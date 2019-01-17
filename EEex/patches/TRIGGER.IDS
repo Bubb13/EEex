@@ -1,0 +1,3 @@
+0x410d EEex_HasDispellableEffect(O:Object*)
+0x410e EEex_LuaTrigger(S:Function*)
+0x410f EEex_IsImmuneToOpcode(O:Object*,I:Opcode*)
