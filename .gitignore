@@ -1,0 +1,7 @@
+*.*
+!.gitignore
+!setup-EEex.exe
+!EEex/*.*
+!EEex/copy/*.*
+!EEex/patches/*.*
+!EEex/patches/bg2ee/*.*
