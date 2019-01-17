@@ -20,8 +20,8 @@ EEex is installed just as any other WeiDU mod. Simply extract the archive's cont
 
 <h1>I'm a modder, how do I use EEex?</h1>
 EEex makes changes to many different parts of the engine. Accessing and making use of new opcodes, actions, triggers, and objects is as simple as installing EEex.
-<br>
-The real power of EEex, however, comes from its ability to change hardcoded engine behavior. The hooks that enable these alterations are completely defined and controlled by the Lua environment, and as such, modders wishing to use these systems will have to either:
+
+<br>The real power of EEex, however, comes from its ability to change hardcoded engine behavior. The hooks that enable these alterations are completely defined and controlled by the Lua environment, and as such, modders wishing to use these systems will have to either:
 
 <br><b class="Bold">a)</b> Insert a M_*.lua file into the override folder.<br>
 <i class="Italic">or</i><br>
