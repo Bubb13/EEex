@@ -77,10 +77,11 @@ function EEex_SetActionPointY(actionData, newY)
 end
 
 function EEex_HookAction(actionData)
-	for _, func in ipairs(EEex_HookActionFunctions) do
-		func(actionData)
-	end
+	local hooksCopy = EEex_HookActionFunctions
 	EEex_HookActionFunctions = {}
+	for _, hook in ipairs(hooksCopy) do
+		hook(actionData)
+	end
 end
 
 function EEex_InstallActionHook()

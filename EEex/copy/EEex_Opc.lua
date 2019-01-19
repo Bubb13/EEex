@@ -14,16 +14,17 @@ function EEex_InstallOpcodeChanges()
 	EEex_WriteAssembly(0x5903AA, {"!nop !nop"})
 	EEex_WriteAssembly(0x5903DC, {"!nop !nop !nop !nop !nop !nop"})
 
-	EEex_WriteAssembly(0x6870F6, {"!jmp_byte"}) -- force bookMode to true
-	EEex_WriteAssembly(0x709287, {"!jmp_byte"}) -- force hasMageBook to true
+	-- Set strref of opcode #324 to Special
+	EEex_WriteAssembly(0x57F805, {"8B 7E 44 90 90"}) 
 
-	-- 0x617DBA - Render's spell icon
-
-	EEex_WriteAssembly(0x57F805, {"8B 7E 44 90 90"}) -- Set strref of opcode #324 to Special
-	--EEex_WriteAssembly(0x52CBE8, {"!nop !nop !nop"}) -- Remove Opcode #262 hard limit
-	--EEex_WriteAssembly(0x60C7B3, {"90 90 90"}) -- Remove Opcode #262 hard limit
-	--EEex_WriteAssembly(0x60C7B9, {"90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90"}) -- Remove Opcode #262 hard limit
+	-- (Opcode #262) Not ready yet...
+	--[[
+	EEex_WriteAssembly(0x52CBE8, {"!nop !nop !nop"})
+	EEex_WriteAssembly(0x60C7B3, {"90 90 90"})
+	EEex_WriteAssembly(0x60C7B9, {"90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90"})
+	--]]
 
 	EEex_EnableCodeProtection()
+	
 end
 EEex_InstallOpcodeChanges()

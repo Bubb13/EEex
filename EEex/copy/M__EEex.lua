@@ -364,7 +364,7 @@ function EEex_CalcWriteLength(address, args)
 					else
 						toReturn = toReturn + macroResult
 					end
-				elseif prefix ~= "@" then
+				elseif prefix ~= "@" and prefix ~= "$" then
 					toReturn = toReturn + 1
 				end
 			end
@@ -431,7 +431,7 @@ function EEex_CalcLabelOffset(address, args, label)
 					else
 						toReturn = toReturn + macroResult
 					end
-				elseif prefix == "@" then
+				elseif prefix == "@" or prefix == "$" then
 					local argLabel = string.sub(section, 2, #section)
 					if argLabel == label then
 						return true
@@ -786,6 +786,7 @@ Core function that writes assembly declarations into memory. args syntax =>
 		@label  = Defines a local label that can be used in the above two operations.
 		          (only in current EEex_WriteAssembly call, use EEex_DefineAssemblyLabel()
 		          if you want to create a global label)
+		$label  = Defines a global label
 		!macro  = Writes macro's bytes.
 
 	b) table:
@@ -882,6 +883,9 @@ function EEex_WriteAssembly(address, args, funcOverride)
 					else
 						currentWriteAddress = currentWriteAddress + macroResult
 					end
+				elseif prefix == "$" then
+					local label = string.sub(section, 2, #section)
+					EEex_DefineAssemblyLabel(label, currentWriteAddress)
 				elseif prefix ~= "@" then
 					local byte = tonumber(section, 16)
 					funcOverride(currentWriteAddress, byte)
@@ -1481,6 +1485,17 @@ Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
 Infinity_DoFile("EEex_Obj") -- New Script Objects
 Infinity_DoFile("EEex_Ren") -- Render Hook
 
+--------------
+--  Modules --
+--------------
+
+Infinity_DoFile("EEex_INI") -- Define modules...
+for moduleName, moduleEnabled in pairs(EEex_Modules) do
+	if moduleEnabled then
+		Infinity_DoFile(moduleName)
+	end
+end
+
 ---------------------
 --  Input Details  --
 ---------------------
@@ -1688,6 +1703,17 @@ function EEex_GetActorIDSelected()
 	else
 		return 0x0
 	end
+end
+
+function EEex_GetAllActorIDSelected()
+	local ids = {}
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + 0xD14) -- (CInfGame)
+	local CPtrList = m_pObjectGame + 0x3E50
+	EEex_IterateCPtrList(CPtrList, function(actorID)
+		table.insert(ids, actorID)
+	end)
+	return ids
 end
 
 ------------------------------
