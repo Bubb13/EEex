@@ -84,7 +84,9 @@ end
 -------------------
 
 function EEex_FunctionLog(message)
-	Infinity_Log("[EEex] "..debug.getinfo(2, "n").name..": "..message)
+	local name = debug.getinfo(2, "n").name
+	if name == nil then name = "(Unknown)" end
+	Infinity_Log("[EEex] "..name..": "..message)
 end
 
 function EEex_Error(message)
@@ -169,6 +171,20 @@ end
 --------------------
 -- Random Utility --
 --------------------
+
+function EEex_ConcatTables(tables)
+	local toReturn = {}
+	for _, _table in ipairs(tables) do
+		if type(_table) == "table" then
+			for _, element in ipairs(_table) do
+				table.insert(toReturn, element)
+			end
+		else
+			table.insert(toReturn, _table)
+		end
+	end
+	return toReturn
+end
 
 function EEex_RoundUp(numToRound, multiple)
 	if multiple == 0 then
@@ -956,6 +972,154 @@ function EEex_WriteAssemblyFunction(functionName, assembly)
 	return functionAddress
 end
 
+function EEex_WriteOpcode(opcodeFunctions)
+
+	--[[
+
+	OFFSET       NAME                  DEFAULT FUNCTION NAME          DEFAULT ADDRESS
+
+	[+0x0]   (__vecDelDtor)   CGameEffect::`vector deleting destructor'  0x56FBB0
+	[+0x4]   (Copy)           (auto-generated)                           NA
+	[+0x8]   (ApplyEffect)    (nullsub that matches signature)           0x8A81D8
+	[+0xC]   (ResolveEffect)  CGameEffect::ResolveEffect                 0x5AB020
+	[+0x10]  (OnAdd)          CGameEffect::OnAdd                         0x5A8150
+	[+0x14]  (OnAddSpecific)  (nullsub that matches signature)           0x42C8A0
+	[+0x18]  (OnLoad)         (nullsub that matches signature)           0x42C8A0
+	[+0x1C]  (CheckSave)      CGameEffect::CheckSave                     0x5949D0
+	[+0x20]  (UsesDice)       CWarp::GetVirtualKeys                      0x42C890
+	[+0x24]  (DisplayString)  CGameEffect::DisplayString                 0x5A6B00
+	[+0x28]  (OnRemove)       (nullsub that matches signature)           0x42C8A0
+
+	--]]
+
+	local EEex_RunOpcodeDecode = function(constructor)
+		return {[[
+			!push_dword #144
+			!call >operator_new
+			!add_esp_byte 04
+			!test_eax_eax
+			!je_dword :5A5A0F
+			!mov_ecx_[ebp+byte] 14
+			!push_[ecx+byte] 04
+			!push_[ecx]
+			!mov_ecx_eax
+			!push_[ebp+byte] 10
+			!push_[ebp+byte] 0C
+			!push_edi
+			!call ]], {constructor, 4, 4}, [[
+			!mov_esi_eax
+			!jmp_dword :5A5A11
+		]]}
+	end
+
+	local EEex_WriteOpcodeConstructor = function(vtbl)
+		return EEex_WriteAssemblyAuto({[[
+			!push_ebp
+			!mov_ebp_esp
+			!push_esi
+			!push_byte FF
+			!push_byte 00
+			!push_[ebp+byte] 18
+			!mov_esi_ecx
+			!push_[ebp+byte] 14
+			!push_[ebp+byte] 10
+			!push_[ebp+byte] 0C
+			!push_[ebp+byte] 08
+			!call >CGameEffect::CGameEffect
+			!mov_[esi]_dword ]], {vtbl, 4}, [[
+			!mov_eax_esi
+			!pop_esi
+			!pop_ebp
+			!ret_word 14 00
+		]]})
+	end
+
+	local EEex_WriteOpcodeCopy = function(vtbl)
+		return EEex_WriteAssemblyAuto({[[
+			!push_ebx
+			!push_esi
+			!push_edi
+			!mov_edi_ecx
+			!call >CGameEffect::GetItemEffect
+			!push_dword #144
+			!mov_ebx_eax
+			!call >operator_new
+			!mov_esi_eax
+			!add_esp_byte 04
+			!test_esi_esi
+			!je_dword >0
+			!push_byte FF
+			!push_byte 00
+			!push_[edi+dword] #88
+			!lea_eax_[edi+byte] 7C
+			!mov_ecx_esi
+			!push_[edi+dword] #84
+			!push_[edi+dword] #10C
+			!push_eax
+			!push_ebx
+			!call >CGameEffect::CGameEffect
+			!mov_[esi]_dword ]], {vtbl, 4}, [[
+			!jmp_dword >1
+			@0
+			!xor_esi_esi
+			@1
+			!push_ebx
+			!call >_SDL_free
+			!add_esp_byte 04
+			!test_edi_edi
+			!je_dword >2
+			!add_edi_byte 04
+			!mov_ecx_esi
+			!push_edi
+			!call >CGameEffect::CopyFromBase
+			!pop_edi
+			!mov_eax_esi
+			!pop_esi
+			!pop_ebx
+			!ret
+			@2
+			!xor_edi_edi
+			!mov_ecx_esi
+			!push_edi
+			!call >CGameEffect::CopyFromBase
+			!pop_edi
+			!mov_eax_esi
+			!pop_esi
+			!pop_ebx
+			!ret
+		]]})
+	end
+
+	local vtbl = EEex_Malloc(0x2C)
+	local opcodeConstructor = EEex_WriteOpcodeConstructor(vtbl)
+	local opcodeCopy = EEex_WriteOpcodeCopy(vtbl)
+
+	local writeOrDefault = function(writeAddress, writeStuff, defaultValue)
+		local toWrite = nil
+		if writeStuff ~= nil then
+			toWrite = EEex_WriteAssemblyAuto(writeStuff)
+		else
+			toWrite = defaultValue
+		end
+		EEex_WriteDword(writeAddress, toWrite)
+	end
+
+	writeOrDefault(vtbl + 0x0,  opcodeFunctions["__vecDelDtor"],  0x56FBB0)
+	writeOrDefault(vtbl + 0x4,  opcodeFunctions["Copy"],          opcodeCopy)
+	writeOrDefault(vtbl + 0x8,  opcodeFunctions["ApplyEffect"],   0x8A81D8)
+	writeOrDefault(vtbl + 0xC,  opcodeFunctions["ResolveEffect"], 0x5AB020)
+	writeOrDefault(vtbl + 0x10, opcodeFunctions["OnAdd"],         0x5A8150)
+	writeOrDefault(vtbl + 0x14, opcodeFunctions["OnAddSpecific"], 0x42C8A0)
+	writeOrDefault(vtbl + 0x18, opcodeFunctions["OnLoad"],        0x42C8A0)
+	writeOrDefault(vtbl + 0x1C, opcodeFunctions["CheckSave"],     0x5949D0)
+	writeOrDefault(vtbl + 0x20, opcodeFunctions["UsesDice"],      0x42C890)
+	writeOrDefault(vtbl + 0x24, opcodeFunctions["DisplayString"], 0x5A6B00)
+	writeOrDefault(vtbl + 0x28, opcodeFunctions["OnRemove"],      0x42C8A0)
+
+	return EEex_RunOpcodeDecode(opcodeConstructor)
+
+end
+
 ----------------------
 --  Bits Utilility  --
 ----------------------
@@ -1434,6 +1598,43 @@ function EEex_Main()
 		!ret
 
 	]]})
+
+	EEex_WriteAssemblyFunction("EEex_Memset", {[[
+
+		!push_state
+
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte 00
+		!push_byte 03
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!call >_memset
+		!add_esp_byte 0C
+
+		!mov_eax #00
+		!pop_state
+		!ret
+
+	]]})
 end
 EEex_Main()
 
@@ -1468,32 +1669,6 @@ function EEex_EnableCodeProtection()
 	-- 0x49F000 = Size of .text section in memory.
 	EEex_DllCall("Kernel32", "VirtualProtect", {temp, 0x20, 0x49F000, 0x401000}, nil, 0x0)
 	EEex_Free(temp)
-end
-
---------------------
---  Engine Hooks  --
---------------------
-
-Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
-Infinity_DoFile("EEex_AHo") -- Actions Hook
-Infinity_DoFile("EEex_Bar") -- Actionbar Hook
-Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
-Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
-Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
-Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
-Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
-Infinity_DoFile("EEex_Obj") -- New Script Objects
-Infinity_DoFile("EEex_Ren") -- Render Hook
-
---------------
---  Modules --
---------------
-
-Infinity_DoFile("EEex_INI") -- Define modules...
-for moduleName, moduleEnabled in pairs(EEex_Modules) do
-	if moduleEnabled then
-		Infinity_DoFile(moduleName)
-	end
 end
 
 ---------------------
@@ -2622,4 +2797,31 @@ function EEex_UnmemorizeInnateSpell(actorID, index)
 	local edi = actorDataAddress + 0x8A0
 	EEex_WriteDword(edi, EEex_ReadDword(edi) - 1)
 	::_0::
+end
+
+--------------------
+--  Engine Hooks  --
+--------------------
+
+Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
+Infinity_DoFile("EEex_AHo") -- Actions Hook
+Infinity_DoFile("EEex_Bar") -- Actionbar Hook
+Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
+Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
+Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
+Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
+Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
+Infinity_DoFile("EEex_Obj") -- New Script Objects
+Infinity_DoFile("EEex_Ren") -- Render Hook
+--Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
+
+--------------
+--  Modules --
+--------------
+
+Infinity_DoFile("EEex_INI") -- Define modules...
+for moduleName, moduleEnabled in pairs(EEex_Modules) do
+	if moduleEnabled then
+		Infinity_DoFile(moduleName)
+	end
 end

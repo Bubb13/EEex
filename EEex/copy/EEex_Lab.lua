@@ -25,9 +25,14 @@ for _, labelEntry in ipairs({
 	{"CChitin::TIMER_UPDATES_PER_SECOND", 0x938778},
 	{"CDerivedStats::GetAtOffset", 0x52CC40},
 	{"CDerivedStats::GetSpellState", 0x52DF30},
+	{"CDerivedStats::Reload", 0x52E3A0},
 	{"CGameAIBase::FireSpellPoint", 0x542FC0},
+	{"CGameEffect::CGameEffect", 0x56AAB0},
+	{"CGameEffect::CopyFromBase", 0x5A0180},
 	{"CGameEffect::FireSpell", 0x5A73E0},
+	{"CGameEffect::GetItemEffect", 0x5A7A30},
 	{"CGameObjectArray::GetShare", 0x625C00},
+	{"CGameSprite::~CGameSprite", 0x6D5D90},
 	{"CGameSprite::AddKnownSpell", 0x6D9B40},
 	{"CGameSprite::AddKnownSpellMage", 0x6D9DC0},
 	{"CGameSprite::GetActiveStats", 0x4FE120},
@@ -83,11 +88,13 @@ for _, labelEntry in ipairs({
 	{"_lua_touserdata", 0x4B5840},
 	{"_lua_type", 0x4B5240},
 	{"_lua_typename", 0x4B5280},
+	{"_memset", 0x85B6A0},
 	{"_p_malloc", 0x886FD0},
 	{"aB_1", 0x927BD8},
 	{"dimmGetResObject", 0x77D9A0},
 	{"g_pBaldurChitin", 0x93FDBC},
 	{"g_pChitin", 0x93FDB8},
+	{"operator_new", 0x85BEA7},
 })
 do
 	local labelName = labelEntry[1]
