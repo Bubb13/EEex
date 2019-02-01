@@ -10,6 +10,8 @@ I haven't documented most of them yet, so have a look around.
 
 --]]
 
+EEex_MinimalStartup = false
+
 -----------
 -- State --
 -----------
@@ -1285,6 +1287,39 @@ function EEex_ReserveCodeMemory(assembly)
 	return reservedAddress, writeLength
 end
 
+-------------------------
+-- !CODE MANIPULATION! --
+-------------------------
+
+-- OS:WINDOWS
+-- Don't use this unless
+-- you REALLY know what you are doing.
+-- Enables writing to the .text section of the
+-- exe (code).
+function EEex_DisableCodeProtection()
+	local temp = EEex_Malloc(0x4)
+	-- 0x40 = PAGE_EXECUTE_READWRITE
+	-- 0x401000 = Start of .text section in memory.
+	-- 0x49F000 = Size of .text section in memory.
+	EEex_DllCall("Kernel32", "VirtualProtect", {temp, 0x40, 0x49F000, 0x401000}, nil, 0x0)
+	EEex_Free(temp)
+end
+
+-- OS:WINDOWS
+-- If you were crazy enough to use
+-- EEex_DisableCodeProtection(), please
+-- use this to reverse your bad decisions.
+-- Reverts the .text section protections back
+-- to default.
+function EEex_EnableCodeProtection()
+	local temp = EEex_Malloc(0x4)
+	-- 0x20 = PAGE_EXECUTE_READ
+	-- 0x401000 = Start of .text section in memory.
+	-- 0x49F000 = Size of .text section in memory.
+	EEex_DllCall("Kernel32", "VirtualProtect", {temp, 0x20, 0x49F000, 0x401000}, nil, 0x0)
+	EEex_Free(temp)
+end
+
 ------------
 -- !MAIN! --
 ------------
@@ -1635,41 +1670,17 @@ function EEex_Main()
 		!ret
 
 	]]})
+
+	EEex_DisableCodeProtection()
+
+	local newVersionString = "(EEex) v%d.%d.%d.%d"
+	local newVersionStringAddress = EEex_Malloc(#newVersionString + 1)
+	EEex_WriteString(newVersionStringAddress, newVersionString)
+	EEex_WriteAssembly(EEex_Label("CChitin::GetVersionString()_versionStringPush"), {{newVersionStringAddress, 4}})
+
+	EEex_EnableCodeProtection()
 end
 EEex_Main()
-
--------------------------
--- !CODE MANIPULATION! --
--------------------------
-
--- OS:WINDOWS
--- Don't use this unless
--- you REALLY know what you are doing.
--- Enables writing to the .text section of the
--- exe (code).
-function EEex_DisableCodeProtection()
-	local temp = EEex_Malloc(0x4)
-	-- 0x40 = PAGE_EXECUTE_READWRITE
-	-- 0x401000 = Start of .text section in memory.
-	-- 0x49F000 = Size of .text section in memory.
-	EEex_DllCall("Kernel32", "VirtualProtect", {temp, 0x40, 0x49F000, 0x401000}, nil, 0x0)
-	EEex_Free(temp)
-end
-
--- OS:WINDOWS
--- If you were crazy enough to use
--- EEex_DisableCodeProtection(), please
--- use this to reverse your bad decisions.
--- Reverts the .text section protections back
--- to default.
-function EEex_EnableCodeProtection()
-	local temp = EEex_Malloc(0x4)
-	-- 0x20 = PAGE_EXECUTE_READ
-	-- 0x401000 = Start of .text section in memory.
-	-- 0x49F000 = Size of .text section in memory.
-	EEex_DllCall("Kernel32", "VirtualProtect", {temp, 0x20, 0x49F000, 0x401000}, nil, 0x0)
-	EEex_Free(temp)
-end
 
 ---------------------
 --  Input Details  --
@@ -2803,25 +2814,29 @@ end
 --  Engine Hooks  --
 --------------------
 
-Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
-Infinity_DoFile("EEex_AHo") -- Actions Hook
-Infinity_DoFile("EEex_Bar") -- Actionbar Hook
-Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
-Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
-Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
-Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
-Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
-Infinity_DoFile("EEex_Obj") -- New Script Objects
-Infinity_DoFile("EEex_Ren") -- Render Hook
---Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
+if not EEex_MinimalStartup then
+	Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
+	Infinity_DoFile("EEex_AHo") -- Actions Hook
+	Infinity_DoFile("EEex_Bar") -- Actionbar Hook
+	Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
+	Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
+	Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
+	Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
+	Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
+	Infinity_DoFile("EEex_Obj") -- New Script Objects
+	Infinity_DoFile("EEex_Ren") -- Render Hook
+	--Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
+end
 
 --------------
 --  Modules --
 --------------
 
-Infinity_DoFile("EEex_INI") -- Define modules...
-for moduleName, moduleEnabled in pairs(EEex_Modules) do
-	if moduleEnabled then
-		Infinity_DoFile(moduleName)
+if not EEex_MinimalStartup then
+	Infinity_DoFile("EEex_INI") -- Define modules...
+	for moduleName, moduleEnabled in pairs(EEex_Modules) do
+		if moduleEnabled then
+			Infinity_DoFile(moduleName)
+		end
 	end
 end
