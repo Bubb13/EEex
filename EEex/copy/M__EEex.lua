@@ -1239,7 +1239,7 @@ function EEex_ReserveCodeMemory(assembly)
 					local memLeftOver = allocEntry.size - writeLength
 					if memLeftOver > 0 then
 						local newAddress = allocEntry.address + writeLength
-						local nextEntry = EEex_CodePageAllocations[i + 1]
+						local nextEntry = codePage[i + 1]
 						if nextEntry then
 							if not nextEntry.reserved then
 								local addressDifference = nextEntry.address - newAddress
@@ -2821,11 +2821,11 @@ if not EEex_MinimalStartup then
 	Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
 	Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
 	Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
-	Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
 	Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
 	Infinity_DoFile("EEex_Obj") -- New Script Objects
 	Infinity_DoFile("EEex_Ren") -- Render Hook
-	--Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
+	Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
+	Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
 end
 
 --------------

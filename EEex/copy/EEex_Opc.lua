@@ -201,12 +201,48 @@ function EEex_InstallOpcodeChanges()
 		]]},
 	})
 
+	local EEex_SetNewStat = EEex_WriteOpcode({
+
+		["ApplyEffect"] = {[[
+
+			!build_stack_frame
+			!push_registers
+
+			!mov_esi_ecx
+			!mov_eax_[esi+byte] 18
+			!mov_ecx_[ebp+byte] 08
+
+			!cmp_eax_dword #CB
+			!jb_dword >ret
+
+			!sub_eax_dword #CB
+			!cmp_eax_dword ]], {EEex_NewStatsCount, 4}, [[
+			!jae_dword >ret
+
+			!mov_ecx_[ecx+dword] #3B18
+			!mov_edx_[esi+byte] 1C
+			!mov_[ecx+eax*4]_edx
+			!jmp_dword >ret
+
+			@ret
+			!mov_eax #1
+			!restore_stack_frame
+			!ret_word 04 00
+		]]},
+	})
+
 	local opcodesHook = EEex_WriteAssemblyAuto(EEex_ConcatTables({[[
 
 		!cmp_eax_dword #190
-		!jne_dword >fail
+		!jne_dword >401
 
 		]], newOpcode400, [[
+
+		@401
+		!cmp_eax_dword #191
+		!jne_dword >fail
+
+		]], EEex_SetNewStat, [[
 
 		@fail
 		!jmp_dword :5A5A11
