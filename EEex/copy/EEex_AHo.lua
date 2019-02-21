@@ -88,21 +88,38 @@ function EEex_InstallActionHook()
 	local hookName = "EEex_HookAction"
 	local hookNameAddress = EEex_Malloc(#hookName + 1)
 	EEex_WriteString(hookNameAddress, hookName)
-	local hookAddress = EEex_WriteAssemblyAuto({
-		"FF 34 24 89 4C 24 04 \z
-		E8 >CAIAction::Decode \z
-		68", {hookNameAddress, 4},
-		"FF 35 0C 01 94 00 \z
-		E8 >_lua_getglobal \z
-		83 C4 08 DB 04 24 83 EC 04 DD 1C 24 FF 35 0C 01 94 00 \z
-		E8 >_lua_pushnumber \z
-		83 C4 0C 6A 00 6A 00 6A 00 6A 00 6A 01 FF 35 0C 01 94 00 \z
-		E8 >_lua_pcallk \z
-		83 C4 18 \z
-		E9 :737D2D"
-	})
+
+	local hookAddress = EEex_WriteAssemblyAuto({[[
+		!push_[esp]
+		!mov_[esp+byte]_ecx 04
+		!call >CAIAction::Decode
+
+		!push_dword ]], {hookNameAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!jmp_dword >CGameSprite::SetCurrAction()_after_decode
+	]]})
+
 	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(0x737D28, {"E9", {hookAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("CGameSprite::SetCurrAction()_decode"), {"!jmp_dword", {hookAddress, 4, 4}})
 	EEex_EnableCodeProtection()
 end
 EEex_InstallActionHook()

@@ -10,13 +10,13 @@ B3CurrentActionbarConfig = -1
 function B3ActionbarKeyListener(key)
 	if key == 0x400000E1 then
 		B3CurrentActionbarConfig = B3CurrentActionbarConfig + 1
-		Infinity_DisplayString("DEBUG: Actionbar Config => \zB3CurrentActionbarConfig
-			.." (\ztoHex(B3CurrentActionbarConfig)..")")
+		Infinity_DisplayString("DEBUG: Actionbar Config => "B3CurrentActionbarConfig
+			.." ("toHex(B3CurrentActionbarConfig)..")")
 		setActionbarConfig(B3CurrentActionbarConfig)
 	elseif key == 0x400000E0 then
 		B3CurrentActionbarConfig = B3CurrentActionbarConfig - 1
-		Infinity_DisplayString("DEBUG: Actionbar Config => \zB3CurrentActionbarConfig
-			.." (\ztoHex(B3CurrentActionbarConfig)..")")
+		Infinity_DisplayString("DEBUG: Actionbar Config => "B3CurrentActionbarConfig
+			.." ("toHex(B3CurrentActionbarConfig)..")")
 		setActionbarConfig(B3CurrentActionbarConfig)
 	end
 end
@@ -63,30 +63,66 @@ function EEex_AddKeyReleasedListener(func)
 end
 
 function EEex_InstallKeyHook()
+
 	local keyPressedHookName = "EEex_KeyPressed"
 	local keyPressedHookNameAddress = EEex_Malloc(#keyPressedHookName + 1)
 	EEex_WriteString(keyPressedHookNameAddress, keyPressedHookName)
+
 	local keyReleasedHookName = "EEex_KeyReleased"
 	local keyReleasedHookNameAddress = EEex_Malloc(#keyReleasedHookName + 1)
 	EEex_WriteString(keyReleasedHookNameAddress, keyReleasedHookName)
-	local hookAddress = EEex_WriteAssemblyAuto({
-		"0F 84 :792816 \z
-		81 7D 8C 00 03 00 00 75 0D 80 7D 99 00 75 55 \z
-		68", {keyPressedHookNameAddress, 4},
-		"EB 0E 81 7D 8C 01 03 00 00 75 45 \z
-		68", {keyReleasedHookNameAddress, 4},
-		"FF 35 0C 01 94 00 \z
-		E8 >_lua_getglobal \z
-		83 C4 08 FF 75 A0 DB 04 24 83 EC 04 DD 1C 24 FF 35 0C 01 94 00 \z
-		E8 >_lua_pushnumber \z
-		83 C4 0C 6A 00 6A 00 6A 00 6A 00 6A 01 FF 35 0C 01 94 00 \z
-		E8 >_lua_pcallk \z
-		83 C4 18 \z
-		E9 :791BF2"
-	})
+
+	local hookAddress = EEex_WriteAssemblyAuto({[[
+
+		!je_dword >SDLHook_NoEvents
+
+		!cmp_[ebp+byte]_dword 8C #300
+		!jne_dword >check_1
+
+		!cmp_byte:[ebp+byte] 99 00
+		!jne_dword >exit
+
+		!push_dword ]], {keyPressedHookNameAddress, 4}, [[
+		!jmp_dword >function_call
+
+		@check_1
+
+		!cmp_[ebp+byte]_dword 8C #301
+		!jne_dword >exit
+
+		!push_dword ]], {keyReleasedHookNameAddress, 4}, [[
+
+		@function_call
+
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_[ebp+byte] A0
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		@exit
+		!jmp_dword >SDLHook_ResumeExecution
+
+	]]})
+
 	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(0x791BEC, {"E9", {hookAddress, 4, 4}})
-	EEex_WriteAssembly(0x792812, {{hookAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("SDLHook_NoEventsJump"), {"!jmp_dword", {hookAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("SDLHook_AnyMoreEventsJump"), {{hookAddress, 4, 4}})
 	EEex_EnableCodeProtection()
 end
 EEex_InstallKeyHook()

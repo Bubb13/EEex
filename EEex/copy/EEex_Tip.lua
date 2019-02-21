@@ -12,27 +12,57 @@ function EEex_IsActorTooltipDisabled()
 end
 
 function EEex_InstallTooltipHook()
+
 	local hookName = "EEex_IsActorTooltipDisabled"
 	local hookNameAddress = EEex_Malloc(#hookName + 1)
 	EEex_WriteString(hookNameAddress, hookName)
-	local hookAddress = EEex_WriteAssemblyAuto({
-		"51 \z
-		68", {hookNameAddress, 4},
-		"FF 35 0C 01 94 00 \z
-		E8 >_lua_getglobal \z
-		83 C4 08 6A 00 6A 00 6A 00 6A 01 6A 00 FF 35 0C 01 94 00 \z
-		E8 >_lua_pcallk \z
-		83 C4 18 6A FF FF 35 0C 01 94 00 \z
-		E8 >_lua_toboolean \z
-		83 C4 08 50 6A FE FF 35 0C 01 94 00 \z
-		E8 >_lua_settop \z
-		83 C4 08 58 85 C0 59 \z
-		0F 85 :70045B \z
-		E8 >CGameSprite::SetCharacterToolTip \z
-		E9 :700455"
+
+	local tooltipHookAddress = EEex_Label("TooltipHook")
+
+	local hookAddress = EEex_WriteAssemblyAuto({[[
+
+		!push_ecx
+
+		!push_dword ]], {hookNameAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_byte 00
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!push_byte FF
+		!push_[dword] *_g_lua
+		!call >_lua_toboolean
+		!add_esp_byte 08
+
+		!push_eax
+
+		!push_byte FE
+		!push_[dword] *_g_lua
+		!call >_lua_settop
+		!add_esp_byte 08
+
+		!pop_eax
+		!test_eax_eax
+
+		!pop_ecx
+
+		!jne_dword ]], {tooltipHookAddress, 4, 4}, [[
+
+		!call >CGameSprite::SetCharacterToolTip
+		!jmp_dword ]], {tooltipHookAddress - 6, 4, 4},
+
 	})
+
 	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(0x700450, {"E9", {hookAddress, 4, 4}})
+	EEex_WriteAssembly(tooltipHookAddress - 0xB, {"!jmp_dword", {hookAddress, 4, 4}})
 	EEex_EnableCodeProtection()
 end
 EEex_InstallTooltipHook()

@@ -4,18 +4,18 @@ function EEex_InstallOpcodeChanges()
 	EEex_DisableCodeProtection()
 
 	-- Remove the "at least 1 slot" checks from Opcode #42
-	EEex_WriteAssembly(0x59027D, {"!nop !nop"})
-	EEex_WriteAssembly(0x5902A8, {"!nop !nop"})
-	EEex_WriteAssembly(0x5902D3, {"!nop !nop"})
-	EEex_WriteAssembly(0x5902FE, {"!nop !nop"})
-	EEex_WriteAssembly(0x590329, {"!nop !nop"})
-	EEex_WriteAssembly(0x590354, {"!nop !nop"})
-	EEex_WriteAssembly(0x59037F, {"!nop !nop"})
-	EEex_WriteAssembly(0x5903AA, {"!nop !nop"})
-	EEex_WriteAssembly(0x5903DC, {"!nop !nop !nop !nop !nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck1"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck2"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck3"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck4"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck5"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck6"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck7"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck8"), {"!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck9"), {"!nop !nop !nop !nop !nop !nop"})
 
 	-- Set strref of opcode #324 to Special
-	EEex_WriteAssembly(0x57F805, {"8B 7E 44 90 90"}) 
+	EEex_WriteAssembly(EEex_Label("Opcode324StrrefHook"), {"!mov_edi_[esi+byte] 44 !nop !nop"})
 
 	local fireSubspellAddress = EEex_WriteAssemblyAuto({[[
 
@@ -46,7 +46,7 @@ function EEex_InstallOpcodeChanges()
 		!push_eax
 		!lea_eax_[ebp+byte] FC
 		!push_eax
-		!call >CResRef::operator=
+		!call >CResRef::operator_equ
 		!lea_ecx_[ebp+byte] F4
 		!call >CString::~CString
 		!lea_ecx_[ebp+byte] F8
@@ -79,15 +79,15 @@ function EEex_InstallOpcodeChanges()
 	]]})
 
 	-- Fire subspell when Opcode #218 expires due to losing all layers
-	EEex_WriteAssembly(0x59078B, {"!call", {fireSubspellHook1, 4, 4}, "!nop !nop !nop !nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode218LostLayersHook"), {"!call", {fireSubspellHook1, 4, 4}, "!nop !nop !nop !nop !nop"})
 
 	local setAIScript = EEex_WriteAssemblyAuto({[[
 
 		!push_state
 		!mov_esi_ecx
 
-		!push_dword #91BD15
-		!call >CResRef::operator!=
+		!push_dword *NullString
+		!call >CResRef::operator_notequ
 
 		!test_eax_eax
 		!je_dword >no_script
@@ -144,7 +144,7 @@ function EEex_InstallOpcodeChanges()
 
 			!cmp_eax_byte 04
 			!jb_dword >do_lookup
-			
+
 			!dec_eax
 
 			@do_lookup
@@ -174,7 +174,7 @@ function EEex_InstallOpcodeChanges()
 			!push_eax
 			!mov_ecx_[ebp+byte] 08
 			!call ]], {setAIScript, 4, 4}, [[
-		
+
 			@do_nothing
 
 			!pop_state
@@ -245,20 +245,13 @@ function EEex_InstallOpcodeChanges()
 		]], EEex_SetNewStat, [[
 
 		@fail
-		!jmp_dword :5A5A11
+		!jmp_dword >CGameEffect::DecodeEffect()_default_label
 
 	]]}))
 
-	EEex_WriteAssembly(0x5A15CD, {{opcodesHook, 4, 4}})
-
-	-- (Opcode #262) Not ready yet...
-	--[[
-	EEex_WriteAssembly(0x52CBE8, {"!nop !nop !nop"})
-	EEex_WriteAssembly(0x60C7B3, {"90 90 90"})
-	EEex_WriteAssembly(0x60C7B9, {"90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90"})
-	--]]
+	EEex_WriteAssembly(EEex_Label("CGameEffect::DecodeEffect()_default_jump"), {{opcodesHook, 4, 4}})
 
 	EEex_EnableCodeProtection()
-	
+
 end
 EEex_InstallOpcodeChanges()

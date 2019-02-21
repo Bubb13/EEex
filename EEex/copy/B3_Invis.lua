@@ -1,5 +1,5 @@
 
-B3Invis_RenderAsInvisible = false
+B3Invis_RenderAsInvisible = true
 
 function B3Invis_InstallOpcode193Changes()
 
@@ -10,7 +10,7 @@ function B3Invis_InstallOpcode193Changes()
 		!sub_esp_byte 04
 		!push_registers
 		!mov_eax_[dword] *g_pBaldurChitin
-		!mov_eax_[eax+dword] #D14
+		!mov_eax_[eax+dword] *CBaldurChitin::m_pObjectGame
 		!mov_esi_[eax+dword] #3E54
 		!test_esi_esi
 		!je_dword >fail
@@ -69,9 +69,9 @@ function B3Invis_InstallOpcode193Changes()
 		!ret
 	]]})
 
-	EEex_WriteAssembly(0x6EE5F1, {"!call", {invisCheckHook1, 4, 4}, "!nop !nop"})
-	EEex_WriteAssembly(0x6FC1C2, {"!call", {invisCheckHook2, 4, 4}, "!nop !nop"})
-	EEex_WriteAssembly(0x6FC237, {"!call", {forceCircleHook, 4, 4}, "!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode218IsOverHook"), {"!call", {invisCheckHook1, 4, 4}, "!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode218RenderMarkerHook"), {"!call", {invisCheckHook2, 4, 4}, "!nop !nop"})
+	EEex_WriteAssembly(EEex_Label("Opcode218IsPausedHook"), {"!call", {forceCircleHook, 4, 4}, "!nop !nop"})
 
 	if B3Invis_RenderAsInvisible then
 
@@ -86,8 +86,8 @@ function B3Invis_InstallOpcode193Changes()
 			!ret
 		]]})
 		
-		EEex_WriteAssembly(0x6F9170, {"!call", {invisCheckHook2, 4, 4}, "!nop !nop"})
-		EEex_WriteAssembly(0x6F9970, {"!call", {invisCheckHook3, 4, 4}, "!nop !nop"})
+		EEex_WriteAssembly(EEex_Label("Opcode218RenderSpriteHook1"), {"!call", {invisCheckHook2, 4, 4}, "!nop !nop"})
+		EEex_WriteAssembly(EEex_Label("Opcode218RenderSpriteHook2"), {"!call", {invisCheckHook3, 4, 4}, "!nop !nop"})
 	end
 	EEex_EnableCodeProtection()
 end

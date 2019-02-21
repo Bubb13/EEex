@@ -11,13 +11,13 @@ function EEex_InstallNewObjects()
 
 		!cmp_eax_byte 72
 		!je_dword >EEex_LuaObject
-		!jmp_dword :5024B8
+		!jmp_dword >CAIObjectType::Decode()_default_label
 
 		@EEex_LuaObject
 
 		!push_dword *CAIObjectType::ANYONE
 		!lea_ecx_[ebp+byte] E8
-		!call >CAIObjectType::operator=
+		!call >CAIObjectType::operator_equ
 
 		!push_dword ]], {luaObjectAddress, 4}, [[
 		!push_[dword] *_g_lua
@@ -40,13 +40,13 @@ function EEex_InstallNewObjects()
 
 		!pop_eax
 		!cmp_eax_byte FF
-		!je_dword :501A25
-		!jmp_dword :50192B
+		!je_dword >CAIObjectType::Decode()_fail_label
+		!jmp_dword >CAIObjectType::Decode()_success_label
 
 	]]})
 
 	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(0x50190D, {{newObjectsAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("CAIObjectType::Decode()_default_jump"), {{newObjectsAddress, 4, 4}})
 	EEex_EnableCodeProtection()
 end
 EEex_InstallNewObjects()

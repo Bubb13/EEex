@@ -66,7 +66,7 @@ function B3Hotkey_AttemptToSelectCharacter(portraitNum, dontUnselect)
 	if worldScreen == activeEngine then
 
 		local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
-		local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + 0xD14) -- (CInfGame)
+		local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
 		-- CInfGame.m_nState
 		
 		local actorID = EEex_Call(EEex_Label("CInfGame::GetCharacterId"), {portraitNum}, m_pObjectGame, 0x0)

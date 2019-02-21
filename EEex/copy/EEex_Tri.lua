@@ -23,7 +23,7 @@ function EEex_InstallNewTriggers()
 		!cmp_eax_dword #105
 		!je_dword >EEex_IsImmuneToOpcode
 		@trigger_failed
-		!jmp_dword :532B8C
+		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_default_label
 
 		@EEex_HasDispellableEffect
 
@@ -84,7 +84,7 @@ function EEex_InstallNewTriggers()
 		@done_equiped_effects
 
 		!mov_ebx_eax
-		!jmp_dword :532B8E
+		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_success_label
 
 
 		@EEex_LuaTrigger
@@ -123,7 +123,7 @@ function EEex_InstallNewTriggers()
 		!call >_lua_settop
 		!add_esp_byte 08
 
-		!jmp_dword :532B8E
+		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_success_label
 
 
 		@EEex_IsImmuneToOpcode
@@ -166,12 +166,12 @@ function EEex_InstallNewTriggers()
 		@done
 
 		!mov_ebx_eax
-		!jmp_dword :532B8E
+		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_success_label
 
 	]]})
 
 	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(0x530DE0, {{newTriggersAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("CGameAIBase::EvaluateStatusTrigger()_default_jump"), {{newTriggersAddress, 4, 4}})
 	EEex_EnableCodeProtection()
 end
 EEex_InstallNewTriggers()

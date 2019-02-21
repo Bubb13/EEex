@@ -1,41 +1,19 @@
 BACKUP ~EEex\backup~
 AUTHOR ~Bubb~
-VERSION 0.3.0
+VERSION 0.4.0
 
 BEGIN ~EEex~
 REQUIRE_PREDICATE (
-	   (GAME_IS ~bg2ee~)
+	   (GAME_IS ~bgee~)
+	OR (GAME_IS ~bg2ee~)
 	OR (GAME_IS ~eet~)
+	OR (GAME_IS ~iwdee~)
 ) ~Game not supported.~
 
-	ACTION_IF GAME_IS ~bg2ee~ OR GAME_IS ~eet~ BEGIN
-		OUTER_SPRINT exe_name ~Baldur.exe~
-		OUTER_SPRINT patches_directory ~EEex\patches\bg2ee~
-	END ELSE BEGIN
-		FAIL ~Unhandled game type! Tell @Bubb that he should really be smarter than this.~
-	END
-
-	OUTER_SET index = 0
-	ACTION_BASH_FOR ~%patches_directory%~ ~.*~ BEGIN
-		OUTER_SPRINT $patch_files(~%index%~) ~%BASH_FOR_FILESPEC%~
-		OUTER_SET $patch_addresses(~%index%~) = %BASH_FOR_RES%
-		OUTER_SET index = index + 1
-	END
-
-	COPY ~%exe_name%~ ~%exe_name%~
-		FOR (i = 0; i < index; i+=1) BEGIN
-			SPRINT file $patch_files(~%i%~)
-			SET address = $patch_addresses(~%i%~)
-			WRITE_FILE address ~%file%~
-		END
-	IF_EXISTS
-	
-	COPY_EXISTING ~UI.MENU~ ~override~
-		INSERT_FILE 0 ~EEex\patches\UI.MENU~
-	IF_EXISTS
-	
+	COPY_EXISTING ~UI.MENU~ ~override~ INSERT_FILE 0 ~EEex\patches\UI.MENU~ IF_EXISTS
 	COPY_EXISTING ~ACTION.IDS~ ~override~ APPEND_FILE ~EEex\patches\ACTION.IDS~ IF_EXISTS
 	COPY_EXISTING ~OBJECT.IDS~ ~override~ APPEND_FILE ~EEex\patches\OBJECT.IDS~ IF_EXISTS
 	COPY_EXISTING ~TRIGGER.IDS~ ~override~ APPEND_FILE ~EEex\patches\TRIGGER.IDS~ IF_EXISTS
-	
+
+	COPY ~EEex\loader~ ~.~ IF_EXISTS
 	COPY ~EEex\copy~ ~override~ IF_EXISTS

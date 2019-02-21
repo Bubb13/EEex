@@ -10,7 +10,43 @@ I haven't documented most of them yet, so have a look around.
 
 --]]
 
+-------------
+-- Options --
+-------------
+
 EEex_MinimalStartup = false
+
+--------------------
+-- Initialization --
+--------------------
+
+EEex_InitialMemory = nil
+if not pcall(function()
+
+	-- !!!----------------------------------------------------------------!!!
+	--  | EEex_Init() is the only new function that is exposed by default. |
+	--  | It does several things:                                          |
+	--  |                                                                  |
+	--  |   1. Exposes the hardcoded function EEex_WriteByte()             |
+	--  |                                                                  |
+	--  |   2. Exposes the hardcoded function EEex_ExposeToLua()           |
+	--  |                                                                  |
+	--  |   3. Calls VirtualAlloc() with the following params =>           |
+	--  |        lpAddress = 0                                             |
+	--  |        dwSize = 0x1000                                           |
+	--  |        flAllocationType = MEM_COMMIT | MEM_RESERVE               |
+	--  |        flProtect = PAGE_EXECUTE_READWRITE                        |
+	--  |                                                                  |
+	--  |   4. Passes along the VirtualAlloc()'s return value              |
+	-- !!! ---------------------------------------------------------------!!!
+
+	EEex_InitialMemory = EEex_Init()
+
+end) then
+	-- Failed to initialize EEex, clean up junk.
+	EEex_MinimalStartup = nil
+	error("EEex is disabled: dll not injected. Please start game using EEex.exe.")
+end
 
 -----------
 -- State --
@@ -40,7 +76,7 @@ end
 ---------------------
 
 function EEex_Malloc(size)
-	return EEex_Call(EEex_Label("_p_malloc"), {size}, nil, 0x4)
+	return EEex_Call(EEex_Label("_malloc"), {size}, nil, 0x4)
 end
 
 function EEex_Free(address)
@@ -74,8 +110,8 @@ function EEex_DllCall(dll, proc, args, ecx, pop)
 	procaddress = dlladdress + procaddress
 	EEex_WriteString(dlladdress, dll)
 	EEex_WriteString(procaddress, proc)
-	local dllhandle = EEex_Call(EEex_ReadDword(EEex_Label("__imp__LoadLibraryA")), {dlladdress}, nil, 0x0)
-	local procfunc = EEex_Call(EEex_ReadDword(EEex_Label("__imp__GetProcAddress")), {procaddress, dllhandle}, nil, 0x0)
+	local dllhandle = EEex_Call(EEex_Label("__imp__LoadLibraryA"), {dlladdress}, nil, 0x0)
+	local procfunc = EEex_Call(EEex_Label("__imp__GetProcAddress"), {procaddress, dllhandle}, nil, 0x0)
 	local result = EEex_Call(procfunc, args, ecx, pop)
 	EEex_Free(dlladdress)
 	return result
@@ -251,7 +287,7 @@ end
 
 function EEex_GetCurrentCInfinity()
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
-	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + 0xD14) -- (CInfGame)
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
 	local m_visibleArea = EEex_ReadByte(m_pObjectGame + 0x3DA0, 0) -- (byte)
 	local m_gameArea = EEex_ReadDword(m_pObjectGame + m_visibleArea * 4 + 0x3DA4) -- (CGameArea)
 	local m_cInfinity = m_gameArea + 0x484 -- (CInfinity)
@@ -1000,7 +1036,7 @@ function EEex_WriteOpcode(opcodeFunctions)
 			!call >operator_new
 			!add_esp_byte 04
 			!test_eax_eax
-			!je_dword :5A5A0F
+			!je_dword >CGameEffect::DecodeEffect()_fail_label
 			!mov_ecx_[ebp+byte] 14
 			!push_[ecx+byte] 04
 			!push_[ecx]
@@ -1010,7 +1046,7 @@ function EEex_WriteOpcode(opcodeFunctions)
 			!push_edi
 			!call ]], {constructor, 4, 4}, [[
 			!mov_esi_eax
-			!jmp_dword :5A5A11
+			!jmp_dword >CGameEffect::DecodeEffect()_success_label
 		]]}
 	end
 
@@ -1320,376 +1356,15 @@ function EEex_EnableCodeProtection()
 	EEex_Free(temp)
 end
 
-------------
--- !MAIN! --
-------------
-
-function EEex_Main()
-
-	-- !!!----------------------------------------------------------------!!!
-	--  | EEex_Init() is the only new function that is exposed by default. |
-	--  | It does several things:                                          |
-    --  |                                                                  |
-	--  |   1. Exposes the hardcoded function EEex_WriteByte()             |
-    --  |                                                                  |
-	--  |   2. Exposes the hardcoded function EEex_ExposeToLua()           |
-    --  |                                                                  |
-	--  |   3. Calls VirtualAlloc() with the following params =>           |
-	--  |        lpAddress = 0                                             |
-    --  |        dwSize = 0x1000                                           |
-    --  |        flAllocationType = MEM_COMMIT | MEM_RESERVE               |
-    --  |        flProtect = PAGE_EXECUTE_READWRITE                        |
-    --  |                                                                  |
-    --  |   4. Passes along the VirtualAlloc()'s return value              |
-    -- !!! ---------------------------------------------------------------!!!
-	local initialMemory = EEex_Init()
-
-	-- Inform the dynamic memory system of the hardcoded starting memory.
-	-- (Had to hardcode initial memory because I couldn't include a VirtualAlloc wrapper
-	-- without using more than the 340 alignment bytes available.)
-	table.insert(EEex_CodePageAllocations, {
-		{["address"] = initialMemory, ["size"] = 0x1000, ["reserved"] = false}
-	})
-
-	Infinity_DoFile("EEex_Lab") -- Labels
-	Infinity_DoFile("EEex_Mac") -- Macros
-
-	-- Calls an internal function at the given address.
-
-	-- stackArgs: Includes the values to be pushed before the function is called.
-	--            Note that the stackArgs are pushed in the order they are defined,
-	--            so in order to call a function properly these args should be defined in reverse.
-
-	-- ecx: Sets the ecx register to the given value directly before calling the internal function.
-	--      The ecx register is most commonly used to pass the "this" pointer.
-
-	-- popSize: Some internal functions don't clean up the stackArgs pushed to them. This value
-	--          defines the size, (in bytes), that should be removed from the stack after the
-	--          internal function is called. Please note that if this value is wrong, the game
-	--          WILL crash due to an imbalanced stack.
-
-	-- SIGNATURE:
-	-- number eax = EEex_Call(number address, table stackArgs, number ecx, number popSize)
-	EEex_WriteAssemblyFunction("EEex_Call", {[[
-		!push_state
-		!push_byte 02
-		!push_[ebp+byte] 08
-		!call >_lua_rawlen
-		!add_esp_byte 08
-		!test_eax_eax
-		!je_dword >no_args
-		!mov_edi_eax
-		!mov_esi #01
-		@arg_loop
-		!push_esi
-		!push_byte 02
-		!push_[ebp+byte] 08
-		!call >_lua_rawgeti
-		!add_esp_byte 0C
-		!push_byte 00
-		!push_byte FF
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-		!push_byte FE
-		!push_[ebp+byte] 08
-		!call >_lua_settop
-		!add_esp_byte 08
-		!inc_esi
-		!cmp_esi_edi
-		!jle_dword >arg_loop
-		@no_args
-		!push_byte 00
-		!push_byte 03
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-		!push_byte 00
-		!push_byte 01
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!pop_ecx
-		!call_eax
-		!push_eax
-		!fild_[esp]
-		!sub_esp_byte 04
-		!fstp_qword:[esp]
-		!push_[ebp+byte] 08
-		!call >_lua_pushnumber
-		!add_esp_byte 0C
-		!push_byte 00
-		!push_byte 04
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!add_esp_eax
-		!mov_eax #01
-		!pop_state
-		!ret
-	]]})
-
-	-- Writes the given string at the specified address.
-	-- NOTE: Writes a terminating NULL in addition to the raw string.
-
-	-- junk result = EEex_WriteString(number address, string toWrite)
-	EEex_WriteAssemblyFunction("EEex_WriteString", {
-		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
-		!call >_lua_tonumberx \z
-		83 C4 0C \z
-		!call >__ftol2_sse \z
-		8B F8 6A 00 6A 02 FF 75 08 \z
-		!call >_lua_tolstring \z
-		83 C4 0C 8B F0 8A 06 88 07 46 47 80 3E 00 75 F5 C6 07 00 B8 00 00 00 00 5F 5E 5A 59 5B 5D C3"
-	})
-
-	local debugHookName = "EEex_ReadDwordDebug"
-	local debugHookAddress = EEex_Malloc(#debugHookName + 1)
-	EEex_WriteString(debugHookAddress, debugHookName)
-
-	-- Reads a dword at the given address. What more is there to say.
-
-	-- SIGNATURE:
-	-- number result = EEex_ReadDword(number address)
-	EEex_WriteAssemblyFunction("EEex_ReadDword", {
-		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
-		!call >_lua_tonumberx \z
-		83 C4 0C \z
-		!call >__ftol2_sse \z
-		FF 30 \z
-		50 \z
-		68", {debugHookAddress, 4},
-		"FF 75 08 \z
-		!call >_lua_getglobal \z
-		83 C4 08 \z
-		DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
-		!call >_lua_pushnumber \z
-		83 C4 0C \z
-		FF 34 24 \z
-		DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
-		!call >_lua_pushnumber \z
-		83 C4 0C \z
-		6A 00 6A 00 6A 00 6A 00 6A 02 FF 75 08 \z
-		!call >_lua_pcallk \z
-		83 C4 18 \z
-		DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
-		!call >_lua_pushnumber \z
-		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
-	})
-
-	-- Disabled legacy EEex_ReadDword (no debug hook included)
-	--[[
-	EEex_WriteAssemblyFunction("EEex_ReadDword", {
-		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
-		!call >_lua_tonumberx \z
-		83 C4 0C \z
-		!call >__ftol2_sse \z
-		FF 30 DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
-		!call >_lua_pushnumber \z
-		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
-	})
-	--]]
-
-	-- Reads a string from the given address until a NULL is encountered.
-	-- NOTE: Certain game structures, (most commonly resrefs), don't
-	-- necessarily end in a NULL. Regarding resrefs, if one uses all
-	-- 8 characters of alloted space, no NULL will be written. To read
-	-- this properly, please use EEex_ReadLString with maxLength set to 8.
-	-- In cases where the string is guaranteed to have a terminating NULL,
-	-- use this function.
-
-	-- SIGNATURE:
-	-- string result = EEex_ReadString(number address)
-	EEex_WriteAssemblyFunction("EEex_ReadString", {[[
-		!push_state
-		!push_byte 00
-		!push_byte 01
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-		!push_[ebp+byte] 08
-		!call >_lua_pushstring
-		!add_esp_byte 08
-		!mov_eax #01
-		!pop_state
-		!ret
-	]]})
-
-	-- This is much longer than EEex_ReadString because it had to use new behavior.
-	-- Reads until NULL is encountered, OR until it reaches the given length.
-	-- Registers esi, ebx, and edi are all assumed to be non-volitile.
-
-	-- SIGNATURE:
-	-- string result = EEex_ReadLString(number address, number maxLength)
-	EEex_WriteAssemblyFunction("EEex_ReadLString", {[[
-		!build_stack_frame
-		!sub_esp_byte 08
-		!push_registers
-		!push_byte 00
-		!push_byte 01
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!mov_esi_eax
-		!push_byte 00
-		!push_byte 02
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!mov_ebx_eax
-		!and_eax_byte FC
-		!add_eax_byte 04
-		!mov_[ebp+byte]_esp FC
-		!sub_esp_eax
-		!mov_edi_esp
-		!mov_[ebp+byte]_edi F8
-		!add_ebx_esi
-		@read_loop
-		!mov_al_[esi]
-		!mov_[edi]_al
-		!test_al_al
-		!je_dword >done
-		!inc_esi
-		!inc_edi
-		!cmp_esi_ebx
-		!jl_dword >read_loop
-		!mov_[edi]_byte 00
-		@done
-		!push_[ebp+byte] F8
-		!push_[ebp+byte] 08
-		!call >_lua_pushstring
-		!add_esp_byte 08
-		!mov_esp_[ebp+byte] FC
-		!mov_eax #01
-		!restore_stack_frame
-		!ret
-	]]})
-
-	-- Returns the memory address of the given userdata object.
-
-	-- SIGNATURE:
-	-- number result = EEex_ReadUserdata(userdata value)
-	EEex_WriteAssemblyFunction("EEex_ReadUserdata", {
-		"55 8B EC 53 51 52 56 57 6A 01 FF 75 08 \z
-		!call >_lua_touserdata \z
-		83 C4 08 50 DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
-		!call >_lua_pushnumber \z
-		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
-	})
-
-	-- Returns a lightuserdata object that points to the given address.
-
-	-- SIGNATURE:
-	-- userdata result = EEex_ToLightUserdata(number address)
-	EEex_WriteAssemblyFunction("EEex_ToLightUserdata", {
-		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
-		!call >_lua_tonumberx \z
-		83 C4 0C \z
-		!call >__ftol2_sse \z
-		50 FF 75 08 \z
-		!call >_lua_pushlightuserdata \z
-		83 C4 08 B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
-	})
-
-	EEex_WriteAssemblyFunction("EEex_GetEffectiveY", {[[
-
-		!push_state
-
-		!push_byte 00
-		!push_byte 01
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!mov_edx_eax
-
-		!mov_eax #55555556
-		!shl_edx 02
-		!imul_edx
-		!mov_eax_edx
-		!shr_eax 1F
-		!add_eax_edx
-
-		!push_eax
-		!fild_[esp]
-		!sub_esp_byte 04
-		!fstp_qword:[esp]
-		!push_[ebp+byte] 08
-		!call >_lua_pushnumber
-		!add_esp_byte 0C
-
-		!mov_eax #01
-		!pop_state
-		!ret
-
-	]]})
-
-	EEex_WriteAssemblyFunction("EEex_Memset", {[[
-
-		!push_state
-
-		!push_byte 00
-		!push_byte 02
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-
-		!push_byte 00
-		!push_byte 03
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-
-		!push_byte 00
-		!push_byte 01
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-
-		!call >_memset
-		!add_esp_byte 0C
-
-		!mov_eax #00
-		!pop_state
-		!ret
-
-	]]})
-
-	EEex_DisableCodeProtection()
-
-	local newVersionString = "(EEex) v%d.%d.%d.%d"
-	local newVersionStringAddress = EEex_Malloc(#newVersionString + 1)
-	EEex_WriteString(newVersionStringAddress, newVersionString)
-	EEex_WriteAssembly(EEex_Label("CChitin::GetVersionString()_versionStringPush"), {{newVersionStringAddress, 4}})
-
-	EEex_EnableCodeProtection()
-end
-EEex_Main()
-
 ---------------------
 --  Input Details  --
 ---------------------
 
 function EEex_GetTrueMousePos()
 	local ecx = EEex_ReadDword(EEex_Label("g_pChitin"))
-	local mouseX = EEex_ReadDword(ecx + 0xC40)
-	local mouseY = EEex_ReadDword(ecx + 0xC44)
+	local cMousePosition = ecx + EEex_Label("CChitin::cMousePosition")
+	local mouseX = EEex_ReadDword(cMousePosition)
+	local mouseY = EEex_ReadDword(cMousePosition + 0x4)
 	return mouseX, mouseY
 end
 
@@ -1711,7 +1386,7 @@ end
 
 function EEex_TranslateGameXY(mouseGameX, mouseGameY)
 	local eax = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
-	local ecx = EEex_ReadDword(eax + 0xD14)
+	local ecx = EEex_ReadDword(eax + EEex_Label("CBaldurChitin::m_pObjectGame"))
 	eax = EEex_ReadByte(ecx + 0x3DA0, 0)
 	local esi = EEex_ReadDword(ecx + eax * 4 + 0x3DA4)
 	esi = esi + 0x484
@@ -1818,7 +1493,7 @@ end
 
 function EEex_GetActorIDCursor()
 	local esi = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
-	local ecx = EEex_ReadDword(esi + 0xD14)
+	local ecx = EEex_ReadDword(esi + EEex_Label("CBaldurChitin::m_pObjectGame"))
 	local eax = EEex_ReadByte(ecx + 0x3DA0, 0x0)
 	eax = EEex_ReadDword(ecx + eax * 4 + 0x3DA4)
 	eax = EEex_ReadDword(eax + 0x21C)
@@ -1831,7 +1506,7 @@ end
 
 function EEex_IterateAreas(func)
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
-	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + 0xD14)
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
 	local m_gameAreas = m_pObjectGame + 0x3DA4
 	for i = 0, 11, 1 do
 		local m_gameArea = EEex_ReadDword(m_gameAreas + i * 4)
@@ -1876,12 +1551,12 @@ end
 
 function EEex_GetActorIDPortrait(slot)
 	return EEex_Call(EEex_Label("CInfGame::GetCharacterId"), {slot},
-		EEex_ReadDword(EEex_ReadDword(EEex_Label("g_pBaldurChitin")) + 0xD14), 0x0)
+		EEex_ReadDword(EEex_ReadDword(EEex_Label("g_pBaldurChitin")) + EEex_Label("CBaldurChitin::m_pObjectGame")), 0x0)
 end
 
 function EEex_GetActorIDSelected()
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
-	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + 0xD14) -- (CInfGame)
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
 	local m_pNodeHead = EEex_ReadDword(m_pObjectGame + 0x3E54)
 	if m_pNodeHead ~= 0x0 then
 		local actorID = EEex_ReadDword(m_pNodeHead + 0x8)
@@ -1894,7 +1569,7 @@ end
 function EEex_GetAllActorIDSelected()
 	local ids = {}
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
-	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + 0xD14) -- (CInfGame)
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
 	local CPtrList = m_pObjectGame + 0x3E50
 	EEex_IterateCPtrList(CPtrList, function(actorID)
 		table.insert(ids, actorID)
@@ -1908,7 +1583,7 @@ end
 
 function EEex_SetActionbarState(actionbarConfig)
 	local eax = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
-	local ecx = EEex_ReadDword(eax + 0xD14)
+	local ecx = EEex_ReadDword(eax + EEex_Label("CBaldurChitin::m_pObjectGame"))
 	eax = EEex_ReadByte(ecx + 0x3DA0, 0)
 	eax = EEex_ReadDword(ecx + eax * 4 + 0x3DA4)
 	eax = EEex_ReadDword(eax + 0x204)
@@ -1947,7 +1622,7 @@ function EEex_SetActionbarButton(buttonIndex, buttonType)
 		EEex_Error("buttonIndex out of bounds")
 	end
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
-	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + 0xD14) -- (CInfGame)
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
 	local m_visibleArea = EEex_ReadByte(m_pObjectGame + 0x3DA0, 0) -- (byte)
 	local m_gameArea = EEex_ReadDword(m_pObjectGame + m_visibleArea * 4 + 0x3DA4) -- (CGameArea)
 	if m_gameArea ~= 0x0 then
@@ -1962,7 +1637,7 @@ function EEex_GetActionbarButton(buttonIndex)
 	if buttonIndex < 0 or buttonIndex > 11 then
 		EEex_Error("buttonIndex out of bounds")
 	end
-	local ecx = EEex_ReadDword(EEex_ReadDword(EEex_Label("g_pBaldurChitin")) + 0xD14)
+	local ecx = EEex_ReadDword(EEex_ReadDword(EEex_Label("g_pBaldurChitin")) + EEex_Label("CBaldurChitin::m_pObjectGame"))
 	local actionbarAddress = EEex_ReadDword(EEex_ReadDword(ecx + EEex_ReadByte(ecx + 0x3DA0, 0) * 4 + 0x3DA4) + 0x204) + 0x2654
 	return EEex_ReadDword(actionbarAddress + 0x1440 + buttonIndex * 0x4)
 end
@@ -2810,33 +2485,388 @@ function EEex_UnmemorizeInnateSpell(actorID, index)
 	::_0::
 end
 
---------------------
---  Engine Hooks  --
---------------------
+-------------
+-- Startup --
+-------------
 
-if not EEex_MinimalStartup then
-	Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
-	Infinity_DoFile("EEex_AHo") -- Actions Hook
-	Infinity_DoFile("EEex_Bar") -- Actionbar Hook
-	Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
-	Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
-	Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
-	Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
-	Infinity_DoFile("EEex_Obj") -- New Script Objects
-	Infinity_DoFile("EEex_Ren") -- Render Hook
-	Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
-	Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
-end
+(function()
 
---------------
---  Modules --
---------------
+	-- Inform the dynamic memory system of the hardcoded starting memory.
+	-- (Had to hardcode initial memory because I couldn't include a VirtualAlloc wrapper
+	-- without using more than the 340 alignment bytes available.)
+	table.insert(EEex_CodePageAllocations, {
+		{["address"] = EEex_InitialMemory, ["size"] = 0x1000, ["reserved"] = false}
+	})
 
-if not EEex_MinimalStartup then
-	Infinity_DoFile("EEex_INI") -- Define modules...
-	for moduleName, moduleEnabled in pairs(EEex_Modules) do
-		if moduleEnabled then
-			Infinity_DoFile(moduleName)
+	-- Fetch the matched pattern addresses from the loader.
+	-- (Thanks @mrfearless!): https://github.com/mrfearless/EEexLoader
+	EEex_GlobalAssemblyLabels = EEex_AddressList()
+
+	-- Assembly Macros
+	Infinity_DoFile("EEex_Mac")
+
+	------------------------
+	--  Default Functions --
+	------------------------
+
+	-- Calls an internal function at the given address.
+
+	-- stackArgs: Includes the values to be pushed before the function is called.
+	--            Note that the stackArgs are pushed in the order they are defined,
+	--            so in order to call a function properly these args should be defined in reverse.
+
+	-- ecx: Sets the ecx register to the given value directly before calling the internal function.
+	--      The ecx register is most commonly used to pass the "this" pointer.
+
+	-- popSize: Some internal functions don't clean up the stackArgs pushed to them. This value
+	--          defines the size, (in bytes), that should be removed from the stack after the
+	--          internal function is called. Please note that if this value is wrong, the game
+	--          WILL crash due to an imbalanced stack.
+
+	-- SIGNATURE:
+	-- number eax = EEex_Call(number address, table stackArgs, number ecx, number popSize)
+	EEex_WriteAssemblyFunction("EEex_Call", {[[
+		!push_state
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_rawlen
+		!add_esp_byte 08
+		!test_eax_eax
+		!je_dword >no_args
+		!mov_edi_eax
+		!mov_esi #01
+		@arg_loop
+		!push_esi
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_rawgeti
+		!add_esp_byte 0C
+		!push_byte 00
+		!push_byte FF
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+		!push_byte FE
+		!push_[ebp+byte] 08
+		!call >_lua_settop
+		!add_esp_byte 08
+		!inc_esi
+		!cmp_esi_edi
+		!jle_dword >arg_loop
+		@no_args
+		!push_byte 00
+		!push_byte 03
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!pop_ecx
+		!call_eax
+		!push_eax
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[ebp+byte] 08
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+		!push_byte 00
+		!push_byte 04
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!add_esp_eax
+		!mov_eax #01
+		!pop_state
+		!ret
+	]]})
+
+	-- Writes the given string at the specified address.
+	-- NOTE: Writes a terminating NULL in addition to the raw string.
+
+	-- junk result = EEex_WriteString(number address, string toWrite)
+	EEex_WriteAssemblyFunction("EEex_WriteString", {
+		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
+		!call >_lua_tonumberx \z
+		83 C4 0C \z
+		!call >__ftol2_sse \z
+		8B F8 6A 00 6A 02 FF 75 08 \z
+		!call >_lua_tolstring \z
+		83 C4 0C 8B F0 8A 06 88 07 46 47 80 3E 00 75 F5 C6 07 00 B8 00 00 00 00 5F 5E 5A 59 5B 5D C3"
+	})
+
+	local debugHookName = "EEex_ReadDwordDebug"
+	local debugHookAddress = EEex_Malloc(#debugHookName + 1)
+	EEex_WriteString(debugHookAddress, debugHookName)
+
+	-- Reads a dword at the given address. What more is there to say.
+
+	-- SIGNATURE:
+	-- number result = EEex_ReadDword(number address)
+	EEex_WriteAssemblyFunction("EEex_ReadDword", {
+		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
+		!call >_lua_tonumberx \z
+		83 C4 0C \z
+		!call >__ftol2_sse \z
+		FF 30 \z
+		50 \z
+		68", {debugHookAddress, 4},
+		"FF 75 08 \z
+		!call >_lua_getglobal \z
+		83 C4 08 \z
+		DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
+		!call >_lua_pushnumber \z
+		83 C4 0C \z
+		FF 34 24 \z
+		DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
+		!call >_lua_pushnumber \z
+		83 C4 0C \z
+		6A 00 6A 00 6A 00 6A 00 6A 02 FF 75 08 \z
+		!call >_lua_pcallk \z
+		83 C4 18 \z
+		DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
+		!call >_lua_pushnumber \z
+		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
+	})
+
+	-- Disabled legacy EEex_ReadDword (no debug hook included)
+	--[[
+	EEex_WriteAssemblyFunction("EEex_ReadDword", {
+		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
+		!call >_lua_tonumberx \z
+		83 C4 0C \z
+		!call >__ftol2_sse \z
+		FF 30 DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
+		!call >_lua_pushnumber \z
+		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
+	})
+	--]]
+
+	-- Reads a string from the given address until a NULL is encountered.
+	-- NOTE: Certain game structures, (most commonly resrefs), don't
+	-- necessarily end in a NULL. Regarding resrefs, if one uses all
+	-- 8 characters of alloted space, no NULL will be written. To read
+	-- this properly, please use EEex_ReadLString with maxLength set to 8.
+	-- In cases where the string is guaranteed to have a terminating NULL,
+	-- use this function.
+
+	-- SIGNATURE:
+	-- string result = EEex_ReadString(number address)
+	EEex_WriteAssemblyFunction("EEex_ReadString", {[[
+		!push_state
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+		!push_[ebp+byte] 08
+		!call >_lua_pushstring
+		!add_esp_byte 08
+		!mov_eax #01
+		!pop_state
+		!ret
+	]]})
+
+	-- This is much longer than EEex_ReadString because it had to use new behavior.
+	-- Reads until NULL is encountered, OR until it reaches the given length.
+	-- Registers esi, ebx, and edi are all assumed to be non-volitile.
+
+	-- SIGNATURE:
+	-- string result = EEex_ReadLString(number address, number maxLength)
+	EEex_WriteAssemblyFunction("EEex_ReadLString", {[[
+		!build_stack_frame
+		!sub_esp_byte 08
+		!push_registers
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_esi_eax
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_ebx_eax
+		!and_eax_byte FC
+		!add_eax_byte 04
+		!mov_[ebp+byte]_esp FC
+		!sub_esp_eax
+		!mov_edi_esp
+		!mov_[ebp+byte]_edi F8
+		!add_ebx_esi
+		@read_loop
+		!mov_al_[esi]
+		!mov_[edi]_al
+		!test_al_al
+		!je_dword >done
+		!inc_esi
+		!inc_edi
+		!cmp_esi_ebx
+		!jl_dword >read_loop
+		!mov_[edi]_byte 00
+		@done
+		!push_[ebp+byte] F8
+		!push_[ebp+byte] 08
+		!call >_lua_pushstring
+		!add_esp_byte 08
+		!mov_esp_[ebp+byte] FC
+		!mov_eax #01
+		!restore_stack_frame
+		!ret
+	]]})
+
+	-- Returns the memory address of the given userdata object.
+
+	-- SIGNATURE:
+	-- number result = EEex_ReadUserdata(userdata value)
+	EEex_WriteAssemblyFunction("EEex_ReadUserdata", {
+		"55 8B EC 53 51 52 56 57 6A 01 FF 75 08 \z
+		!call >_lua_touserdata \z
+		83 C4 08 50 DB 04 24 83 EC 04 DD 1C 24 FF 75 08 \z
+		!call >_lua_pushnumber \z
+		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
+	})
+
+	-- Returns a lightuserdata object that points to the given address.
+
+	-- SIGNATURE:
+	-- userdata result = EEex_ToLightUserdata(number address)
+	EEex_WriteAssemblyFunction("EEex_ToLightUserdata", {
+		"55 8B EC 53 51 52 56 57 6A 00 6A 01 FF 75 08 \z
+		!call >_lua_tonumberx \z
+		83 C4 0C \z
+		!call >__ftol2_sse \z
+		50 FF 75 08 \z
+		!call >_lua_pushlightuserdata \z
+		83 C4 08 B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
+	})
+
+	EEex_WriteAssemblyFunction("EEex_GetEffectiveY", {[[
+
+		!push_state
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_edx_eax
+
+		!mov_eax #55555556
+		!shl_edx 02
+		!imul_edx
+		!mov_eax_edx
+		!shr_eax 1F
+		!add_eax_edx
+
+		!push_eax
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[ebp+byte] 08
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!mov_eax #01
+		!pop_state
+		!ret
+
+	]]})
+
+	EEex_WriteAssemblyFunction("EEex_Memset", {[[
+
+		!push_state
+
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte 00
+		!push_byte 03
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!call >_memset
+		!add_esp_byte 0C
+
+		!mov_eax #00
+		!pop_state
+		!ret
+
+	]]})
+
+	--------------------
+	--  Version Hook  --
+	--------------------
+
+	EEex_DisableCodeProtection()
+
+	local newVersionString = "(EEex) v%d.%d.%d.%d"
+	local newVersionStringAddress = EEex_Malloc(#newVersionString + 1)
+	EEex_WriteString(newVersionStringAddress, newVersionString)
+	EEex_WriteAssembly(EEex_Label("CChitin::GetVersionString()_versionStringPush"), {{newVersionStringAddress, 4}})
+
+	EEex_EnableCodeProtection()
+
+	if not EEex_MinimalStartup then
+
+		--------------------
+		--  Engine Hooks  --
+		--------------------
+
+		Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
+		Infinity_DoFile("EEex_AHo") -- Actions Hook
+		Infinity_DoFile("EEex_Bar") -- Actionbar Hook
+		Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
+		Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
+		Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
+		Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
+		Infinity_DoFile("EEex_Obj") -- New Script Objects
+		Infinity_DoFile("EEex_Ren") -- Render Hook
+		Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
+		Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
+		Infinity_DoFile("EEex_Fix") -- Engine Related Bug Fixes
+
+		--------------
+		--  Modules --
+		--------------
+
+		Infinity_DoFile("EEex_INI") -- Define modules...
+		for moduleName, moduleEnabled in pairs(EEex_Modules) do
+			if moduleEnabled then
+				Infinity_DoFile(moduleName)
+			end
 		end
 	end
-end
+end)()

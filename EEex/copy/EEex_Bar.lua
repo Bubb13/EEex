@@ -40,41 +40,66 @@ function EEex_InstallActionbarHook()
 	local hookName = "EEex_HookActionbar"
 	local hookNameAddress = EEex_Malloc(#hookName + 1)
 	EEex_WriteString(hookNameAddress, hookName)
-	local hookAddress = EEex_WriteAssemblyAuto({
-		"8B 45 08 48 83 F8 71 77 4A 0F B6 80 0C 98 61 00 50 \z
-		68", {hookNameAddress, 4},
-		"FF 35 0C 01 94 00 \z
-		E8 >_lua_getglobal \z
-		83 C4 08 DB 04 24 83 EC 04 DD 1C 24 FF 35 0C 01 94 00 \z
-		E8 >_lua_pushnumber \z
-		83 C4 0C 6A 00 6A 00 6A 00 6A 00 6A 01 FF 35 0C 01 94 00 \z
-		E8 >_lua_pcallk \z
-		83 C4 18 8B CF \z
-		E8 >CInfButtonArray::UpdateButtons \z
-		E9 :619778"
-	})
+
+	local hookAddress = EEex_WriteAssemblyAuto({[[
+
+		!mov_eax_[ebp+byte] 08
+		!dec_eax
+		!cmp_eax_byte 71
+		!ja_dword >UpdateButtons
+
+		!movzx_eax_byte:[eax+dword] *CInfButtonArray::SetState()_IndirectJumpTable
+		!push_eax
+
+		!push_dword ]], {hookNameAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		@UpdateButtons
+		!mov_ecx_edi
+		!call >CInfButtonArray::UpdateButtons
+		!jmp_dword >CInfButtonArray::SetState()_AfterUpdate
+	]]})
 
 	local hookData = EEex_Malloc(0xC)
-	local fixSpecial = EEex_WriteAssemblyAuto({
-		"8B 45 04 \z
-		A3", {hookData, 4},
-		"8B 86 78 14 00 00 \z
-		A3", {hookData + 0x4, 4},
-		"89 35", {hookData + 0x8, 4},
-		"C7 45 04 *resume \z
-		E9 :61663D \z
-		@resume \z
-		FF 35", {hookData + 0x4, 4},
-		"8B 0D", {hookData + 0x8, 4},
-		"C7 81 08 16 00 00 0A 00 00 00 \z
-		E8 >CInfButtonArray::SetState \z
-		FF 25", {hookData, 4}
+	local fixSpecial = EEex_WriteAssemblyAuto({[[
+
+		!mov_eax_[ebp+byte] 04
+		!mov_[dword]_eax ]], {hookData, 4}, [[
+		!mov_eax_[esi+dword] #1478
+		!mov_[dword]_eax ]], {hookData + 0x4, 4}, [[
+		!mov_[dword]_esi ]], {hookData + 0x8, 4}, [[
+		!mov_[ebp+byte]_dword 04 *resume
+		!jmp_dword >CInfButtonArray::SetState()_NormalPath
+
+		@resume
+		!push_[dword] ]], {hookData + 0x4, 4}, [[
+		!mov_ecx_[dword] ]], {hookData + 0x8, 4}, [[
+		!mov_[ecx+dword]_dword #1608 #0A
+		!call >CInfButtonArray::SetState
+		!jmp_[dword] ]], {hookData, 4},
 	})
 
 	EEex_DisableCodeProtection()
 
-	EEex_WriteAssembly(0x619771, {"E9", {hookAddress, 4, 4}})
-	EEex_WriteAssembly(0x61716C, {{fixSpecial, 4}})
+	EEex_WriteAssembly(EEex_Label("CInfButtonArray::SetState()_BeforeUpdate"), {"!jmp_dword", {hookAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("CInfButtonArray::OnLButtonPressed()_MainSwitchTable") + 16, {{fixSpecial, 4}})
 
 	EEex_EnableCodeProtection()
 end

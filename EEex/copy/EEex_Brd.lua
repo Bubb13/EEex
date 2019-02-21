@@ -14,25 +14,48 @@ function EEex_HookBardThieving()
 end
 
 function EEex_InstallBardThievingHook()
+
 	local hookName = "EEex_HookBardThieving"
 	local hookNameAddress = EEex_Malloc(#hookName + 1)
 	EEex_WriteString(hookNameAddress, hookName)
-	local hookAddress = EEex_WriteAssemblyAuto({
-		"68", {hookNameAddress, 4},
-		"FF 35 0C 01 94 00 \z
-		E8 >_lua_getglobal \z
-		83 C4 08 6A 00 6A 00 6A 00 6A 01 6A 00 FF 35 0C 01 94 00 \z
-		E8 >_lua_pcallk \z
-		83 C4 18 6A 00 6A FF FF 35 0C 01 94 00 \z
-		E8 >_lua_tonumberx \z
-		83 C4 0C \z
-		E8 >__ftol2_sse \z
-		50 6A FE FF 35 0C 01 94 00 \z
-		E8 >_lua_settop \z
-		83 C4 08 58 C3"
-	})
+
+	local hookAddress = EEex_WriteAssemblyAuto({[[
+
+		!push_dword ]], {hookNameAddress, 4}, [[
+
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_byte 00
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!push_byte 00
+		!push_byte FF
+		!push_[dword] *_g_lua
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte FE
+		!push_[dword] *_g_lua
+		!call >_lua_settop
+		!add_esp_byte 08
+
+		!pop_eax
+		!ret
+	]]})
+
 	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(0x616D5C, {{hookAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("ThievingClassHook"), {{hookAddress, 4, 4}})
 	EEex_EnableCodeProtection()
 end
 EEex_InstallBardThievingHook()

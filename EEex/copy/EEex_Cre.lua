@@ -3,7 +3,7 @@ EEex_NewStatsCount = 0xFFFF
 
 function EEex_HookConstructCreature(fromFile, toStruct)
 
-	-- arbitrary new maximum... but let's make it pretty and have 
+	-- arbitrary new maximum... but let's make it pretty and have
 	-- it be the max of an unsigned short... maybe people will think
 	-- there is an actual meaning behind it that way; for full
 	-- explanation, see video: https://youtu.be/dQw4w9WgXcQ
@@ -30,75 +30,55 @@ function B3Cre_InstallCreatureHook()
 
 	EEex_DisableCodeProtection()
 
-	-- Increase creature struct size by 0x8 bytes (in memory)	
-	for _, address in ipairs({
-		0x51C21E,
-		0x51E0A4,
-		0x521231,
-		0x53EE01,
-		0x53F6AD,
-		0x53FF0D,
-		0x54F945,
-		0x54FD53,
-		0x55C648,
-		0x55C6E7,
-		0x55C74C,
-		0x55C7B9,
-		0x560796,
-		0x568077,
-		0x57C8E4,
-		0x57D081,
-		0x584C61,
-		0x586FDF,
-		0x588CB2,
-		0x590E7C,
-		0x5938AF,
-		0x5B31B0,
-		0x5B34FF,
-		0x5B650A,
-		0x5B9DDC,
-		0x5BA13C,
-		0x5C0906,
-		0x5C0CB7,
-		0x620D8D,
-		0x62D05D,
-		0x63E5D4,
-		0x63E629,
-		0x63E927,
-		0x63E96C,
-		0x641DB0,
-		0x656029,
-		0x667462,
-		0x66BDC9,
-		0x69DE3A,
-		0x6E19F7,
-		0x6ECB87,
-		0x714887
-	})
-	do
+	-- Increase creature struct size by 0x8 bytes (in memory)
+	for _, address in ipairs(EEex_Label("CreAllocationSize")) do
 		EEex_WriteAssembly(address + 1, {{0x3B20, 4}})
 	end
 
 	local hookNameLoad = "EEex_HookConstructCreature"
 	local hookNameLoadAddress = EEex_Malloc(#hookNameLoad + 1)
 	EEex_WriteString(hookNameLoadAddress, hookNameLoad)
-	local hookAddressLoad = EEex_WriteAssemblyAuto({
-		"E8 :52EEE0 "..
-		"68", {hookNameLoadAddress,  4},
-		"FF 35 0C 01 94 00 "..
-		"E8 :4B5C10 "..
-		"83 C4 08 FF 75 08 DB 04 24 83 EC 04 DD 1C 24 FF 35 0C 01 94 00 "..
-		"E8 :4B5960 "..
-		"83 C4 0C 53 DB 04 24 83 EC 04 DD 1C 24 FF 35 0C 01 94 00 "..
-		"E8 :4B5960 "..
-		"83 C4 0C 6A 00 6A 00 6A 00 6A 00 6A 02 FF 35 0C 01 94 00 "..
-		"E8 :4B63F0 "..
-		"83 C4 18 "..
-		"E9 :6D40CB"
+
+	local hookConstructCreatureAddress = EEex_Label("CGameSprite::CGameSprite()_HookConstructCreature")
+
+	local hookAddressLoad = EEex_WriteAssemblyAuto({[[
+
+		!call >CGameAIBase::CGameAIBase
+		!push_dword ]], {hookNameLoadAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_[ebp+byte] 08
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_ebx
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 02
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+
+		!add_esp_byte 18
+		!jmp_dword ]], {hookConstructCreatureAddress + 0x5, 4, 4},
 	})
 
-	-- Install EEex_HookLoadCreature
-	EEex_WriteAssembly(0x6D40C6, {"E9", {hookAddressLoad, 4, 4}})
+	-- Install EEex_HookConstructCreature
+	EEex_WriteAssembly(hookConstructCreatureAddress, {"!jmp_dword", {hookAddressLoad, 4, 4}})
 
 	local hookNameReload = "EEex_HookReloadStats"
 	local hookNameReloadAddress = EEex_Malloc(#hookNameReload + 1)
@@ -182,20 +162,22 @@ function B3Cre_InstallCreatureHook()
 	]]})
 
 	-- Install EEex_HookReloadStats
-	EEex_WriteAssembly(0x6F5A21, {{hookReload1, 4, 4}})
-	EEex_WriteAssembly(0x7064CC, {{hookReload1, 4, 4}})
-	EEex_WriteAssembly(0x7068F3, {{hookReload1, 4, 4}})
-	EEex_WriteAssembly(0x723894, {{hookReload2, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookReloadStats1"), {{hookReload1, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookReloadStats2"), {{hookReload1, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookReloadStats3"), {{hookReload1, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookReloadStats4"), {{hookReload2, 4, 4}})
 
 	local hookNameDeconstruct = "EEex_HookDeconstructCreature"
 	local hookNameDeconstructAddress = EEex_Malloc(#hookNameDeconstruct + 1)
 	EEex_WriteString(hookNameDeconstructAddress, hookNameDeconstruct)
 
+	local deconstructHookAddress = EEex_Label("CGameSprite::~CGameSprite")
+
 	local hookDeconstruct = EEex_WriteAssemblyAuto({[[
 
-		!call >CGameSprite::~CGameSprite
+		!push_state
 
-		!push_esi
+		!push_ecx
 
 		!push_dword ]], {hookNameDeconstructAddress, 4}, [[
 		!push_[dword] *_g_lua
@@ -218,12 +200,19 @@ function B3Cre_InstallCreatureHook()
 		!call >_lua_pcallk
 		!add_esp_byte 18
 
-		!ret
+		!pop_state
 
-	]]})
+		!push_ebp
+		!mov_ebp_esp
+		!push_ecx
+		!push_ebx
+
+		!jmp_dword ]], {deconstructHookAddress + 0x5, 4, 4},
+
+	})
 
 	-- Install EEex_HookDeconstructCreature
-	EEex_WriteAssembly(0x56FBE7, {{hookDeconstruct, 4, 4}})
+	EEex_WriteAssembly(deconstructHookAddress, {"!jmp_dword", {hookDeconstruct, 4, 4}})
 
 	-- Allow engine functions to access extended states...
 	local hookAccessState = EEex_WriteAssemblyAuto({[[
@@ -275,7 +264,7 @@ function B3Cre_InstallCreatureHook()
 	local newStatsTempSet1 = EEex_WriteAssemblyAuto({[[
 		!push_state
 		!push_[ebp+byte] 08
-		!call >CDerivedStats::operator=
+		!call >CDerivedStats::operator_equ
 		!push_dword ]], {EEex_NewStatsCount * 4, 4}, [[
 		!mov_eax_[esi+dword] #3B18
 		!push_eax
@@ -290,7 +279,7 @@ function B3Cre_InstallCreatureHook()
 	local newStatsTempSet2 = EEex_WriteAssemblyAuto({[[
 		!push_state
 		!push_[ebp+byte] 08
-		!call >CDerivedStats::operator=
+		!call >CDerivedStats::operator_equ
 		!push_dword ]], {EEex_NewStatsCount * 4, 4}, [[
 		!mov_eax_[edi+dword] #3B18
 		!push_eax
@@ -302,8 +291,8 @@ function B3Cre_InstallCreatureHook()
 		!ret_word 04 00
 	]]})
 
-	EEex_WriteAssembly(0x7111A0, {{newStatsTempSet1, 4, 4}})
-	EEex_WriteAssembly(0x730D24, {{newStatsTempSet2, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookStatsTempSet1"), {{newStatsTempSet1, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookStatsTempSet2"), {{newStatsTempSet2, 4, 4}})
 
 	-- lua wrapper for above function; overrides the default
 	-- value in M__EEex.lua that uses inbuilt functions.
@@ -352,20 +341,21 @@ function B3Cre_InstallCreatureHook()
 	]]})
 
 	-- CheckStat
-	EEex_WriteAssembly(0x532DC6, {{hookAccessState, 4, 4}, "!nop !nop !nop !nop !nop !nop !nop"})
+	EEex_WriteAssembly(EEex_Label("HookCheckStat"), {{hookAccessState, 4, 4}, "!nop !nop !nop !nop !nop !nop !nop"})
 
 	-- CheckStatGT
-	EEex_WriteAssembly(0x532E09, {{hookAccessState, 4, 4}, "!nop !nop !nop !nop !nop !nop !nop"})
+	EEex_WriteAssembly(EEex_Label("HookCheckStatGT"), {{hookAccessState, 4, 4}, "!nop !nop !nop !nop !nop !nop !nop"})
 
 	-- CheckStatLT
-	EEex_WriteAssembly(0x532E4C, {{hookAccessState, 4, 4}, "!nop !nop !nop !nop !nop !nop !nop"})
+	EEex_WriteAssembly(EEex_Label("HookCheckStatLT"), {{hookAccessState, 4, 4}, "!nop !nop !nop !nop !nop !nop !nop"})
 
 	-- Opcodes #318, #324, #326
-	EEex_WriteAssembly(0x603519, {[[
+	local hookSplprotOpcodesAddress = EEex_Label("HookSplprotOpcodes")
+	EEex_WriteAssembly(hookSplprotOpcodesAddress, {[[
 		!push_eax
 		!mov_ecx_edi
 		!call ]], {hookAccessState, 4, 4}, [[
-		!jmp_dword :60353A
+		!jmp_dword ]], {hookSplprotOpcodesAddress + 33, 4, 4}, [[
 		!nop
 		!nop
 	]]})

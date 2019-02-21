@@ -3,5 +3,5 @@
 !setup-EEex.exe
 !EEex/*.*
 !EEex/copy/*.*
+!EEex/loader/*.*
 !EEex/patches/*.*
-!EEex/patches/bg2ee/*.*

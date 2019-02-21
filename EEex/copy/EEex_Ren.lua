@@ -104,7 +104,7 @@ function EEex_InstallRenderHook()
 	]]})
 
 	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(0x55972A, {{renderHookAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("CGameArea::Render()_hook"), {{renderHookAddress, 4, 4}})
 	EEex_EnableCodeProtection()
 end
 EEex_InstallRenderHook()
