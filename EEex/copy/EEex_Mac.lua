@@ -201,7 +201,7 @@ for _, macroEntry in ipairs({
 	{"mov_esp_[ebp+byte]", "8B 65"},
 	{"mov_esp_[ebp+dword]", "8B A5"},
 	{"mov_esp_[ebp]", "8B 65 00"},
-	{"movzx_eax_byte:[eax+dword]", "0F B6 86"},
+	{"movzx_eax_byte:[eax+dword]", "0F B6 80"},
 	{"movzx_eax_word:[esi+byte]", "0F B7 46"},
 	{"movzx_ecx_word:[esi+byte]", "0F B7 4E"},
 	{"movzx_esi_word:[ebp-byte]", "0F B7 75"},
