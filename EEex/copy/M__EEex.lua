@@ -2173,6 +2173,22 @@ function EEex_GetGlobal(globalName)
 	return EEex_FetchVariable(m_variables, globalName)
 end
 
+function EEex_GetAreaGlobal(areaResref, globalName)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local areaResrefAddress = EEex_Malloc(#globalName + 5)
+	EEex_WriteString(areaResrefAddress + 0x4, areaResref)
+	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {areaResrefAddress + 0x4}, areaResrefAddress, 0x0)
+	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"), 
+		{EEex_ReadDword(areaResrefAddress)}, m_pObjectGame, 0x0)
+	if areaAddress ~= 0x0 then
+		local areaVariables = areaAddress + 0xA8C
+		return EEex_FetchVariable(areaVariables, globalName)
+	else
+		return 0x0
+	end
+end
+
 ---------------------
 --  Actor Details  --
 ---------------------

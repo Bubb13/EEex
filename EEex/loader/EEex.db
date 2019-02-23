@@ -533,6 +533,10 @@ PatAdj=-37
 PatBytes=558BEC83EC205356578D4508C745E8000000008BF933DB508D4DFC895DEC
 PatAdj=0
 
+[CInfGame::GetArea]
+PatBytes=558BEC5356578BF932DB8D9B000000000FB6C3
+PatAdj=0
+
 
 ;------------------------------------------------------
 ; EE game global patterns
