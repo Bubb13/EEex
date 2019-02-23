@@ -2163,7 +2163,11 @@ function EEex_FetchVariable(CVariableHash, variableName)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {localAddress + 0x4}, localAddress, 0x0)
 	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
 	EEex_Free(localAddress)
-	return EEex_ReadDword(varAddress + 0x28)
+	if varAddress ~= 0x0 then
+		return EEex_ReadDword(varAddress + 0x28)
+	else
+		return 0x0
+	end
 end
 
 function EEex_GetGlobal(globalName)
