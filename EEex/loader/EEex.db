@@ -453,6 +453,10 @@ PatAdj=0
 PatBytes=558BEC8B55083B510C7D1285D2780E8B4104740B8B004A75FB5DC2040033C05DC20400
 PatAdj=0
 
+[CString::CString(char_const_*)]
+PatBytes=538B5D08578BF9890785DB
+PatAdj=-8
+
 
 ;---------------------------
 ; CInfButtonArray
@@ -524,6 +528,10 @@ PatAdj=-123
 [CAIScript::CAIScript]
 PatBytes=8B45088BCB8945F48B450C8945F88D45F4508D45EC
 PatAdj=-37
+
+[CVariableHash::FindKey]
+PatBytes=558BEC83EC205356578D4508C745E8000000008BF933DB508D4DFC895DEC
+PatAdj=0
 
 
 ;------------------------------------------------------

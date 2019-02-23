@@ -2153,6 +2153,26 @@ function EEex_GetKnownInnateSpells(actorID)
 	return toReturn
 end
 
+-----------------
+--  Game State --
+-----------------
+
+function EEex_FetchVariable(CVariableHash, variableName)
+	local localAddress = EEex_Malloc(#variableName + 5)
+	EEex_WriteString(localAddress + 0x4, variableName)
+	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {localAddress + 0x4}, localAddress, 0x0)
+	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
+	EEex_Free(localAddress)
+	return EEex_ReadDword(varAddress + 0x28)
+end
+
+function EEex_GetGlobal(globalName)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_variables = m_pObjectGame + 0x5BC8
+	return EEex_FetchVariable(m_variables, globalName)
+end
+
 ---------------------
 --  Actor Details  --
 ---------------------
@@ -2230,6 +2250,12 @@ function EEex_GetActorEffectResrefs(actorID)
 		table.insert(toReturn, value)
 	end
 	return toReturn
+end
+
+function EEex_GetActorLocal(actorID, localName)
+	local share = EEex_GetActorShare(actorID)
+	local localVariables = EEex_ReadDword(share + 0x3758)
+	return EEex_FetchVariable(localVariables, localName)
 end
 
 function EEex_GetActorLocation(actorID)
