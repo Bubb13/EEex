@@ -294,6 +294,15 @@ function EEex_GetCurrentCInfinity()
 	return m_cInfinity
 end
 
+function EEex_ConstructCString(string)
+	local stringAddress = EEex_Malloc(#string + 1)
+	EEex_WriteString(stringAddress, string)
+	local CStringAddress = EEex_Malloc(0x4)
+	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {stringAddress}, CStringAddress, 0x0)
+	EEex_Free(stringAddress)
+	return CStringAddress
+end
+
 ----------------------
 -- Assembly Writing --
 ----------------------
@@ -2153,15 +2162,16 @@ function EEex_GetKnownInnateSpells(actorID)
 	return toReturn
 end
 
------------------
---  Game State --
------------------
+----------------
+-- Game State --
+----------------
 
 function EEex_FetchVariable(CVariableHash, variableName)
 	local localAddress = EEex_Malloc(#variableName + 5)
 	EEex_WriteString(localAddress + 0x4, variableName)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {localAddress + 0x4}, localAddress, 0x0)
-	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
+	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), 
+		{EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
 	EEex_Free(localAddress)
 	if varAddress ~= 0x0 then
 		return EEex_ReadDword(varAddress + 0x28)
@@ -2191,6 +2201,26 @@ function EEex_GetAreaGlobal(areaResref, globalName)
 	else
 		return 0x0
 	end
+end
+
+function EEex_2DALoad(_2DAResref)
+	local resrefAddress = EEex_Malloc(#_2DAResref + 1)
+	EEex_WriteString(resrefAddress, _2DAResref)
+	local C2DArray = EEex_Malloc(0x20)
+	EEex_Memset(C2DArray, 0x20, 0x0)
+	EEex_WriteDword(C2DArray + 0x18, EEex_Label("_afxPchNil"))
+	EEex_Call(EEex_Label("C2DArray::Load"), {resrefAddress}, C2DArray, 0x0)
+	EEex_Free(resrefAddress)
+	return C2DArray
+end
+
+function EEex_2DAGetAtStrings(C2DArray, columnString, rowString)
+	local columnCString = EEex_ConstructCString(columnString)
+	local rowCString = EEex_ConstructCString(rowString)
+	local foundCString = EEex_Call(EEex_Label("C2DArray::GetAt(CString*_CString*)"), 
+		{rowCString, columnCString}, C2DArray, 0x0)
+	EEex_Call(EEex_Label("CString::~CString"), {}, rowCString, 0x0)
+	return EEex_ReadString(EEex_ReadDword(foundCString))
 end
 
 ---------------------

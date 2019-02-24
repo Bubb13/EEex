@@ -594,6 +594,16 @@ PatAdj=31
 VerBytes=83C4188BC65E5DC3
 VerAdj=41
 
+[NullString]
+PatBytes=663BC1743A833B00741B
+PatAdj=11
+Type=1
+
+[_afxPchNil]
+PatBytes=33F68945FC33FF8945F4
+PatAdj=-4
+Type=1
+
 
 ;------------------------------------------------------
 ; DecodeEffect() Hooks
@@ -961,7 +971,14 @@ VerBytes=FF5268
 VerAdj=16
 Type=1
 
-[NullString]
-PatBytes=663BC1743A833B00741B
-PatAdj=11
-Type=1
+
+;------------------------------------------------------
+; 2DA Functions
+;------------------------------------------------------
+[C2DArray::Load]
+PatBytes=558BEC83EC2C538BD95657895DE88B430C85C0
+PatAdj=0
+
+[C2DArray::GetAt(CString*_CString*)]
+PatBytes=558BEC515657FF75088BF18D4DFC
+PatAdj=0
