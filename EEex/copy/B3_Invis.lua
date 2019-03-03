@@ -74,20 +74,7 @@ function B3Invis_InstallOpcode193Changes()
 	EEex_WriteAssembly(EEex_Label("Opcode218IsPausedHook"), {"!call", {forceCircleHook, 4, 4}, "!nop !nop"})
 
 	if B3Invis_RenderAsInvisible then
-
-		local invisCheckHook3 = EEex_WriteAssemblyAuto({[[
-			!push_complete_state
-			!cmp_[ebx+dword]_byte #2D07 00
-			!je_dword >ret
-			!call ]], {canSeeInvisAddress, 4, 4}, [[
-			!cmp_eax_byte 01
-			@ret
-			!pop_complete_state
-			!ret
-		]]})
-		
 		EEex_WriteAssembly(EEex_Label("Opcode218RenderSpriteHook1"), {"!call", {invisCheckHook2, 4, 4}, "!nop !nop"})
-		EEex_WriteAssembly(EEex_Label("Opcode218RenderSpriteHook2"), {"!call", {invisCheckHook3, 4, 4}, "!nop !nop"})
 	end
 	EEex_EnableCodeProtection()
 end

@@ -899,10 +899,6 @@ PatAdj=0
 PatBytes=761980BB072D00000074108BCB
 PatAdj=2
 
-[Opcode218RenderSpriteHook2]
-PatBytes=8945A488458080BB072D0000007429
-PatAdj=6
-
 
 ;------------------------------------------------------
 ; Hotkey Hooks
