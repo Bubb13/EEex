@@ -209,20 +209,44 @@ function EEex_InstallOpcodeChanges()
 			!push_registers
 
 			!mov_esi_ecx
-			!mov_eax_[esi+byte] 18
-			!mov_ecx_[ebp+byte] 08
+			!mov_edi_[esi+byte] 44 ; Special (Stat Num) ;
+			!mov_ecx_[ebp+byte] 08 ; CGameSprite ;
 
-			!cmp_eax_dword #CB
-			!jb_dword >ret
-
-			!sub_eax_dword #CB
-			!cmp_eax_dword ]], {EEex_NewStatsCount, 4}, [[
+			!sub_edi_dword #CB
+			!cmp_edi_dword ]], {EEex_NewStatsCount, 4}, [[
 			!jae_dword >ret
 
 			!mov_ecx_[ecx+dword] #3B18
-			!mov_edx_[esi+byte] 1C
-			!mov_[ecx+eax*4]_edx
-			!jmp_dword >ret
+			!mov_eax_[esi+byte] 1C ; Param2 (Type) ;
+
+			!sub_eax_byte 00
+			!jz_dword >type_cumulative
+			!dec_eax
+			!jz_dword >type_flat
+			!dec_eax
+			!jnz_dword >ret
+
+			@type_percentage
+			!mov_edx_[ecx+edi*4]
+			!imul_edx_[esi+byte] 18
+			!mov_eax #51EB851F ; Magic number for division by 100 ;
+			!imul_edx
+			!sar_edx 05
+			!mov_eax_edx
+			!shr_eax 1F
+			!add_edx_eax
+			!jmp_dword >set_stat
+
+			@type_cumulative
+			!mov_edx_[ecx+edi*4]
+			!add_edx_[esi+byte] 18 ; Param1 (Statistic Modifier) ;
+			!jmp_dword >set_stat
+
+			@type_flat
+			!mov_edx_[esi+byte] 18 ; Param1 (Statistic Modifier) ;
+
+			@set_stat
+			!mov_[ecx+edi*4]_edx
 
 			@ret
 			!mov_eax #1

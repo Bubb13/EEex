@@ -405,30 +405,35 @@ function EEex_CalcWriteLength(address, args)
 		if argType == "string" then
 			-- processTextArg needs to be "defined" up here to have processSection see it.
 			local processTextArg = nil
+			local inComment = false
 			local processSection = function(section)
 				local prefix = string.sub(section, 1, 1)
-				if prefix == ":" or prefix == "#" or prefix == "+" then
-					toReturn = toReturn + 4
-				elseif prefix == ">" or prefix == "*" then
-					local label = string.sub(section, 2, #section)
-					if
-						not EEex_CalcLabelOffset(address, args, label)
-						and not EEex_GlobalAssemblyLabels[label]
-					then
-						EEex_Error("Label @"..label.." is not defined in current scope!")
-					end
-					toReturn = toReturn + 4
-				elseif prefix == "!" then -- Processes a macro
-					local macroResult = EEex_ResolveMacro(address, args, toReturn, section)
-					if type(macroResult) == "string" then
-						if processTextArg(macroResult) then
-							return true
+				if prefix == ";" then
+					inComment = not inComment
+				elseif not inComment then
+					if prefix == ":" or prefix == "#" or prefix == "+" then
+						toReturn = toReturn + 4
+					elseif prefix == ">" or prefix == "*" then
+						local label = string.sub(section, 2, #section)
+						if
+							not EEex_CalcLabelOffset(address, args, label)
+							and not EEex_GlobalAssemblyLabels[label]
+						then
+							EEex_Error("Label @"..label.." is not defined in current scope!")
 						end
-					else
-						toReturn = toReturn + macroResult
+						toReturn = toReturn + 4
+					elseif prefix == "!" then -- Processes a macro
+						local macroResult = EEex_ResolveMacro(address, args, toReturn, section)
+						if type(macroResult) == "string" then
+							if processTextArg(macroResult) then
+								return true
+							end
+						else
+							toReturn = toReturn + macroResult
+						end
+					elseif prefix ~= "@" and prefix ~= "$" then
+						toReturn = toReturn + 1
 					end
-				elseif prefix ~= "@" and prefix ~= "$" then
-					toReturn = toReturn + 1
 				end
 			end
 			processTextArg = function(innerArg)
@@ -481,26 +486,31 @@ function EEex_CalcLabelOffset(address, args, label)
 		if argType == "string" then
 			-- processTextArg needs to be "defined" up here to have processSection see it.
 			local processTextArg = nil
+			local inComment = false
 			local processSection = function(section)
 				local prefix = string.sub(section, 1, 1)
-				if prefix == ":" or prefix == "#" or prefix == "+" or prefix == ">" or prefix == "*" then
-					toReturn = toReturn + 4
-				elseif prefix == "!" then -- Processes a macro
-					local macroResult = EEex_ResolveMacro(address, args, toReturn, section)
-					if type(macroResult) == "string" then
-						if processTextArg(macroResult) then
+				if prefix == ";" then
+					inComment = not inComment
+				elseif not inComment then
+					if prefix == ":" or prefix == "#" or prefix == "+" or prefix == ">" or prefix == "*" then
+						toReturn = toReturn + 4
+					elseif prefix == "!" then -- Processes a macro
+						local macroResult = EEex_ResolveMacro(address, args, toReturn, section)
+						if type(macroResult) == "string" then
+							if processTextArg(macroResult) then
+								return true
+							end
+						else
+							toReturn = toReturn + macroResult
+						end
+					elseif prefix == "@" or prefix == "$" then
+						local argLabel = string.sub(section, 2, #section)
+						if argLabel == label then
 							return true
 						end
 					else
-						toReturn = toReturn + macroResult
+						toReturn = toReturn + 1
 					end
-				elseif prefix == "@" or prefix == "$" then
-					local argLabel = string.sub(section, 2, #section)
-					if argLabel == label then
-						return true
-					end
-				else
-					toReturn = toReturn + 1
 				end
 			end
 			processTextArg = function(innerArg)
@@ -879,80 +889,84 @@ function EEex_WriteAssembly(address, args, funcOverride)
 		if argType == "string" then
 			-- processTextArg needs to be "defined" up here to have processSection see it.
 			local processTextArg = nil
+			local inComment = false
 			local processSection = function(section)
-				--EEex_FunctionLog("Processing Section: \'"..section.."\"")
 				local prefix = string.sub(section, 1, 1)
-				if prefix == ":" then -- Writes relative offset to known address
-					local targetOffset = tonumber(string.sub(section, 2, #section), 16)
-					local relativeOffsetNeeded = targetOffset - (currentWriteAddress + 4)
-					for i = 0, 3, 1 do
-						local byte = bit32.extract(relativeOffsetNeeded, i * 8, 8)
-						funcOverride(currentWriteAddress, byte)
-						currentWriteAddress = currentWriteAddress + 1
-					end
-				elseif prefix == "#" then
-					local toWrite = tonumber(string.sub(section, 2, #section), 16)
-					for i = 0, 3, 1 do
-						local byte = bit32.extract(toWrite, i * 8, 8)
-						funcOverride(currentWriteAddress, byte)
-						currentWriteAddress = currentWriteAddress + 1
-					end
-				elseif prefix == "+" then -- Writes absolute address of relative offset
-					local targetOffset = currentWriteAddress + 4 + tonumber(string.sub(section, 2, #section), 16)
-					for i = 0, 3, 1 do
-						local byte = bit32.extract(targetOffset, i * 8, 8)
-						funcOverride(currentWriteAddress, byte)
-						currentWriteAddress = currentWriteAddress + 1
-					end
-				elseif prefix == ">" then -- Writes relative offset to label
-					local label = string.sub(section, 2, #section)
-					local offset = EEex_CalcLabelOffset(address, args, label)
-					local targetOffset = nil
-					if offset then
-						targetOffset = address + offset
-					else
-						targetOffset = EEex_GlobalAssemblyLabels[label]
-						if not targetOffset then
-							EEex_Error("Label @"..label.." is not defined in current scope!")
+				if prefix == ";" then
+					inComment = not inComment
+				elseif not inComment then
+					if prefix == ":" then -- Writes relative offset to known address
+						local targetOffset = tonumber(string.sub(section, 2, #section), 16)
+						local relativeOffsetNeeded = targetOffset - (currentWriteAddress + 4)
+						for i = 0, 3, 1 do
+							local byte = bit32.extract(relativeOffsetNeeded, i * 8, 8)
+							funcOverride(currentWriteAddress, byte)
+							currentWriteAddress = currentWriteAddress + 1
 						end
-					end
-					local relativeOffsetNeeded = targetOffset - (currentWriteAddress + 4)
-					for i = 0, 3, 1 do
-						local byte = bit32.extract(relativeOffsetNeeded, i * 8, 8)
-						funcOverride(currentWriteAddress, byte)
-						currentWriteAddress = currentWriteAddress + 1
-					end
-				elseif prefix == "*" then -- Writes absolute address of label
-					local label = string.sub(section, 2, #section)
-					local offset = EEex_CalcLabelOffset(address, args, label)
-					local targetOffset = nil
-					if offset then
-						targetOffset = address + offset
-					else
-						targetOffset = EEex_GlobalAssemblyLabels[label]
-						if not targetOffset then
-							EEex_Error("Label @"..label.." is not defined in current scope!")
+					elseif prefix == "#" then
+						local toWrite = tonumber(string.sub(section, 2, #section), 16)
+						for i = 0, 3, 1 do
+							local byte = bit32.extract(toWrite, i * 8, 8)
+							funcOverride(currentWriteAddress, byte)
+							currentWriteAddress = currentWriteAddress + 1
 						end
-					end
-					for i = 0, 3, 1 do
-						local byte = bit32.extract(targetOffset, i * 8, 8)
+					elseif prefix == "+" then -- Writes absolute address of relative offset
+						local targetOffset = currentWriteAddress + 4 + tonumber(string.sub(section, 2, #section), 16)
+						for i = 0, 3, 1 do
+							local byte = bit32.extract(targetOffset, i * 8, 8)
+							funcOverride(currentWriteAddress, byte)
+							currentWriteAddress = currentWriteAddress + 1
+						end
+					elseif prefix == ">" then -- Writes relative offset to label
+						local label = string.sub(section, 2, #section)
+						local offset = EEex_CalcLabelOffset(address, args, label)
+						local targetOffset = nil
+						if offset then
+							targetOffset = address + offset
+						else
+							targetOffset = EEex_GlobalAssemblyLabels[label]
+							if not targetOffset then
+								EEex_Error("Label @"..label.." is not defined in current scope!")
+							end
+						end
+						local relativeOffsetNeeded = targetOffset - (currentWriteAddress + 4)
+						for i = 0, 3, 1 do
+							local byte = bit32.extract(relativeOffsetNeeded, i * 8, 8)
+							funcOverride(currentWriteAddress, byte)
+							currentWriteAddress = currentWriteAddress + 1
+						end
+					elseif prefix == "*" then -- Writes absolute address of label
+						local label = string.sub(section, 2, #section)
+						local offset = EEex_CalcLabelOffset(address, args, label)
+						local targetOffset = nil
+						if offset then
+							targetOffset = address + offset
+						else
+							targetOffset = EEex_GlobalAssemblyLabels[label]
+							if not targetOffset then
+								EEex_Error("Label @"..label.." is not defined in current scope!")
+							end
+						end
+						for i = 0, 3, 1 do
+							local byte = bit32.extract(targetOffset, i * 8, 8)
+							funcOverride(currentWriteAddress, byte)
+							currentWriteAddress = currentWriteAddress + 1
+						end
+					elseif prefix == "!" then -- Processes a macro
+						local macroResult = EEex_ResolveMacro(address, args, toReturn, section, func)
+						if type(macroResult) == "string" then
+							processTextArg(macroResult)
+						else
+							currentWriteAddress = currentWriteAddress + macroResult
+						end
+					elseif prefix == "$" then
+						local label = string.sub(section, 2, #section)
+						EEex_DefineAssemblyLabel(label, currentWriteAddress)
+					elseif prefix ~= "@" then
+						local byte = tonumber(section, 16)
 						funcOverride(currentWriteAddress, byte)
 						currentWriteAddress = currentWriteAddress + 1
 					end
-				elseif prefix == "!" then -- Processes a macro
-					local macroResult = EEex_ResolveMacro(address, args, toReturn, section, func)
-					if type(macroResult) == "string" then
-						processTextArg(macroResult)
-					else
-						currentWriteAddress = currentWriteAddress + macroResult
-					end
-				elseif prefix == "$" then
-					local label = string.sub(section, 2, #section)
-					EEex_DefineAssemblyLabel(label, currentWriteAddress)
-				elseif prefix ~= "@" then
-					local byte = tonumber(section, 16)
-					funcOverride(currentWriteAddress, byte)
-					currentWriteAddress = currentWriteAddress + 1
 				end
 			end
 			processTextArg = function(innerArg)
@@ -1151,17 +1165,17 @@ function EEex_WriteOpcode(opcodeFunctions)
 		EEex_WriteDword(writeAddress, toWrite)
 	end
 
-	writeOrDefault(vtbl + 0x0,  opcodeFunctions["__vecDelDtor"],  0x56FBB0)
+	writeOrDefault(vtbl + 0x0,  opcodeFunctions["__vecDelDtor"],  EEex_Label("DefaultOpcodeFree"))
 	writeOrDefault(vtbl + 0x4,  opcodeFunctions["Copy"],          opcodeCopy)
-	writeOrDefault(vtbl + 0x8,  opcodeFunctions["ApplyEffect"],   0x8A81D8)
-	writeOrDefault(vtbl + 0xC,  opcodeFunctions["ResolveEffect"], 0x5AB020)
-	writeOrDefault(vtbl + 0x10, opcodeFunctions["OnAdd"],         0x5A8150)
-	writeOrDefault(vtbl + 0x14, opcodeFunctions["OnAddSpecific"], 0x42C8A0)
-	writeOrDefault(vtbl + 0x18, opcodeFunctions["OnLoad"],        0x42C8A0)
-	writeOrDefault(vtbl + 0x1C, opcodeFunctions["CheckSave"],     0x5949D0)
-	writeOrDefault(vtbl + 0x20, opcodeFunctions["UsesDice"],      0x42C890)
-	writeOrDefault(vtbl + 0x24, opcodeFunctions["DisplayString"], 0x5A6B00)
-	writeOrDefault(vtbl + 0x28, opcodeFunctions["OnRemove"],      0x42C8A0)
+	writeOrDefault(vtbl + 0x8,  opcodeFunctions["ApplyEffect"],   EEex_Label("DefaultOpcodeNullsubXOR"))
+	writeOrDefault(vtbl + 0xC,  opcodeFunctions["ResolveEffect"], EEex_Label("DefaultOpcodeResolveEffect"))
+	writeOrDefault(vtbl + 0x10, opcodeFunctions["OnAdd"],         EEex_Label("DefaultOpcodeOnAdd"))
+	writeOrDefault(vtbl + 0x14, opcodeFunctions["OnAddSpecific"], EEex_Label("DefaultOpcodeNullsub4"))
+	writeOrDefault(vtbl + 0x18, opcodeFunctions["OnLoad"],        EEex_Label("DefaultOpcodeNullsub4"))
+	writeOrDefault(vtbl + 0x1C, opcodeFunctions["CheckSave"],     EEex_Label("DefaultOpcodeCheckSave"))
+	writeOrDefault(vtbl + 0x20, opcodeFunctions["UsesDice"],      EEex_Label("DefaultOpcodeNullsubXOR"))
+	writeOrDefault(vtbl + 0x24, opcodeFunctions["DisplayString"], EEex_Label("DefaultOpcodeDisplayString"))
+	writeOrDefault(vtbl + 0x28, opcodeFunctions["OnRemove"],      EEex_Label("DefaultOpcodeNullsub4"))
 
 	return EEex_RunOpcodeDecode(opcodeConstructor)
 
@@ -2221,6 +2235,18 @@ function EEex_2DAGetAtStrings(C2DArray, columnString, rowString)
 		{rowCString, columnCString}, C2DArray, 0x0)
 	EEex_Call(EEex_Label("CString::~CString"), {}, rowCString, 0x0)
 	return EEex_ReadString(EEex_ReadDword(foundCString))
+end
+
+function EEex_GetActorClassString(actorID)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local kit = EEex_GetActorKit(actorID)
+	local class = EEex_GetActorClass(actorID)
+	local result = EEex_Malloc(0x4)
+	EEex_Call(0x5F7A60, {kit, class, result}, m_pObjectGame, 0x0)
+	local luaString = EEex_ReadString(EEex_ReadDword(result))
+	EEex_Call(EEex_Label("CString::~CString"), {}, result, 0x0)
+	return luaString
 end
 
 ---------------------
