@@ -987,8 +987,8 @@ PatAdj=0
 PatBytes=558BEC568BF18D8E2C010000
 PatAdj=0
 
-[DefaultOpcodeNullsubXOR]
-PatBytes=33C0C3CC
+[DefaultOpcodeApplyEffect]
+PatBytes=33C0C20400CC
 PatAdj=0
 
 [DefaultOpcodeResolveEffect]
@@ -1006,6 +1006,10 @@ PatAdj=0
 [DefaultOpcodeCheckSave]
 PatBytes=33C58945FC8B550C8B45108955B48945C8
 PatAdj=-11
+
+[DefaultOpcodeUsesDice]
+PatBytes=33C0C3CC
+PatAdj=0
 
 [DefaultOpcodeDisplayString]
 PatBytes=558BEC83EC08568B7508837E1400
