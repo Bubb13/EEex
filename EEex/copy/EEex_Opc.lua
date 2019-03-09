@@ -3,7 +3,10 @@ function EEex_InstallOpcodeChanges()
 
 	EEex_DisableCodeProtection()
 
-	-- Remove the "at least 1 slot" checks from Opcode #42
+	--------------------------------------------------
+	-- Opcode #42 (Remove "at least 1 slot" checks) --
+	--------------------------------------------------
+
 	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck1"), {"!nop !nop"})
 	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck2"), {"!nop !nop"})
 	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck3"), {"!nop !nop"})
@@ -14,8 +17,9 @@ function EEex_InstallOpcodeChanges()
 	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck8"), {"!nop !nop"})
 	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck9"), {"!nop !nop !nop !nop !nop !nop"})
 
-	-- Set strref of opcode #324 to Special
-	EEex_WriteAssembly(EEex_Label("Opcode324StrrefHook"), {"!mov_edi_[esi+byte] 44 !nop !nop"})
+	--------------------------------------------------
+	-- Opcode #218 (Fire subspell when layers lost) --
+	--------------------------------------------------
 
 	local fireSubspellAddress = EEex_WriteAssemblyAuto({[[
 
@@ -78,8 +82,46 @@ function EEex_InstallOpcodeChanges()
 		!ret
 	]]})
 
-	-- Fire subspell when Opcode #218 expires due to losing all layers
 	EEex_WriteAssembly(EEex_Label("Opcode218LostLayersHook"), {"!call", {fireSubspellHook1, 4, 4}, "!nop !nop !nop !nop !nop"})
+
+	----------------------------------------------
+	-- Opcode #280 (Param1 overrides surge num) --
+	----------------------------------------------
+
+	local opcode280Override = EEex_Label("Opcode280Override")
+	local opcode280Surge = EEex_WriteAssemblyAuto({[[
+		!mov_[eax+dword]_edx #D58
+		!mov_edx_[ecx+byte] 18 ; Param1 (Surge Override) ;
+		!test_edx_edx
+		!jz_dword >skip_set
+		!mov_ecx_[eax+dword] #3B18
+		!mov_[ecx+dword]_edx #184
+		@skip_set
+		!jmp_dword ]], {opcode280Override + 0x6, 4, 4},
+	})
+	EEex_WriteAssembly(opcode280Override, {"!jmp_dword ", {opcode280Surge, 4, 4}, "!nop"})
+
+	local overrideJump = EEex_Label("WildSurgeOverride")
+	local wildSurgeOverride = EEex_WriteAssemblyAuto({[[
+		!push_dword #12C
+		!mov_ecx_edi
+		!call >EEex_AccessStat
+		!test_eax_eax
+		!cmovnz_ebx_eax
+		!cmp_[ebp+dword]_byte #FFFFFB08 00
+		!jmp_dword ]], {overrideJump + 0x7, 4, 4},
+	})
+	EEex_WriteAssembly(overrideJump, {"!jmp_dword ", {wildSurgeOverride, 4, 4}, "!nop !nop"})
+
+	-----------------------------------------
+	-- Opcode #324 (Set strref to Special) --
+	-----------------------------------------
+
+	EEex_WriteAssembly(EEex_Label("Opcode324StrrefHook"), {"!mov_edi_[esi+byte] 44 !nop !nop"})
+
+	-----------------------------------
+	-- New Opcode #400 (SetAIScript) --
+	-----------------------------------
 
 	local setAIScript = EEex_WriteAssemblyAuto({[[
 
@@ -201,6 +243,10 @@ function EEex_InstallOpcodeChanges()
 		]]},
 	})
 
+	----------------------------------
+	-- New Opcode #401 (SetNewStat) --
+	----------------------------------
+
 	local EEex_SetNewStat = EEex_WriteOpcode({
 
 		["ApplyEffect"] = {[[
@@ -254,6 +300,10 @@ function EEex_InstallOpcodeChanges()
 			!ret_word 04 00
 		]]},
 	})
+
+	-----------------------------
+	-- Opcode Definitions Hook --
+	-----------------------------
 
 	local opcodesHook = EEex_WriteAssemblyAuto(EEex_ConcatTables({[[
 

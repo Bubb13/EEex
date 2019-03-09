@@ -217,6 +217,8 @@ function B3Cre_InstallCreatureHook()
 	-- Allow engine functions to access extended states...
 	local hookAccessState = EEex_WriteAssemblyAuto({[[
 
+		$EEex_AccessStat
+
 		!build_stack_frame
 		!push_registers
 

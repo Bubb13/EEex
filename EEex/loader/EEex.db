@@ -1014,3 +1014,14 @@ PatAdj=0
 [DefaultOpcodeDisplayString]
 PatBytes=558BEC83EC08568B7508837E1400
 PatAdj=0
+
+;------------------------------------------------------
+; Wild Surge Override
+;------------------------------------------------------
+[WildSurgeOverride]
+PatBytes=83BD08FBFFFF00
+PatAdj=0
+
+[Opcode280Override]
+PatBytes=8990580D0000
+PatAdj=0
