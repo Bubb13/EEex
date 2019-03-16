@@ -39,11 +39,10 @@ function B3Cre_InstallCreatureHook()
 	local hookNameLoadAddress = EEex_Malloc(#hookNameLoad + 1)
 	EEex_WriteString(hookNameLoadAddress, hookNameLoad)
 
-	local hookConstructCreatureAddress = EEex_Label("CGameSprite::CGameSprite()_HookConstructCreature")
-
 	local hookAddressLoad = EEex_WriteAssemblyAuto({[[
 
 		!call >CGameAIBase::CGameAIBase
+
 		!push_dword ]], {hookNameLoadAddress, 4}, [[
 		!push_[dword] *_g_lua
 		!call >_lua_getglobal
@@ -72,13 +71,14 @@ function B3Cre_InstallCreatureHook()
 		!push_byte 02
 		!push_[dword] *_g_lua
 		!call >_lua_pcallk
-
 		!add_esp_byte 18
-		!jmp_dword ]], {hookConstructCreatureAddress + 0x5, 4, 4},
-	})
+
+		!ret
+	]]})
 
 	-- Install EEex_HookConstructCreature
-	EEex_WriteAssembly(hookConstructCreatureAddress, {"!jmp_dword", {hookAddressLoad, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookConstructCreature1"), {{hookAddressLoad, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookConstructCreature2"), {{hookAddressLoad, 4, 4}})
 
 	local hookNameReload = "EEex_HookReloadStats"
 	local hookNameReloadAddress = EEex_Malloc(#hookNameReload + 1)
