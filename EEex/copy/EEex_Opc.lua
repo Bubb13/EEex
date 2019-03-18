@@ -93,10 +93,16 @@ function EEex_InstallOpcodeChanges()
 		!mov_[eax+dword]_edx #D58
 		!mov_edx_[ecx+byte] 18 ; Param1 (Surge Override) ;
 		!test_edx_edx
-		!jz_dword >skip_set
-		!mov_ecx_[eax+dword] #3B18
-		!mov_[ecx+dword]_edx #184
-		@skip_set
+		!jz_dword >skip_num_override
+		!mov_edi_[eax+dword] #3B18
+		!mov_[edi+dword]_edx #184
+		@skip_num_override
+		!mov_edx_[ecx+byte] 44 ; Special (Suppress Graphics) ;
+		!test_edx_edx
+		!jz_dword >ret
+		!mov_edi_[eax+dword] #3B18
+		!mov_[edi+dword]_edx #188
+		@ret
 		!jmp_dword ]], {opcode280Override + 0x6, 4, 4},
 	})
 	EEex_WriteAssembly(opcode280Override, {"!jmp_dword ", {opcode280Surge, 4, 4}, "!nop"})
@@ -112,6 +118,88 @@ function EEex_InstallOpcodeChanges()
 		!jmp_dword ]], {overrideJump + 0x7, 4, 4},
 	})
 	EEex_WriteAssembly(overrideJump, {"!jmp_dword ", {wildSurgeOverride, 4, 4}, "!nop !nop"})
+
+	-- NOP 0x7435B9
+		-- REASON: (Disables Feedback String)
+		-- HOW: (add esp,0x1C  and  NOP*2)
+		-- REQUIRED FIXES: (None)
+
+	local wildSurgeFeedbackAddress = EEex_Label("WildSurgeFeedback")
+	local opcode280Feedback = EEex_WriteAssemblyAuto({[[
+		!push_dword #12D
+		!call >EEex_AccessStat
+		!test_eax_eax
+		!jnz_dword >skip_feedback
+		!call >CGameSprite::FeedBack
+		!jmp_dword >ret
+		@skip_feedback
+		!add_esp_byte 1C
+		@ret
+		!jmp_dword ]], {wildSurgeFeedbackAddress + 0x5, 4, 4},
+	})
+	EEex_WriteAssembly(wildSurgeFeedbackAddress, {"!jmp_dword ", {opcode280Feedback, 4, 4}})
+
+	-- Force 0x743608 - (Disables Random Visual Effect)
+
+	local wildSurgeVisualJump = EEex_Label("WildSurgeSkipRandomVisual")
+	local opcode280Visual = EEex_WriteAssemblyAuto({[[
+		!push_dword #12D
+		!mov_ecx_edi
+		!call >EEex_AccessStat
+		!test_eax_eax
+		!jz_dword >normal_execution
+		; Set the ZF manually ;
+		!xor_eax_eax
+		!jmp_dword >ret
+		@normal_execution
+		!cmp_[ebp+dword]_byte #FFFFFB50 00
+		@ret
+		!ret
+	]]})
+	EEex_WriteAssembly(wildSurgeVisualJump, {"!call", {opcode280Visual, 4, 4}, "!nop !nop"})
+
+	-- NOP 0x744132
+		-- REASON: (Prevents SPFLESHS From Loading)
+		-- HOW: (NOP*4),
+		-- REQUIRED FIXES: (Free "name" CString)
+
+	local wildSurgeSwirlLoadAddress = EEex_Label("WildSurgeSkipSwirlLoad")
+	local opcode280SwirlLoad = EEex_WriteAssemblyAuto({[[
+		!push_dword #12D
+		!mov_ecx_edi
+		!call >EEex_AccessStat
+		!test_eax_eax
+		!jnz_dword >skip_swirl
+		!call >CVisualEffect::Load
+		!jmp_dword >ret
+		@skip_swirl
+		!mov_ecx_esp
+		!call >CString::~CString
+		@ret
+		!jmp_dword ]], {wildSurgeSwirlLoadAddress + 0x5, 4, 4},
+	})
+	EEex_WriteAssembly(wildSurgeSwirlLoadAddress, {"!jmp_dword ", {opcode280SwirlLoad, 4, 4}})
+
+	-- NOP 0x744207
+		-- REASON: (Prevents SPFLESHS From Being Sent To Multiplayer)
+		-- HOW: (add esp,0x8  and  NOP*2),
+		-- REQUIRED FIXES: (None)
+
+	local wildSurgeSwirlSendAddress = EEex_Label("WildSurgeSkipSwirlSend")
+	local opcode280SwirlSend = EEex_WriteAssemblyAuto({[[
+		!push_dword #12D
+		!mov_ecx_[esp+byte] 10
+		!call >EEex_AccessStat
+		!test_eax_eax
+		!jnz_dword >skip_swirl
+		!call >CMessageHandler::AddMessage
+		!jmp_dword >ret
+		@skip_swirl
+		!add_esp_byte 08
+		@ret
+		!jmp_dword ]], {wildSurgeSwirlSendAddress + 0x5, 4, 4},
+	})
+	EEex_WriteAssembly(wildSurgeSwirlSendAddress, {"!jmp_dword ", {opcode280SwirlSend, 4, 4}})
 
 	-----------------------------------------
 	-- Opcode #324 (Set strref to Special) --
@@ -301,6 +389,65 @@ function EEex_InstallOpcodeChanges()
 		]]},
 	})
 
+	---------------------------------
+	-- New Opcode #402 (InvokeLua) --
+	---------------------------------
+
+	local EEex_InvokeLua = EEex_WriteOpcode({
+
+		["ApplyEffect"] = {[[
+
+			!build_stack_frame
+			!sub_esp_byte 0C
+			!push_registers
+
+			!mov_esi_ecx
+
+			; Copy resref field into null-terminated stack space ;
+			!mov_eax_[esi+byte] 2C
+			!mov_[ebp+byte]_eax F4
+			!mov_eax_[esi+byte] 30
+			!mov_[ebp+byte]_eax F8
+			!mov_byte:[ebp+byte]_byte FC 0
+
+			!lea_eax_[ebp+byte] F4
+			!push_eax
+			!push_[dword] *_g_lua
+			!call >_lua_getglobal
+			!add_esp_byte 08
+	
+			!push_esi
+			!fild_[esp]
+			!sub_esp_byte 04
+			!fstp_qword:[esp]
+			!push_[dword] *_g_lua
+			!call >_lua_pushnumber
+			!add_esp_byte 0C
+	
+			!push_[ebp+byte] 08
+			!fild_[esp]
+			!sub_esp_byte 04
+			!fstp_qword:[esp]
+			!push_[dword] *_g_lua
+			!call >_lua_pushnumber
+			!add_esp_byte 0C
+	
+			!push_byte 00
+			!push_byte 00
+			!push_byte 00
+			!push_byte 00
+			!push_byte 02
+			!push_[dword] *_g_lua
+			!call >_lua_pcallk
+			!add_esp_byte 18
+
+			@ret
+			!mov_eax #1
+			!restore_stack_frame
+			!ret_word 04 00
+		]]},
+	})
+
 	-----------------------------
 	-- Opcode Definitions Hook --
 	-----------------------------
@@ -314,9 +461,15 @@ function EEex_InstallOpcodeChanges()
 
 		@401
 		!cmp_eax_dword #191
-		!jne_dword >fail
+		!jne_dword >402
 
 		]], EEex_SetNewStat, [[
+
+		@402
+		!cmp_eax_dword #192
+		!jne_dword >fail
+
+		]], EEex_InvokeLua, [[
 
 		@fail
 		!jmp_dword >CGameEffect::DecodeEffect()_default_label
