@@ -205,7 +205,16 @@ function EEex_InstallOpcodeChanges()
 	-- Opcode #324 (Set strref to Special) --
 	-----------------------------------------
 
-	EEex_WriteAssembly(EEex_Label("Opcode324StrrefHook"), {"!mov_edi_[esi+byte] 44 !nop !nop"})
+	local opcode324StrrefOverride = EEex_WriteAssemblyAuto({[[
+		!mov_edi_[esi+byte] 44
+		!test_edi_edi
+		!jnz_dword >ret
+		!mov_edi #0F00080
+		!cmp_eax_dword #109
+		@ret
+		!ret
+	]]})
+	EEex_WriteAssembly(EEex_Label("Opcode324StrrefHook"), {"!call", {opcode324StrrefOverride, 4, 4}})
 
 	-----------------------------------
 	-- New Opcode #400 (SetAIScript) --

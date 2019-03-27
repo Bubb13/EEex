@@ -354,12 +354,12 @@ function B3Cre_InstallCreatureHook()
 	-- Opcodes #318, #324, #326
 	local hookSplprotOpcodesAddress = EEex_Label("HookSplprotOpcodes")
 	EEex_WriteAssembly(hookSplprotOpcodesAddress, {[[
+		!push_ecx ; relation ;
+		!push_esi ; b ;
 		!push_eax
 		!mov_ecx_edi
 		!call ]], {hookAccessState, 4, 4}, [[
 		!jmp_dword ]], {hookSplprotOpcodesAddress + 33, 4, 4}, [[
-		!nop
-		!nop
 	]]})
 
 	EEex_EnableCodeProtection()

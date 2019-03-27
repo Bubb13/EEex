@@ -193,6 +193,7 @@ for _, macroEntry in ipairs({
 	{"mov_ecx_edi", "8B CF"},
 	{"mov_ecx_esi", "8B CE"},
 	{"mov_ecx_esp", "8B CC"},
+	{"mov_edi", "BF"},
 	{"mov_edi_[eax+dword]", "8B B8"},
 	{"mov_edi_[ebp+byte]", "8B 7D"},
 	{"mov_edi_[ebp+dword]", "8B BD"},
