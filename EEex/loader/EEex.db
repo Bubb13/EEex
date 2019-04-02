@@ -1019,6 +1019,7 @@ PatAdj=0
 PatBytes=558BEC83EC08568B7508837E1400
 PatAdj=0
 
+
 ;------------------------------------------------------
 ; Wild Surge Override
 ;------------------------------------------------------
@@ -1057,3 +1058,11 @@ PatAdj=40
 [CMessageHandler::AddMessage]
 PatBytes=558BEC568B7508578BF98BCE8B06
 PatAdj=0
+
+
+;------------------------------------------------------
+; Portrait Hooks
+;------------------------------------------------------
+[RenderPortraitIconSwitch]
+PatBytes=0FBF073DC0000000
+PatAdj=8
