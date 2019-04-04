@@ -1429,6 +1429,48 @@ end
 --  Menu Manipulation  --
 -------------------------
 
+function EEex_FetchMenuRes(resref)
+	local resrefAddress = EEex_Malloc(#resref + 1)
+	EEex_WriteString(resrefAddress, resref)
+	local res = EEex_Malloc(0x38)
+	EEex_Call(EEex_Label("CRes::CRes"), {}, res, 0x0)
+	EEex_WriteDword(res + 0x4, resrefAddress)
+	EEex_WriteDword(res + 0x8, 0x408)
+	local pointerToRes = EEex_Malloc(0x4)
+	EEex_WriteDword(pointerToRes, res)
+	local result = EEex_Call(EEex_Label("_bsearch"), {
+		EEex_Label("CompareCResByTypeThenName"),
+		0x4,
+		EEex_ReadDword(EEex_Label("resources.m_nSize")),
+		EEex_ReadDword(EEex_Label("resources.m_pData")),
+		pointerToRes
+	}, nil, 0x14)
+	EEex_Free(resrefAddress)
+	EEex_Free(res)
+	EEex_Free(pointerToRes)
+	return EEex_ReadDword(result)
+end
+
+function EEex_LoadMenuFile(resref)
+	EEex_Call(EEex_Label("_saveMenuStack"), {}, nil, 0x0)
+	EEex_Memset(EEex_Label("_menuStack"), 0x400, 0x0)
+	EEex_WriteDword(EEex_Label("_nextStackMenuIdx"), 0x0)
+	local menuSrc = EEex_ReadDword(EEex_Label("_menuSrc"))
+	local menuLength = EEex_ReadDword(EEex_Label("_menuLength"))
+	EEex_Call(EEex_Label("_uiLoadMenu"), {EEex_FetchMenuRes(resref)}, nil, 0x4)
+	EEex_WriteDword(EEex_Label("_menuSrc"), menuSrc)
+	EEex_WriteDword(EEex_Label("_menuLength"), menuLength)
+	EEex_Call(EEex_Label("_restoreMenuStack"), {}, nil, 0x0)
+end
+
+function EEex_GetMenuStructure(menuName)
+	local stringAddress = EEex_Malloc(#menuName + 0x1)
+	EEex_WriteString(stringAddress, menuName)
+	local result = EEex_Call(0x7456A0, {0x0, 0x0, stringAddress}, nil, 0xC)
+	EEex_Free(stringAddress)
+	return result
+end
+
 function EEex_GetMenuAddressFromItem(menuItemName)
 	return EEex_ReadDword(EEex_ReadUserdata(Infinity_FindUIItemByName(menuItemName)) + 0x4)
 end
@@ -2376,6 +2418,15 @@ function EEex_GetActorStat(actorID, statID)
 	return EEex_Call(EEex_Label("CDerivedStats::GetAtOffset"), {statID}, ecx, 0x0)
 end
 
+function EEex_GetActorCastTimer(actorID)
+	local timerValue = EEex_ReadWord(EEex_GetActorShare(actorID) + 0x3360, 0)
+	if timerValue > 0 then
+		return 100 - timerValue
+	else
+		return 0
+	end
+end
+
 ----------------------
 --  Spell Learning  --
 ----------------------
@@ -2941,6 +2992,12 @@ end
 
 	EEex_EnableCodeProtection()
 
+	----------------
+	--  2DA Files --
+	----------------
+
+	--EEex_Str = EEex_2DALoad("EEEX_STR")
+
 	if not EEex_MinimalStartup then
 
 		--------------------
@@ -2959,6 +3016,7 @@ end
 		Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
 		Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
 		Infinity_DoFile("EEex_Fix") -- Engine Related Bug Fixes
+		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things
 
 		--------------
 		--  Modules --
