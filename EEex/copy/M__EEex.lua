@@ -91,6 +91,17 @@ function EEex_ReadWord(address, index)
 	return bit32.extract(EEex_ReadDword(address), index * 0x10, 0x10)
 end
 
+function EEex_ReadSignedWord(address, index)
+	local readValue = bit32.extract(EEex_ReadDword(address), index * 0x10, 0x10)
+	-- TODO: This is definitely not the right way to do the conversion,
+	-- but I have at least 32 bits to play around with; will do for now.
+	if readValue >= 32768 then
+		return -65536 + readValue
+	else
+		return readValue
+	end
+end
+
 function EEex_WriteWord(address, value)
 	for i = 0, 1, 1 do
 		EEex_WriteByte(address + i * 0x2, bit32.extract(value, i * 0x16, 0x8))
@@ -1466,7 +1477,7 @@ end
 function EEex_GetMenuStructure(menuName)
 	local stringAddress = EEex_Malloc(#menuName + 0x1)
 	EEex_WriteString(stringAddress, menuName)
-	local result = EEex_Call(0x7456A0, {0x0, 0x0, stringAddress}, nil, 0xC)
+	local result = EEex_Call(EEex_Label("_findMenu"), {0x0, 0x0, stringAddress}, nil, 0xC)
 	EEex_Free(stringAddress)
 	return result
 end
@@ -2285,6 +2296,7 @@ function EEex_GetActorClassString(actorID)
 	local kit = EEex_GetActorKit(actorID)
 	local class = EEex_GetActorClass(actorID)
 	local result = EEex_Malloc(0x4)
+	-- TODO: Use Pattern
 	EEex_Call(0x5F7A60, {kit, class, result}, m_pObjectGame, 0x0)
 	local luaString = EEex_ReadString(EEex_ReadDword(result))
 	EEex_Call(EEex_Label("CString::~CString"), {}, result, 0x0)
@@ -2419,8 +2431,8 @@ function EEex_GetActorStat(actorID, statID)
 end
 
 function EEex_GetActorCastTimer(actorID)
-	local timerValue = EEex_ReadWord(EEex_GetActorShare(actorID) + 0x3360, 0)
-	if timerValue > 0 then
+	local timerValue = EEex_ReadSignedWord(EEex_GetActorShare(actorID) + 0x3360, 0)
+	if timerValue >= 0 then
 		return 100 - timerValue
 	else
 		return 0
@@ -3004,6 +3016,7 @@ end
 		--  Engine Hooks  --
 		--------------------
 
+		Infinity_DoFile("EEex_Men") -- Lua / Menu Hooks
 		Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
 		Infinity_DoFile("EEex_AHo") -- Actions Hook
 		Infinity_DoFile("EEex_Bar") -- Actionbar Hook

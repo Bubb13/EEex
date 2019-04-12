@@ -1,0 +1,69 @@
+menu
+{
+	name "B3_TEMPLATES"
+	ignoreEsc
+
+	template
+	{
+		ignoreEvents
+		label
+		{
+			area 0 0 52 52
+			enabled "B3GetProgressEnabled('TEMPLATE_B3_Song_Progress', instanceId)"
+			bam lua "B3GetProgressBAM('TEMPLATE_B3_Song_Progress', instanceId)"
+			frame lua "B3GetProgressFrame('TEMPLATE_B3_Song_Progress', instanceId)"
+		}
+		name "TEMPLATE_B3_Song_Progress"
+	}
+
+	template
+	{
+		ignoreEvents
+		label
+		{
+			area 0 0 52 52
+			enabled "B3GetProgressEnabled('TEMPLATE_B3_Cast_Progress', instanceId)"
+			bam lua "B3GetProgressBAM('TEMPLATE_B3_Cast_Progress', instanceId)"
+			frame lua "B3GetProgressFrame('TEMPLATE_B3_Cast_Progress', instanceId)"
+		}
+		name "TEMPLATE_B3_Cast_Progress"
+	}
+
+	template
+	{
+		ignoreEvents
+		label
+		{
+			area 0 0 52 52
+			enabled "B3GetProgressEnabled('TEMPLATE_B3_Trap_Progress', instanceId)"
+			bam lua "B3GetProgressBAM('TEMPLATE_B3_Trap_Progress', instanceId)"
+			frame lua "B3GetProgressFrame('TEMPLATE_B3_Trap_Progress', instanceId)"
+		}
+		name "TEMPLATE_B3_Trap_Progress"
+	}
+
+	template
+	{
+		ignoreEvents
+		label
+		{
+			area 0 0 52 52
+			enabled "B3GetProgressEnabled('TEMPLATE_B3_Turn_Progress', instanceId)"
+			bam lua "B3GetProgressBAM('TEMPLATE_B3_Turn_Progress', instanceId)"
+			frame lua "B3GetProgressFrame('TEMPLATE_B3_Turn_Progress', instanceId)"
+		}
+		name "TEMPLATE_B3_Turn_Progress"
+	}
+
+	template
+	{
+		ignoreEvents
+		label
+		{
+			area 0 0 36 36
+			bam "CONTIN2"
+			frame lua "B3ContinFrame()"
+		}
+		name "TEMPLATE_B3_Spell_Progress"
+	}
+}

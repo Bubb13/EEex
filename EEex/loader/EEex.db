@@ -1121,6 +1121,18 @@ PatBytes=8D4DE0516A006A00
 PatAdj=11
 Type=1
 
+[_findMenu]
+PatBytes=558BEC83EC548B4508
+PatAdj=0
+
+[_uiRefreshMenu]
+PatBytes=81FA3E000040
+PatAdj=24
+
+[DestroyTemplateMenuOverride]
+PatBytes=8B450C39460C
+PatAdj=-43
+
 
 ;------------------------------------------------------
 ; File System Functions

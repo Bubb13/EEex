@@ -29,7 +29,13 @@ function EEex_AddActionbarListener(func)
 	table.insert(EEex_ActionbarListeners, func)
 end
 
+EEex_IgnoreEngineStartup = true
+
 function EEex_HookActionbar(config)
+	if EEex_IgnoreEngineStartup then
+		EEex_IgnoreEngineStartup = false
+		return
+	end
 	for i, func in ipairs(EEex_ActionbarListeners) do
 		func(config)
 	end
@@ -46,9 +52,15 @@ function EEex_InstallActionbarHook()
 		!mov_eax_[ebp+byte] 08
 		!dec_eax
 		!cmp_eax_byte 71
-		!ja_dword >UpdateButtons
+		!ja_dword >NoConfig
 
 		!movzx_eax_byte:[eax+dword] *CInfButtonArray::SetState()_IndirectJumpTable
+		!jmp_dword >CallHook
+
+		@NoConfig
+		!mov_eax #FFFFFFFF
+
+		@CallHook
 		!push_eax
 
 		!push_dword ]], {hookNameAddress, 4}, [[
