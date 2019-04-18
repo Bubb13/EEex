@@ -1164,3 +1164,27 @@ PatAdj=0
 [RenderPortraitIconSwitch]
 PatBytes=0FBF073DC0000000
 PatAdj=8
+
+
+;------------------------------------------------------
+; Script Compiler
+;------------------------------------------------------
+[CAIScriptFile::CAIScriptFile]
+PatBytes=5356578BF98D4F1C894718
+PatAdj=-9
+
+[CAIScriptFile::ParseObjectType]
+PatBytes=33C58945FC8B450853568B750C8BD95789854CFFFFFF8D4DD4
+PatAdj=-14
+
+[CAIScriptFile::~CAIScriptFile]
+PatBytes=568BF1578B7E0885FF
+PatAdj=0
+
+[CAIObjectType::GetShare]
+PatBytes=558BEC83EC24538BD9C745FC000000008A4304
+PatAdj=0
+
+[CAIObjectType::CAIObjectType]
+PatBytes=89018A4508884104
+PatAdj=-8

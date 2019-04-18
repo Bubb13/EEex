@@ -1567,6 +1567,10 @@ function EEex_GetActorShare(actorID)
 	return result
 end
 
+function EEex_GetActorIDShare(share)
+	return EEex_ReadDword(share + 0x34)
+end
+
 function EEex_GetActorIDCursor()
 	local esi = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
 	local ecx = EEex_ReadDword(esi + EEex_Label("CBaldurChitin::m_pObjectGame"))
@@ -1651,6 +1655,45 @@ function EEex_GetAllActorIDSelected()
 		table.insert(ids, actorID)
 	end)
 	return ids
+end
+
+-----------------------
+--  Script Compiler  --
+-----------------------
+
+function EEex_ParseObjectString(string)
+	local scriptFile = EEex_Malloc(0xE8)
+	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, scriptFile, 0x0)
+	local objectString = EEex_ConstructCString(string)
+	local objectTypeResult = EEex_Malloc(0x14)
+	EEex_Call(EEex_Label("CAIScriptFile::ParseObjectType"), {objectString, objectTypeResult}, scriptFile, 0x0)
+	EEex_Call(EEex_Label("CAIScriptFile::~CAIScriptFile"), {}, scriptFile, 0x0)
+	EEex_Call(EEex_Label("CString::~CString"), {}, objectString, 0x0)
+	return objectTypeResult
+end
+
+function EEex_EvalObjectAsActor(object, actorID)
+	local objectCopy = EEex_Malloc(0x14)
+	EEex_Call(EEex_Label("CAIObjectType::CAIObjectType"), {-0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, objectCopy, 0x0)
+	EEex_Call(EEex_Label("CAIObjectType::operator_equ"), {object}, objectCopy, 0x0)
+	local actorShare = EEex_GetActorShare(actorID)
+	EEex_Call(EEex_Label("CAIObjectType::Decode"), {actorShare}, objectCopy, 0x0)
+	local matchedShare = EEex_Call(EEex_Label("CAIObjectType::GetShare"), {0x0, actorShare}, objectCopy, 0x0)
+	EEex_Call(EEex_Label("CString::~CString"), {}, objectCopy, 0x0)
+	EEex_Free(objectCopy)
+	if matchedShare ~= 0x0 then
+		return EEex_GetActorIDShare(matchedShare)
+	else
+		return 0x0
+	end
+end
+
+function EEex_EvalObjectStringAsActor(string, actorID)
+	local object = EEex_ParseObjectString(string)
+	local matchedID = EEex_EvalObjectAsActor(object, actorID)
+	EEex_Call(EEex_Label("CString::~CString"), {}, object, 0x0)
+	EEex_Free(object)
+	return matchedID
 end
 
 ------------------------------
@@ -2337,6 +2380,10 @@ end
 
 function EEex_GetActorKit(actorID)
 	return EEex_Call(EEex_Label("CGameSprite::GetKit"), {}, EEex_GetActorShare(actorID), 0x0)
+end
+
+function EEex_GetActorAreaRes(actorID)
+	return EEex_ReadLString(EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14), 0x8)
 end
 
 function EEex_GetActorAreaSize(actorID)
