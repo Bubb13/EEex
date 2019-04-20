@@ -14,6 +14,10 @@ function EEex_InstallNewTriggers()
 	-- m_compareIdAndResrefOnly =>
 	--     Opcode #296
 
+	local luaTriggerActorName = "EEex_LuaTriggerActorID"
+	local luaTriggerActorAddress = EEex_Malloc(#luaTriggerActorName + 1)
+	EEex_WriteString(luaTriggerActorAddress, luaTriggerActorName)
+
 	local newTriggersAddress = EEex_WriteAssemblyAuto({[[
 
 		!cmp_eax_dword #103
@@ -91,7 +95,8 @@ function EEex_InstallNewTriggers()
 
 		!push_[ebp+byte] F4
 		!push_[dword] *_g_lua
-		!call >_lua_getglobal
+		; TODO: Cache Lua chunks ;
+		!call >_luaL_loadstring
 		!add_esp_byte 08
 
 		!push_[edi+byte] 34
@@ -102,11 +107,16 @@ function EEex_InstallNewTriggers()
 		!call >_lua_pushnumber
 		!add_esp_byte 0C
 
+		!push_dword ]], {luaTriggerActorAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_setglobal
+		!add_esp_byte 08
+
 		!push_byte 00
 		!push_byte 00
 		!push_byte 00
 		!push_byte 01
-		!push_byte 01
+		!push_byte 00
 		!push_[dword] *_g_lua
 		!call >_lua_pcallk
 		!add_esp_byte 18
