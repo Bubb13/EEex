@@ -18,6 +18,10 @@ function EEex_InstallNewTriggers()
 	local luaTriggerActorAddress = EEex_Malloc(#luaTriggerActorName + 1)
 	EEex_WriteString(luaTriggerActorAddress, luaTriggerActorName)
 
+	local luaTriggerReturnName = "EEex_LuaTrigger"
+	local luaTriggerReturnAddress = EEex_Malloc(#luaTriggerReturnName + 1)
+	EEex_WriteString(luaTriggerReturnAddress, luaTriggerReturnName)
+
 	local newTriggersAddress = EEex_WriteAssemblyAuto({[[
 
 		!cmp_eax_dword #103
@@ -115,11 +119,16 @@ function EEex_InstallNewTriggers()
 		!push_byte 00
 		!push_byte 00
 		!push_byte 00
-		!push_byte 01
+		!push_byte 00
 		!push_byte 00
 		!push_[dword] *_g_lua
 		!call >_lua_pcallk
 		!add_esp_byte 18
+
+		!push_dword ]], {luaTriggerReturnAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
 
 		!push_byte FF
 		!push_[dword] *_g_lua
