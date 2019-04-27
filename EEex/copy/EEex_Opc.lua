@@ -201,6 +201,112 @@ function EEex_InstallOpcodeChanges()
 	})
 	EEex_WriteAssembly(wildSurgeSwirlSendAddress, {"!jmp_dword ", {opcode280SwirlSend, 4, 4}})
 
+	-------------------------------------------
+	-- Opcode #319 (Implement SPLPROT Modes) --
+	-------------------------------------------
+
+	-- Documentation:
+	--     Power =>
+	--         2 => SPLPROT Enabled
+	--         3 => SPLPROT Enabled (Inverted)
+	--
+	--     Param1 => SPLPROT Value
+	--     Param2 => SPLPROT Row
+
+	local opcode319DoSplprotCheck = EEex_WriteAssemblyAuto({[[
+
+		!build_stack_frame
+		!sub_esp_byte 04
+		!push_registers
+
+		!mov_esi_ecx
+		!mov_[ebp+byte]_dword FC #0
+		!xor_edi_edi
+		!mov_eax_[esi+dword] #10C
+		!cmp_eax_byte FF
+		!jz_dword >do_test
+		!lea_ecx_[ebp+byte] FC
+		!push_ecx ; ptr ;
+		!push_eax ; index ;
+		!call >CGameObjectArray::GetShare
+		!add_esp_byte 08
+		!test_al_al
+		!jnz_dword >do_test
+		!mov_ecx_[ebp+byte] FC
+		!mov_eax_[ecx]
+		!mov_eax_[eax+byte] 04
+		!call_eax
+		!mov_edi_[ebp+byte] FC
+		!xor_ecx_ecx
+		!cmp_al_[dword] *CGameObject::TYPE_SPRITE
+		!cmovnz_edi_ecx
+
+		@do_test
+
+		!push_[esi+byte] 18 ; value ;
+		!mov_eax_[dword] *g_pBaldurChitin
+		!push_edi ; mine ;
+		!mov_edi_[ebp+byte] 08
+		!push_edi ; stats ;
+		!push_[esi+byte] 1C ; nRow ;
+		!mov_ecx_[eax+dword] *CBaldurChitin::m_pObjectGame ; this ;
+		!call >CRuleTables::IsProtectedFromSpell
+
+		!pop_registers
+		!destroy_stack_frame
+		!ret_word 04 00
+	]]})
+
+	local opcode319DefaultJump = EEex_Label("IsProtectedFromSpell()_defaultJump")
+	local opcode319DefaultJumpDest = opcode319DefaultJump + EEex_ReadDword(opcode319DefaultJump + 0x2) + 0x6
+
+	local opcode319CleanupJump = EEex_Label("IsProtectedFromSpell()_cleanupJump")
+	local opcode319CleanupJumpDest = opcode319CleanupJump + EEex_ReadByte(opcode319CleanupJump, 0) + 1
+
+	local opcode319DefaultOverride = EEex_WriteAssemblyAuto({[[
+		!cmp_[esi+byte]_byte 14 02
+		!je_dword >do_splprot
+		!cmp_[esi+byte]_byte 14 03
+		!je_dword >do_splprot
+		
+		!cmp_eax_byte 09
+		!ja_dword ]], {opcode319DefaultJumpDest, 4, 4}, [[
+		!jmp_dword ]], {opcode319DefaultJump + 0x6, 4, 4}, [[
+
+		@do_splprot
+		!push_[ebp+byte] 08 ; pSprite ;
+		!mov_ecx_esi
+		!call ]], {opcode319DoSplprotCheck, 4, 4}, [[
+
+		!cmp_[esi+byte]_byte 14 03
+		!jne_dword >return
+		
+		!test_eax_eax
+		!mov_eax #0
+		!setz_al
+
+		@return
+		!mov_ebx_eax
+		!jmp_dword ]], {opcode319CleanupJumpDest, 4, 4},
+	})
+
+	local opcode319TextJump = EEex_Label("GetUsabilityText()_typeJump")
+	local opcode319TextJumpDest = opcode319TextJump + EEex_ReadByte(opcode319TextJump, 0) + 1
+	local opcode319TextOverride = EEex_WriteAssemblyAuto({[[
+		!push_eax
+		!cmp_[ecx+byte]_byte 14 02
+		!je_dword >direct
+
+		!cmp_[ecx+byte]_byte 14 01
+		!jne_dword ]], {opcode319TextJumpDest, 4, 4}, [[
+
+		@direct
+		!jmp_dword ]], {opcode319TextJump + 0x1, 4, 4},
+	})
+
+	EEex_WriteAssembly(EEex_Label("GetUsabilityText()_compareLoc"), {"!jmp_dword", {opcode319TextOverride, 4, 4}})
+	EEex_WriteAssembly(opcode319DefaultJump, {"!jmp_dword", {opcode319DefaultOverride, 4, 4}, "!nop"})
+
 	-----------------------------------------
 	-- Opcode #324 (Set strref to Special) --
 	-----------------------------------------
