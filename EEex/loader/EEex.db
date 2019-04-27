@@ -1208,6 +1208,7 @@ PatAdj=21
 [CGameObject::TYPE_SPRITE]
 PatBytes=8D4E086A005057
 PatAdj=-4
+Type=1
 
 [GetUsabilityText()_compareLoc]
 PatBytes=8B4E088B368B414485C0
