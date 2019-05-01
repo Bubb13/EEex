@@ -610,29 +610,6 @@ function EEex_DecodeAssembly(address, args)
 		["RELATIVE_TO_ADDRESS"] = 8,
 	}
 
-	local resolveDecoded = function(decodedArg, currentWriteAddress)
-		local toReturn = nil
-		local classification = decodedArg.classification
-		if classification == Classification.RELATIVE_TO_KNOWN then
-			toReturn = 4
-		elseif classification == Classification.DWORD then
-			toReturn = 4
-		elseif classification == Classification.ABSOLUTE_OF_OFFSET then
-			toReturn = 4
-		elseif classification == Classification.RELATIVE_TO_LABEL then
-			toReturn = 4
-		elseif classification == Classification.ABSOLUTE_OF_LABEL then
-			toReturn = 4
-		elseif classification == Classification.MACRO then
-
-		elseif classification == Classification.LABEL then
-			toReturn = 0
-		elseif classification == Classification.BYTE then
-			toReturn = 1
-		end
-		return toReturn
-	end
-
 	local decodeTextArg = function(arg, func)
 		local argType = type(arg)
 		if argType == "string" then
@@ -679,7 +656,7 @@ function EEex_DecodeAssembly(address, args)
 					local decodedMacroArgs = {}
 					local limit = #macroSplit
 					for i = 2, limit, 1 do
-						table.insert(decodedMacroArgs, decodeSection(macroSplit[i]))
+						table.insert(decodedMacroArgs, decodeSection(macroSplit[i])) -- TODO: Not defined
 					end
 					decode.decodedMacroArgs = decodedMacroArgs
 					func(decode)
@@ -1205,35 +1182,51 @@ function EEex_Flags(flags)
 end
 
 function EEex_IsBitSet(original, isSetIndex)
-	return bit32.band(original, bit32.lshift(0x1, isSetIndex)) == mask
+	return bit32.band(original, bit32.lshift(0x1, isSetIndex)) ~= 0x0
+end
+
+function EEex_AreBitsSet(original, bitsString)
+	return EEex_IsMaskSet(original, tonumber(bitsString, 2))
 end
 
 function EEex_IsMaskSet(original, isSetMask)
-	return bit32.band(original, tonumber(toSetMask, 2)) == isSetMask
+	return bit32.band(original, isSetMask) == isSetMask
 end
 
-function EEex_IsBitUnset(original, isSetIndex)
-	return bit32.band(original, bit32.lshift(0x1, isSetIndex)) == 0x0
+function EEex_IsBitUnset(original, isUnsetIndex)
+	return bit32.band(original, bit32.lshift(0x1, isUnsetIndex)) == 0x0
+end
+
+function EEex_AreBitsUnset(original, bitsString)
+	return EEex_IsMaskUnset(original, tonumber(bitsString, 2))
 end
 
 function EEex_IsMaskUnset(original, isUnsetMask)
-	return bit32.band(original, tonumber(toSetMask, 2)) == 0x0
+	return bit32.band(original, isUnsetMask) == 0x0
 end
 
 function EEex_SetBit(original, toSetIndex)
 	return bit32.bor(original, bit32.lshift(0x1, toSetIndex))
 end
 
+function EEex_SetBits(original, bitsString)
+	return EEex_SetMask(original, tonumber(bitsString, 2))
+end
+
 function EEex_SetMask(original, toSetMask)
-	return bit32.bor(original, tonumber(toSetMask, 2))
+	return bit32.bor(original, toSetMask)
 end
 
 function EEex_UnsetBit(original, toUnsetIndex)
 	return bit32.band(original, bit32.bnot(bit32.lshift(0x1, toUnsetIndex)))
 end
 
+function EEex_UnsetBits(original, bitsString)
+	return EEex_UnsetMask(original, tonumber(bitsString, 2))
+end
+
 function EEex_UnsetMask(original, toUnsetmask)
-	return bit32.band(original, bit32.bnot(tonumber(toUnsetmask, 2)))
+	return bit32.band(original, bit32.bnot(toUnsetmask))
 end
 
 function EEex_ToHex(number, minLength, prefix)
@@ -1765,6 +1758,11 @@ end
 --  Actor Spell Details  --
 ---------------------------
 
+function EEex_IsSpellValid(resrefLocation)
+	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
+	return eax ~= 0x0
+end
+
 function EEex_GetSpellDescription(resrefLocation)
 	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
 	return Infinity_FetchString(EEex_ReadDword(EEex_ReadDword(eax + 0x40) + 0x50))
@@ -2164,17 +2162,17 @@ function EEex_GetMemorizedClericSpells(actorID)
 	for i = 1, 7, 1 do
 		table.insert(toReturn, {})
 	end
-	EEex_ProcessClericMemorization(actorID,
-		function(level, resrefLocation)
+	EEex_ProcessClericMemorization(actorID, function(level, resrefLocation)
+		if EEex_IsSpellValid(resrefLocation) then
 			local memorizedSpell = {}
 			memorizedSpell.resref = EEex_ReadString(resrefLocation)
 			memorizedSpell.icon = EEex_GetSpellIcon(resrefLocation)
 			local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
-			memorizedSpell.castable = EEex_IsBitUnset(flags, 0x0)
+			memorizedSpell.castable = EEex_IsBitSet(flags, 0x0)
 			memorizedSpell.index = #toReturn[level]
 			table.insert(toReturn[level], memorizedSpell)
 		end
-	)
+	end)
 	return toReturn
 end
 
@@ -2183,34 +2181,34 @@ function EEex_GetMemorizedWizardSpells(actorID)
 	for i = 1, 9, 1 do
 		table.insert(toReturn, {})
 	end
-	EEex_ProcessWizardMemorization(actorID,
-		function(level, resrefLocation)
+	EEex_ProcessWizardMemorization(actorID, function(level, resrefLocation)
+		if EEex_IsSpellValid(resrefLocation) then
 			local memorizedSpell = {}
 			memorizedSpell.resref = EEex_ReadString(resrefLocation)
 			memorizedSpell.icon = EEex_GetSpellIcon(resrefLocation)
 			local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
-			memorizedSpell.castable = EEex_IsBitUnset(flags, 0x0)
+			memorizedSpell.castable = EEex_IsBitSet(flags, 0x0)
 			memorizedSpell.index = #toReturn[level]
 			table.insert(toReturn[level], memorizedSpell)
 		end
-	)
+	end)
 	return toReturn
 end
 
 function EEex_GetMemorizedInnateSpells(actorID)
 	local toReturn = {}
 	table.insert(toReturn, {})
-	EEex_ProcessInnateMemorization(actorID,
-		function(level, resrefLocation)
+	EEex_ProcessInnateMemorization(actorID, function(level, resrefLocation)
+		if EEex_IsSpellValid(resrefLocation) then
 			local memorizedSpell = {}
 			memorizedSpell.resref = EEex_ReadString(resrefLocation)
 			memorizedSpell.icon = EEex_GetSpellIcon(resrefLocation)
 			local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
-			memorizedSpell.castable = EEex_IsBitUnset(flags, 0x0)
+			memorizedSpell.castable = EEex_IsBitSet(flags, 0x0)
 			memorizedSpell.index = #toReturn[level]
 			table.insert(toReturn[level], memorizedSpell)
 		end
-	)
+	end)
 	return toReturn
 end
 
