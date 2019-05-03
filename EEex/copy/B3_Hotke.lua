@@ -6,6 +6,8 @@ B3Hotkey_Hotkeys = {
 	--{"SPWI112", {}, {0x61, 0x73, 0x64}}, -- Old way of doing a spell keybinding
 	--{function() B3Hotkey_AttemptToCastViaHotkey("SPWI112") end, {}, {0x61, 0x73, 0x64}}, -- Example of a spell keybinding
 	--{function() B3Hotkey_AttemptToSelectCharacter(0) end, {0x400000E1}, {0x31}}, -- Example of a keybinding that uses shift mod
+	--{function() B3Hotkey_CastTwoStep("SPWI124", "SPWI112") end, {}, {0x61, 0x73, 0x64}}, -- Example of casting Magic Missile through Nahal's
+	--{function() B3Hotkey_CastTwoStep("SPWI510", "SPWI596") end, {}, {0x64, 0x73, 0x61}}, -- Example of casting Immunity : Necromancy
 }
 
 -- Initialize all stage counters to 1
@@ -24,39 +26,67 @@ function B3Hotkey_TogglePrintKeys()
 	end
 end
 
+function B3Hotkey_UseCGameButtonList(m_CGameSprite, m_CGameButtonList, resref, offInternal)
+	local found = false
+	EEex_IterateCPtrList(m_CGameButtonList, function(m_CButtonData) 
+		-- m_CButtonData.m_abilityId.m_res
+		local m_res = EEex_ReadLString(m_CButtonData + 0x1C + 0x6, 0x8)
+		if m_res == resref then
+			-- Unlike most other functions, CGameSprite::ReadySpell() expects the CButtonData
+			-- arg to be passed by VALUE, not by reference. EEex's call() function isn't designed
+			-- to do that, so the hacky hilarity that follows is required...
+			local stackArgs = {}
+			table.insert(stackArgs, 0x0) -- 0 = Cast, 1 = Choose (for quickslot type things)
+			for i = 0x30, 0x0, -0x4 do
+				table.insert(stackArgs, EEex_ReadDword(m_CButtonData + i))
+			end
+
+			if not offInternal then
+				EEex_Call(EEex_Label("CGameSprite::ReadySpell"), stackArgs, m_CGameSprite, 0x0)
+			else
+				EEex_Call(EEex_Label("CGameSprite::ReadyOffInternalList"), stackArgs, m_CGameSprite, 0x0)
+			end
+			
+			found = true
+			return true -- breaks out of EEex_IterateCPtrList()
+		end
+	end)
+	EEex_FreeCPtrList(m_CGameButtonList)
+	return found
+end
+
 function B3Hotkey_AttemptToCastViaHotkey(resref)
 	if worldScreen == e:GetActiveEngine() then
 		local actorID = EEex_GetActorIDSelected()
 		if actorID ~= 0x0 then
-			local useCGameButtonList = function(m_CGameSprite, m_CGameButtonList)
-				local found = false
-				EEex_IterateCPtrList(m_CGameButtonList, function(m_CButtonData) 
-					-- m_CButtonData.m_abilityId.m_res
-					local m_res = EEex_ReadLString(m_CButtonData + 0x1C + 0x6, 0x8)
-					if m_res == resref then
-						-- Unlike most other functions, CGameSprite::ReadySpell() expects the CButtonData
-						-- arg to be passed by VALUE, not by reference. EEex's call() function isn't designed
-						-- to do that, so the hacky hilarity that follows is required...
-						local stackArgs = {}
-						table.insert(stackArgs, 0x0)
-						for i = 0x30, 0x0, -0x4 do
-							table.insert(stackArgs, EEex_ReadDword(m_CButtonData + i))
-						end
-						EEex_Call(EEex_Label("CGameSprite::ReadySpell"), stackArgs, m_CGameSprite, 0x0)
-						found = true
-						return true -- breaks out of EEex_IterateCPtrList()
-					end
-				end)
-				EEex_FreeCPtrList(m_CGameButtonList)
-				return found
-			end
 			local m_CGameSprite = EEex_GetActorShare(actorID)
 			local spellButtonDataList = EEex_Call(EEex_Label("CGameSprite::GetQuickButtons"), {0, 2}, m_CGameSprite, 0x0)
-			if useCGameButtonList(m_CGameSprite, spellButtonDataList) then return end
+			if B3Hotkey_UseCGameButtonList(m_CGameSprite, spellButtonDataList, resref, false) then return end
 			local innateButtonDataList = EEex_Call(EEex_Label("CGameSprite::GetQuickButtons"), {0, 4}, m_CGameSprite, 0x0)
-			useCGameButtonList(m_CGameSprite, innateButtonDataList)
+			B3Hotkey_UseCGameButtonList(m_CGameSprite, innateButtonDataList, resref, false)
 		end
 	end
+end
+
+function B3Hotkey_CastOffInternal(resref)
+	if worldScreen == e:GetActiveEngine() then
+		local actorID = EEex_GetActorIDSelected()
+		if actorID ~= 0x0 then
+			local m_CGameSprite = EEex_GetActorShare(actorID)
+			local spellButtonDataList = EEex_Call(EEex_Label("CGameSprite::GetInternalButtonList"), {}, m_CGameSprite, 0x0)
+			B3Hotkey_UseCGameButtonList(m_CGameSprite, spellButtonDataList, resref, true)
+			local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+			local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+			local m_cButtonArray = m_pObjectGame + 0x2654
+			local m_nLastState = EEex_ReadDword(m_cButtonArray + 0x1478)
+			EEex_Call(EEex_Label("CInfButtonArray::SetState"), {m_nLastState}, m_cButtonArray, 0x0)
+		end
+	end
+end
+
+function B3Hotkey_CastTwoStep(initial, second)
+	B3Hotkey_AttemptToCastViaHotkey(initial)
+	B3Hotkey_InternalCastResref = second
 end
 
 function B3Hotkey_AttemptToSelectCharacter(portraitNum, dontUnselect)
@@ -200,9 +230,21 @@ function B3Hotkey_KeyReleasedListener(key)
 end
 EEex_AddKeyReleasedListener(B3Hotkey_KeyReleasedListener)
 
+B3Hotkey_InternalCastResref = nil
+
+function B3Hotkey_ActionbarListener(config)
+	if config == 0x1C and B3Hotkey_InternalCastResref then
+		local myCopy = B3Hotkey_InternalCastResref
+		B3Hotkey_InternalCastResref = nil
+		B3Hotkey_CastOffInternal(myCopy)
+	end
+end
+EEex_AddActionbarListener(B3Hotkey_ActionbarListener)
+
 function B3Hotkey_ResetListener()
 	EEex_AddKeyPressedListener(B3Hotkey_KeyPressedListener)
 	EEex_AddKeyReleasedListener(B3Hotkey_KeyReleasedListener)
+	EEex_AddActionbarListener(B3Hotkey_ActionbarListener)
 	EEex_AddResetListener(B3Hotkey_ResetListener)
 end
 EEex_AddResetListener(B3Hotkey_ResetListener)

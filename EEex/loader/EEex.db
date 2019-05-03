@@ -1217,3 +1217,15 @@ PatAdj=12
 [GetUsabilityText()_typeJump]
 PatBytes=8B4E088B368B414485C0
 PatAdj=18
+
+
+;------------------------------------------------------
+; Hotkeys
+;------------------------------------------------------
+[CGameSprite::ReadyOffInternalList]
+PatBytes=8D4508508D8F74350000
+PatAdj=-23
+
+[CGameSprite::GetInternalButtonList]
+PatBytes=33C58945FC53566A208BF1
+PatAdj=-11
