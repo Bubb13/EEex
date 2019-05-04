@@ -1229,3 +1229,12 @@ PatAdj=-23
 [CGameSprite::GetInternalButtonList]
 PatBytes=33C58945FC53566A208BF1
 PatAdj=-11
+
+
+;------------------------------------------------------
+; Auto-Pause Related Things
+;------------------------------------------------------
+[CGameArea::BATTLE_SONG_COUNTER_POST_SONG_DEAD_ZONE]
+PatBytes=8B4F148B81A00A0000
+PatAdj=11
+Type=1

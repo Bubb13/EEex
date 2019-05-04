@@ -2170,6 +2170,8 @@ function EEex_GetMemorizedClericSpells(actorID)
 			local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
 			memorizedSpell.castable = EEex_IsBitSet(flags, 0x0)
 			memorizedSpell.index = #toReturn[level]
+			memorizedSpell.name = EEex_GetSpellName(resrefLocation)
+			memorizedSpell.description = EEex_GetSpellDescription(resrefLocation)
 			table.insert(toReturn[level], memorizedSpell)
 		end
 	end)
@@ -2189,6 +2191,8 @@ function EEex_GetMemorizedWizardSpells(actorID)
 			local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
 			memorizedSpell.castable = EEex_IsBitSet(flags, 0x0)
 			memorizedSpell.index = #toReturn[level]
+			memorizedSpell.name = EEex_GetSpellName(resrefLocation)
+			memorizedSpell.description = EEex_GetSpellDescription(resrefLocation)
 			table.insert(toReturn[level], memorizedSpell)
 		end
 	end)
@@ -2206,6 +2210,8 @@ function EEex_GetMemorizedInnateSpells(actorID)
 			local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
 			memorizedSpell.castable = EEex_IsBitSet(flags, 0x0)
 			memorizedSpell.index = #toReturn[level]
+			memorizedSpell.name = EEex_GetSpellName(resrefLocation)
+			memorizedSpell.description = EEex_GetSpellDescription(resrefLocation)
 			table.insert(toReturn[level], memorizedSpell)
 		end
 	end)
@@ -2482,6 +2488,29 @@ function EEex_GetActorCastTimer(actorID)
 	else
 		return 0
 	end
+end
+
+function EEex_IsActorInCombat(actorID)
+	local area = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14)
+	local songCounter = EEex_ReadDword(area + 0xAA0)
+	local damageCounter = EEex_ReadDword(area + 0xAA4)
+	-- Ladies and Gentlemen, the longest label in the entire Infinity Engine:
+	local songDeadZone = EEex_ReadDword(EEex_Label("CGameArea::BATTLE_SONG_COUNTER_POST_SONG_DEAD_ZONE"))
+	return songCounter > songDeadZone or damageCounter > 0
+end
+
+function EEex_GetActorTargetID(actorID)
+	local targetID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3564)
+	if targetID ~= -0x1 then
+		return targetID
+	else
+		return 0x0
+	end
+end
+
+function EEex_GetActorTargetPoint(actorID)
+	local share = EEex_GetActorShare(actorID)
+	return EEex_ReadDword(share + 0x3568), EEex_ReadDword(share + 0x356C)
 end
 
 ----------------------
