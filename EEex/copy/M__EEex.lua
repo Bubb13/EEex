@@ -2490,13 +2490,16 @@ function EEex_GetActorCastTimer(actorID)
 	end
 end
 
-function EEex_IsActorInCombat(actorID)
+function EEex_IsActorInCombat(actorID, includeDeadZone)
 	local area = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14)
 	local songCounter = EEex_ReadDword(area + 0xAA0)
 	local damageCounter = EEex_ReadDword(area + 0xAA4)
-	-- Ladies and Gentlemen, the longest label in the entire Infinity Engine:
-	local songDeadZone = EEex_ReadDword(EEex_Label("CGameArea::BATTLE_SONG_COUNTER_POST_SONG_DEAD_ZONE"))
-	return songCounter > songDeadZone or damageCounter > 0
+	local songCompare = 0
+	if includeDeadZone then
+		-- Ladies and Gentlemen, the longest label in the entire Infinity Engine:
+		songCompare = EEex_ReadDword(EEex_Label("CGameArea::BATTLE_SONG_COUNTER_POST_SONG_DEAD_ZONE"))
+	end
+	return songCounter > songCompare or damageCounter > 0
 end
 
 function EEex_GetActorTargetID(actorID)
@@ -2511,6 +2514,20 @@ end
 function EEex_GetActorTargetPoint(actorID)
 	local share = EEex_GetActorShare(actorID)
 	return EEex_ReadDword(share + 0x3568), EEex_ReadDword(share + 0x356C)
+end
+
+function EEex_GetActorCurrentHP(actorID)
+	return EEex_ReadSignedWord(EEex_GetActorShare(actorID) + 0x438, 0x0)
+end
+
+function EEex_GetActorCurrentDest(actorID)
+	local share = EEex_GetActorShare(actorID)
+	return EEex_ReadDword(share + 0x3404), EEex_ReadDword(share + 0x3408)
+end
+
+function EEex_GetActorPosDest(actorID)
+	local share = EEex_GetActorShare(actorID)
+	return EEex_ReadDword(share + 0x31D4), EEex_ReadDword(share + 0x31D8)
 end
 
 ----------------------
@@ -3090,7 +3107,8 @@ end
 		--  Engine Hooks  --
 		--------------------
 
-		Infinity_DoFile("EEex_Men") -- Lua / Menu Hooks
+		Infinity_DoFile("EEex_Men") -- Menu Hooks
+		Infinity_DoFile("EEex_Lua") -- Lua Hooks
 		Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
 		Infinity_DoFile("EEex_AHo") -- Actions Hook
 		Infinity_DoFile("EEex_Bar") -- Actionbar Hook
