@@ -2535,30 +2535,6 @@ function EEex_GetActorAnimation(actorID)
 end
 
 function EEex_GetActorBaseStrength(actorID)
-	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64C, 0x0)
-end
-
-function EEex_GetActorBaseDexterity(actorID)
-	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x650, 0x0)
-end
-
-function EEex_GetActorBaseConstitution(actorID)
-	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x651, 0x0)
-end
-
-function EEex_GetActorBaseIntelligence(actorID)
-	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64E, 0x0)
-end
-
-function EEex_GetActorBaseWisdom(actorID)
-	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64F, 0x0)
-end
-
-function EEex_GetActorBaseCharisma(actorID)
-	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x652, 0x0)
-end
-
-function EEex_GetActorBaseStrength(actorID)
 	-- Returns the actor's Strength ignoring Strength changes from items and spells
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64C, 0x0)
 end
