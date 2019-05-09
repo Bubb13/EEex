@@ -2563,7 +2563,7 @@ function EEex_ApplyEffectToActor(actorID, args)
 
 	local Item_effect_st = EEex_Malloc(0x30)
 
-	local argOrError = function(argKey, default)
+	local argOrError = function(argKey)
 		local arg = args[argKey]
 		if arg then
 			return arg
@@ -2581,46 +2581,64 @@ function EEex_ApplyEffectToActor(actorID, args)
 		end
 	end
 
-	EEex_WriteWord(Item_effect_st + 0x0, argOrError("effectID"))                 -- Required
-	EEex_WriteByte(Item_effect_st + 0x2, argOrDefault("targetType", 1))          -- Default: 1 (Self)
-	EEex_WriteByte(Item_effect_st + 0x3, argOrDefault("spellLevel", 0))          -- Default: 0
-	EEex_WriteDword(Item_effect_st + 0x4, argOrDefault("effectAmount", 0))       -- Default: 0
-	EEex_WriteDword(Item_effect_st + 0x8, argOrDefault("dwFlags", 0))            -- Default: 0
-	EEex_WriteByte(Item_effect_st + 0xC, argOrDefault("durationType", 0))        -- Default: 0 (Instant/Limited)
-	EEex_WriteByte(Item_effect_st + 0xD, argOrDefault("dispelType", 0))          -- Default: 0 (Natural/Nonmagical)
-	EEex_WriteDword(Item_effect_st + 0xE, argOrDefault("duration",  0))          -- Default: 0
-	EEex_WriteByte(Item_effect_st + 0x12, argOrDefault("probabilityUpper", 100)) -- Default: 100
-	EEex_WriteByte(Item_effect_st + 0x13, argOrDefault("probabilityLower", 0))   -- Default: 0
-	local res = args["res"]
-	if res then
-		local stringMem = EEex_Malloc(#res + 1)
-		EEex_WriteDword(stringMem + 0x0, 0x0)
-		EEex_WriteDword(stringMem + 0x4, 0x0)
-		EEex_WriteString(stringMem, res)
-		EEex_WriteDword(Item_effect_st + 0x14, EEex_ReadDword(stringMem + 0x0))
-		EEex_WriteDword(Item_effect_st + 0x18, EEex_ReadDword(stringMem + 0x4))
-		EEex_Free(stringMem)
-	else
-		EEex_WriteDword(Item_effect_st + 0x14, 0x0)
-		EEex_WriteDword(Item_effect_st + 0x18, 0x0)
+	local writeResrefArg = function(address, argKey)
+		local resref = args[argKey]:upper()
+		if resref then
+			local stringMem = EEex_Malloc(#resref + 1)
+			EEex_WriteDword(stringMem + 0x0, 0x0)
+			EEex_WriteDword(stringMem + 0x4, 0x0)
+			EEex_WriteString(stringMem, resref)
+			EEex_WriteDword(address + 0x0, EEex_ReadDword(stringMem + 0x0))
+			EEex_WriteDword(address + 0x4, EEex_ReadDword(stringMem + 0x4))
+			EEex_Free(stringMem)
+		else
+			EEex_WriteDword(address + 0x0, 0x0)
+			EEex_WriteDword(address + 0x4, 0x0)
+		end
 	end
-	EEex_WriteDword(Item_effect_st + 0x1C, argOrDefault("numDice", 0))     -- Default: 0
-	EEex_WriteDword(Item_effect_st + 0x20, argOrDefault("diceSize", 0))    -- Default: 0
-	EEex_WriteDword(Item_effect_st + 0x24, argOrDefault("savingThrow", 0)) -- Default: 0 (None)
-	EEex_WriteDword(Item_effect_st + 0x28, argOrDefault("saveMod", 0))     -- Default: 0
+
+	EEex_WriteWord(Item_effect_st + 0x0, argOrError("opcode"))               -- Required
+	EEex_WriteByte(Item_effect_st + 0x2, argOrDefault("target", 1))          -- Default: 1 (Self)
+	EEex_WriteByte(Item_effect_st + 0x3, argOrDefault("power", 0))           -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x4, argOrDefault("parameter1", 0))     -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x8, argOrDefault("parameter2", 0))     -- Default: 0
+	EEex_WriteByte(Item_effect_st + 0xC, argOrDefault("timing", 0))          -- Default: 0 (Instant/Limited)
+	EEex_WriteByte(Item_effect_st + 0xD, argOrDefault("resist_dispel", 0))   -- Default: 0 (Natural/Nonmagical)
+	EEex_WriteDword(Item_effect_st + 0xE, argOrDefault("duration",  0))      -- Default: 0
+	EEex_WriteByte(Item_effect_st + 0x12, argOrDefault("probability1", 100)) -- Default: 100
+	EEex_WriteByte(Item_effect_st + 0x13, argOrDefault("probability2", 0))   -- Default: 0
+	writeResrefArg(Item_effect_st + 0x14, "resource")
+	EEex_WriteDword(Item_effect_st + 0x1C, argOrDefault("dicenumber", 0))  -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x20, argOrDefault("dicesize", 0))    -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x24, argOrDefault("savingthrow", 0)) -- Default: 0 (None)
+	EEex_WriteDword(Item_effect_st + 0x28, argOrDefault("savebonus", 0))   -- Default: 0
 	EEex_WriteDword(Item_effect_st + 0x2C, argOrDefault("special", 0))     -- Default: 0
 
-	local pointJunk = EEex_Malloc(0x8)
-	EEex_WriteDword(pointJunk + 0x0, -0x1)
-	EEex_WriteDword(pointJunk + 0x4, -0x1)
-	local CGameEffect = EEex_Call(EEex_Label("CGameEffect::DecodeEffect"), {-0x1, pointJunk, -0x1, pointJunk, Item_effect_st}, nil, 0x14)
+	local sourceTarget = argOrDefault("source_target", -0x1)
+
+	local target = EEex_Malloc(0x8)
+	EEex_WriteDword(target + 0x0, argOrDefault("target_x", -0x1))
+	EEex_WriteDword(target + 0x4, argOrDefault("target_y", -0x1))
+
+	local sourceID = argOrDefault("source_id", -0x1)
+
+	local source = EEex_Malloc(0x8)
+	EEex_WriteDword(source + 0x0, argOrDefault("source_x", -0x1))
+	EEex_WriteDword(source + 0x4, argOrDefault("source_y", -0x1))
+
+	-- int sourceTarget, CPoint *target, int sourceID, CPoint *source, Item_effect_st *effect 
+	local CGameEffect = EEex_Call(EEex_Label("CGameEffect::DecodeEffect"), {sourceTarget, target, sourceID, source, Item_effect_st}, nil, 0x14)
 	
-	EEex_Free(pointJunk)
+	EEex_Free(target)
+	EEex_Free(source)
 	EEex_Free(Item_effect_st)
+
+	writeResrefArg(CGameEffect + 0x90, "parent_resource")
 
 	local share = EEex_GetActorShare(actorID)
 	local vtable = EEex_ReadDword(share)
-	EEex_Call(EEex_ReadDword(vtable + 0x74), {1, 0, 0, CGameEffect}, share, 0x0)
+	-- int immediateResolve, int noSave, char list, CGameEffect *pEffect
+	EEex_Call(EEex_ReadDword(vtable + 0x74), {1, 0, 1, CGameEffect}, share, 0x0)
 end
 
 ----------------------
