@@ -1754,6 +1754,20 @@ function EEex_GetActionbarButton(buttonIndex)
 	return EEex_ReadDword(actionbarAddress + 0x1440 + buttonIndex * 0x4)
 end
 
+function EEex_IsActionbarButtonDown(buttonIndex)
+	local capture = EEex_ReadDword(EEex_Label("capture") + 0xC)
+	if capture == 0x0 then return false end
+	local actionbar = EEex_ReadDword(capture + 0x1AC)
+	if actionbar == 0x0 then return false end
+	return EEex_ReadDword(actionbar + 0x4) == buttonIndex
+end
+
+function EEex_GetActionbarButtonFrame(buttonIndex)
+	local frame = buttonArray:GetButtonSequence(buttonIndex)
+	if EEex_IsActionbarButtonDown(buttonIndex) then frame = frame + 1 end
+	return frame
+end
+
 ---------------------------
 --  Actor Spell Details  --
 ---------------------------

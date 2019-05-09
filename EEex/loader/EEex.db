@@ -1254,3 +1254,12 @@ PatAdj=18
 [CGameEffect::DecodeEffect]
 PatBytes=558BEC56578B7D0833F6837F20FF
 PatAdj=0
+
+
+;------------------------------------------------------
+; UI Hooks
+;------------------------------------------------------
+[capture]
+PatBytes=33C06A2C5068
+PatAdj=11
+Type=1
