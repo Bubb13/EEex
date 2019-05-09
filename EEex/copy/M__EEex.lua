@@ -104,7 +104,7 @@ end
 
 function EEex_WriteWord(address, value)
 	for i = 0, 1, 1 do
-		EEex_WriteByte(address + i * 0x2, bit32.extract(value, i * 0x16, 0x8))
+		EEex_WriteByte(address + i, bit32.extract(value, i * 0x8, 0x8))
 	end
 end
 
@@ -2557,6 +2557,70 @@ end
 
 function EEex_GetActorBaseCharisma(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x652, 0x0)
+end
+
+function EEex_ApplyEffectToActor(actorID, args)
+
+	local Item_effect_st = EEex_Malloc(0x30)
+
+	local argOrError = function(argKey, default)
+		local arg = args[argKey]
+		if arg then
+			return arg
+		else
+			EEex_Error(argKey.." must be defined!")
+		end
+	end
+
+	local argOrDefault = function(argKey, default)
+		local arg = args[argKey]
+		if arg then
+			return arg
+		else
+			return default
+		end
+	end
+
+	EEex_WriteWord(Item_effect_st + 0x0, argOrError("effectID"))                 -- Required
+	EEex_WriteByte(Item_effect_st + 0x2, argOrDefault("targetType", 1))          -- Default: 1 (Self)
+	EEex_WriteByte(Item_effect_st + 0x3, argOrDefault("spellLevel", 0))          -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x4, argOrDefault("effectAmount", 0))       -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x8, argOrDefault("dwFlags", 0))            -- Default: 0
+	EEex_WriteByte(Item_effect_st + 0xC, argOrDefault("durationType", 0))        -- Default: 0 (Instant/Limited)
+	EEex_WriteByte(Item_effect_st + 0xD, argOrDefault("dispelType", 0))          -- Default: 0 (Natural/Nonmagical)
+	EEex_WriteDword(Item_effect_st + 0xE, argOrDefault("duration",  0))          -- Default: 0
+	EEex_WriteByte(Item_effect_st + 0x12, argOrDefault("probabilityUpper", 100)) -- Default: 100
+	EEex_WriteByte(Item_effect_st + 0x13, argOrDefault("probabilityLower", 0))   -- Default: 0
+	local res = args["res"]
+	if res then
+		local stringMem = EEex_Malloc(#res + 1)
+		EEex_WriteDword(stringMem + 0x0, 0x0)
+		EEex_WriteDword(stringMem + 0x4, 0x0)
+		EEex_WriteString(stringMem, res)
+		EEex_WriteDword(Item_effect_st + 0x14, EEex_ReadDword(stringMem + 0x0))
+		EEex_WriteDword(Item_effect_st + 0x18, EEex_ReadDword(stringMem + 0x4))
+		EEex_Free(stringMem)
+	else
+		EEex_WriteDword(Item_effect_st + 0x14, 0x0)
+		EEex_WriteDword(Item_effect_st + 0x18, 0x0)
+	end
+	EEex_WriteDword(Item_effect_st + 0x1C, argOrDefault("numDice", 0))     -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x20, argOrDefault("diceSize", 0))    -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x24, argOrDefault("savingThrow", 0)) -- Default: 0 (None)
+	EEex_WriteDword(Item_effect_st + 0x28, argOrDefault("saveMod", 0))     -- Default: 0
+	EEex_WriteDword(Item_effect_st + 0x2C, argOrDefault("special", 0))     -- Default: 0
+
+	local pointJunk = EEex_Malloc(0x8)
+	EEex_WriteDword(pointJunk + 0x0, -0x1)
+	EEex_WriteDword(pointJunk + 0x4, -0x1)
+	local CGameEffect = EEex_Call(EEex_Label("CGameEffect::DecodeEffect"), {-0x1, pointJunk, -0x1, pointJunk, Item_effect_st}, nil, 0x14)
+	
+	EEex_Free(pointJunk)
+	EEex_Free(Item_effect_st)
+
+	local share = EEex_GetActorShare(actorID)
+	local vtable = EEex_ReadDword(share)
+	EEex_Call(EEex_ReadDword(vtable + 0x74), {1, 0, 0, CGameEffect}, share, 0x0)
 end
 
 ----------------------

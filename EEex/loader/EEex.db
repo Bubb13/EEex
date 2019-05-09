@@ -1246,3 +1246,11 @@ Type=1
 [Eval()_actorIDJmp]
 PatBytes=8B450C83C40883F8FF
 PatAdj=18
+
+
+;------------------------------------------------------
+; Effect Hooks
+;------------------------------------------------------
+[CGameEffect::DecodeEffect]
+PatBytes=558BEC56578B7D0833F6837F20FF
+PatAdj=0
