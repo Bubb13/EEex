@@ -2596,12 +2596,12 @@ function EEex_ApplyEffectToActor(actorID, args)
 	end
 
 	local writeResrefArg = function(address, argKey)
-		local resref = args[argKey]:upper()
+		local resref = args[argKey]
 		if resref then
 			local stringMem = EEex_Malloc(#resref + 1)
 			EEex_WriteDword(stringMem + 0x0, 0x0)
 			EEex_WriteDword(stringMem + 0x4, 0x0)
-			EEex_WriteString(stringMem, resref)
+			EEex_WriteString(stringMem, resref:upper())
 			EEex_WriteDword(address + 0x0, EEex_ReadDword(stringMem + 0x0))
 			EEex_WriteDword(address + 0x4, EEex_ReadDword(stringMem + 0x4))
 			EEex_Free(stringMem)
