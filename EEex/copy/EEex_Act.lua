@@ -7,6 +7,10 @@ No new Lua functionality is defined in this file.
 
 function EEex_InstallNewActions()
 
+	local luaActorName = "EEex_LuaActorID"
+	local luaActorAddress = EEex_Malloc(#luaActorName + 1)
+	EEex_WriteString(luaActorAddress, luaActorName)
+
 	local hookAddress = EEex_WriteAssemblyAuto({[[
 		!cmp_eax_dword #1D8
 		!je_dword >EEex_Lua
@@ -16,10 +20,11 @@ function EEex_InstallNewActions()
 
 		!push_[esi+dword] #344
 		!push_[dword] *_g_lua
-		!call >_lua_getglobal
+		; TODO: Cache Lua chunks ;
+		!call >_luaL_loadstring
 		!add_esp_byte 08
 
-		!push_[esi+byte] 28
+		!push_[esi+byte] 34
 		!fild_[esp]
 		!sub_esp_byte 04
 		!fstp_qword:[esp]
@@ -27,11 +32,16 @@ function EEex_InstallNewActions()
 		!call >_lua_pushnumber
 		!add_esp_byte 0C
 
+		!push_dword ]], {luaActorAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_setglobal
+		!add_esp_byte 08
+
 		!push_byte 00
 		!push_byte 00
 		!push_byte 00
 		!push_byte 00
-		!push_byte 01
+		!push_byte 00
 		!push_[dword] *_g_lua
 		!call >_lua_pcallk
 		!add_esp_byte 18
