@@ -1395,6 +1395,19 @@ function EEex_GetTrueMousePos()
 	return mouseX, mouseY
 end
 
+function EEex_ScreenToWorldXY(screenX, screenY)
+	local screenXY = EEex_Malloc(0x8)
+	EEex_WriteDword(screenXY + 0x0, screenX)
+	EEex_WriteDword(screenXY + 0x4, screenY)
+	local result = EEex_Malloc(0x8)
+	EEex_Call(EEex_Label("CInfinity::GetWorldCoordinates"), {screenXY, result}, EEex_GetCurrentCInfinity(), 0x0)
+	local resultX = EEex_ReadDword(result + 0x0)
+	local resultY = EEex_ReadDword(result + 0x4)
+	EEex_Free(screenXY)
+	EEex_Free(result)
+	return resultX, resultY
+end
+
 function EEex_IsCursorWithin(x, y, width, height)
 	local mouseX, mouseY = EEex_GetTrueMousePos()
 	return mouseX >= x and mouseX <= (x + width)
@@ -2571,6 +2584,50 @@ end
 
 function EEex_GetActorBaseCharisma(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x652, 0x0)
+end
+
+function EEex_GetActorDirection(actorID)
+	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x31FE, 0x0)
+end
+
+function EEex_GetActorRequiredDirection(actorID, targetX, targetY)
+	local share = EEex_GetActorShare(actorID)
+	local targetPoint = EEex_Malloc(0x8)
+	EEex_WriteDword(targetPoint + 0x0, targetX)
+	EEex_WriteDword(targetPoint + 0x4, targetY)
+	return bit32.extract(EEex_Call(EEex_Label("CGameSprite::GetDirection"), {targetPoint}, share, 0x0), 0, 0x10)
+end
+
+function EEex_IsActorFacing(sourceID, targetID)
+	local targetX, targetY = EEex_GetActorLocation(targetID)
+	local currentDir = EEex_GetActorDirection(sourceID)
+	local requiredDir = EEex_GetActorRequiredDirection(sourceID, targetX, targetY)
+	return currentDir == requiredDir
+end
+
+function EEex_CyclicBound(num, lowerBound, upperBound)
+	local tolerance = upperBound - lowerBound
+	local cycleCount = math.floor((num - lowerBound) / (tolerance + 1))
+	return num - tolerance * cycleCount - cycleCount
+end
+
+function EEex_WithinCyclicRange(num, num2, range, lowerBound, higherBound)
+	if num2 < lowerBound + range then
+		-- Underflows
+		return num > EEex_CyclicBound(num2 + higherBound - range + 1, lowerBound, higherBound) or num < (num2 + range)
+	elseif num2 <= (higherBound - range + 1) then
+		-- Normal
+		return num > (num2 - range) and num < (num2 + range)
+	else
+		-- Overflows
+		return num > (num2 - range) or num < EEex_CyclicBound(num2 + range, lowerBound, higherBound)
+	end
+end
+
+function EEex_IsValidBackstabDirection(attackerID, targetID)
+	local attackerDirection = EEex_GetActorDirection(attackerID)
+	local targetDirection = EEex_GetActorDirection(targetID)
+	return EEex_WithinCyclicRange(attackerDirection, targetDirection, 3, 0, 15)
 end
 
 function EEex_ApplyEffectToActor(actorID, args)

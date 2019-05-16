@@ -1263,3 +1263,15 @@ PatAdj=0
 PatBytes=33C06A2C5068
 PatAdj=11
 Type=1
+
+
+;------------------------------------------------------
+; Facing
+;------------------------------------------------------
+[CInfinity::GetWorldCoordinates]
+PatBytes=558BEC56578B7D0C8BF18B073B4658
+PatAdj=0
+
+[CGameSprite::GetDirection]
+PatBytes=558BEC83EC10568B75088B068B5604394108
+PatAdj=0
