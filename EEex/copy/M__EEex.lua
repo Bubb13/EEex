@@ -1396,16 +1396,20 @@ function EEex_GetTrueMousePos()
 end
 
 function EEex_ScreenToWorldXY(screenX, screenY)
+	local CInfinity = EEex_GetCurrentCInfinity()
 	local screenXY = EEex_Malloc(0x8)
 	EEex_WriteDword(screenXY + 0x0, screenX)
 	EEex_WriteDword(screenXY + 0x4, screenY)
-	local result = EEex_Malloc(0x8)
-	EEex_Call(EEex_Label("CInfinity::GetWorldCoordinates"), {screenXY, result}, EEex_GetCurrentCInfinity(), 0x0)
-	local resultX = EEex_ReadDword(result + 0x0)
-	local resultY = EEex_ReadDword(result + 0x4)
+	local viewportXY = EEex_Malloc(0x8)
+	EEex_Call(EEex_Label("CInfinity::ScreenToViewport"), {screenXY, viewportXY}, CInfinity, 0x0)
 	EEex_Free(screenXY)
-	EEex_Free(result)
-	return resultX, resultY
+	local worldXY = EEex_Malloc(0x8)
+	EEex_Call(EEex_Label("CInfinity::GetWorldCoordinates"), {viewportXY, worldXY}, CInfinity, 0x0)
+	EEex_Free(viewportXY)
+	local worldX = EEex_ReadDword(worldXY + 0x0)
+	local worldY = EEex_ReadDword(worldXY + 0x4)
+	EEex_Free(worldXY)
+	return worldX, worldY
 end
 
 function EEex_IsCursorWithin(x, y, width, height)
@@ -2595,7 +2599,9 @@ function EEex_GetActorRequiredDirection(actorID, targetX, targetY)
 	local targetPoint = EEex_Malloc(0x8)
 	EEex_WriteDword(targetPoint + 0x0, targetX)
 	EEex_WriteDword(targetPoint + 0x4, targetY)
-	return bit32.extract(EEex_Call(EEex_Label("CGameSprite::GetDirection"), {targetPoint}, share, 0x0), 0, 0x10)
+	local result = EEex_Call(EEex_Label("CGameSprite::GetDirection"), {targetPoint}, share, 0x0)
+	EEex_Free(targetPoint)
+	return bit32.extract(result, 0, 0x10)
 end
 
 function EEex_IsActorFacing(sourceID, targetID)

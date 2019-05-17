@@ -1268,6 +1268,10 @@ Type=1
 ;------------------------------------------------------
 ; Facing
 ;------------------------------------------------------
+[CInfinity::ScreenToViewport]
+PatBytes=558BEC51538BD9C745FC00000000568B750C
+PatAdj=0
+
 [CInfinity::GetWorldCoordinates]
 PatBytes=558BEC56578B7D0C8BF18B073B4658
 PatAdj=0
