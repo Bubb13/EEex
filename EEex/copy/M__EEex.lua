@@ -2612,13 +2612,13 @@ function EEex_IsActorFacing(sourceID, targetID)
 end
 
 function EEex_CyclicBound(num, lowerBound, upperBound)
-	local tolerance = upperBound - lowerBound
-	local cycleCount = math.floor((num - lowerBound) / (tolerance + 1))
-	return num - tolerance * cycleCount - cycleCount
+	local tolerance = upperBound - lowerBound + 1
+	local cycleCount = math.floor((num - lowerBound) / tolerance)
+	return num - tolerance * cycleCount
 end
 
 function EEex_WithinCyclicRange(num, num2, range, lowerBound, higherBound)
-	if num2 < lowerBound + range then
+	if num2 < (lowerBound + range) then
 		-- Underflows
 		return num > EEex_CyclicBound(num2 + higherBound - range + 1, lowerBound, higherBound) or num < (num2 + range)
 	elseif num2 <= (higherBound - range + 1) then
