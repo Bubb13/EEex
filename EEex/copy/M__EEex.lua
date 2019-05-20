@@ -114,6 +114,21 @@ function EEex_WriteDword(address, value)
 	end
 end
 
+-- Function for editing text fields without a terminating NULL (e.g. resrefs)
+-- This is basically like the WeiDU WRITE_ASCII function.
+-- EEex_WriteLString(0x20, "SPWI304", 8)
+-- equals
+-- WRITE_ASCII 0x20 ~SPWI304~ #8
+function EEex_WriteLString(address, toWrite, maxLength)
+	local stringLength = string.len(toWrite)
+	local not_so_null = EEex_ReadByte(address + stringLength, 0x0)
+	EEex_WriteString(address, toWrite)
+	EEex_WriteByte(address + stringLength, not_so_null)
+	for i = stringLength, maxLength - 1, 1 do
+		EEex_WriteByte(address + i, 0x0)
+	end
+end
+
 -- OS:WINDOWS
 function EEex_DllCall(dll, proc, args, ecx, pop)
 	local procaddress = #dll + 1
@@ -2716,6 +2731,96 @@ function EEex_ApplyEffectToActor(actorID, args)
 	local vtable = EEex_ReadDword(share)
 	-- int immediateResolve, int noSave, char list, CGameEffect *pEffect
 	EEex_Call(EEex_ReadDword(vtable + 0x74), {1, 0, 1, CGameEffect}, share, 0x0)
+end
+
+-- Table with the effect offsets, along with the size of each one. Names are based on WeiDU function variable names unless not included in there.
+EEex_effOff = {
+["opcode"] = {0xC, 4}, 
+["target"] = {0x10, 4}, 
+["power"] = {0x14, 4}, 
+["parameter1"] = {0x18, 4}, 
+["parameter2"] = {0x1C, 4}, 
+["timing"] = {0x20, 4}, 
+["duration"] = {0x24, 4}, 
+["probability1"] = {0x28, 2}, 
+["probability2"] = {0x2A, 2}, 
+["resource"] = {0x2C, 8},
+["dicenumber"] = {0x34, 4},
+["dicesize"] = {0x38, 4},
+["savingthrow"] = {0x3C, 4},
+["savebonus"] = {0x40, 4},
+["special"] = {0x44, 4},
+["school"] = {0x48, 4},
+["lowestafflevel"] = {0x50, 4},
+["highestafflevel"] = {0x54, 4},
+["resist_dispel"] = {0x58, 4},
+["parameter3"] = {0x5C, 4},
+["parameter4"] = {0x60, 4},
+["time_applied"] = {0x64, 4},
+["resource2"] = {0x68, 8},
+["vvcresource"] = {0x70, 8},
+["casterx"] = {0x7C, 4},
+["source_x"] = {0x7C, 4},
+["castery"] = {0x80, 4},
+["source_y"] = {0x80, 4},
+["targetx"] = {0x84, 4},
+["target_x"] = {0x84, 4},
+["targety"] = {0x88, 4},
+["target_y"] = {0x88, 4},
+["restype"] = {0x8C, 4},
+["effsource"] = {0x90, 8},
+["parent_resource"] = {0x90, 8},
+["sourceslot"] = {0xA0, 4},
+["effvar"] = {0xA4, 32},
+["casterlvl"] = {0xC4, 4},
+["internal_flags"] = {0xC8, 4},
+["sectype"] = {0xCC, 4}}
+
+
+-- This is basically like the WeiDU ALTER_EFFECT function, except that it alters effects in the middle of the game!
+-- EEex_AlterActorEffect(actorID, {{"opcode",232},{"parameter2",0},{"resource","SPWI304"}}, {{"resource","SPWI502"}}, 2)
+-- equals
+-- LPF ALTER_EFFECT INT_VAR multi_match=2 match_opcode=232 match_parameter2=0 STR_VAR match_resource=~SPWI304~ resource=~SPWI502~ END
+function EEex_AlterActorEffect(actorID, match_table, set_table, multi_match)
+	if multi_match == -1 then
+		multi_match = 65535
+	end
+	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
+	local match_count = 0
+	while esi ~= 0x0 and match_count < multi_match do
+		edi = EEex_ReadDword(esi + 0x8)
+		local matched = true
+		for key,value in ipairs(match_table) do
+			local readSize = EEex_effOff[value[1]][2]
+			if readSize == 4 then
+				if EEex_ReadDword(edi + EEex_effOff[value[1]][1]) ~= value[2] then
+					matched = false
+				end
+			elseif readSize == 2 then
+				if EEex_ReadWord(edi + EEex_effOff[value[1]][1], 0x0) ~= value[2] then
+					matched = false
+				end
+			else
+				if EEex_ReadLString(edi + EEex_effOff[value[1]][1], readSize) ~= value[2] then
+					matched = false
+				end
+			end
+		end
+		if matched then
+			for key,value in ipairs(set_table) do
+				local writeSize = EEex_effOff[value[1]][2]
+				if writeSize == 4 then
+					EEex_WriteDword(edi + EEex_effOff[value[1]][1], value[2])
+				elseif writeSize == 2 then
+					EEex_WriteWord(edi + EEex_effOff[value[1]][1], value[2])
+				else
+					EEex_WriteLString(edi + EEex_effOff[value[1]][1], value[2], writeSize)
+				end
+			end
+			match_count = match_count + 1
+		end
+		esi = EEex_ReadDword(esi)
+	end
 end
 
 ----------------------
