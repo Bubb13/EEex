@@ -3,20 +3,84 @@ function EEex_InstallOpcodeChanges()
 
 	EEex_DisableCodeProtection()
 
-	--------------------------------------------------
-	-- Opcode #42 (Remove "at least 1 slot" checks) --
-	--------------------------------------------------
+	---------------------------------------------------------------------
+	-- Opcode #42 (Non-zero Special bypasses "at least 1 slot" checks) --
+	---------------------------------------------------------------------
 
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck1"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck2"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck3"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck4"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck5"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck6"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck7"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck8"), {"!nop !nop"})
-	EEex_WriteAssembly(EEex_Label("Opcode42DisableCheck9"), {"!nop !nop !nop !nop !nop !nop"})
+	local opcode42WriteHook = function(address)
+		local opcode42JumpDest = address + EEex_ReadByte(address + 0x3, 1) + 0x5
+		local opcode42CheckSpecial = EEex_WriteAssemblyAuto({[[
+			!mov_eax_[edx+byte] 44
+			!test_eax_eax
+			!jnz_dword >skip_check
+			!test_si_si
+			!jz_dword ]], {opcode42JumpDest, 4, 4}, [[
+			@skip_check
+			!jmp_dword ]], {address + 0x5, 4, 4},
+		})
+		EEex_WriteAssembly(address, {"!jmp_dword", {opcode42CheckSpecial, 4, 4}})
+	end
 
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck1"))
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck2"))
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck3"))
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck4"))
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck5"))
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck6"))
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck7"))
+	opcode42WriteHook(EEex_Label("Opcode42DisableCheck8"))
+
+	local opcode42LastJumpAddress = EEex_Label("Opcode42DisableCheck9")
+	local opcode42LastJumpDest = opcode42LastJumpAddress + EEex_ReadDword(opcode42LastJumpAddress + 0x5) + 0x9
+	local opcode42LastCheckSpecial = EEex_WriteAssemblyAuto({[[
+		!mov_eax_[edx+byte] 44
+		!test_eax_eax
+		!jnz_dword >skip_check
+		!test_si_si
+		!jz_dword ]], {opcode42LastJumpDest, 4, 4}, [[
+		@skip_check
+		!jmp_dword ]], {opcode42LastJumpAddress + 0x9, 4, 4},
+	})
+	EEex_WriteAssembly(opcode42LastJumpAddress, {"!jmp_dword", {opcode42LastCheckSpecial, 4, 4}, "!nop !nop !nop !nop"})
+
+	---------------------------------------------------------------------
+	-- Opcode #62 (Non-zero Special bypasses "at least 1 slot" checks) --
+	---------------------------------------------------------------------
+
+	local opcode62WriteHook = function(address)
+		local opcode62JumpDest = address + EEex_ReadByte(address + 0x3, 1) + 0x5
+		local opcode62CheckSpecial = EEex_WriteAssemblyAuto({[[
+			!mov_eax_[edx+byte] 44
+			!test_eax_eax
+			!jnz_dword >skip_check
+			!test_si_si
+			!jz_dword ]], {opcode62JumpDest, 4, 4}, [[
+			@skip_check
+			!jmp_dword ]], {address + 0x5, 4, 4},
+		})
+		EEex_WriteAssembly(address, {"!jmp_dword", {opcode62CheckSpecial, 4, 4}})
+	end
+
+	opcode62WriteHook(EEex_Label("Opcode62DisableCheck1"))
+	opcode62WriteHook(EEex_Label("Opcode62DisableCheck2"))
+	opcode62WriteHook(EEex_Label("Opcode62DisableCheck3"))
+	opcode62WriteHook(EEex_Label("Opcode62DisableCheck4"))
+	opcode62WriteHook(EEex_Label("Opcode62DisableCheck5"))
+	opcode62WriteHook(EEex_Label("Opcode62DisableCheck6"))
+
+	local opcode62LastJumpAddress = EEex_Label("Opcode62DisableCheck7")
+	local opcode62LastJumpDest = opcode62LastJumpAddress + EEex_ReadDword(opcode62LastJumpAddress + 0x5) + 0x9
+	local opcode62LastCheckSpecial = EEex_WriteAssemblyAuto({[[
+		!mov_eax_[edx+byte] 44
+		!test_eax_eax
+		!jnz_dword >skip_check
+		!test_si_si
+		!jz_dword ]], {opcode62LastJumpDest, 4, 4}, [[
+		@skip_check
+		!jmp_dword ]], {opcode62LastJumpAddress + 0x9, 4, 4},
+	})
+	EEex_WriteAssembly(opcode62LastJumpAddress, {"!jmp_dword", {opcode62LastCheckSpecial, 4, 4}, "!nop !nop !nop !nop"})
+	
 	--------------------------------------------------
 	-- Opcode #218 (Fire subspell when layers lost) --
 	--------------------------------------------------
