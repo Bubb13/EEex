@@ -439,6 +439,10 @@ PatAdj=0
 PatBytes=83B948370000008D81300B000075068D8154140000C3
 PatAdj=0
 
+[CGameSprite::GetDirection]
+PatBytes=558BEC83EC10568B75088B068B5604394108
+PatAdj=0
+
 [CGameSprite::GetInternalButtonList]
 PatBytes=33C58945FC53566A208BF1
 PatAdj=-11
@@ -764,8 +768,16 @@ PatAdj=0
 ; CVariableHash
 ;---------------------------
 
+[CVariableHash::AddKey]
+PatBytes=558BEC83EC28538B5D0856578BF9C745E800000000
+PatAdj=0
+
 [CVariableHash::FindKey]
 PatBytes=558BEC83EC205356578D4508C745E8000000008BF933DB508D4DFC895DEC
+PatAdj=0
+
+[CVariableHash::SetName]
+PatBytes=558BEC6A20FF750851
 PatAdj=0
 
 
@@ -932,39 +944,67 @@ PatAdj=10
 
 [Opcode42DisableCheck1]
 PatBytes=0FB7B15A1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck2]
 PatBytes=0FB7B16A1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck3]
 PatBytes=0FB7B17A1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck4]
 PatBytes=0FB7B18A1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck5]
 PatBytes=0FB7B19A1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck6]
 PatBytes=0FB7B1AA1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck7]
 PatBytes=0FB7B1BA1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck8]
 PatBytes=0FB7B1CA1200006685F67419
-PatAdj=10
+PatAdj=7
 
 [Opcode42DisableCheck9]
 PatBytes=0FB7B1DA1200006685F60F84A0000000
-PatAdj=10
+PatAdj=7
+
+[Opcode62DisableCheck1]
+PatBytes=0FB7B1EA1200006685F67419
+PatAdj=7
+
+[Opcode62DisableCheck2]
+PatBytes=0FB7B1FA1200006685F67419
+PatAdj=7
+
+[Opcode62DisableCheck3]
+PatBytes=0FB7B10A1300006685F67419
+PatAdj=7
+
+[Opcode62DisableCheck4]
+PatBytes=0FB7B11A1300006685F67419
+PatAdj=7
+
+[Opcode62DisableCheck5]
+PatBytes=0FB7B12A1300006685F67419
+PatAdj=7
+
+[Opcode62DisableCheck6]
+PatBytes=0FB7B13A1300006685F67419
+PatAdj=7
+
+[Opcode62DisableCheck7]
+PatBytes=0FB7B14A1300006685F60F849C000000
+PatAdj=7
 
 [RenderPortraitIconSwitch]
 PatBytes=0FBF073DC0000000

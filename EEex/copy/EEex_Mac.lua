@@ -115,6 +115,7 @@ for _, macroEntry in ipairs({
 	{"lea_edi_[esi+byte]", "8D 7E"},
 	{"movsx_eax_al", "0F BE C0"},
 	{"movzx_eax_byte:[eax+dword]", "0F B6 80"},
+	{"movzx_eax_word:[edx+byte]", "0F B7 42"},
 	{"movzx_eax_word:[esi+byte]", "0F B7 46"},
 	{"movzx_ecx_word:[esi+byte]", "0F B7 4E"},
 	{"movzx_esi_word:[ebp-byte]", "0F B7 75"},
@@ -139,6 +140,7 @@ for _, macroEntry in ipairs({
 	{"mov_eax_[ecx]", "8B 01"},
 	{"mov_eax_[edi+dword]", "8B 87"},
 	{"mov_eax_[edi]", "8B 07"},
+	{"mov_eax_[edx+byte]", "8B 42"},
 	{"mov_eax_[esi+byte]", "8B 46"},
 	{"mov_eax_[esi+dword]", "8B 86"},
 	{"mov_eax_[esi]", "8B 46 00"},
@@ -297,6 +299,7 @@ for _, macroEntry in ipairs({
 	{"sub_esp_eax", "2B E0"},
 	{"sub_esp_edx", "2B E2"},
 	{"test_al_al", "84 C0"},
+	{"test_si_si", "66 85 F6"},
 	{"test_eax_eax", "85 C0"},
 	{"test_ecx_ecx", "85 C9"},
 	{"test_edi_edi", "85 FF"},
@@ -311,9 +314,51 @@ for _, macroEntry in ipairs({
 	{"xor_ecx_ecx", "33 C9"},
 	{"xor_edi_edi", "33 FF"},
 	{"xor_esi_esi", "33 F6"},
+	{"dec", {
+		["write"] = function(currentWriteAddress, macroArgs, func)
+			local decimalValue = tonumber(macroArgs[1].value, 10)
+			local lengthDecode = macroArgs[2]
+			local length = (lengthDecode and lengthDecode.value) or 1
+			for i = 0, length - 1, 1 do
+				local byte = bit32.extract(decimalValue, i * 8, 8)
+				EEex_MessageBox(EEex_ToHex(byte))
+				func(currentWriteAddress + i, byte)
+			end
+			return length
+		end,
+		["quickPrefix"] = "#",
+		["quickSplit"] = function(arg)
+			local toReturn = EEex_SplitByChar(string.sub(arg, 2, #arg), ",")
+			B3dump("toReturn", toReturn)
+			return toReturn
+		end,
+	}},
+	{"hex", {
+		["write"] = function(currentWriteAddress, macroArgs, func)
+			local decimalValue = tonumber(macroArgs[1].value, 16)
+			local lengthDecode = macroArgs[2]
+			local length = (lengthDecode and lengthDecode.value) or 1
+			for i = 0, length - 1, 1 do
+				local byte = bit32.extract(decimalValue, i * 8, 8)
+				EEex_MessageBox(EEex_ToHex(byte))
+				func(currentWriteAddress + i, byte)
+			end
+			return length
+		end,
+		["quickPrefix"] = "x",
+		["quickSplit"] = function(arg)
+			local toReturn = EEex_SplitByChar(string.sub(arg, 2, #arg), ",")
+			B3dump("toReturn", toReturn)
+			return toReturn
+		end,
+	}},
 })
 do
 	local macroName = macroEntry[1]
 	local macroValue = macroEntry[2]
-	EEex_DefineAssemblyMacro(macroName, macroValue)
+	local quickPrefix = nil
+	if type(macroValue) == "table" then
+		quickPrefix = macroValue.quickPrefix
+	end
+	EEex_DefineAssemblyMacro(macroName, macroValue, quickPrefix)
 end

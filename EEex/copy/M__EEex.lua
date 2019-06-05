@@ -285,7 +285,7 @@ function EEex_SplitByChar(string, char)
 		startIndex = found + 1
 		found = EEex_CharFind(string, char, startIndex)
 	end
-	if #string - startIndex > 0 then
+	if #string - startIndex + 1 > 0 then
 		table.insert(splits, string:sub(startIndex, #string))
 	end
 	return splits
@@ -329,6 +329,10 @@ function EEex_ConstructCString(string)
 	return CStringAddress
 end
 
+function EEex_FreeCString(CString)
+	EEex_Call(EEex_Label("CString::~CString"), {}, CString, 0x0)
+end
+
 ----------------------
 -- Assembly Writing --
 ----------------------
@@ -347,8 +351,12 @@ function EEex_Label(label)
 end
 
 EEex_GlobalAssemblyMacros = {}
-function EEex_DefineAssemblyMacro(macroName, macroValue)
+EEex_MacroQuickPrefixes = {}
+function EEex_DefineAssemblyMacro(macroName, macroValue, quickPrefix)
 	EEex_GlobalAssemblyMacros[macroName] = macroValue
+	if quickPrefix then
+		EEex_MacroQuickPrefixes[quickPrefix] = macroValue
+	end
 end
 
 -- Some more complex assembly solutions require special macro functions
@@ -590,14 +598,14 @@ end
 function EEex_DecodeAssembly(address, args)
 
 	local iterateSections = function(textArg, func)
-		innerArg = innerArg:gsub("%s+", " ")
-		local limit = #innerArg
+		textArg = textArg:gsub("%s+", " ")
+		local limit = #textArg
 		local lastSpace = 0
 		for i = 1, limit, 1 do
-			local char = string.sub(innerArg, i, i)
+			local char = string.sub(textArg, i, i)
 			if char == " " then
 				if i - lastSpace > 1 then
-					local section = string.sub(innerArg, lastSpace + 1, i - 1)
+					local section = string.sub(textArg, lastSpace + 1, i - 1)
 					if func(section) then
 						return true
 					end
@@ -606,7 +614,7 @@ function EEex_DecodeAssembly(address, args)
 			end
 		end
 		if limit - lastSpace > 0 then
-			local lastSection = string.sub(innerArg, lastSpace + 1, limit)
+			local lastSection = string.sub(textArg, lastSpace + 1, limit)
 			if func(lastSection) then
 				return true
 			end
@@ -614,22 +622,64 @@ function EEex_DecodeAssembly(address, args)
 	end
 
 	local Classification = {
+		["NUMBER_STRING"] = 1,
 		["RELATIVE_TO_KNOWN"] = 0,
-		["DWORD"] = 1,
 		["ABSOLUTE_OF_OFFSET"] = 2,
 		["RELATIVE_TO_LABEL"] = 3,
 		["ABSOLUTE_OF_LABEL"] = 4,
 		["MACRO_FUNCTION"] = 5,
 		["LABEL"] = 6,
-		["BYTE"] = 7,
-		["RELATIVE_TO_ADDRESS"] = 8,
+		["RELATIVE_TO_ADDRESS"] = 7,
 	}
 
-	local decodeTextArg = function(arg, func)
+	local decodeTextArg = nil
+
+	local handleMacro = function(macroValue, macroSplit, func)
+		local macroType = type(macroValue)
+		if macroType == "string" then
+			decodeTextArg(macroValue, func)
+		elseif macroType == "table" then
+			local decodedMacroArgs = {}
+			local limit = #macroSplit
+			for i = 1, limit, 1 do
+				decodeTextArg(macroSplit[i], function(decoded) table.insert(decodedMacroArgs, decoded) end)
+			end
+			local decode = {}
+			decode.classification = Classification.MACRO_FUNCTION
+			decode.value = macroValue
+			decode.decodedMacroArgs = decodedMacroArgs
+			func(decode)
+		end
+	end
+
+	local defaultMacroArgSplit = function(arg)
+		local macroSplit = {}
+		local startArgIndex = EEex_CharFind(arg, ",")
+		local argLength = #arg
+		if startArgIndex ~= -1 and argLength > startArgIndex then
+			local argsString = string.sub(arg, startArgIndex + 1, argLength)
+			macroSplit = EEex_SplitByChar(argsString, ",")
+		end
+		return macroSplit
+	end
+
+	decodeTextArg = function(arg, func)
 		local argType = type(arg)
 		if argType == "string" then
 			local prefix = string.sub(arg, 1, 1)
-			if prefix == ":" then
+			local quickMacro = EEex_MacroQuickPrefixes[prefix]
+			if quickMacro then
+
+				local macroSplit = nil
+				local quickSplit = quickMacro.quickSplit
+				if quickSplit then
+					macroSplit = quickSplit(arg)
+				else
+					macroSplit = defaultMacroArgSplit(arg)
+				end
+				handleMacro(quickMacro, macroSplit, func)
+
+			elseif prefix == ":" then
 				local decode = {}
 				decode.classification = Classification.RELATIVE_TO_KNOWN
 				decode.value = tonumber(string.sub(arg, 2, #arg), 16)
@@ -655,27 +705,15 @@ function EEex_DecodeAssembly(address, args)
 				decode.value = string.sub(arg, 2, #arg)
 				func(decode)
 			elseif prefix == "!" then
-				local macroSplit = EEex_SplitByChar(arg, ",")
-				local macroSplitName = macroSplit[1]
+
+				local macroSplit = defaultMacroArgSplit(arg)
+
+				local macroSplitName = EEex_SplitByChar(arg, ",")[1]
 				local macroName = string.sub(macroSplitName, 2, #macroSplitName)
+
 				local macroValue = EEex_GlobalAssemblyMacros[macroName]
-				if not macroValue then
-					EEex_Error("Macro !"..macroName.." not defined!")
-				end
-				local macroType = type(macroValue)
-				if macroType == "string" then
-					decodeTextArg(macroValue, func)
-				elseif macroType == "function" then
-					local decode = {}
-					decode.classification = Classification.MACRO_FUNCTION
-					local decodedMacroArgs = {}
-					local limit = #macroSplit
-					for i = 2, limit, 1 do
-						table.insert(decodedMacroArgs, decodeSection(macroSplit[i])) -- TODO: Not defined
-					end
-					decode.decodedMacroArgs = decodedMacroArgs
-					func(decode)
-				end
+				handleMacro(macroValue, macroSplit, func)
+
 			elseif prefix == "@" then
 				local decode = {}
 				decode.classification = Classification.LABEL
@@ -683,8 +721,8 @@ function EEex_DecodeAssembly(address, args)
 				func(decode)
 			else
 				local decode = {}
-				decode.classification = Classification.BYTE
-				decode.value = tonumber(string.sub(arg, 1, #arg), 16)
+				decode.classification = Classification.NUMBER_STRING
+				decode.value = arg
 				func(decode)
 			end
 		else
@@ -781,7 +819,7 @@ function EEex_DecodeAssembly(address, args)
 			end
 		elseif classification == Classification.LABEL then
 			toReturn = 0
-		elseif classification == Classification.BYTE then
+		elseif classification == Classification.NUMBER_STRING then
 			toReturn = 1
 		end
 		return toReturn
@@ -789,55 +827,25 @@ function EEex_DecodeAssembly(address, args)
 
 	local decodedArgs = decodeArgs(args)
 
-	local localLabelIndexes = {}
-	local variableLengthIndexes = {}
-	local offsetSensitiveIndexes = {}
-
+	local currentAddress = address 
 	for i, decodedArg in ipairs(decodedArgs) do
+
 		local classification = decodedArg.classification
-		if classification == Classification.LABEL then
-			labelIndexes[decodedArg.value] = i
+		local value = decodedArg.value
+
+		if classification == Classification.MACRO_FUNCTION then
+			currentAddress = currentAddress + value.write(currentAddress, decodedArg.decodedMacroArgs, EEex_WriteByte)
+		else
+			-- Use "hex" Macro if no other Classification / Macro is being used
+			local macroSplit = EEex_SplitByChar(value, ",")
+			local decodedMacroArgs = {}
+			local limit = #macroSplit
+			for i = 1, limit, 1 do
+				decodeTextArg(macroSplit[i], function(decoded) table.insert(decodedMacroArgs, decoded) end)
+			end
+			currentAddress = currentAddress + EEex_GlobalAssemblyMacros["hex"].write(currentAddress, decodedMacroArgs, EEex_WriteByte)
 		end
 	end
-
-	for i, decodedArg in ipairs(decodedArgs) do
-		local classification = decodedArg.classification
-		if classification == Classification.LABEL then
-			labelIndexes[decodedArg.value] = i
-		elseif classification == Classification.MACRO_FUNCTION then
-
-			local macroValue = decodedArg.value
-			if macroHasFlag(macroValue, EEex_MacroFlag.VARIABLE_LENGTH) then
-				table.insert(variableLengthIndexes, i)
-			end
-
-			for _, macroArg in ipairs(macroValue.decodedMacroArgs) do
-
-				local classification = decodedArg.classification
-				if classification == Classification.RELATIVE_TO_LABEL then
-
-				end
-				if classification == Classification.ABSOLUTE_OF_LABEL then
-					local labelName = macroArg.value
-					--local localLabelDef = localLabelIndexes[]
-				end
-
-			end
-
-			if macroHasFlag(macroValue, EEex_MacroFlag.OFFSET_SENSITIVE) then
-				table.insert(offsetSensitiveIndexes, i)
-			end
-		end
-	end
-
-	for i, offsetSensitiveIndex in ipairs(offsetSensitiveIndexes) do
-		for _, variableLengthIndex in ipairs(variableLengthIndexes) do
-			if variableLengthIndex < offsetSensitiveIndex then
-				table.insert(decodedArgs[variableLengthIndex].affects, offsetSensitiveIndex)
-			end
-		end
-	end
-
 end
 
 
@@ -2335,6 +2343,20 @@ function EEex_FetchVariable(CVariableHash, variableName)
 	EEex_Free(localAddress)
 	if varAddress ~= 0x0 then
 		return EEex_ReadDword(varAddress + 0x28)
+	else
+		return 0x0
+	end
+end
+
+-- TODO: Not done yet.
+function EEex_SetVariable(CVariableHash, variableName, value)
+
+	local variableNameAddress = EEex_ConstructCString(variableName)
+	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {variableNameAddress}, CVariableHash, 0x0)
+	EEex_FreeCString(variableNameAddress)
+
+	if varAddress ~= 0x0 then
+		EEex_WriteDword(varAddress + 0x28, value)
 	else
 		return 0x0
 	end
