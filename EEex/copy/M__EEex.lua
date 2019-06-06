@@ -2639,17 +2639,22 @@ end
 
 EEex_SpellIDSType = {[1] = "SPPR", [2] = "SPWI", [3] = "SPIN", [4] = "SPCL"}
 
--- Returns the resref of the spell the actor is either currently casting,
---  cast most recently, or is about to cast (waiting for its aura to be cleansed).
+-- Returns the resref of the spell the actor is either currently casting
+--  or is about to cast (waiting for its aura to be cleansed).
 -- For example, if the actor is casting Fireball, it will return "SPWI304".
--- If the actor has not cast a spell since the game was loaded, it will return "".
+-- If the actor is not casting a spell, it will return "".
 function EEex_GetActorSpellRES(actorID)
-	local spellIDS = EEex_ReadWord(EEex_GetActorShare(actorID) + 0x338, 0x0)
-	local spellRES = EEex_ReadLString(EEex_GetActorShare(actorID) + 0x3596, 8)
-	if spellRES ~= "" then
-		return spellRES
-	elseif spellIDS > 0 then
-		return (EEex_SpellIDSType[math.floor(spellIDS / 1000)] .. spellIDS % 1000)
+	local actionID = EEex_GetActorCurrentAction(actorID)
+	if actionID == 31 or actionID == 113 or actionID == 191 or actionID == 318 or actionID == 95 or actionID == 114 or actionID == 192 or actionID == 319 then
+		local spellIDS = EEex_ReadWord(EEex_GetActorShare(actorID) + 0x338, 0x0)
+		local spellRES = EEex_ReadLString(EEex_ReadDword(EEex_GetActorShare(actorID) + 0x344), 8)
+		if spellRES ~= "" then
+			return spellRES
+		elseif spellIDS > 0 then
+			return (EEex_SpellIDSType[math.floor(spellIDS / 1000)] .. spellIDS % 1000)
+		else
+			return ""
+		end
 	else
 		return ""
 	end
