@@ -2831,7 +2831,7 @@ end
 --   offsets in an EFF file. For example, if you do:
 --[[ 
 EEex_IterateActorEffects(EEex_GetActorIDCursor(), function(eData)
-	local opcode = eData + 0x10
+	local opcode = EEex_ReadDword(eData + 0x10)
 	Infinity_DisplayString(opcode)
 end)
 --]]
