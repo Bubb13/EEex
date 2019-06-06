@@ -1812,6 +1812,26 @@ end
 --  Actor Spell Details  --
 ---------------------------
 
+-- Gets offset 0x0 of the data for the SPL file.
+-- The offsets after that are exactly the same as in a SPL file.
+-- For example:
+-- Infinity_DisplayString(EEex_ReadDword(EEex_GetSpellData("SPWI304") + 0x34))
+-- will print:
+--  3
+-- because offset 0x34 in the SPL file is the spell's level.
+-- Warning: this will crash if the spell is not in the game.
+function EEex_GetSpellData(resref)
+	local resrefLocation = EEex_Malloc(0x8)
+	EEex_WriteLString(resrefLocation + 0x0, resref, 8)
+	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
+	EEex_Free(resrefLocation)
+	if eax ~= 0x0 then
+		return EEex_ReadDword(eax + 0x40)
+	else
+		return 0
+	end
+end
+
 function EEex_IsSpellValid(resrefLocation)
 	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
 	return eax ~= 0x0
@@ -2450,6 +2470,11 @@ function EEex_GetActorSpecific(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x30, 0x1)
 end
 
+-- Returns the resref of the actor's DLG file.
+function EEex_GetActorDialogue(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x35A8, 8)
+end
+
 function EEex_GetActorKit(actorID)
 	return EEex_Call(EEex_Label("CGameSprite::GetKit"), {}, EEex_GetActorShare(actorID), 0x0)
 end
@@ -2526,6 +2551,22 @@ function EEex_GetActorModalTimer(actorID)
 	end
 end
 
+-- Returns a number based on which modal state the actor is using:
+-- 0: Not using a modal state
+-- 1: Bard Song
+-- 2: Detect Traps
+-- 3: Stealth
+-- 4: Turn Undead
+-- 5: Shamanic Dance
+function EEex_GetActorModalState(actorID)
+	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x295D, 0x0)
+end
+
+-- Returns the resref of the actor's DLG file.
+function EEex_GetActorDialogue(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x35A8, 8)
+end
+
 function EEex_GetActorName(actorID)
 	return EEex_ReadString(EEex_ReadDword(EEex_Call(EEex_Label("CGameSprite::GetName"), {0x0}, EEex_GetActorShare(actorID), 0x0)))
 end
@@ -2570,6 +2611,10 @@ function EEex_IsActorInCombat(actorID, includeDeadZone)
 	return songCounter > songCompare or damageCounter > 0
 end
 
+-- Returns the ID of the target of the actor's current action.
+-- If the actor is not targeting another creature (e.g. if the actor
+--  is doing nothing, targeting a point, or targeting a container, door, or trap),
+--   then it will return 0.
 function EEex_GetActorTargetID(actorID)
 	local targetID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3564)
 	if targetID ~= -0x1 then
@@ -2582,6 +2627,32 @@ end
 function EEex_GetActorTargetPoint(actorID)
 	local share = EEex_GetActorShare(actorID)
 	return EEex_ReadDword(share + 0x3568), EEex_ReadDword(share + 0x356C)
+end
+
+-- Returns the ID of the action the actor is currently doing, based on ACTION.IDS.
+-- For example, if the actor is currently moving to a point, it will return 23
+--  because MoveToPoint() is action 23 in ACTION.IDS.
+-- If the actor isn't doing anything, it will return 0.
+function EEex_GetActorCurrentAction(actorID)
+	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x2F8, 0x0)
+end
+
+EEex_SpellIDSType = {[1] = "SPPR", [2] = "SPWI", [3] = "SPIN", [4] = "SPCL"}
+
+-- Returns the resref of the spell the actor is either currently casting,
+--  cast most recently, or is about to cast (waiting for its aura to be cleansed).
+-- For example, if the actor is casting Fireball, it will return "SPWI304".
+-- If the actor has not cast a spell since the game was loaded, it will return "".
+function EEex_GetActorSpellRES(actorID)
+	local spellIDS = EEex_ReadWord(EEex_GetActorShare(actorID) + 0x338, 0x0)
+	local spellRES = EEex_ReadLString(EEex_GetActorShare(actorID) + 0x3596, 8)
+	if spellRES ~= "" then
+		return spellRES
+	elseif spellIDS > 0 then
+		return (EEex_SpellIDSType[math.floor(spellIDS / 1000)] .. spellIDS % 1000)
+	else
+		return ""
+	end
 end
 
 function EEex_GetActorCurrentHP(actorID)
@@ -2755,48 +2826,70 @@ function EEex_ApplyEffectToActor(actorID, args)
 	EEex_Call(EEex_ReadDword(vtable + 0x74), {1, 0, 1, CGameEffect}, share, 0x0)
 end
 
+-- For each effect on the actor, the function is passed offset 0x0 of
+--  the effect data. The offsets in the effect data are the same as the
+--   offsets in an EFF file. For example, if you do:
+--[[ 
+EEex_IterateActorEffects(EEex_GetActorIDCursor(), function(eData)
+	local opcode = eData + 0x10
+	Infinity_DisplayString(opcode)
+end)
+--]]
+-- It will print the opcode number of each effect on the actor.
+function EEex_IterateActorEffects(actorID, func)
+	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
+	while esi ~= 0x0 do
+		edi = EEex_ReadDword(esi + 0x8) - 0x4
+		func(edi)
+		esi = EEex_ReadDword(esi)
+	end
+end
+
 -- Table with the effect offsets, along with the size of each one. Names are based on WeiDU function variable names unless not included in there.
 EEex_effOff = {
-["opcode"] = {0xC, 4}, 
-["target"] = {0x10, 4}, 
-["power"] = {0x14, 4}, 
-["parameter1"] = {0x18, 4}, 
-["parameter2"] = {0x1C, 4}, 
-["timing"] = {0x20, 4}, 
-["duration"] = {0x24, 4}, 
-["probability1"] = {0x28, 2}, 
-["probability2"] = {0x2A, 2}, 
-["resource"] = {0x2C, 8},
-["dicenumber"] = {0x34, 4},
-["dicesize"] = {0x38, 4},
-["savingthrow"] = {0x3C, 4},
-["savebonus"] = {0x40, 4},
-["special"] = {0x44, 4},
-["school"] = {0x48, 4},
-["lowestafflevel"] = {0x50, 4},
-["highestafflevel"] = {0x54, 4},
-["resist_dispel"] = {0x58, 4},
-["parameter3"] = {0x5C, 4},
-["parameter4"] = {0x60, 4},
-["time_applied"] = {0x64, 4},
-["resource2"] = {0x68, 8},
+["opcode"] = {0x10, 4}, 
+["target"] = {0x14, 4}, 
+["power"] = {0x18, 4}, 
+["parameter1"] = {0x1C, 4}, 
+["parameter2"] = {0x20, 4}, 
+["timing"] = {0x24, 4}, 
+["duration"] = {0x28, 4}, 
+["probability1"] = {0x2C, 2}, 
+["probability2"] = {0x2E, 2}, 
+["resource"] = {0x30, 8},
+["dicenumber"] = {0x38, 4},
+["dicesize"] = {0x3C, 4},
+["savingthrow"] = {0x40, 4},
+["savebonus"] = {0x44, 4},
+["special"] = {0x48, 4},
+["school"] = {0x4C, 4},
+["lowestafflevel"] = {0x54, 4},
+["highestafflevel"] = {0x58, 4},
+["resist_dispel"] = {0x5C, 4},
+["parameter3"] = {0x60, 4},
+["parameter4"] = {0x64, 4},
+["time_applied"] = {0x6C, 4},
 ["vvcresource"] = {0x70, 8},
-["casterx"] = {0x7C, 4},
-["source_x"] = {0x7C, 4},
-["castery"] = {0x80, 4},
-["source_y"] = {0x80, 4},
-["targetx"] = {0x84, 4},
-["target_x"] = {0x84, 4},
-["targety"] = {0x88, 4},
-["target_y"] = {0x88, 4},
-["restype"] = {0x8C, 4},
-["effsource"] = {0x90, 8},
-["parent_resource"] = {0x90, 8},
-["sourceslot"] = {0xA0, 4},
-["effvar"] = {0xA4, 32},
-["casterlvl"] = {0xC4, 4},
-["internal_flags"] = {0xC8, 4},
-["sectype"] = {0xCC, 4}}
+["resource2"] = {0x78, 8},
+["casterx"] = {0x80, 4},
+["source_x"] = {0x80, 4},
+["castery"] = {0x84, 4},
+["source_y"] = {0x84, 4},
+["targetx"] = {0x88, 4},
+["target_x"] = {0x88, 4},
+["targety"] = {0x8C, 4},
+["target_y"] = {0x8C, 4},
+["restype"] = {0x90, 4},
+["effsource"] = {0x94, 8},
+["parent_resource"] = {0x94, 8},
+["resource_flags"] = {0x9C, 4},
+["impact_projectile"] = {0xA0, 4},
+["sourceslot"] = {0xA4, 4},
+["effvar"] = {0xA8, 32},
+["casterlvl"] = {0xC8, 4},
+["internal_flags"] = {0xCC, 4},
+["sectype"] = {0xD0, 4},
+["source_id"] = {0x110, 4}}
 
 
 -- This is basically like the WeiDU ALTER_EFFECT function, except that it alters effects in the middle of the game!
@@ -2810,7 +2903,7 @@ function EEex_AlterActorEffect(actorID, match_table, set_table, multi_match)
 	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
 	local match_count = 0
 	while esi ~= 0x0 and match_count < multi_match do
-		edi = EEex_ReadDword(esi + 0x8)
+		edi = EEex_ReadDword(esi + 0x8) - 0x4
 		local matched = true
 		for key,value in ipairs(match_table) do
 			local readSize = EEex_effOff[value[1]][2]
