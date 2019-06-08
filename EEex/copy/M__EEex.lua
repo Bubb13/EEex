@@ -2480,7 +2480,11 @@ function EEex_GetActorKit(actorID)
 end
 
 function EEex_GetActorAreaRes(actorID)
-	return EEex_ReadLString(EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14), 0x8)
+	if EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14) > 0 then
+		return EEex_ReadLString(EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14), 0x8)
+	else
+		return ""
+	end
 end
 
 function EEex_GetActorAreaSize(actorID)
@@ -2565,6 +2569,31 @@ end
 -- Returns the resref of the actor's DLG file.
 function EEex_GetActorDialogue(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x35A8, 8)
+end
+
+-- Returns the resref of the actor's override script.
+function EEex_GetActorOverrideScript(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x65C, 8)
+end
+
+function EEex_GetActorSpecificsScript(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x2A24, 8)
+end
+
+function EEex_GetActorClassScript(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x664, 8)
+end
+
+function EEex_GetActorRaceScript(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x66C, 8)
+end
+
+function EEex_GetActorGeneralScript(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x674, 8)
+end
+
+function EEex_GetActorDefaultScript(actorID)
+	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x67C, 8)
 end
 
 function EEex_GetActorName(actorID)
