@@ -2605,6 +2605,37 @@ function EEex_GetActorScriptName(actorID)
 	return EEex_ReadString(EEex_ReadDword(EEex_Call(EEex_ReadDword(EEex_ReadDword(dataAddress) + 0x10), {}, dataAddress, 0x0)))
 end
 
+-- If the actor is a summoned creature, this returns the actor ID of its summoner.
+-- If the actor is not a summoned creature, or if it's an image created by Mislead, Project
+--  Image or Simulacrum, this will return 0.
+-- Also, this will return 0 if the creature had already been summoned before the save was loaded.
+function EEex_GetSummonerID(actorID)
+	local summonerID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x130)
+	if summonerID == -1 then
+		return 0
+	else
+		return summonerID
+	end
+end
+
+-- If the actor is an image created by Mislead, Project Image or Simulacrum, this returns the actor ID
+--  of the image's master. Otherwise, it returns 0.
+function EEex_GetImageMasterID(actorID)
+-- This first read will get the master ID even if the image doesn't have a Puppet ID effect.
+-- However, that field gets reset to -1 on a reload, so the function also checks a second field.
+	local masterID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x39F4)
+	if masterID ~= -1 then
+		return masterID
+	else
+		masterID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x1604)
+		if masterID ~= -1 then
+			return masterID
+		else
+			return 0
+		end
+	end
+end
+
 function EEex_GetActorSpellState(actorID, splstateID)
 	return EEex_Call(EEex_Label("CDerivedStats::GetSpellState"), {splstateID},
 		EEex_GetActorShare(actorID) + 0xB30, 0x0) == 1
@@ -2617,6 +2648,52 @@ end
 function EEex_GetActorStat(actorID, statID)
 	local ecx = EEex_Call(EEex_Label("CGameSprite::GetActiveStats"), {}, EEex_GetActorShare(actorID), 0x0)
 	return EEex_Call(EEex_Label("CDerivedStats::GetAtOffset"), {statID}, ecx, 0x0)
+end
+
+-- Returns true if the actor has the specified state, based on the numbers in STATE.IDS.
+-- For example, if the state parameter is set to 0x8000, it will return true if the actor
+--  is hasted or improved hasted, because STATE_HASTE is state 0x8000 in STATE.IDS.
+function EEex_HasState(actorID, state)
+	return (bit32.band(EEex_ReadDword(EEex_GetActorShare(actorID) + 0xB30), state) == state)
+end
+
+-- Returns true if the actor is immune to the specified opcode.
+function EEex_IsImmuneToOpcode(actorID, opcode)
+	if actorID == 0x0 then return end
+	local found_it = false
+	EEex_IterateActorEffects(actorID, function(eData)
+		if found_it == false then
+			local the_opcode = EEex_ReadDword(eData + 0x10)
+			local the_parameter2 = EEex_ReadDword(eData + 0x20)
+			if (the_opcode == 101 or the_opcode == 198) and the_parameter2 == opcode then
+				found_it = true
+			end
+		end
+	end)
+	return found_it
+end
+
+-- Returns true if the actor is immune to the specified spell level.
+-- If includeSpellDeflection is true, it will also return true if the actor has a Spell Deflection,
+--  Spell Turning or Spell Trap effect for the specified spell level.
+function EEex_IsImmuneToSpellLevel(actorID, level, includeSpellDeflection)
+	if actorID == 0x0 then return end
+	local found_it = false
+	EEex_IterateActorEffects(actorID, function(eData)
+		if found_it == false then
+			local the_opcode = EEex_ReadDword(eData + 0x10)
+			local the_parameter1 = EEex_ReadDword(eData + 0x1C)
+			if (the_opcode == 102 or the_opcode == 199) and the_parameter1 == level then
+				found_it = true
+			elseif includeSpellDeflection then
+				local the_parameter2 = EEex_ReadDword(eData + 0x20)
+				if (the_opcode == 200 or the_opcode == 201 or the_opcode == 259) and the_parameter2 == level then
+					found_it = true
+				end
+			end
+		end
+	end)
+	return found_it
 end
 
 function EEex_GetActorCastTimer(actorID)
@@ -2701,6 +2778,26 @@ end
 function EEex_GetActorPosDest(actorID)
 	local share = EEex_GetActorShare(actorID)
 	return EEex_ReadDword(share + 0x31D4), EEex_ReadDword(share + 0x31D8)
+end
+
+-- Returns the actor's movement rate. For example, if the actor has
+--  an effect (opcode 126 or 176) that sets their movement rate to 180,
+--   it will return 180.
+-- If the actor does not have a movement-modifying effect, it will
+--  return the "move_scale" number in the creature's animation INI file.
+-- If adjustForHaste is true, the movement rate number will be doubled if
+--  the actor is hasted, and it will be halved if the actor is slowed.
+function EEex_GetActorMovementRate(actorID, adjustForHaste)
+	local speed = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3884)
+	if adjustForHaste then
+		if EEex_HasState(actorID, 0x8000) then -- If the actor is hasted
+			speed = speed * 2
+		end
+		if EEex_HasState(actorID, 0x10000) then -- If the actor is slowed
+			speed = math.floor(speed / 2)
+		end
+	end
+	return speed
 end
 
 function EEex_GetActorAnimation(actorID)
@@ -2852,7 +2949,15 @@ function EEex_ApplyEffectToActor(actorID, args)
 	EEex_Free(source)
 	EEex_Free(Item_effect_st)
 
+	writeResrefArg(CGameEffect + 0x6C, "vvcresource")
+	writeResrefArg(CGameEffect + 0x74, "resource2")
 	writeResrefArg(CGameEffect + 0x90, "parent_resource")
+	EEex_WriteDword(CGameEffect + 0x98, argOrDefault("resource_flags", 0))
+	EEex_WriteDword(CGameEffect + 0x9C, argOrDefault("impact_projectile", 0))
+	EEex_WriteDword(CGameEffect + 0xA0, argOrDefault("source_slot", 0xFFFFFFFF))
+	EEex_WriteDword(CGameEffect + 0xC4, argOrDefault("casterlvl", 1))
+	EEex_WriteDword(CGameEffect + 0xC8, argOrDefault("internal_flags", 1))
+	EEex_WriteDword(CGameEffect + 0xCC, argOrDefault("sectype", 0))
 
 	local share = EEex_GetActorShare(actorID)
 	local vtable = EEex_ReadDword(share)
@@ -2871,9 +2976,9 @@ end)
 --]]
 -- It will print the opcode number of each effect on the actor.
 function EEex_IterateActorEffects(actorID, func)
-	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
+	local esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
 	while esi ~= 0x0 do
-		edi = EEex_ReadDword(esi + 0x8) - 0x4
+		local edi = EEex_ReadDword(esi + 0x8) - 0x4
 		func(edi)
 		esi = EEex_ReadDword(esi)
 	end
@@ -2934,10 +3039,10 @@ function EEex_AlterActorEffect(actorID, match_table, set_table, multi_match)
 	if multi_match == -1 then
 		multi_match = 65535
 	end
-	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
+	local esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
 	local match_count = 0
 	while esi ~= 0x0 and match_count < multi_match do
-		edi = EEex_ReadDword(esi + 0x8) - 0x4
+		local edi = EEex_ReadDword(esi + 0x8) - 0x4
 		local matched = true
 		for key,value in ipairs(match_table) do
 			local readSize = EEex_effOff[value[1]][2]
