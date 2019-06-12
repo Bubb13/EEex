@@ -1,4 +1,30 @@
 
+-- Final step in Opcode #403 mechanics. If it becomes apparent
+-- that running this logic in Lua is too slow, it can be rewritten
+-- in assembly.
+function EEex_HookCheckAddScreen(effectData, creatureData)
+
+	local newStats = nil
+	if EEex_ReadDword(creatureData + 0x3748) == 0x0 then
+		newStats = EEex_ReadDword(creatureData + 0x3B1C)
+	else
+		newStats = EEex_ReadDword(creatureData + 0x3B18)
+	end
+
+	local foundImmunity = false
+	EEex_IterateCPtrList(newStats + EEex_SimpleStatsSize, function(CString)
+		local immunityFunction = _G[EEex_ReadString(CString)]
+		if immunityFunction and immunityFunction(effectData, creatureData) then
+			foundImmunity = true
+			return true
+		end
+	end)
+
+	if foundImmunity then
+		return true
+	end
+end
+
 function EEex_InstallOpcodeChanges()
 
 	EEex_DisableCodeProtection()
@@ -80,7 +106,7 @@ function EEex_InstallOpcodeChanges()
 		!jmp_dword ]], {opcode62LastJumpAddress + 0x9, 4, 4},
 	})
 	EEex_WriteAssembly(opcode62LastJumpAddress, {"!jmp_dword", {opcode62LastCheckSpecial, 4, 4}, "!nop !nop !nop !nop"})
-	
+
 	--------------------------------------------------
 	-- Opcode #218 (Fire subspell when layers lost) --
 	--------------------------------------------------
@@ -332,7 +358,7 @@ function EEex_InstallOpcodeChanges()
 		!je_dword >do_splprot
 		!cmp_[esi+byte]_byte 14 03
 		!je_dword >do_splprot
-		
+
 		!cmp_eax_byte 09
 		!ja_dword ]], {opcode319DefaultJumpDest, 4, 4}, [[
 		!jmp_dword ]], {opcode319DefaultJump + 0x6, 4, 4}, [[
@@ -344,7 +370,7 @@ function EEex_InstallOpcodeChanges()
 
 		!cmp_[esi+byte]_byte 14 03
 		!jne_dword >return
-		
+
 		!test_eax_eax
 		!mov_eax #0
 		!setz_al
@@ -594,7 +620,7 @@ function EEex_InstallOpcodeChanges()
 			!push_[dword] *_g_lua
 			!call >_lua_getglobal
 			!add_esp_byte 08
-	
+
 			!push_esi
 			!fild_[esp]
 			!sub_esp_byte 04
@@ -602,7 +628,7 @@ function EEex_InstallOpcodeChanges()
 			!push_[dword] *_g_lua
 			!call >_lua_pushnumber
 			!add_esp_byte 0C
-	
+
 			!push_[ebp+byte] 08
 			!fild_[esp]
 			!sub_esp_byte 04
@@ -610,7 +636,7 @@ function EEex_InstallOpcodeChanges()
 			!push_[dword] *_g_lua
 			!call >_lua_pushnumber
 			!add_esp_byte 0C
-	
+
 			!push_byte 00
 			!push_byte 00
 			!push_byte 00
@@ -624,6 +650,113 @@ function EEex_InstallOpcodeChanges()
 			!mov_eax #1
 			!restore_stack_frame
 			!ret_word 04 00
+		]]},
+	})
+
+	---------------------------------
+	-- New Opcode #403 (ScreenEffects) --
+	---------------------------------
+
+	local checkAddScreenHookAddress = EEex_Label("CGameEffect::CheckAdd()_screen_hook")
+	local checkAddScreenHookDest = checkAddScreenHookAddress + EEex_ReadDword(checkAddScreenHookAddress + 5) + 9
+
+	local checkAddScreenHookName = "EEex_HookCheckAddScreen"
+	local checkAddScreenHookNameAddress = EEex_Malloc(#checkAddScreenHookName + 1)
+	EEex_WriteString(checkAddScreenHookNameAddress, checkAddScreenHookName)
+
+	local checkAddScreenHook = EEex_WriteAssemblyAuto({[[
+
+		!push_registers
+
+		!push_dword ]], {checkAddScreenHookNameAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_edi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_ebx
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_byte 02
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!push_byte FF
+		!push_[dword] *_g_lua
+		!call >_lua_toboolean
+		!add_esp_byte 08
+		!push_eax
+		!push_byte FE
+		!push_[dword] *_g_lua
+		!call >_lua_settop
+		!add_esp_byte 08
+		!pop_eax
+
+		!test_eax_eax
+		!pop_registers
+
+		!jz_dword >resume_normally
+
+		!pop_esi
+		!pop_ebx
+		!jmp_dword >CGameEffect::CheckAdd()_screen_hook_immunity
+
+		@resume_normally
+
+		!cmp_eax_[ebx+byte] 34
+		!jz_dword ]], {checkAddScreenHookDest, 4, 4}, [[
+		!jmp_dword ]], {checkAddScreenHookAddress + 9, 4, 4},
+
+	})
+	EEex_WriteAssembly(checkAddScreenHookAddress, {"!jmp_dword", {checkAddScreenHook, 4, 4}, "!nop !nop !nop !nop"})
+
+	local EEex_ScreenEffects = EEex_WriteOpcode({
+
+		["ApplyEffect"] = {[[
+
+			!build_stack_frame
+			!sub_esp_byte 04
+			!push_registers
+
+			!mov_esi_ecx
+			!mov_edi_[ebp+byte] 08 ; CGameSprite ;
+
+			!lea_eax_[ebp+byte] FC
+			!push_eax
+			!lea_ecx_[esi+byte] 2C
+			!call >CResRef::GetResRefStr
+
+			!mov_eax_[eax]
+			!push_eax
+			!mov_ecx_[edi+dword] #3B18
+			!lea_ecx_[ecx+dword] ]], {EEex_SimpleStatsSize, 4}, [[
+			!call >CStringList::AddTail
+
+			!lea_ecx_[ebp+byte] FC
+			!call >CString::~CString
+
+			@ret
+			!mov_eax #1
+			!restore_stack_frame
+			!ret_word 04 00
+
 		]]},
 	})
 
@@ -646,9 +779,15 @@ function EEex_InstallOpcodeChanges()
 
 		@402
 		!cmp_eax_dword #192
-		!jne_dword >fail
+		!jne_dword >403
 
 		]], EEex_InvokeLua, [[
+
+		@403
+		!cmp_eax_dword #193
+		!jne_dword >fail
+
+		]], EEex_ScreenEffects, [[
 
 		@fail
 		!jmp_dword >CGameEffect::DecodeEffect()_default_label
