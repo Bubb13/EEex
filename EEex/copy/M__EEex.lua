@@ -3629,6 +3629,105 @@ end
 
 	]]})
 
+	-- Needed to copy CStringList from new creature stats to new temp stats
+	EEex_WriteAssemblyFunction("EEex_CopyCStringList", {[[
+
+		!build_stack_frame
+		!sub_esp_byte 04
+		!push_registers
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_edi_eax
+
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_ebx_eax
+
+		!mov_esi_[ebx+byte] 04
+		!test_esi_esi
+		!jz_dword >freeing_done
+
+		@free_loop
+		!lea_ecx_[esi+byte] 08
+		!call >CString::~CString
+		!mov_esi_[esi]
+		!test_esi_esi
+		!jnz_dword >free_loop
+
+		@freeing_done
+		!mov_ecx_ebx
+		!call >CObList::RemoveAll
+		!mov_edi_[edi+byte] 04
+		!test_edi_edi
+		!jz_dword >done
+
+		@copy_loop
+		!lea_eax_[edi+byte] 08
+		!push_eax
+		!lea_ecx_[ebp+byte] FC
+		!call :778F80
+		!mov_eax_[eax]
+
+		!push_eax
+		!mov_ecx_ebx
+		!call >CPtrList::AddTail
+
+		!mov_edi_[edi]
+		!test_edi_edi
+		!jnz_dword >copy_loop
+
+		@done
+		!mov_eax #00
+		!restore_stack_frame
+		!ret
+
+	]]})
+
+	-- Needed to clear CStringList from new creature stats and new temp stats
+	EEex_WriteAssemblyFunction("EEex_ClearCStringList", {[[
+
+		!build_stack_frame
+		!push_registers
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_ebx_eax
+
+		!mov_esi_[ebx+byte] 04
+		!test_esi_esi
+		!jz_dword >freeing_done
+
+		@free_loop
+		!lea_ecx_[esi+byte] 08
+		!call >CString::~CString
+		!mov_esi_[esi]
+		!test_esi_esi
+		!jnz_dword >free_loop
+
+		@freeing_done
+		!mov_ecx_ebx
+		!call >CObList::RemoveAll
+		!mov_edi_[edi+byte] 04
+
+		!mov_eax #00
+		!restore_stack_frame
+		!ret
+
+	]]})
+
 	--------------------
 	--  Version Hook  --
 	--------------------
