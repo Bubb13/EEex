@@ -1,29 +1,66 @@
 
+-- Arbitrary new maximum: can be adjusted if the need arises.
 EEex_NewStatsCount = 0xFFFF
+EEex_ComplexStatSpace = 0x18
+EEex_SimpleStatsSize = EEex_NewStatsCount * 4
 
 function EEex_HookConstructCreature(fromFile, toStruct)
 
-	-- arbitrary new maximum... but let's make it pretty and have
-	-- it be the max of an unsigned short... maybe people will think
-	-- there is an actual meaning behind it that way; for full
-	-- explanation, see video: https://youtu.be/dQw4w9WgXcQ
+	local newStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
+	local tempNewStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
 
-	local newStatsAddress = EEex_Malloc(EEex_NewStatsCount * 4)
-	local tempNewStatsAddress = EEex_Malloc(EEex_NewStatsCount * 4)
+	EEex_WriteDword(toStruct + 0x3B18, newStats)
+	EEex_WriteDword(toStruct + 0x3B1C, tempNewStats)
 
-	EEex_WriteDword(toStruct + 0x3B18, newStatsAddress)
-	EEex_WriteDword(toStruct + 0x3B1C, tempNewStatsAddress)
+	EEex_Call(EEex_Label("CStringList::CStringList"), {10}, newStats + EEex_SimpleStatsSize, 0x0)
+	EEex_Call(EEex_Label("CStringList::CStringList"), {10}, tempNewStats + EEex_SimpleStatsSize, 0x0)
 
 end
 
 function EEex_HookDeconstructCreature(cre)
-	EEex_Free(EEex_ReadDword(cre + 0x3B18))
-	EEex_Free(EEex_ReadDword(cre + 0x3B1C))
+
+	local newStats = EEex_ReadDword(cre + 0x3B18)
+	local tempNewStats = EEex_ReadDword(cre + 0x3B1C)
+
+	EEex_Call(EEex_Label("CStringList::~CStringList"), {}, newStats + EEex_SimpleStatsSize, 0x0)
+	EEex_Call(EEex_Label("CStringList::~CStringList"), {}, tempNewStats + EEex_SimpleStatsSize, 0x0)
+
+	EEex_Free(newStats)
+	EEex_Free(tempNewStats)
+
 end
 
 function EEex_HookReloadStats(cre)
-	EEex_Memset(EEex_ReadDword(cre + 0x3B18), EEex_NewStatsCount * 4, 0x0)
-	EEex_Memset(EEex_ReadDword(cre + 0x3B1C), EEex_NewStatsCount * 4, 0x0)
+
+	local newStats = EEex_ReadDword(cre + 0x3B18)
+	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
+
+	EEex_Memset(newStats, EEex_SimpleStatsSize, 0x0)
+	EEex_Memset(newTempStats, EEex_SimpleStatsSize, 0x0)
+
+	EEex_ClearCStringList(newStats + EEex_SimpleStatsSize)
+	EEex_ClearCStringList(newTempStats + EEex_SimpleStatsSize)
+
+end
+
+function EEex_HookCopyStats(cre)
+
+	local newStats = EEex_ReadDword(cre + 0x3B18)
+	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
+	EEex_Call(EEex_Label("_memcpy"), {EEex_SimpleStatsSize, newStats, newTempStats}, nil, 0xC)
+
+	EEex_CopyCStringList(newStats + EEex_SimpleStatsSize, newTempStats + EEex_SimpleStatsSize)
+
+	-- Debug print to ensure list copied successfully:
+	--[[
+	Infinity_DisplayString("{")
+	EEex_IterateCPtrList(newTempStats + EEex_SimpleStatsSize, function(CString)
+		local string = EEex_ReadString(CString)
+		Infinity_DisplayString("    String: "..string)
+	end)
+	Infinity_DisplayString("}")
+	--]]
+
 end
 
 function B3Cre_InstallCreatureHook()
@@ -263,38 +300,66 @@ function B3Cre_InstallCreatureHook()
 
 	]]})
 
-	local newStatsTempSet1 = EEex_WriteAssemblyAuto({[[
+	local hookNameCopy = "EEex_HookCopyStats"
+	local hookNameCopyAddress = EEex_Malloc(#hookNameCopy + 1)
+	EEex_WriteString(hookNameCopyAddress, hookNameCopy)
+
+	local hookCopy1 = EEex_WriteAssemblyAuto({[[
 		!push_state
+		!push_esi
 		!push_[ebp+byte] 08
 		!call >CDerivedStats::operator_equ
-		!push_dword ]], {EEex_NewStatsCount * 4, 4}, [[
-		!mov_eax_[esi+dword] #3B18
-		!push_eax
-		!mov_eax_[esi+dword] #3B1C
-		!push_eax
-		!call >_memcpy
+		!push_dword ]], {hookNameCopyAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
 		!add_esp_byte 0C
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
 		!pop_state
 		!ret_word 04 00
 	]]})
 
-	local newStatsTempSet2 = EEex_WriteAssemblyAuto({[[
+	local hookCopy2 = EEex_WriteAssemblyAuto({[[
 		!push_state
+		!push_edi
 		!push_[ebp+byte] 08
 		!call >CDerivedStats::operator_equ
-		!push_dword ]], {EEex_NewStatsCount * 4, 4}, [[
-		!mov_eax_[edi+dword] #3B18
-		!push_eax
-		!mov_eax_[edi+dword] #3B1C
-		!push_eax
-		!call >_memcpy
+		!push_dword ]], {hookNameCopyAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
 		!add_esp_byte 0C
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
 		!pop_state
 		!ret_word 04 00
 	]]})
 
-	EEex_WriteAssembly(EEex_Label("HookStatsTempSet1"), {{newStatsTempSet1, 4, 4}})
-	EEex_WriteAssembly(EEex_Label("HookStatsTempSet2"), {{newStatsTempSet2, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookStatsTempSet1"), {{hookCopy1, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("HookStatsTempSet2"), {{hookCopy2, 4, 4}})
 
 	-- lua wrapper for above function; overrides the default
 	-- value in M__EEex.lua that uses inbuilt functions.

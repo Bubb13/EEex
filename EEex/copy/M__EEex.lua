@@ -827,7 +827,7 @@ function EEex_DecodeAssembly(address, args)
 
 	local decodedArgs = decodeArgs(args)
 
-	local currentAddress = address 
+	local currentAddress = address
 	for i, decodedArg in ipairs(decodedArgs) do
 
 		local classification = decodedArg.classification
@@ -2358,7 +2358,7 @@ function EEex_FetchVariable(CVariableHash, variableName)
 	local localAddress = EEex_Malloc(#variableName + 5)
 	EEex_WriteString(localAddress + 0x4, variableName)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {localAddress + 0x4}, localAddress, 0x0)
-	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), 
+	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"),
 		{EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
 	EEex_Free(localAddress)
 	if varAddress ~= 0x0 then
@@ -2395,7 +2395,7 @@ function EEex_GetAreaGlobal(areaResref, globalName)
 	local areaResrefAddress = EEex_Malloc(#globalName + 5)
 	EEex_WriteString(areaResrefAddress + 0x4, areaResref)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {areaResrefAddress + 0x4}, areaResrefAddress, 0x0)
-	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"), 
+	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"),
 		{EEex_ReadDword(areaResrefAddress)}, m_pObjectGame, 0x0)
 	if areaAddress ~= 0x0 then
 		local areaVariables = areaAddress + 0xA8C
@@ -2419,7 +2419,7 @@ end
 function EEex_2DAGetAtStrings(C2DArray, columnString, rowString)
 	local columnCString = EEex_ConstructCString(columnString)
 	local rowCString = EEex_ConstructCString(rowString)
-	local foundCString = EEex_Call(EEex_Label("C2DArray::GetAt(CString*_CString*)"), 
+	local foundCString = EEex_Call(EEex_Label("C2DArray::GetAt(CString*_CString*)"),
 		{rowCString, columnCString}, C2DArray, 0x0)
 	EEex_Call(EEex_Label("CString::~CString"), {}, rowCString, 0x0)
 	return EEex_ReadString(EEex_ReadDword(foundCString))
@@ -2942,9 +2942,9 @@ function EEex_ApplyEffectToActor(actorID, args)
 	EEex_WriteDword(source + 0x0, argOrDefault("source_x", -0x1))
 	EEex_WriteDword(source + 0x4, argOrDefault("source_y", -0x1))
 
-	-- int sourceTarget, CPoint *target, int sourceID, CPoint *source, Item_effect_st *effect 
+	-- int sourceTarget, CPoint *target, int sourceID, CPoint *source, Item_effect_st *effect
 	local CGameEffect = EEex_Call(EEex_Label("CGameEffect::DecodeEffect"), {sourceTarget, target, sourceID, source, Item_effect_st}, nil, 0x14)
-	
+
 	EEex_Free(target)
 	EEex_Free(source)
 	EEex_Free(Item_effect_st)
@@ -2968,7 +2968,7 @@ end
 -- For each effect on the actor, the function is passed offset 0x0 of
 --  the effect data. The offsets in the effect data are the same as the
 --   offsets in an EFF file. For example, if you do:
---[[ 
+--[[
 EEex_IterateActorEffects(EEex_GetActorIDCursor(), function(eData)
 	local opcode = EEex_ReadDword(eData + 0x10)
 	Infinity_DisplayString(opcode)
@@ -2993,15 +2993,15 @@ end
 
 -- Table with the effect offsets, along with the size of each one. Names are based on WeiDU function variable names unless not included in there.
 EEex_effOff = {
-["opcode"] = {0x10, 4}, 
-["target"] = {0x14, 4}, 
-["power"] = {0x18, 4}, 
-["parameter1"] = {0x1C, 4}, 
-["parameter2"] = {0x20, 4}, 
-["timing"] = {0x24, 4}, 
-["duration"] = {0x28, 4}, 
-["probability1"] = {0x2C, 2}, 
-["probability2"] = {0x2E, 2}, 
+["opcode"] = {0x10, 4},
+["target"] = {0x14, 4},
+["power"] = {0x18, 4},
+["parameter1"] = {0x1C, 4},
+["parameter2"] = {0x20, 4},
+["timing"] = {0x24, 4},
+["duration"] = {0x28, 4},
+["probability1"] = {0x2C, 2},
+["probability2"] = {0x2E, 2},
 ["resource"] = {0x30, 8},
 ["dicenumber"] = {0x38, 4},
 ["dicesize"] = {0x3C, 4},
@@ -3632,6 +3632,105 @@ end
 
 		!mov_eax #00
 		!pop_state
+		!ret
+
+	]]})
+
+	-- Needed to copy CStringList from new creature stats to new temp stats
+	EEex_WriteAssemblyFunction("EEex_CopyCStringList", {[[
+
+		!build_stack_frame
+		!sub_esp_byte 04
+		!push_registers
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_edi_eax
+
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_ebx_eax
+
+		!mov_esi_[ebx+byte] 04
+		!test_esi_esi
+		!jz_dword >freeing_done
+
+		@free_loop
+		!lea_ecx_[esi+byte] 08
+		!call >CString::~CString
+		!mov_esi_[esi]
+		!test_esi_esi
+		!jnz_dword >free_loop
+
+		@freeing_done
+		!mov_ecx_ebx
+		!call >CObList::RemoveAll
+		!mov_edi_[edi+byte] 04
+		!test_edi_edi
+		!jz_dword >done
+
+		@copy_loop
+		!lea_eax_[edi+byte] 08
+		!push_eax
+		!lea_ecx_[ebp+byte] FC
+		!call >CString::CString(CString_const_&)
+		!mov_eax_[eax]
+
+		!push_eax
+		!mov_ecx_ebx
+		!call >CPtrList::AddTail
+
+		!mov_edi_[edi]
+		!test_edi_edi
+		!jnz_dword >copy_loop
+
+		@done
+		!mov_eax #00
+		!restore_stack_frame
+		!ret
+
+	]]})
+
+	-- Needed to clear CStringList from new creature stats and new temp stats
+	EEex_WriteAssemblyFunction("EEex_ClearCStringList", {[[
+
+		!build_stack_frame
+		!push_registers
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!mov_ebx_eax
+
+		!mov_esi_[ebx+byte] 04
+		!test_esi_esi
+		!jz_dword >freeing_done
+
+		@free_loop
+		!lea_ecx_[esi+byte] 08
+		!call >CString::~CString
+		!mov_esi_[esi]
+		!test_esi_esi
+		!jnz_dword >free_loop
+
+		@freeing_done
+		!mov_ecx_ebx
+		!call >CObList::RemoveAll
+		!mov_edi_[edi+byte] 04
+
+		!mov_eax #00
+		!restore_stack_frame
 		!ret
 
 	]]})
