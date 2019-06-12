@@ -2975,8 +2975,15 @@ EEex_IterateActorEffects(EEex_GetActorIDCursor(), function(eData)
 end)
 --]]
 -- It will print the opcode number of each effect on the actor.
+-- This looks through spell effects, item equipped effects, and permanent effects.
 function EEex_IterateActorEffects(actorID, func)
 	local esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
+	while esi ~= 0x0 do
+		local edi = EEex_ReadDword(esi + 0x8) - 0x4
+		func(edi)
+		esi = EEex_ReadDword(esi)
+	end
+	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3380)
 	while esi ~= 0x0 do
 		local edi = EEex_ReadDword(esi + 0x8) - 0x4
 		func(edi)
