@@ -34,11 +34,11 @@ function EEex_HookReloadStats(cre)
 
 	local newStats = EEex_ReadDword(cre + 0x3B18)
 	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
-	
-	EEex_Memset(newStats, EEex_SimpleStatsSize, 0x0)
-	EEex_ClearCStringList(newStats + EEex_SimpleStatsSize)
 
+	EEex_Memset(newStats, EEex_SimpleStatsSize, 0x0)
 	EEex_Memset(newTempStats, EEex_SimpleStatsSize, 0x0)
+
+	EEex_ClearCStringList(newStats + EEex_SimpleStatsSize)
 	EEex_ClearCStringList(newTempStats + EEex_SimpleStatsSize)
 
 end

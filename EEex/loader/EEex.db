@@ -4,32 +4,32 @@
 ; EEexLoader by mrfearless: github.com/mrfearless
 ; EEex by Bubb: github.com/Bubb13/EEex
 ;
-; 
-; Each section name should be unique and named to 
+;
+; Each section name should be unique and named to
 ; represent the function or global it is for.
 ;
-; PatBytes: is a series of bytes in text hexidecimal 
+; PatBytes: is a series of bytes in text hexidecimal
 ; format repesenting the pattern to match.
 ;
 ; PatAdj: is an unsigned integer representing the value
-; to adjust +/- the found pattern address by, to return 
-; the start of the function or the address to read a 
+; to adjust +/- the found pattern address by, to return
+; the start of the function or the address to read a
 ; game global variable from. PatAdj is optional.
 ;
-; VerBytes: is a series of bytes in text hexidecimal 
+; VerBytes: is a series of bytes in text hexidecimal
 ; format repesenting the sub-pattern to check for and
-; verify if the pattern found is the correct. VerBytes 
+; verify if the pattern found is the correct. VerBytes
 ; is optional.
-; 
+;
 ; VerAdj: is an unsigned integer representing the value
 ; to adjust +/- the found pattern address by, to obtain
 ; an address to use for matching the VerBytes sub-
 ; pattern (if VerBytes is defined). VerAdj is optional.
 ;
 ; Type: is a integer value of 0 or 1. 0 represents a
-; pattern defined for a function. 1 a pattern for a 
+; pattern defined for a function. 1 a pattern for a
 ; game global variable. Type is optional
-; 
+;
 ;------------------------------------------------------
 
 
@@ -352,6 +352,14 @@ PatAdj=12
 [CGameEffect::CGameEffect]
 PatBytes=8BF1578B7D088D4E04
 PatAdj=-17
+
+[CGameEffect::CheckAdd()_screen_hook]
+PatBytes=8B870C010000538B5D08563B4334
+PatAdj=11
+
+[CGameEffect::CheckAdd()_screen_hook_immunity]
+PatBytes=C2200033C05F5DC22000
+PatAdj=3
 
 [CGameEffect::CopyFromBase]
 PatBytes=8B5D088D45F4
@@ -677,6 +685,10 @@ PatAdj=0
 ; CObList
 ;---------------------------
 
+[CObList::CObList]
+PatBytes=C7410C00000000C7411000000000C7410800000000C7410400000000C74114000000005DC20400
+PatAdj=0
+
 [CObList::RemoveAll]
 PatBytes=568BF18B4E14C7460C00000000C7461000000000C7460800000000C7460400000000E8
 PatAdj=0
@@ -689,6 +701,10 @@ PatAdj=0
 ;---------------------------
 ; CPtrList
 ;---------------------------
+
+[CPtrList::AddTail]
+PatBytes=558BEC568BF16A00FF7608
+PatAdj=0
 
 [CPtrList::RemoveAt]
 PatBytes=558BEC8B5508568BF18B023B56047505894604EB058B4A04
@@ -746,6 +762,10 @@ PatAdj=0
 ; CString
 ;---------------------------
 
+[CString::CString(CString_const_&)]
+PatBytes=558BEC568BF18B4D088B018378F400
+PatAdj=0
+
 [CString::CString(char_const_*)]
 PatBytes=538B5D08578BF9890785DB
 PatAdj=-8
@@ -759,9 +779,21 @@ PatAdj=0
 ; CStringList
 ;---------------------------
 
+[CStringList::AddTail]
+PatBytes=C20400558BEC535657FF75088BD98D4D08
+PatAdj=3
+
+[CStringList::CStringList]
+PatBytes=8B450C5E5DC20800558BEC8B45088941188BC1
+PatAdj=8
+
 [CStringList::FindIndex]
 PatBytes=558BEC8B55083B510C7D1285D2780E8B4104740B8B004A75FB5DC2040033C05DC20400
 PatAdj=0
+
+[CStringList::~CStringList]
+PatBytes=C7410C00000000C7411000000000C7410800000000C7410400000000C74114000000005DC20400CCCCCCCCCCCCCCCC568BF1
+PatAdj=47
 
 
 ;---------------------------

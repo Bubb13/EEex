@@ -28,7 +28,7 @@ end
 
 function B3Hotkey_UseCGameButtonList(m_CGameSprite, m_CGameButtonList, resref, offInternal)
 	local found = false
-	EEex_IterateCPtrList(m_CGameButtonList, function(m_CButtonData) 
+	EEex_IterateCPtrList(m_CGameButtonList, function(m_CButtonData)
 		-- m_CButtonData.m_abilityId.m_res
 		local m_res = EEex_ReadLString(m_CButtonData + 0x1C + 0x6, 0x8)
 		if m_res == resref then
@@ -46,7 +46,7 @@ function B3Hotkey_UseCGameButtonList(m_CGameSprite, m_CGameButtonList, resref, o
 			else
 				EEex_Call(EEex_Label("CGameSprite::ReadyOffInternalList"), stackArgs, m_CGameSprite, 0x0)
 			end
-			
+
 			found = true
 			return true -- breaks out of EEex_IterateCPtrList()
 		end
@@ -98,7 +98,7 @@ function B3Hotkey_AttemptToSelectCharacter(portraitNum, dontUnselect)
 		local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
 		local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
 		-- CInfGame.m_nState
-		
+
 		local actorID = EEex_Call(EEex_Label("CInfGame::GetCharacterId"), {portraitNum}, m_pObjectGame, 0x0)
 		local m_nState = EEex_ReadWord(m_pObjectGame + 0x2558, 0)
 
