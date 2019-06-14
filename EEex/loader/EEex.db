@@ -797,6 +797,17 @@ PatAdj=47
 
 
 ;---------------------------
+; CVariable
+;---------------------------
+
+[CVariable::CVariable]
+PatBytes=D9EE33C06A208946208946248946288D4634
+PatAdj=-16
+VerBytes=83C4188BC65EC3
+VerAdj=32
+
+
+;---------------------------
 ; CVariableHash
 ;---------------------------
 
@@ -821,9 +832,11 @@ PatAdj=0
 PatBytes=33C58945FC8B450C8945D8
 PatAdj=-11
 
+
 ;---------------------------
 ; Uncategorized
 ;---------------------------
+
 [(CString)_operator+]
 PatBytes=2BF18B450C8B008945108B40F889450803C6
 PatAdj=-39
@@ -1255,6 +1268,10 @@ PatAdj=-257
 [_saveMenuStack]
 PatBytes=558BEC83EC08566A006A00
 PatAdj=0
+
+[_strncpy]
+PatBytes=56538BD98B742414F7C6030000008B7C2410
+PatAdj=-13
 
 [_uiLoadMenu]
 PatBytes=6A0068FFFFFF7F6A006A056A00
