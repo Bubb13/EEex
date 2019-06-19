@@ -162,6 +162,7 @@ for _, macroEntry in ipairs({
 	{"mov_ecx_[dword]", "8B 0D"},
 	{"mov_ecx_[eax+dword]", "8B 88"},
 	{"mov_ecx_[ebp+byte]", "8B 4D"},
+	{"mov_ecx_[ebx+dword]", "8B 8B"},
 	{"mov_ecx_[ecx+dword]", "8B 89"},
 	{"mov_ecx_[ecx]", "8B 09"},
 	{"mov_ecx_[edi+dword]", "8B 8F"},

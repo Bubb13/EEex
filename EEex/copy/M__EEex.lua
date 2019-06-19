@@ -329,8 +329,15 @@ function EEex_ConstructCString(string)
 	return CStringAddress
 end
 
+function EEex_CopyCString(CString)
+	local CStringAddress = EEex_Malloc(0x4)
+	EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {CString}, CStringAddress, 0x0)
+	return CStringAddress
+end
+
 function EEex_FreeCString(CString)
 	EEex_Call(EEex_Label("CString::~CString"), {}, CString, 0x0)
+	EEex_Free(CString)
 end
 
 ----------------------
@@ -1694,6 +1701,7 @@ end
 --  Script Compiler  --
 -----------------------
 
+-- TODO: Memory leak?
 function EEex_ParseObjectString(string)
 	local scriptFile = EEex_Malloc(0xE8)
 	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, scriptFile, 0x0)
@@ -2358,25 +2366,10 @@ function EEex_FetchVariable(CVariableHash, variableName)
 	local localAddress = EEex_Malloc(#variableName + 5)
 	EEex_WriteString(localAddress + 0x4, variableName)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {localAddress + 0x4}, localAddress, 0x0)
-	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"),
-		{EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
+	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
 	EEex_Free(localAddress)
 	if varAddress ~= 0x0 then
 		return EEex_ReadDword(varAddress + 0x28)
-	else
-		return 0x0
-	end
-end
-
--- TODO: Not done yet.
-function EEex_SetVariable(CVariableHash, variableName, value)
-
-	local variableNameAddress = EEex_ConstructCString(variableName)
-	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {variableNameAddress}, CVariableHash, 0x0)
-	EEex_FreeCString(variableNameAddress)
-
-	if varAddress ~= 0x0 then
-		EEex_WriteDword(varAddress + 0x28, value)
 	else
 		return 0x0
 	end
@@ -2389,19 +2382,60 @@ function EEex_GetGlobal(globalName)
 	return EEex_FetchVariable(m_variables, globalName)
 end
 
+-- TODO: Memory leak?
 function EEex_GetAreaGlobal(areaResref, globalName)
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
 	local areaResrefAddress = EEex_Malloc(#globalName + 5)
 	EEex_WriteString(areaResrefAddress + 0x4, areaResref)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {areaResrefAddress + 0x4}, areaResrefAddress, 0x0)
-	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"),
-		{EEex_ReadDword(areaResrefAddress)}, m_pObjectGame, 0x0)
+	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"), {EEex_ReadDword(areaResrefAddress)}, m_pObjectGame, 0x0)
 	if areaAddress ~= 0x0 then
 		local areaVariables = areaAddress + 0xA8C
 		return EEex_FetchVariable(areaVariables, globalName)
 	else
 		return 0x0
+	end
+end
+
+function EEex_SetVariable(CVariableHash, variableName, value)
+	local variableNamePtr = EEex_ConstructCString(variableName)
+	local variableNameLookupPtr = EEex_CopyCString(variableNamePtr)
+	local variableNameLookupAddress = EEex_ReadDword(variableNameLookupPtr)
+	local existingVarAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {variableNameLookupAddress}, CVariableHash, 0x0)
+	EEex_Free(variableNameLookupPtr)
+	if existingVarAddress ~= 0x0 then
+		EEex_WriteDword(existingVarAddress + 0x28, value)
+	else
+		local newVarAddress = EEex_Malloc(0x54)
+		EEex_Call(EEex_Label("CVariable::CVariable"), {}, newVarAddress, 0x0)
+		local variableNameAddress = EEex_ReadDword(variableNamePtr)
+		EEex_Call(EEex_Label("_strncpy"), {0x20, variableNameAddress, newVarAddress}, nil, 0xC)
+		EEex_WriteDword(newVarAddress + 0x28, value)
+		EEex_Call(EEex_Label("CVariableHash::AddKey"), {newVarAddress}, CVariableHash, 0x0)
+		EEex_Free(newVarAddress)
+	end
+	EEex_FreeCString(variableNamePtr)
+end
+
+function EEex_SetGlobal(globalName, value)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_variables = m_pObjectGame + 0x5BC8
+	return EEex_SetVariable(m_variables, globalName, value)
+end
+
+-- TODO: Memory leak?
+function EEex_SetAreaGlobal(areaResref, globalName, value)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local areaResrefAddress = EEex_Malloc(#globalName + 5)
+	EEex_WriteString(areaResrefAddress + 0x4, areaResref)
+	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {areaResrefAddress + 0x4}, areaResrefAddress, 0x0)
+	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"), {EEex_ReadDword(areaResrefAddress)}, m_pObjectGame, 0x0)
+	if areaAddress ~= 0x0 then
+		local areaVariables = areaAddress + 0xA8C
+		EEex_SetVariable(areaVariables, globalName, value)
 	end
 end
 
@@ -2416,6 +2450,7 @@ function EEex_2DALoad(_2DAResref)
 	return C2DArray
 end
 
+-- TODO: Memory leak?
 function EEex_2DAGetAtStrings(C2DArray, columnString, rowString)
 	local columnCString = EEex_ConstructCString(columnString)
 	local rowCString = EEex_ConstructCString(rowString)
@@ -2534,6 +2569,12 @@ function EEex_GetActorLocal(actorID, localName)
 	local share = EEex_GetActorShare(actorID)
 	local localVariables = EEex_ReadDword(share + 0x3758)
 	return EEex_FetchVariable(localVariables, localName)
+end
+
+function EEex_SetActorLocal(actorID, localName, value)
+	local share = EEex_GetActorShare(actorID)
+	local localVariables = EEex_ReadDword(share + 0x3758)
+	return EEex_SetVariable(localVariables, localName, value)
 end
 
 function EEex_GetActorLocation(actorID)
