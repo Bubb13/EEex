@@ -1,32 +1,83 @@
 
 -- Arbitrary new maximum: can be adjusted if the need arises.
 EEex_NewStatsCount = 0xFFFF
-EEex_ComplexStatSpace = 0x18
 EEex_SimpleStatsSize = EEex_NewStatsCount * 4
+
+EEex_ComplexStatDefinitions = {}
+EEex_CurrentStatOffset = EEex_SimpleStatsSize
+EEex_ComplexStatSpace = 0x0
+
+function EEex_RegisterComplexStat(name, attributeTable)
+
+	-- attributeTable["construct"]
+	-- attributeTable["destruct"]
+	-- attributeTable["clear"]
+	-- attributeTable["copy"]
+	-- attributeTable["size"]
+
+	local offset = EEex_CurrentStatOffset
+	attributeTable["offset"] = offset
+	local size = attributeTable["size"]
+
+	EEex_CurrentStatOffset = EEex_CurrentStatOffset + size
+	EEex_ComplexStatSpace = EEex_ComplexStatSpace + size
+
+	EEex_ComplexStatDefinitions[name] = attributeTable
+
+	return offset
+	
+end
+
+function EEex_AccessComplexStat(actorID, name)
+
+	local creatureData = EEex_GetActorShare(actorID)
+
+	local newStats = nil
+	if EEex_ReadDword(creatureData + 0x3748) == 0x0 then
+		newStats = EEex_ReadDword(creatureData + 0x3B1C)
+	else
+		newStats = EEex_ReadDword(creatureData + 0x3B18)
+	end
+
+	return newStats + EEex_ComplexStatDefinitions[name]["offset"]
+
+end
 
 function EEex_HookConstructCreature(fromFile, toStruct)
 
 	local newStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
-	local tempNewStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
+	local newTempStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
 
 	EEex_WriteDword(toStruct + 0x3B18, newStats)
-	EEex_WriteDword(toStruct + 0x3B1C, tempNewStats)
+	EEex_WriteDword(toStruct + 0x3B1C, newTempStats)
 
-	EEex_Call(EEex_Label("CStringList::CStringList"), {10}, newStats + EEex_SimpleStatsSize, 0x0)
-	EEex_Call(EEex_Label("CStringList::CStringList"), {10}, tempNewStats + EEex_SimpleStatsSize, 0x0)
+	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
+		local constructFunction = complexStatDef["construct"]
+		if constructFunction then
+			local statOffset = complexStatDef["offset"]
+			constructFunction(newStats + statOffset)
+			constructFunction(newTempStats + statOffset)
+		end
+	end
 
 end
 
 function EEex_HookDeconstructCreature(cre)
 
 	local newStats = EEex_ReadDword(cre + 0x3B18)
-	local tempNewStats = EEex_ReadDword(cre + 0x3B1C)
+	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
 
-	EEex_Call(EEex_Label("CStringList::~CStringList"), {}, newStats + EEex_SimpleStatsSize, 0x0)
-	EEex_Call(EEex_Label("CStringList::~CStringList"), {}, tempNewStats + EEex_SimpleStatsSize, 0x0)
+	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
+		local destructFunction = complexStatDef["destruct"]
+		if destructFunction then
+			local statOffset = complexStatDef["offset"]
+			destructFunction(newStats + statOffset)
+			destructFunction(newTempStats + statOffset)
+		end
+	end
 
 	EEex_Free(newStats)
-	EEex_Free(tempNewStats)
+	EEex_Free(newTempStats)
 
 end
 
@@ -38,8 +89,14 @@ function EEex_HookReloadStats(cre)
 	EEex_Memset(newStats, EEex_SimpleStatsSize, 0x0)
 	EEex_Memset(newTempStats, EEex_SimpleStatsSize, 0x0)
 
-	EEex_ClearCStringList(newStats + EEex_SimpleStatsSize)
-	EEex_ClearCStringList(newTempStats + EEex_SimpleStatsSize)
+	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
+		local clearFunction = complexStatDef["clear"]
+		if clearFunction then
+			local statOffset = complexStatDef["offset"]
+			clearFunction(newStats + statOffset)
+			clearFunction(newTempStats + statOffset)
+		end
+	end
 
 end
 
@@ -49,17 +106,13 @@ function EEex_HookCopyStats(cre)
 	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
 	EEex_Call(EEex_Label("_memcpy"), {EEex_SimpleStatsSize, newStats, newTempStats}, nil, 0xC)
 
-	EEex_CopyCStringList(newStats + EEex_SimpleStatsSize, newTempStats + EEex_SimpleStatsSize)
-
-	-- Debug print to ensure list copied successfully:
-	--[[
-	Infinity_DisplayString("{")
-	EEex_IterateCPtrList(newTempStats + EEex_SimpleStatsSize, function(CString)
-		local string = EEex_ReadString(CString)
-		Infinity_DisplayString("    String: "..string)
-	end)
-	Infinity_DisplayString("}")
-	--]]
+	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
+		local copyFunction = complexStatDef["copy"]
+		if copyFunction then
+			local statOffset = complexStatDef["offset"]
+			copyFunction(newStats + statOffset, newTempStats + statOffset)
+		end
+	end
 
 end
 
