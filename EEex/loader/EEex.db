@@ -569,6 +569,10 @@ PatAdj=-25
 ; CInfButtonArray
 ;---------------------------
 
+[CInfButtonArray::OnLButtonPressed()_InvalidSpecialAbility]
+PatBytes=8B84BE4014000083C0F483F8200F87
+PatAdj=15
+
 [CInfButtonArray::OnLButtonPressed()_MainSwitchTable]
 PatBytes=8B84BE4014000083C0F483F820
 PatAdj=29
@@ -604,6 +608,10 @@ PatAdj=0
 [CInfButtonArray::UpdateButtons]
 PatBytes=33F633DB8985D4FDFFFFC785E0FDFFFF0100000089B5E4FDFFFF8985F0FDFFFF899DECFDFFFF
 PatAdj=-51
+
+[CInfButtonArray::UpdateState]
+PatBytes=56578BF9FFB7741400008BB778140000
+PatAdj=0
 
 
 ;---------------------------

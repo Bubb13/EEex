@@ -25,7 +25,39 @@ function EEex_RegisterComplexStat(name, attributeTable)
 	EEex_ComplexStatDefinitions[name] = attributeTable
 
 	return offset
-	
+
+end
+
+function EEex_RegisterSimpleListStat(name, elementSize)
+	return EEex_RegisterComplexStat(name, {
+		["construct"] = function(address)
+			EEex_Call(EEex_Label("CObList::CObList"), {10}, address, 0x0)
+		end,
+		["destruct"] = function(address)
+			EEex_IterateCPtrList(address, function(overridePtr)
+				EEex_Free(overridePtr)
+			end)
+			EEex_Call(EEex_Label("CObList::~CObList"), {}, address, 0x0)
+		end,
+		["clear"] = function(address)
+			EEex_IterateCPtrList(address, function(overridePtr)
+				EEex_Free(overridePtr)
+			end)
+			EEex_Call(EEex_Label("CObList::RemoveAll"), {}, address, 0x0)
+		end,
+		["copy"] = function(source, dest)
+			EEex_IterateCPtrList(dest, function(overridePtr)
+				EEex_Free(overridePtr)
+			end)
+			EEex_Call(EEex_Label("CObList::RemoveAll"), {}, dest, 0x0)
+			EEex_IterateCPtrList(source, function(overridePtr)
+				local copyOverridePtr = EEex_Malloc(elementSize)
+				EEex_Call(EEex_Label("_memcpy"), {elementSize, overridePtr, copyOverridePtr}, nil, 0xC)
+				EEex_Call(EEex_Label("CPtrList::AddTail"), {copyOverridePtr}, dest, 0x0)
+			end)
+		end,
+		["size"] = 0x1C,
+	})
 end
 
 function EEex_AccessComplexStat(actorID, name)
