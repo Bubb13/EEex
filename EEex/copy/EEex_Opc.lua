@@ -11,10 +11,17 @@ function EEex_HookCheckAddScreen(effectData, creatureData)
 		newStats = EEex_ReadDword(creatureData + 0x3B18)
 	end
 
+	local actorID = EEex_GetActorIDShare(creatureData)
+	local screenList = EEex_AccessComplexStat(actorID, "EEex_ScreenEffectsList")
+
 	local foundImmunity = false
-	EEex_IterateCPtrList(newStats + EEex_SimpleStatsSize, function(CString)
-		local immunityFunction = _G[EEex_ReadString(CString)]
-		if immunityFunction and immunityFunction(effectData, creatureData) then
+	EEex_IterateCPtrList(screenList, function(screenElement)
+
+		local originatingEffectData = EEex_ReadDword(screenElement + 0x0)
+		local functionName = EEex_ReadString(EEex_ReadDword(screenElement + 0x4))
+		local immunityFunction = _G[functionName]
+
+		if immunityFunction and immunityFunction(originatingEffectData, effectData, creatureData) then
 			foundImmunity = true
 			return true
 		end
@@ -727,37 +734,23 @@ function EEex_InstallOpcodeChanges()
 	})
 	EEex_WriteAssembly(checkAddScreenHookAddress, {"!jmp_dword", {checkAddScreenHook, 4, 4}, "!nop !nop !nop !nop"})
 
-	local screenListOffset = EEex_RegisterComplexStat("EEex_ScreenEffectsList", {
+	local screenListOffset = EEex_RegisterComplexListStat("EEex_ScreenEffectsList", {
 
 		["construct"] = function(address)
-			EEex_Call(EEex_Label("CStringList::CStringList"), {10}, address, 0x0)
+			EEex_WriteDword(address + 0x4, EEex_ReadDword(EEex_Label("_afxPchNil")))
 		end,
 
 		["destruct"] = function(address)
-			EEex_Call(EEex_Label("CStringList::~CStringList"), {}, address, 0x0)
-		end,
-
-		["clear"] = function(address)
-			EEex_ClearCStringList(address)
+			EEex_Call(EEex_Label("CString::~CString"), {}, address + 0x4, 0x0)
 		end,
 
 		["copy"] = function(source, dest)
-
-			EEex_CopyCStringList(source, dest)
-
-			-- Debug print to ensure list copied successfully:
-			--[[
-			Infinity_DisplayString("{")
-			EEex_IterateCPtrList(dest, function(CString)
-				local string = EEex_ReadString(CString)
-				Infinity_DisplayString("    String: "..string)
-			end)
-			Infinity_DisplayString("}")
-			--]]
-
+			EEex_WriteDword(dest + 0x0, EEex_ReadDword(source + 0x0))
+			EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {dest + 0x4}, source + 0x4, 0x0)
 		end,
 
-		["size"] = 0x18,
+		["size"] = 0x8,
+
 	})
 
 	local EEex_ScreenEffects = EEex_WriteOpcode({
@@ -769,21 +762,26 @@ function EEex_InstallOpcodeChanges()
 			!push_registers
 
 			!mov_esi_ecx
-			!mov_edi_[ebp+byte] 08 ; CGameSprite ;
+			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
+
+			!push_byte 08
+			!call >_malloc
+			!add_esp_byte 04
+			!mov_edi_eax
+
+			!mov_[edi]_esi ; Element Offset 0x0 ;
 
 			!lea_eax_[ebp+byte] FC
 			!push_eax
 			!lea_ecx_[esi+byte] 2C
 			!call >CResRef::GetResRefStr
-
 			!mov_eax_[eax]
-			!push_eax
-			!mov_ecx_[edi+dword] #3B18
-			!lea_ecx_[ecx+dword] ]], {screenListOffset, 4}, [[
-			!call >CStringList::AddTail
+			!mov_[edi+byte]_eax 04 ; Element Offset 0x4 ;
 
-			!lea_ecx_[ebp+byte] FC
-			!call >CString::~CString
+			!push_edi
+			!mov_ecx_[ebx+dword] #3B18
+			!lea_ecx_[ecx+dword] ]], {screenListOffset, 4}, [[
+			!call >CPtrList::AddTail
 
 			@ret
 			!mov_eax #1
@@ -793,55 +791,11 @@ function EEex_InstallOpcodeChanges()
 		]]},
 	})
 
-	--------------------------------------
-	-- New Opcode #404 (OverrideButton) --
-	--------------------------------------
+	------------------------------------------
+	-- New Opcode #404 (OverrideButtonType) --
+	------------------------------------------
 
-	local buttonOverrideOffset = EEex_RegisterComplexStat("EEex_OverrideButtonList", {
-
-		["construct"] = function(address)
-
-			EEex_Call(EEex_Label("CObList::CObList"), {10}, address, 0x0)
-
-		end,
-
-		["destruct"] = function(address)
-
-			EEex_IterateCPtrList(address, function(overridePtr)
-				EEex_Free(overridePtr)
-			end)
-			EEex_Call(EEex_Label("CObList::~CObList"), {}, address, 0x0)
-
-		end,
-
-		["clear"] = function(address)
-
-			EEex_IterateCPtrList(address, function(overridePtr)
-				EEex_Free(overridePtr)
-			end)
-			EEex_Call(EEex_Label("CObList::RemoveAll"), {}, address, 0x0)
-
-		end,
-
-		["copy"] = function(source, dest)
-
-			EEex_IterateCPtrList(dest, function(overridePtr)
-				EEex_Free(overridePtr)
-			end)
-			EEex_Call(EEex_Label("CObList::RemoveAll"), {}, dest, 0x0)
-
-
-			EEex_IterateCPtrList(source, function(overridePtr)
-				local copyOverridePtr = EEex_Malloc(0x8)
-				EEex_WriteDword(copyOverridePtr + 0x0, EEex_ReadDword(overridePtr + 0x0))
-				EEex_WriteDword(copyOverridePtr + 0x4, EEex_ReadDword(overridePtr + 0x4))
-				EEex_Call(EEex_Label("CPtrList::AddTail"), {copyOverridePtr}, dest, 0x0)
-			end)
-
-		end,
-
-		["size"] = 0x1C,
-	})
+	local buttonOverrideOffset = EEex_RegisterSimpleListStat("EEex_OverrideButtonList", 0x8)
 
 	local EEex_OverrideButton = EEex_WriteOpcode({
 
@@ -880,7 +834,7 @@ function EEex_InstallOpcodeChanges()
 
 		local actorID = EEex_GetActorIDSelected()
 		if actorID == 0x0 then return end
-		
+
 		local overrideList = EEex_AccessComplexStat(actorID, "EEex_OverrideButtonList")
 		EEex_IterateCPtrList(overrideList, function(overridePtr)
 			local overrideID = EEex_ReadDword(overridePtr)
@@ -894,6 +848,69 @@ function EEex_InstallOpcodeChanges()
 	end
 	EEex_AddActionbarListener(op404UpdateButton)
 	EEex_AddResetListener(function() EEex_AddActionbarListener(op404UpdateButton) end)
+
+	-------------------------------------------
+	-- New Opcode #405 (OverrideButtonIndex) --
+	-------------------------------------------
+
+	local buttonOverrideIndexOffset = EEex_RegisterSimpleListStat("EEex_OverrideButtonIndex", 0xC)
+
+	local EEex_OverrideButtonIndex = EEex_WriteOpcode({
+
+		["ApplyEffect"] = {[[
+
+			!build_stack_frame
+			!push_registers
+
+			!mov_esi_ecx
+			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
+
+			!push_byte 0C
+			!call >_malloc
+			!add_esp_byte 04
+			!mov_edi_eax
+
+			!mov_eax_[esi+byte] 18 ; Param1 ;
+			!mov_[edi+byte]_eax 00 ; Target Button ;
+			!mov_eax_[esi+byte] 1C ; Param2 ;
+			!mov_[edi+byte]_eax 04 ; Override With ;
+			!mov_eax_[esi+byte] 44 ; Special ;
+			!mov_[edi+byte]_eax 08 ; Target Config ;
+
+			!push_edi
+			!mov_ecx_[ebx+dword] #3B18
+			!lea_ecx_[ecx+dword] ]], {buttonOverrideIndexOffset, 4}, [[
+			!call >CPtrList::AddTail
+
+			@ret
+			!mov_eax #1
+			!restore_stack_frame
+			!ret_word 04 00
+
+		]]},
+	})
+
+	local op405UpdateButton = function(config)
+		local actorID = EEex_GetActorIDSelected()
+		if actorID == 0x0 then return end
+		local overrideList = EEex_AccessComplexStat(actorID, "EEex_OverrideButtonIndex")
+		EEex_IterateCPtrList(overrideList, function(overridePtr)
+			local targetConfig = EEex_ReadDword(overridePtr + 0x8)
+			if targetConfig == -1 then
+				if config >= 0 and config <= 19 then
+					local overrideIndex = EEex_ReadDword(overridePtr)
+					local overrideID = EEex_ReadDword(overridePtr + 0x4)
+					EEex_SetActionbarButton(overrideIndex, overrideID)
+				end
+			elseif config == targetConfig then
+				local overrideIndex = EEex_ReadDword(overridePtr)
+				local overrideID = EEex_ReadDword(overridePtr + 0x4)
+				EEex_SetActionbarButton(overrideIndex, overrideID)
+			end
+		end)
+	end
+	EEex_AddActionbarListener(op405UpdateButton)
+	EEex_AddResetListener(function() EEex_AddActionbarListener(op405UpdateButton) end)
 
 	-----------------------------
 	-- Opcode Definitions Hook --
@@ -926,9 +943,15 @@ function EEex_InstallOpcodeChanges()
 
 		@404
 		!cmp_eax_dword #194
-		!jne_dword >fail
+		!jne_dword >405
 
 		]], EEex_OverrideButton, [[
+
+		@405
+		!cmp_eax_dword #195
+		!jne_dword >fail
+
+		]], EEex_OverrideButtonIndex, [[
 
 		@fail
 		!jmp_dword >CGameEffect::DecodeEffect()_default_label

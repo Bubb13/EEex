@@ -1542,7 +1542,7 @@ function EEex_SetListScroll(listName, scroll)
 	EEex_WriteDword(scrollPointer, scroll)
 end
 
-function EEex_StoreTemplateInstance(templateName, instanceID, storeIntoName)
+function EEex_StoreTemplateInstance(menuName, templateName, instanceID, storeIntoName)
 
 	local stringAddress = EEex_Malloc(#templateName + 0x1)
 	EEex_WriteString(stringAddress, templateName)
@@ -1553,10 +1553,9 @@ function EEex_StoreTemplateInstance(templateName, instanceID, storeIntoName)
 	local esi = nil
 	local edi = nil
 
-	esi = EEex_ReadUserdata(nameToItem[templateName])
+	esi = EEex_GetMenuStructure(menuName)
 	if esi == 0x0 then goto _fail end
 
-	esi = EEex_ReadDword(esi + 0x4)
 	edi = 0x0
 	esi = EEex_ReadDword(esi + 0x1C)
 	if esi == 0x0 then goto _fail end
@@ -1814,6 +1813,13 @@ function EEex_GetActionbarButtonFrame(buttonIndex)
 	local frame = buttonArray:GetButtonSequence(buttonIndex)
 	if EEex_IsActionbarButtonDown(buttonIndex) then frame = frame + 1 end
 	return frame
+end
+
+function EEex_UpdateActionbar()
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_cButtonArray = m_pObjectGame + 0x2654
+	EEex_Call(EEex_Label("CInfButtonArray::UpdateState"), {}, m_cButtonArray, 0x0)
 end
 
 ---------------------------

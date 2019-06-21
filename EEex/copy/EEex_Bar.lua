@@ -111,6 +111,7 @@ function EEex_InstallActionbarHook()
 	EEex_DisableCodeProtection()
 
 	EEex_WriteAssembly(EEex_Label("CInfButtonArray::SetState()_BeforeUpdate"), {"!jmp_dword", {hookAddress, 4, 4}})
+	EEex_WriteAssembly(EEex_Label("CInfButtonArray::OnLButtonPressed()_InvalidSpecialAbility"), {{fixSpecial, 4, 4}})
 	EEex_WriteAssembly(EEex_Label("CInfButtonArray::OnLButtonPressed()_MainSwitchTable") + 16, {{fixSpecial, 4}})
 
 	EEex_EnableCodeProtection()
