@@ -211,6 +211,7 @@ end
 function B3CuBarPickerTick()
 	if not Infinity_IsMenuOnStack("WORLD_ACTIONBAR") then
 		Infinity_PopMenu("B3_CuBarPicker")
+		B3CuBarDestroyInstances()
 	end
 end
 
@@ -223,18 +224,19 @@ function B3CuBarKeyPressedListener(key)
 end
 
 function B3CuBarKeyReleasedListener(key)
-	if key == 0x400000E1 then
-		if Infinity_IsMenuOnStack("B3_CuBarPicker") then
-			Infinity_PopMenu("B3_CuBarPicker")
-			B3CuBarDestroyInstances()
-		end
+	if key == 0x400000E1 and Infinity_IsMenuOnStack("B3_CuBarPicker") then
+		Infinity_PopMenu("B3_CuBarPicker")
+		B3CuBarDestroyInstances()
 	end
 end
 
 B3CuBarCurrentConfig = nil
 
 function B3CuBarActionbarListener(config)
-	B3CuBarDestroyInstances()
+	if Infinity_IsMenuOnStack("B3_CuBarPicker") then
+		Infinity_PopMenu("B3_CuBarPicker")
+		B3CuBarDestroyInstances()
+	end
 	B3CuBarCurrentConfig = config
 end
 

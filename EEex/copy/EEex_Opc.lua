@@ -11,10 +11,17 @@ function EEex_HookCheckAddScreen(effectData, creatureData)
 		newStats = EEex_ReadDword(creatureData + 0x3B18)
 	end
 
+	local actorID = EEex_GetActorIDShare(creatureData)
+	local screenList = EEex_AccessComplexStat(actorID, "EEex_ScreenEffectsList")
+
 	local foundImmunity = false
-	EEex_IterateCPtrList(newStats + EEex_SimpleStatsSize, function(CString)
-		local immunityFunction = _G[EEex_ReadString(CString)]
-		if immunityFunction and immunityFunction(effectData, creatureData) then
+	EEex_IterateCPtrList(screenList, function(screenElement)
+
+		local originatingEffectData = EEex_ReadDword(screenElement + 0x0)
+		local functionName = EEex_ReadString(EEex_ReadDword(screenElement + 0x4))
+		local immunityFunction = _G[functionName]
+
+		if immunityFunction and immunityFunction(originatingEffectData, effectData, creatureData) then
 			foundImmunity = true
 			return true
 		end
@@ -727,37 +734,23 @@ function EEex_InstallOpcodeChanges()
 	})
 	EEex_WriteAssembly(checkAddScreenHookAddress, {"!jmp_dword", {checkAddScreenHook, 4, 4}, "!nop !nop !nop !nop"})
 
-	local screenListOffset = EEex_RegisterComplexStat("EEex_ScreenEffectsList", {
+	local screenListOffset = EEex_RegisterComplexListStat("EEex_ScreenEffectsList", {
 
 		["construct"] = function(address)
-			EEex_Call(EEex_Label("CStringList::CStringList"), {10}, address, 0x0)
+			EEex_WriteDword(address + 0x4, EEex_ReadDword(EEex_Label("_afxPchNil")))
 		end,
 
 		["destruct"] = function(address)
-			EEex_Call(EEex_Label("CStringList::~CStringList"), {}, address, 0x0)
-		end,
-
-		["clear"] = function(address)
-			EEex_ClearCStringList(address)
+			EEex_Call(EEex_Label("CString::~CString"), {}, address + 0x4, 0x0)
 		end,
 
 		["copy"] = function(source, dest)
-
-			EEex_CopyCStringList(source, dest)
-
-			-- Debug print to ensure list copied successfully:
-			--[[
-			Infinity_DisplayString("{")
-			EEex_IterateCPtrList(dest, function(CString)
-				local string = EEex_ReadString(CString)
-				Infinity_DisplayString("    String: "..string)
-			end)
-			Infinity_DisplayString("}")
-			--]]
-
+			EEex_WriteDword(dest + 0x0, EEex_ReadDword(source + 0x0))
+			EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {dest + 0x4}, source + 0x4, 0x0)
 		end,
 
-		["size"] = 0x18,
+		["size"] = 0x8,
+
 	})
 
 	local EEex_ScreenEffects = EEex_WriteOpcode({
@@ -769,21 +762,26 @@ function EEex_InstallOpcodeChanges()
 			!push_registers
 
 			!mov_esi_ecx
-			!mov_edi_[ebp+byte] 08 ; CGameSprite ;
+			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
+
+			!push_byte 08
+			!call >_malloc
+			!add_esp_byte 04
+			!mov_edi_eax
+
+			!mov_[edi]_esi ; Element Offset 0x0 ;
 
 			!lea_eax_[ebp+byte] FC
 			!push_eax
 			!lea_ecx_[esi+byte] 2C
 			!call >CResRef::GetResRefStr
-
 			!mov_eax_[eax]
-			!push_eax
-			!mov_ecx_[edi+dword] #3B18
-			!lea_ecx_[ecx+dword] ]], {screenListOffset, 4}, [[
-			!call >CStringList::AddTail
+			!mov_[edi+byte]_eax 04 ; Element Offset 0x4 ;
 
-			!lea_ecx_[ebp+byte] FC
-			!call >CString::~CString
+			!push_edi
+			!mov_ecx_[ebx+dword] #3B18
+			!lea_ecx_[ecx+dword] ]], {screenListOffset, 4}, [[
+			!call >CPtrList::AddTail
 
 			@ret
 			!mov_eax #1
@@ -867,7 +865,7 @@ function EEex_InstallOpcodeChanges()
 			!mov_esi_ecx
 			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
 
-			!push_byte 08
+			!push_byte 0C
 			!call >_malloc
 			!add_esp_byte 04
 			!mov_edi_eax
