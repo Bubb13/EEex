@@ -2620,7 +2620,7 @@ function EEex_GetActorModalTimer(actorID)
 	end
 end
 
--- Returns the actor's current modal MODAL.IDS, (stored at offset 0x28 of the global-creature structure).
+-- Returns the actor's current modal state, (as defined in MODAL.IDS; stored at offset 0x28 of the global-creature structure).
 function EEex_GetActorModalState(actorID)
 	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x295D, 0x0)
 end
@@ -2964,6 +2964,7 @@ function EEex_IsValidBackstabDirection(attackerID, targetID)
 	return EEex_WithinCyclicRange(attackerDirection, targetDirection, 3, 0, 15)
 end
 
+-- Directly applies an effect to an actor based on the args table.
 function EEex_ApplyEffectToActor(actorID, args)
 
 	local Item_effect_st = EEex_Malloc(0x30)
