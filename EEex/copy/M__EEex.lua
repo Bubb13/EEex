@@ -91,6 +91,7 @@ function EEex_ReadWord(address, index)
 	return bit32.extract(EEex_ReadDword(address), index * 0x10, 0x10)
 end
 
+-- Reads a signed 2-byte word at the given address, shifted over by 2*index bytes.
 function EEex_ReadSignedWord(address, index)
 	local readValue = bit32.extract(EEex_ReadDword(address), index * 0x10, 0x10)
 	-- TODO: This is definitely not the right way to do the conversion,
@@ -1425,6 +1426,7 @@ function EEex_GetTrueMousePos()
 	return mouseX, mouseY
 end
 
+-- Translates the given screenX and screenY into a worldX and worldY. Use EEex_GetTrueMousePos() to obtain valid screen coordinates.
 function EEex_ScreenToWorldXY(screenX, screenY)
 	local CInfinity = EEex_GetCurrentCInfinity()
 	local screenXY = EEex_Malloc(0x8)
@@ -1502,6 +1504,8 @@ function EEex_FetchMenuRes(resref)
 	return EEex_ReadDword(result)
 end
 
+-- Loads in the given .MENU file as if it were UI.MENU. Note that in order to keep the menu loaded in the event of an F5 UI reload,
+-- a post-reset listener must be used to reload the menu manually.
 function EEex_LoadMenuFile(resref)
 	EEex_Call(EEex_Label("_saveMenuStack"), {}, nil, 0x0)
 	EEex_Memset(EEex_Label("_menuStack"), 0x400, 0x0)
@@ -1606,6 +1610,7 @@ function EEex_GetActorShare(actorID)
 	return result
 end
 
+-- Returns the actorID for the given share / creatureData.
 function EEex_GetActorIDShare(share)
 	return EEex_ReadDword(share + 0x34)
 end
@@ -1701,6 +1706,8 @@ end
 -----------------------
 
 -- TODO: Memory leak?
+-- Parses the given object string in standard BAF syntax and returns a pointer to the compiled CAIObjectType instance.
+-- Use EEex_EvalObjectAsActor() to evaluate the compiled object instance in relation to an actor.
 function EEex_ParseObjectString(string)
 	local scriptFile = EEex_Malloc(0xE8)
 	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, scriptFile, 0x0)
@@ -1712,6 +1719,7 @@ function EEex_ParseObjectString(string)
 	return objectTypeResult
 end
 
+-- Evaluates an object pointer, (returned by EEex_ParseObjectString()), as if it was evaluated by the given actor.
 function EEex_EvalObjectAsActor(object, actorID)
 	local objectCopy = EEex_Malloc(0x14)
 	EEex_Call(EEex_Label("CAIObjectType::CAIObjectType"), {-0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, objectCopy, 0x0)
@@ -1728,6 +1736,7 @@ function EEex_EvalObjectAsActor(object, actorID)
 	end
 end
 
+-- Evalues an object string in standard BAF syntax as if it was evaluated by the given actor.
 function EEex_EvalObjectStringAsActor(string, actorID)
 	local object = EEex_ParseObjectString(string)
 	local matchedID = EEex_EvalObjectAsActor(object, actorID)
@@ -1801,6 +1810,7 @@ function EEex_GetActionbarButton(buttonIndex)
 	return EEex_ReadDword(actionbarAddress + 0x1440 + buttonIndex * 0x4)
 end
 
+-- Returns true if the actionbar button at buttonIndex is currently in the process of being clicked.
 function EEex_IsActionbarButtonDown(buttonIndex)
 	local capture = EEex_ReadDword(EEex_Label("capture") + 0xC)
 	if capture == 0x0 then return false end
@@ -1809,12 +1819,14 @@ function EEex_IsActionbarButtonDown(buttonIndex)
 	return EEex_ReadDword(actionbar + 0x4) == buttonIndex
 end
 
+-- Returns the current frame of the actionbar button at buttonIndex, taking into account the click status.
 function EEex_GetActionbarButtonFrame(buttonIndex)
 	local frame = buttonArray:GetButtonSequence(buttonIndex)
 	if EEex_IsActionbarButtonDown(buttonIndex) then frame = frame + 1 end
 	return frame
 end
 
+-- Forces the actionbar to refresh its state. Use if making changes with EEex_SetActionbarButton() outside of an actionbar listener.
 function EEex_UpdateActionbar()
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
@@ -2424,6 +2436,9 @@ function EEex_SetVariable(CVariableHash, variableName, value)
 	EEex_FreeCString(variableNamePtr)
 end
 
+-- Sets a "GLOBAL" variable in the .GAM as if a
+-- 	SetGlobal(<globalName>, "GLOBAL", <value>)
+-- script action was executed.
 function EEex_SetGlobal(globalName, value)
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
@@ -2432,6 +2447,9 @@ function EEex_SetGlobal(globalName, value)
 end
 
 -- TODO: Memory leak?
+-- Sets an <arearesref> variable in an .ARE as if a
+-- 	SetGlobal(<globalName>, <areaResref>, <value>)
+-- script action was executed.
 function EEex_SetAreaGlobal(areaResref, globalName, value)
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
@@ -2511,15 +2529,11 @@ function EEex_GetActorSpecific(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x30, 0x1)
 end
 
--- Returns the resref of the actor's DLG file.
-function EEex_GetActorDialogue(actorID)
-	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x35A8, 8)
-end
-
 function EEex_GetActorKit(actorID)
 	return EEex_Call(EEex_Label("CGameSprite::GetKit"), {}, EEex_GetActorShare(actorID), 0x0)
 end
 
+-- Returns the actor's current area resref as a string.
 function EEex_GetActorAreaRes(actorID)
 	if EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14) > 0 then
 		return EEex_ReadLString(EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14), 0x8)
@@ -2577,6 +2591,10 @@ function EEex_GetActorLocal(actorID, localName)
 	return EEex_FetchVariable(localVariables, localName)
 end
 
+
+-- Sets a LOCALS variable in the actor's .CRE as if a
+-- 	SetGlobal(<localName>, "LOCALS", <value>)
+-- script action was executed by the given actor.
 function EEex_SetActorLocal(actorID, localName, value)
 	local share = EEex_GetActorShare(actorID)
 	local localVariables = EEex_ReadDword(share + 0x3758)
@@ -2602,43 +2620,48 @@ function EEex_GetActorModalTimer(actorID)
 	end
 end
 
--- Returns a number based on which modal state the actor is using:
--- 0: Not using a modal state
--- 1: Bard Song
--- 2: Detect Traps
--- 3: Stealth
--- 4: Turn Undead
--- 5: Shamanic Dance
+-- Returns the actor's current modal MODAL.IDS, (stored at offset 0x28 of the global-creature structure).
 function EEex_GetActorModalState(actorID)
 	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x295D, 0x0)
 end
 
--- Returns the resref of the actor's DLG file.
+-- Returns the actor's dialogue resref as a string, (defined at offset 0x2CC of the .CRE,
+-- or optionally overriden by the actor structure at offset 0x48).
 function EEex_GetActorDialogue(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x35A8, 8)
 end
 
--- Returns the resref of the actor's override script.
+-- Returns the actor's override script resref as a string, (defined at offset 0x248 of the .CRE,
+-- or optionally overriden by the actor structure at offset 0x50).
 function EEex_GetActorOverrideScript(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x65C, 8)
 end
 
+-- Returns the actor's specifics script resref as a string, (defined at offset 0x78 of the actor structure).
 function EEex_GetActorSpecificsScript(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x2A24, 8)
 end
 
+-- Returns the actor's class script, (defined at offset 0x250 of the .CRE,
+-- or optionally overriden by the actor structure at offset 0x60).
 function EEex_GetActorClassScript(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x664, 8)
 end
 
+-- Returns the actor's race script resref as a string, (defined at offset 0x258 of the .CRE,
+-- or optionally overriden by the actor structure at offset 0x68).
 function EEex_GetActorRaceScript(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x66C, 8)
 end
 
+-- Returns the actor's general script resref as a string, (defined at offset 0x260 of the .CRE,
+-- or optionally overriden by the actor structure at offset 0x58).
 function EEex_GetActorGeneralScript(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x674, 8)
 end
 
+-- Returns the actor's default script resref as a string, (defined at offset 0x268 of the .CRE,
+-- or optionally overriden by the actor structure at offset 0x70).
 function EEex_GetActorDefaultScript(actorID)
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x67C, 8)
 end
@@ -2752,6 +2775,8 @@ function EEex_GetActorCastTimer(actorID)
 	end
 end
 
+-- Returns true if the given actor is in combat.
+-- If includeDeadZone is set to true, the time period will be extended to until the battle music fully fades out.
 function EEex_IsActorInCombat(actorID, includeDeadZone)
 	local area = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14)
 	local songCounter = EEex_ReadDword(area + 0xAA0)
@@ -2813,6 +2838,7 @@ function EEex_GetActorSpellRES(actorID)
 	end
 end
 
+-- Returns the actor's current HP, (defined at offset 0x24 of the .CRE).
 function EEex_GetActorCurrentHP(actorID)
 	return EEex_ReadSignedWord(EEex_GetActorShare(actorID) + 0x438, 0x0)
 end
@@ -2847,39 +2873,48 @@ function EEex_GetActorMovementRate(actorID, adjustForHaste)
 	return speed
 end
 
+-- Returns the actor's animation, (as defined in ANIMATE.IDS; stored at offset 0x28 of the .CRE,
+-- or optionally overriden by the actor structure at offset 0x30).
 function EEex_GetActorAnimation(actorID)
 	return EEex_ReadDword(EEex_GetActorShare(actorID) + 0x43C)
 end
 
+-- Returns the actor's base strength, (defined at offset 0x238 of the .CRE).
 function EEex_GetActorBaseStrength(actorID)
-	-- Returns the actor's Strength ignoring Strength changes from items and spells
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64C, 0x0)
 end
 
+-- Returns the actor's base dexterity, (defined at offset 0x23C of the .CRE).
 function EEex_GetActorBaseDexterity(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x650, 0x0)
 end
 
+-- Returns the actor's base constitution, (defined at offset 0x23D of the .CRE).
 function EEex_GetActorBaseConstitution(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x651, 0x0)
 end
 
+-- Returns the actor's base intelligence, (defined at offset 0x23A of the .CRE).
 function EEex_GetActorBaseIntelligence(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64E, 0x0)
 end
 
+-- Returns the actor's base wisdom, (defined at offset 0x23B of the .CRE).
 function EEex_GetActorBaseWisdom(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64F, 0x0)
 end
 
+-- Returns the actor's base charisma, (defined at offset 0x23E of the .CRE).
 function EEex_GetActorBaseCharisma(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x652, 0x0)
 end
 
+-- Returns the actor's direction, (as defined in DIR.IDS; stored at offset 0x34 of the actor structure).
 function EEex_GetActorDirection(actorID)
 	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x31FE, 0x0)
 end
 
+-- Returns the direction, (as defined in DIR.IDS), required for the actor to face the given point.
 function EEex_GetActorRequiredDirection(actorID, targetX, targetY)
 	local share = EEex_GetActorShare(actorID)
 	local targetPoint = EEex_Malloc(0x8)
@@ -2890,6 +2925,7 @@ function EEex_GetActorRequiredDirection(actorID, targetX, targetY)
 	return bit32.extract(result, 0, 0x10)
 end
 
+-- Returns true if the sourceID actor is facing the exact direction required to face the targetID actor.
 function EEex_IsActorFacing(sourceID, targetID)
 	local targetX, targetY = EEex_GetActorLocation(targetID)
 	local currentDir = EEex_GetActorDirection(sourceID)
@@ -2897,12 +2933,17 @@ function EEex_IsActorFacing(sourceID, targetID)
 	return currentDir == requiredDir
 end
 
+-- Sanity function to help work with number ranges that are cyclic, (like actor direction).
+-- Example:
+-- 	EEex_CyclicBound(num, 0, 15)
+-- defines a range of 0 to 15. num = 16 rolls over to 0, as does num = 32. num = -1 wraps around to 15, as does num = -17.
 function EEex_CyclicBound(num, lowerBound, upperBound)
 	local tolerance = upperBound - lowerBound + 1
 	local cycleCount = math.floor((num - lowerBound) / tolerance)
 	return num - tolerance * cycleCount
 end
 
+-- Returns true if num2 is within <range> positions of num in the cyclic bounds. See EEex_CyclicBound() for more info about cyclic ranges.
 function EEex_WithinCyclicRange(num, num2, range, lowerBound, higherBound)
 	if num2 < (lowerBound + range) then
 		-- Underflows
@@ -2916,6 +2957,7 @@ function EEex_WithinCyclicRange(num, num2, range, lowerBound, higherBound)
 	end
 end
 
+-- Returns true if the attackerID actor's direction is sufficent to backstab the targetID actor.
 function EEex_IsValidBackstabDirection(attackerID, targetID)
 	local attackerDirection = EEex_GetActorDirection(attackerID)
 	local targetDirection = EEex_GetActorDirection(targetID)

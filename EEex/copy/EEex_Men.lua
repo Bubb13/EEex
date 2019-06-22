@@ -1,12 +1,14 @@
 
 EEex_TemplateMenuOverride = 0
 
+-- Exactly the same as Infinity_InstanceAnimation(), but allows said instance to be "injected" into the menu specified.
 function EEex_InjectTemplate(menuName, templateName, x, y, w, h)
 	EEex_TemplateMenuOverride = EEex_GetMenuStructure(menuName)
 	Infinity_InstanceAnimation(templateName, nil, x, y, w, h, nil, nil)
 	EEex_TemplateMenuOverride = 0
 end
 
+-- Destroys an instance injected into a menu via EEex_InjectTemplate().
 function EEex_DestroyInjectedTemplate(menuName, templateName, instanceId)
 	EEex_TemplateMenuOverride = EEex_GetMenuStructure(menuName)
 	Infinity_DestroyAnimation(templateName, instanceId)
@@ -15,6 +17,7 @@ end
 
 EEex_PostResetListeners = {}
 
+-- Given listener function is called after an F5 UI reload is executed.
 function EEex_AddPostResetListener(listener)
 	table.insert(EEex_PostResetListeners, listener)
 end
