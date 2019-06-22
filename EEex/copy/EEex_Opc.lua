@@ -4,13 +4,6 @@
 -- in assembly.
 function EEex_HookCheckAddScreen(effectData, creatureData)
 
-	local newStats = nil
-	if EEex_ReadDword(creatureData + 0x3748) == 0x0 then
-		newStats = EEex_ReadDword(creatureData + 0x3B1C)
-	else
-		newStats = EEex_ReadDword(creatureData + 0x3B18)
-	end
-
 	local actorID = EEex_GetActorIDShare(creatureData)
 	local screenList = EEex_AccessComplexStat(actorID, "EEex_ScreenEffectsList")
 
@@ -746,7 +739,7 @@ function EEex_InstallOpcodeChanges()
 
 		["copy"] = function(source, dest)
 			EEex_WriteDword(dest + 0x0, EEex_ReadDword(source + 0x0))
-			EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {dest + 0x4}, source + 0x4, 0x0)
+			EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {source + 0x4}, dest + 0x4, 0x0)
 		end,
 
 		["size"] = 0x8,
