@@ -3039,12 +3039,17 @@ function EEex_ApplyEffectToActor(actorID, args)
 	EEex_Free(source)
 	EEex_Free(Item_effect_st)
 
+	EEex_WriteDword(CGameEffect + 0x5C, argOrDefault("parameter3", 0))
+	EEex_WriteDword(CGameEffect + 0x60, argOrDefault("parameter4", 0))
+	EEex_WriteDword(CGameEffect + 0x64, argOrDefault("parameter5", 0))
 	writeResrefArg(CGameEffect + 0x6C, "vvcresource")
 	writeResrefArg(CGameEffect + 0x74, "resource2")
+	EEex_WriteDword(CGameEffect + 0x8C, argOrDefault("restype", 0))
 	writeResrefArg(CGameEffect + 0x90, "parent_resource")
 	EEex_WriteDword(CGameEffect + 0x98, argOrDefault("resource_flags", 0))
 	EEex_WriteDword(CGameEffect + 0x9C, argOrDefault("impact_projectile", 0))
-	EEex_WriteDword(CGameEffect + 0xA0, argOrDefault("source_slot", 0xFFFFFFFF))
+	EEex_WriteDword(CGameEffect + 0xA0, argOrDefault("sourceslot", 0xFFFFFFFF))
+	writeResrefArg(CGameEffect + 0xA4, "effvar")
 	EEex_WriteDword(CGameEffect + 0xC4, argOrDefault("casterlvl", 1))
 	EEex_WriteDword(CGameEffect + 0xC8, argOrDefault("internal_flags", 1))
 	EEex_WriteDword(CGameEffect + 0xCC, argOrDefault("sectype", 0))
@@ -3065,8 +3070,15 @@ EEex_IterateActorEffects(EEex_GetActorIDCursor(), function(eData)
 end)
 --]]
 -- It will print the opcode number of each effect on the actor.
+-- This looks through spell effects, item equipped effects, and permanent effects.
 function EEex_IterateActorEffects(actorID, func)
 	local esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
+	while esi ~= 0x0 do
+		local edi = EEex_ReadDword(esi + 0x8) - 0x4
+		func(edi)
+		esi = EEex_ReadDword(esi)
+	end
+	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3380)
 	while esi ~= 0x0 do
 		local edi = EEex_ReadDword(esi + 0x8) - 0x4
 		func(edi)
