@@ -1526,6 +1526,37 @@ function EEex_GetMenuStructure(menuName)
 	return result
 end
 
+function EEex_GetMenuFunctionOffset(typeName)
+	local typeOffsets = {
+		["onopen"] = 0x2C,
+		["onclose"] = 0x30,
+		["enabled"] = 0x4C,
+	}
+	return typeOffsets[typeName:lower()]
+end
+
+-- Returns the internal compiled function derived from
+-- the <typeName> function-string in the given menu.
+function EEex_GetMenuVariantFunction(menuName, typeName)
+	local menu = EEex_GetMenuStructure(menuName)
+	if menu == 0x0 then return end
+	local offset = EEex_GetMenuFunctionOffset(typeName)
+	local registryIndex = EEex_ReadDword(menu + offset)
+	return EEex_GetLuaRegistryIndex(registryIndex)
+end
+
+-- Overwrites the internal compiled function derived from
+-- the <typeName> function-string in the given menu.
+function EEex_SetMenuVariantFunction(menuName, typeName, myFunction)
+	local menu = EEex_GetMenuStructure(menuName)
+	if menu == 0x0 then return end
+	local offset = EEex_GetMenuFunctionOffset(typeName)
+	local registryIndex = EEex_ReadDword(menu + offset)
+	EEex_SetMenuVariantFunctionTempGlobal = myFunction
+	EEex_SetLuaRegistryFunction(registryIndex, "EEex_SetMenuVariantFunctionTempGlobal")
+	EEex_SetMenuVariantFunctionTempGlobal = nil
+end
+
 function EEex_GetMenuAddressFromItem(menuItemName)
 	return EEex_ReadDword(EEex_ReadUserdata(Infinity_FindUIItemByName(menuItemName)) + 0x4)
 end
@@ -1743,6 +1774,106 @@ function EEex_EvalObjectStringAsActor(string, actorID)
 	EEex_Call(EEex_Label("CString::~CString"), {}, object, 0x0)
 	EEex_Free(object)
 	return matchedID
+end
+
+-- Parses the given string as if it was fed through C:Eval() and
+-- returns the compiled script object, (only filled with actions).
+-- Use in conjunction with one of the EEex_EvalActions* functions.
+function EEex_ParseActionsString(string)
+
+	local CAIScriptFile = EEex_Malloc(0xE8)
+	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, CAIScriptFile, 0x0)
+
+	local CString = EEex_Malloc(0x4)
+	local charArray = EEex_Malloc(#string + 1)
+	EEex_WriteString(charArray, string)
+	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {charArray}, CString, 0x0)
+	EEex_Free(charArray)
+
+	-- Destructs CString internally
+	EEex_Call(EEex_Label("CAIScriptFile::ParseResponseString"), {EEex_ReadDword(CString)}, CAIScriptFile, 0x0)
+	EEex_Free(CString)
+
+	return CAIScriptFile
+
+end
+
+-- Executes compiled actions returned by EEex_ParseActionsString().
+-- Note that due to intentional design, the following function attempts to
+-- resume the currently executing action after forcing the passed actions.
+-- *** ONLY WORKS CORRECTLY FOR ACTIONS DEFINED IN INSTANT.IDS ***
+function EEex_EvalActionsAsActorResume(CAIScriptFile, actorID)
+
+	local share = EEex_GetActorShare(actorID)
+	local CAIResponse = EEex_ReadDword(CAIScriptFile + 0x14)
+	local actionList = CAIResponse + 0x8
+
+	-- Copy currently executing action
+	local currentCopy = EEex_Malloc(0x64)
+	EEex_Call(EEex_Label("CAIAction::CAIAction(CAIAction_const_&)"), {share + 0x2F8}, currentCopy, 0x0)
+
+	EEex_IterateCPtrList(actionList, function(CAIAction)
+
+		-- Override current action with parsed CAIAction
+		EEex_Call(EEex_Label("CAIAction::operator_equ"), {CAIAction}, share + 0x2F8, 0x0)
+
+		-- Execute inserted action
+		EEex_Call(EEex_Label("CGameSprite::ExecuteAction"), {}, share, 0x0)
+
+	end)
+
+	-- Restore overridden action
+	EEex_Call(EEex_Label("CAIAction::operator_equ"), {currentCopy}, share + 0x2F8, 0x0)
+
+	-- Clean up copied action
+	EEex_Call(EEex_Label("CAIAction::~CAIAction"), {}, currentCopy, 0x0)
+
+	-- Free copy memory
+	EEex_Free(currentCopy)
+
+end
+
+-- Same as EEex_EvalActionsAsActorResume(), though intead of
+-- passing a compiled script object, this function compiles
+-- the script from the given string and frees the resulting
+-- script object for you. Use this function sparingly, as
+-- compiling scripts takes a good amount of time.
+function EEex_EvalActionsStringAsActorResume(string, actorID)
+	local CAIScriptFile = EEex_ParseActionsString(string)
+	EEex_EvalActionsAsActorResume(CAIScriptFile, actorID)
+	EEex_FreeActions(CAIScriptFile)
+end
+
+-- Executes compiled actions returned by EEex_ParseActionsString().
+-- Results practically identical to using C:Eval(), though note that executing
+-- compiled actions is significantly faster than parsing the actions string
+-- every call.
+function EEex_EvalActionsAsActor(CAIScriptFile, actorID)
+	local share = EEex_GetActorShare(actorID)
+	local CAIResponse = EEex_ReadDword(CAIScriptFile + 0x14)
+	local actionList = CAIResponse + 0x8
+	EEex_IterateCPtrList(actionList, function(CAIAction)
+		EEex_Call(EEex_Label("CGameAIBase::InsertAction"), {CAIAction}, share, 0x0)
+	end)
+end
+
+-- Same as EEex_EvalActionsAsActor(), though intead of
+-- passing a compiled script object, this function compiles
+-- the script from the given string and frees the resulting
+-- script object for you. Use this function sparingly, as
+-- compiling scripts takes a good amount of time.
+function EEex_EvalActionsStringAsActor(string, actorID)
+	local CAIScriptFile = EEex_ParseActionsString(string)
+	EEex_EvalActionsAsActor(CAIScriptFile, actorID)
+	EEex_FreeActions(CAIScriptFile)
+end
+
+-- Frees the compiled scripts returned by EEex_ParseActionsString().
+-- Ensure that the freed actions are never used again, as attempting
+-- to reference freed actions will result in a crash.
+function EEex_FreeActions(CAIScriptFile)
+	EEex_Call(EEex_Label("CAIScriptFile::~CAIScriptFile"), {}, CAIScriptFile, 0x0)
+	EEex_Free(CAIScriptFile)
 end
 
 ------------------------------
@@ -3854,6 +3985,72 @@ end
 		!mov_edi_[edi+byte] 04
 
 		!mov_eax #00
+		!restore_stack_frame
+		!ret
+
+	]]})
+
+	-- Fetches a value held in the special Lua REGISTRY space.
+	-- This is where compiled .MENU functions - the ones in actual
+	-- menu definitions, not the loose kind - are held, (among other things).
+	-- Signature: <unknown_type> registryValue = EEex_GetLuaRegistryIndex(registryIndex)
+	EEex_WriteAssemblyFunction("EEex_GetLuaRegistryIndex", {[[
+
+		!build_stack_frame
+		!push_registers
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+
+		!push_eax
+		!push_dword #0FFF0B9D8
+		!push_[ebp+byte] 08
+		!call >_lua_rawgeti
+		!add_esp_byte 0C
+
+		!mov_eax #1
+		!restore_stack_frame
+		!ret
+
+	]]})
+
+	-- Sets a Lua REGISTRY index to the global defined by the given string.
+	-- Only used for functions internally, so let's reflect that purpose in the name.
+	-- Signature: <void> = EEex_SetLuaRegistryFunction(registryIndex, globalString)
+	EEex_WriteAssemblyFunction("EEex_SetLuaRegistryFunction", {[[
+
+		!build_stack_frame
+		!push_registers
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tolstring
+		!add_esp_byte 0C
+
+		!push_eax
+		!push_[ebp+byte] 08
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_dword #0FFF0B9D8
+		!push_[ebp+byte] 08
+		!call >_lua_rawseti
+		!add_esp_byte 0C
+
+		!xor_eax_eax
 		!restore_stack_frame
 		!ret
 
