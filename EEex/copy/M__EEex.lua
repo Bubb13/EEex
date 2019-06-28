@@ -2530,10 +2530,13 @@ function EEex_GetActorSpecific(actorID)
 end
 
 function EEex_GetActorKit(actorID)
+	if not EEex_IsSprite(actorID) then return 0 end
 	return EEex_Call(EEex_Label("CGameSprite::GetKit"), {}, EEex_GetActorShare(actorID), 0x0)
 end
 
 -- Returns the actor's current area resref as a string.
+-- If the game was just loaded, sometimes the actor doesn't know what
+--  area they're in yet, so it'll return "" in that case.
 function EEex_GetActorAreaRes(actorID)
 	if EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14) > 0 then
 		return EEex_ReadLString(EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14), 0x8)
@@ -2542,11 +2545,19 @@ function EEex_GetActorAreaRes(actorID)
 	end
 end
 
+-- Gets the maximum X and Y coordinates of the area the actor is in
+-- (for outside areas the numbers are usually in the thousands).
+-- If the game was just loaded, sometimes it will return 0 for both coordinates
+--  because the actor doesn't have a pointer to the area yet.
 function EEex_GetActorAreaSize(actorID)
 	local address = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14)
-	local width = EEex_ReadWord(address + 0x4BC, 0x0) * 64
-	local height = EEex_ReadWord(address + 0x4C0, 0x0) * 64
-	return width, height
+	if address > 0 then
+		local width = EEex_ReadWord(address + 0x4BC, 0x0) * 64
+		local height = EEex_ReadWord(address + 0x4C0, 0x0) * 64
+		return width, height
+	else
+		return 0, 0
+	end
 end
 
 function EEex_GetActorEffectResrefs(actorID)
@@ -2667,6 +2678,7 @@ function EEex_GetActorDefaultScript(actorID)
 end
 
 function EEex_GetActorName(actorID)
+	if not EEex_IsSprite(actorID) then return "" end
 	return EEex_ReadString(EEex_ReadDword(EEex_Call(EEex_Label("CGameSprite::GetName"), {0x0}, EEex_GetActorShare(actorID), 0x0)))
 end
 
@@ -2707,6 +2719,7 @@ function EEex_GetImageMasterID(actorID)
 end
 
 function EEex_GetActorSpellState(actorID, splstateID)
+	if not EEex_IsSprite(actorID) then return false end
 	return EEex_Call(EEex_Label("CDerivedStats::GetSpellState"), {splstateID},
 		EEex_GetActorShare(actorID) + 0xB30, 0x0) == 1
 end
@@ -2716,6 +2729,7 @@ function EEex_GetActorSpellTimer(actorID)
 end
 
 function EEex_GetActorStat(actorID, statID)
+	if not EEex_IsSprite(actorID) then return 0 end
 	local ecx = EEex_Call(EEex_Label("CGameSprite::GetActiveStats"), {}, EEex_GetActorShare(actorID), 0x0)
 	return EEex_Call(EEex_Label("CDerivedStats::GetAtOffset"), {statID}, ecx, 0x0)
 end
@@ -2724,12 +2738,13 @@ end
 -- For example, if the state parameter is set to 0x8000, it will return true if the actor
 --  is hasted or improved hasted, because STATE_HASTE is state 0x8000 in STATE.IDS.
 function EEex_HasState(actorID, state)
+	if not EEex_IsSprite(actorID) then return false end
 	return (bit32.band(EEex_ReadDword(EEex_GetActorShare(actorID) + 0xB30), state) == state)
 end
 
 -- Returns true if the actor is immune to the specified opcode.
 function EEex_IsImmuneToOpcode(actorID, opcode)
-	if actorID == 0x0 then return end
+	if not EEex_IsSprite(actorID) then return false end
 	local found_it = false
 	EEex_IterateActorEffects(actorID, function(eData)
 		if found_it == false then
@@ -2747,7 +2762,7 @@ end
 -- If includeSpellDeflection is true, it will also return true if the actor has a Spell Deflection,
 --  Spell Turning or Spell Trap effect for the specified spell level.
 function EEex_IsImmuneToSpellLevel(actorID, level, includeSpellDeflection)
-	if actorID == 0x0 then return end
+	if not EEex_IsSprite(actorID) then return false end
 	local found_it = false
 	EEex_IterateActorEffects(actorID, function(eData)
 		if found_it == false then
@@ -2916,6 +2931,7 @@ end
 
 -- Returns the direction, (as defined in DIR.IDS), required for the actor to face the given point.
 function EEex_GetActorRequiredDirection(actorID, targetX, targetY)
+	if not EEex_IsSprite(actorID) then return -1 end
 	local share = EEex_GetActorShare(actorID)
 	local targetPoint = EEex_Malloc(0x8)
 	EEex_WriteDword(targetPoint + 0x0, targetX)
@@ -2962,6 +2978,19 @@ function EEex_IsValidBackstabDirection(attackerID, targetID)
 	local attackerDirection = EEex_GetActorDirection(attackerID)
 	local targetDirection = EEex_GetActorDirection(targetID)
 	return EEex_WithinCyclicRange(attackerDirection, targetDirection, 3, 0, 15)
+end
+
+-- Returns true if the actor is a creature.
+-- Returns false if the actor is BALDUR.BCS, an area script, a door, a container, or a region.
+-- For example, if you get the sourceID of an effect of a fireball from a trap, and you
+--  do EEex_IsSprite(sourceID), it will return false.
+-- If the source had been a mage casting a fireball, it would've returned true.
+function EEex_IsSprite(actorID)
+	if actorID == 0x0 or actorID == -1 then
+		return false
+	else
+		return (EEex_ReadDword(EEex_GetActorShare(actorID) + 0x4) == 0x31)
+	end
 end
 
 -- Directly applies an effect to an actor based on the args table.
