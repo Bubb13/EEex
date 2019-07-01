@@ -116,6 +116,7 @@ for _, macroEntry in ipairs({
 	{"lea_edi_[eax+dword]", "8D B8"},
 	{"lea_edi_[eax]", "8D 78 00"},
 	{"lea_edi_[esi+byte]", "8D 7E"},
+	{"lea_esi_[ecx+dword]", "8D B1"},
 	{"movsx_eax_al", "0F BE C0"},
 	{"movzx_eax_byte:[eax+dword]", "0F B6 80"},
 	{"movzx_eax_word:[edx+byte]", "0F B7 42"},

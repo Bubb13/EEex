@@ -1015,6 +1015,10 @@ PatAdj=2
 PatBytes=761980BB072D00000074108BCB
 PatAdj=2
 
+[Opcode233FixHalberdIncrement]
+PatBytes=8B42188B75080181981E0000
+PatAdj=0
+
 [Opcode280Override]
 PatBytes=8990580D0000
 PatAdj=0
