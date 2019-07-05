@@ -1003,6 +1003,26 @@ function EEex_InstallOpcodeChanges()
 		]]},
 	})
 
+	--------------------------------
+	-- New Opcode #407 (OnRemove) --
+	--------------------------------
+
+	local EEex_OnRemove = EEex_WriteOpcode({
+
+		["OnRemove"] = {[[
+
+			!push_complete_state
+
+			!push_[ebp+byte] 08
+			; ecx is already the effect... ;
+			!call ]], {fireSubspellAddress, 4, 4}, [[
+
+			!pop_complete_state
+			!ret_word 04 00
+
+		]]},
+	})
+	
 	-----------------------------
 	-- Opcode Definitions Hook --
 	-----------------------------
@@ -1046,9 +1066,15 @@ function EEex_InstallOpcodeChanges()
 
 		@406
 		!cmp_eax_dword #196
-		!jne_dword >fail
+		!jne_dword >407
 
 		]], EEex_RenderOverride, [[
+
+		@407
+		!cmp_eax_dword #197
+		!jne_dword >fail
+
+		]], EEex_OnRemove, [[
 
 		@fail
 		!jmp_dword >CGameEffect::DecodeEffect()_default_label
