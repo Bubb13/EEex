@@ -905,6 +905,104 @@ function EEex_InstallOpcodeChanges()
 	EEex_AddActionbarListener(op405UpdateButton)
 	EEex_AddResetListener(function() EEex_AddActionbarListener(op405UpdateButton) end)
 
+	--------------------------------------
+	-- New Opcode #406 (RenderOverride) --
+	--------------------------------------
+
+	local noClippingAddress = EEex_Malloc(0x4)
+
+	local opcode406RenderAsFlying = EEex_WriteAssemblyAuto({[[
+
+		!build_stack_frame
+		!sub_esp_byte 04
+		!push_all_registers
+
+		!mov_[dword]_dword ]], {noClippingAddress, 4}, [[ #1
+
+		!mov_esi_[ebx+dword] #8E4 ; CGameArea.m_lVertSort.baseclass_0.m_pNodeHead ;
+		!test_esi_esi
+		!jz_dword >ret
+
+		@loop_start
+		!lea_eax_[ebp+byte] FC
+		!push_eax
+		!push_[esi+byte] 08
+		!call >CGameObjectArray::GetShare
+		!add_esp_byte 08
+
+		!test_al_al
+		!jnz_dword >continue_loop
+
+		!mov_edx_[ebp+byte] FC
+		!cmp_byte:[edx+byte]_byte 04 31 ; Ensure CGameSprite Type ;
+		!jne_dword >continue_loop
+
+		!push_dword #12E
+		!mov_ecx_edx
+		!call >EEex_AccessStat
+
+		!test_eax_eax
+		!jz_dword >continue_loop
+
+		!push_edi
+		!push_ebx
+		!mov_eax_[edx]
+		!call_[eax+byte] 4C
+
+		@continue_loop
+		!mov_esi_[esi]
+		!test_esi_esi
+		!jnz_dword >loop_start
+
+		@ret
+
+		!mov_[dword]_dword ]], {noClippingAddress, 4}, [[ #0
+
+		!pop_all_registers
+		!destroy_stack_frame
+
+		!mov_esi_[ebx+dword] #91C
+		!ret
+	]]})
+
+	local opcode406DisableClippingJmp = EEex_Label("CGameAnimationTypeCharacter::Render()_DisableClipping")
+	local opcode406DisableClipping = EEex_WriteAssemblyAuto({[[
+
+		!cmp_[dword]_byte ]], {noClippingAddress, 4}, [[ 01
+		!je_dword >skip
+
+		!call >CInfinity::FXRenderClippingPolys
+		!jmp_dword >ret
+
+		@skip
+		!add_esp_byte 1C
+
+		@ret
+		!jmp_dword ]], {opcode406DisableClippingJmp + 0x5, 4, 4},
+	})
+
+	EEex_WriteAssembly(EEex_Label("CGameArea::Render()_RenderOverrideCreaturesAsFlying"), {"!call", {opcode406RenderAsFlying, 4, 4}, "!nop"})
+	EEex_WriteAssembly(EEex_Label("CGameAnimationTypeCharacter::Render()_DisableClipping"), {"!jmp_dword", {opcode406DisableClipping, 4, 4}})
+
+	local EEex_RenderOverride = EEex_WriteOpcode({
+
+		["ApplyEffect"] = {[[
+
+			!build_stack_frame
+			!push_registers
+
+			!mov_eax_[ebp+byte] 08 ; CGameSprite ;
+			!mov_edi_[eax+dword] #3B18
+			!mov_[edi+dword]_byte #18C 01 ; Stat 0x12E (302) ;
+
+			@ret
+			!mov_eax #1
+			!restore_stack_frame
+			!ret_word 04 00
+
+		]]},
+	})
+
 	-----------------------------
 	-- Opcode Definitions Hook --
 	-----------------------------
@@ -942,9 +1040,15 @@ function EEex_InstallOpcodeChanges()
 
 		@405
 		!cmp_eax_dword #195
-		!jne_dword >fail
+		!jne_dword >406
 
 		]], EEex_OverrideButtonIndex, [[
+
+		@406
+		!cmp_eax_dword #196
+		!jne_dword >fail
+
+		]], EEex_RenderOverride, [[
 
 		@fail
 		!jmp_dword >CGameEffect::DecodeEffect()_default_label
