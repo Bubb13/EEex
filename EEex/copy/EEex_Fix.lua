@@ -1,7 +1,13 @@
 
-function B3FixTri()
+function EEex_InstallFixes()
 
-	local fixAddress = EEex_WriteAssemblyAuto({[[
+	EEex_DisableCodeProtection()
+
+	---------------------------------------------------------------------------------------
+	-- Triggers with IDS values below 0x4000 should work correctly with object selectors --
+	---------------------------------------------------------------------------------------
+
+	local triggersObjectSelectorFix = EEex_WriteAssemblyAuto({[[
 
 		!add_esp_byte 4
 
@@ -32,9 +38,14 @@ function B3FixTri()
 		!jmp_dword >CAICondition::TriggerHolds()_FixResume
 
 	]]})
+	EEex_WriteAssembly(EEex_Label("CAICondition::TriggerHolds()_FixHook"), {"!jmp_dword", {triggersObjectSelectorFix, 4, 4}})
 
-	EEex_DisableCodeProtection()
-	EEex_WriteAssembly(EEex_Label("CAICondition::TriggerHolds()_FixHook"), {"!jmp_dword", {fixAddress, 4, 4}})
+	------------------------------------------------------------------------
+	-- Opcode #233 should not crash when incrementing halberd proficiency --
+	------------------------------------------------------------------------
+
+	EEex_WriteAssembly(EEex_Label("Opcode233FixHalberdIncrement"), {"!lea_esi_[ecx+dword] #1E98 !nop !nop !nop !nop !nop !nop"})
+
 	EEex_EnableCodeProtection()
 end
-B3FixTri()
+EEex_InstallFixes()

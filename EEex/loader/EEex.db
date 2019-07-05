@@ -348,6 +348,15 @@ PatAdj=6
 
 
 ;---------------------------
+; CGameAnimationTypeCharacter
+;---------------------------
+
+[CGameAnimationTypeCharacter::Render()_DisableClipping]
+PatBytes=512BC18BCE50FF75B0E8
+PatAdj=9
+
+
+;---------------------------
 ; CGameArea
 ;---------------------------
 
@@ -359,6 +368,10 @@ Type=1
 [CGameArea::OnActionButtonClickGround]
 PatBytes=8975F40FBF83582500008DBB483E000083E800
 PatAdj=-22
+
+[CGameArea::Render()_RenderOverrideCreaturesAsFlying]
+PatBytes=8BB31C09000085F6
+PatAdj=0
 
 [CGameArea::Render()_hook]
 PatBytes=EB068DB384040000578BCE
@@ -691,6 +704,10 @@ PatAdj=-209
 PatBytes=8B4D148BF8894DC4B8565555558B4D18C1E102F7E9B8565555558BCAC1E91F03CA
 PatAdj=-137
 
+[CInfinity::FXRenderClippingPolys]
+PatBytes=33C58945FC8B45088945B08B451489459C
+PatAdj=-14
+
 [CInfinity::GetWorldCoordinates]
 PatBytes=558BEC56578B7D0C8BF18B073B4658
 PatAdj=0
@@ -1014,6 +1031,10 @@ PatAdj=2
 [Opcode218RenderSpriteHook1]
 PatBytes=761980BB072D00000074108BCB
 PatAdj=2
+
+[Opcode233FixHalberdIncrement]
+PatBytes=8B42188B75080181981E0000
+PatAdj=0
 
 [Opcode280Override]
 PatBytes=8990580D0000
