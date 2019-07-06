@@ -3120,7 +3120,7 @@ function EEex_IsSprite(actorID)
 	if actorID == 0x0 or actorID == -1 then
 		return false
 	else
-		return (EEex_ReadDword(EEex_GetActorShare(actorID) + 0x4) == 0x31)
+		return (EEex_ReadByte(EEex_GetActorShare(actorID) + 0x64F, 0x0) ~= 0)
 	end
 end
 
