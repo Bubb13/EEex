@@ -1676,7 +1676,7 @@ function EEex_IterateActorIDs(m_gameArea, func)
 	while areaList ~= 0x0 do
 		local areaListID = EEex_ReadDword(areaList + 0x8)
 		local share = EEex_GetActorShare(areaListID)
-		local objectType = EEex_ReadDword(share + 0x4)
+		local objectType = EEex_ReadByte(share + 0x4, 0)
 		if objectType == 0x31 then
 			func(areaListID)
 		end
@@ -3120,7 +3120,7 @@ function EEex_IsSprite(actorID)
 	if actorID == 0x0 or actorID == -1 then
 		return false
 	else
-		return (EEex_ReadDword(EEex_GetActorShare(actorID) + 0x4) == 0x31)
+		return (EEex_ReadByte(EEex_GetActorShare(actorID) + 0x4, 0) == 0x31)
 	end
 end
 
