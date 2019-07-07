@@ -154,8 +154,9 @@ function EEex_HookReloadStats(cre)
 	local newStats = EEex_ReadDword(cre + 0x3B18)
 	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
 
+	-- Only the DERIVED base is reloaded - temp needs to be preserved
+	-- so that stats can be detected within effect calls
 	EEex_Memset(newStats, EEex_SimpleStatsSize, 0x0)
-	EEex_Memset(newTempStats, EEex_SimpleStatsSize, 0x0)
 
 	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
 		local clearFunction = complexStatDef["clear"]
