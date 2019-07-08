@@ -2511,6 +2511,13 @@ end
 -- Game State --
 ----------------
 
+function EEex_GetGameTick()
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_gameTime = EEex_ReadDword(m_pObjectGame + 0x2500)
+	return m_gameTime
+end
+
 function EEex_FetchVariable(CVariableHash, variableName)
 	local localAddress = EEex_Malloc(#variableName + 5)
 	EEex_WriteString(localAddress + 0x4, variableName)
