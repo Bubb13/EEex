@@ -964,25 +964,27 @@ function EEex_InstallOpcodeChanges()
 		!mov_esi_[ebx+dword] #91C
 		!ret
 	]]})
+	
+	local opcode406HookClippingJmp = EEex_Label("CInfinity::FXRenderClippingPolys")
+	local opcode406HookClipping = EEex_WriteAssemblyAuto({[[
 
-	local opcode406DisableClippingJmp = EEex_Label("CGameAnimationTypeCharacter::Render()_DisableClipping")
-	local opcode406DisableClipping = EEex_WriteAssemblyAuto({[[
+		!cmp_[dword]_byte ]], {noClippingAddress, 4}, [[ 00
+		!je_dword >continue_normally
 
-		!cmp_[dword]_byte ]], {noClippingAddress, 4}, [[ 01
-		!je_dword >skip
+		; Return without doing anything if I'm not supposed to be clipping ;
+		!ret_word 1C 00
 
-		!call >CInfinity::FXRenderClippingPolys
-		!jmp_dword >ret
+		@continue_normally
+		; Continue function as if nothing happened... ;
+		!push_ebp
+		!mov_ebp_esp
+		!sub_esp_dword #C4
+		!jmp_dword ]], {opcode406HookClippingJmp + 0x9, 4, 4},
 
-		@skip
-		!add_esp_byte 1C
-
-		@ret
-		!jmp_dword ]], {opcode406DisableClippingJmp + 0x5, 4, 4},
 	})
 
 	EEex_WriteAssembly(EEex_Label("CGameArea::Render()_RenderOverrideCreaturesAsFlying"), {"!call", {opcode406RenderAsFlying, 4, 4}, "!nop"})
-	EEex_WriteAssembly(EEex_Label("CGameAnimationTypeCharacter::Render()_DisableClipping"), {"!jmp_dword", {opcode406DisableClipping, 4, 4}})
+	EEex_WriteAssembly(opcode406HookClippingJmp, {"!jmp_dword", {opcode406HookClipping, 4, 4}, "!nop !nop !nop !nop"})
 
 	local EEex_RenderOverride = EEex_WriteOpcode({
 

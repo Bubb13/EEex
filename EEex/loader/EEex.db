@@ -348,15 +348,6 @@ PatAdj=6
 
 
 ;---------------------------
-; CGameAnimationTypeCharacter
-;---------------------------
-
-[CGameAnimationTypeCharacter::Render()_DisableClipping]
-PatBytes=512BC18BCE50FF75B0E8
-PatAdj=9
-
-
-;---------------------------
 ; CGameArea
 ;---------------------------
 
