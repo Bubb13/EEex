@@ -3676,6 +3676,16 @@ end
 		83 C4 0C 8B F0 8A 06 88 07 46 47 80 3E 00 75 F5 C6 07 00 B8 00 00 00 00 5F 5E 5A 59 5B 5D C3"
 	})
 
+	EEex_DisableCodeProtection()
+
+	-- *** Prevent D3D from lowering FPU precision ***
+	-- Sets D3DCREATE_FPU_PRESERVE flag, see here:
+	-- docs.microsoft.com/en-us/windows/win32/direct3d9/d3dcreate
+	EEex_WriteByte(EEex_Label("DrawInit_DX()_FixFPU1"), 0x42)
+	EEex_WriteByte(EEex_Label("DrawInit_DX()_FixFPU2"), 0x22)
+
+	EEex_EnableCodeProtection()
+
 	local debugHookName = "EEex_ReadDwordDebug"
 	local debugHookAddress = EEex_Malloc(#debugHookName + 1)
 	EEex_WriteString(debugHookAddress, debugHookName)
@@ -4090,6 +4100,7 @@ end
 
 		Infinity_DoFile("EEex_Men") -- Menu Hooks
 		Infinity_DoFile("EEex_Lua") -- Lua Hooks
+		Infinity_DoFile("EEex_Obj") -- New Script Objects
 		Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
 		Infinity_DoFile("EEex_AHo") -- Actions Hook
 		Infinity_DoFile("EEex_Bar") -- Actionbar Hook
@@ -4097,7 +4108,6 @@ end
 		Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
 		Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
 		Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
-		Infinity_DoFile("EEex_Obj") -- New Script Objects
 		Infinity_DoFile("EEex_Ren") -- Render Hook
 		Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
 		Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
