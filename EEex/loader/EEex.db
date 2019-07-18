@@ -930,6 +930,14 @@ PatAdj=0
 PatBytes=8B450C39460C
 PatAdj=-43
 
+[DrawInit_DX()_FixFPU1]
+PatBytes=8B086A0050FF514085C0
+PatAdj=-70
+
+[DrawInit_DX()_FixFPU2]
+PatBytes=8B086A0050FF514085C0
+PatAdj=28
+
 [Eval()_actorIDJmp]
 PatBytes=8B450C83C40883F8FF
 PatAdj=18
