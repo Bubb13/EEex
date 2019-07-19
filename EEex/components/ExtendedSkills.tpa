@@ -1,0 +1,253 @@
+
+//Here's a function for adding a new skill to the game. Feel free to put this function in your own mod.
+DEFINE_ACTION_FUNCTION ADD_EXTENDED_SKILL
+	INT_VAR
+		stat=~-1~ //ID of the stat (either from STATS.IDS, or some big number if you're using an extended stat).
+		name=~-1~ //Strref of the skill's name.
+		description=~-1~ //Strref of the skill's description.
+		opcode=401 //The opcode that will be used to modify the skill.
+		visibility=1 //Whether the skill will appear alongside other skills in the character record screen.
+						// 0: Always show
+						// 1: Show if character can put points in skill
+						// 2: Show if skill != 0
+						// 3: Show if skill != 0 and character can put points in skill
+						// 4: Don't show
+	STR_VAR
+		class_include=~{}~ //A character with one of these classes (from CLASS.IDS) can put points in the skill.
+		kit_include=~{}~ //A character with one of these kits can put points in the skill, even if their class is not in the "class_include" list.
+		kit_exclude=~{}~ //A character with one of these kits cannot put points in the skill, even if their class is in the "class_include" list.
+		stat_exclude=~{}~ //A character cannot put points in the skill if its stats meet any of these conditions.
+							//Each stat condition is represented by an inner list with 3 numbers: the stat, a value, and a method of comparing the stat to the value.
+							//The syntax is similar to a SPLPROT.2DA condition, and it accepts all the relations (0 - 11) that SPLPROT.2DA does.
+							//For example, if you set stat_exclude to ~{{41, 12, 0}}~, a character cannot put points in the skill if their Constitution <= 12.
+BEGIN
+	ACTION_IF stat = (0 - 1) BEGIN
+		FAIL ~ADD_EXTENDED_SKILL: You must choose a stat for the skill; otherwise the stat is -1, and that's not okay.~
+	END
+	COPY_EXISTING ~m__skill.lua~ ~override~
+		REPLACE_TEXTUALLY CASE_SENSITIVE ~extendedskilllist = {~ ~extendedskilllist = {
+	{
+		["stat"] = %stat%,
+		["name"] = %name%,
+		["description"] = %description%,
+		["opcode"] = %opcode%,
+		["visibility"] = %visibility%,
+		["class_include"] = %class_include%,
+		["kit_include"] = %kit_include%,
+		["kit_exclude"] = %kit_exclude%,
+		["stat_exclude"] = %stat_exclude%
+	}~
+END
+//To add the example skill shown in M__SKILL.LUA, you'd do this:
+/* LAF ADD_EXTENDED_SKILL
+INT_VAR
+	stat = 25 //Lore
+	name = RESOLVE_STR_REF(~Lore~)
+	description = RESOLVE_STR_REF(~LORE: The character's lore determines <PRO_HISHER> ability to identify the properties of magic items.~)
+	opcode = 21 //Modify Lore
+	visibility = 4 //Will not appear in character record screen (Lore's already there)
+STR_VAR
+	class_include = ~{4, 9, 10, 13, 15}~ //Usable by thief, fighter/thief, fighter/mage/thief, mage/thief, and cleric/thief
+	kit_include = ~{0x4008}~ //Usable by stalker as well
+	kit_exclude = ~{0x400C, 0x4021}~ //Not usable by swashbuckler or shadowdancer
+	stat_exclude = ~{{38, 16, 2}, {39, 14, 2}}~ //Not usable if your Intelligence is less than 16 or your Wisdom is less than 14
+END
+*/
+
+/*
+The patches to UI.MENU are done in an awkward way. Basically, at the point in UI.MENU where I 
+want to insert some code, I see if there is a line of code that doesn't exist anywhere else in
+the file. The patch replaces that line with itself and my own code. If another UI mod adds copies
+of the line I replace, that mod might conflict with this one.
+*/
+COPY_EXISTING ~ui.menu~ ~override~
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~helpTextString = characters\[currentID\]\.proficiencies\.details~ ~~~~~helpTextString = characters[currentID].proficiencies.details
+		local gsubBase = "AI Script:"
+		if string.find(helpTextString, "Turn Undead Level:") ~= nil then
+			gsubBase = "Turn Undead Level:"
+		end
+		if string.find(helpTextString, "Backstab Multiplier:") ~= nil then
+			gsubBase = "Backstab Multiplier:"
+		end
+		if string.find(helpTextString, "Racial Enemy:") ~= nil then
+			gsubBase = "Racial Enemy:"
+		end
+		for i = 1, #extendedskilllist, 1 do
+			local skill = extendedskilllist[i]
+			local skillValue = EEex_GetActorStat(currentID, skill.stat)
+			local visibility = skill.visibility
+			local skillVisible = true
+			if bit32.band(visibility, 0x4) > 0 then
+				skillVisible = false
+			end
+			if bit32.band(visibility, 0x2) > 0 and skillValue == 0 then
+				skillVisible = false
+			end
+			if bit32.band(visibility, 0x1) > 0 and not canUseExtendedSkill(currentID, skill) then
+				skillVisible = false
+			end
+			if skillVisible then
+				helpTextString = string.gsub(helpTextString, gsubBase, Infinity_FetchString(skill.name) .. ": " .. skillValue .. "\n" .. gsubBase)
+			end
+		end~~~~~
+
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~for k, v in ipairs(characters\[currentID\]\.proficiencies\.class_skills) do~ ~local skillInsertPoint = #characters[currentID].proficiencies.class_skills + 1
+		for i = #characters[currentID].proficiencies.class_skills, 1, -1 do
+			local skillName = Infinity_FetchString(characters[currentID].proficiencies.class_skills[i].strRef)
+			if skillName == "Turn Undead Level" or skillName == "Backstab Multiplier" or skillName == "Racial Enemy" then
+				 skillInsertPoint = i
+			end
+		end
+		for i = 1, #extendedskilllist, 1 do
+			local skill = extendedskilllist[i]
+			local skillValue = EEex_GetActorStat(currentID, skill.stat)
+			local visibility = skill.visibility
+			local skillVisible = true
+			if bit32.band(visibility, 0x4) > 0 then
+				skillVisible = false
+			end
+			if bit32.band(visibility, 0x2) > 0 and skillValue == 0 then
+				skillVisible = false
+			end
+			if bit32.band(visibility, 0x1) > 0 and not canUseExtendedSkill(currentID, skill) then
+				skillVisible = false
+			end
+			if skillVisible then
+				table.insert(characters[currentID].proficiencies.class_skills, skillInsertPoint, {['strRef'] = skill.name, ['current'] = skillValue})
+				skillInsertPoint = skillInsertPoint + 1
+			end
+		end
+		for k, v in ipairs(characters[currentID].proficiencies.class_skills) do~
+
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~function isChargenProficienciesBackButtonClickable()~ ~~~~~function canUseExtendedSkill(actorID, skill)
+	local canUseSkill = false
+	local class = EEex_GetActorClass(actorID)
+	local kit = EEex_GetActorKit(actorID)
+	for j = 1, #skill['class_include'], 1 do
+		if skill['class_include'][j] == class then
+			canUseSkill = true
+		end
+	end
+	for j = 1, #skill['kit_include'], 1 do
+		if skill['kit_include'][j] == kit then
+			canUseSkill = true
+		end
+	end
+	for j = 1, #skill['kit_exclude'], 1 do
+		if skill['kit_exclude'][j] == kit then
+			canUseSkill = false
+		end
+	end
+	for j = 1, #skill['stat_exclude'], 1 do
+		local check_stat = EEex_GetActorStat(actorID, skill['stat_exclude'][j][1])
+		local check_value = skill['stat_exclude'][j][2]
+		local check_relation = skill['stat_exclude'][j][3]
+		if check_relation == 0 and check_stat <= check_value then
+			canUseSkill = false
+		elseif check_relation == 1 and check_stat == check_value then
+			canUseSkill = false
+		elseif check_relation == 2 and check_stat < check_value then
+			canUseSkill = false
+		elseif check_relation == 3 and check_stat > check_value then
+			canUseSkill = false
+		elseif check_relation == 4 and check_stat >= check_value then
+			canUseSkill = false
+		elseif check_relation == 5 and check_stat ~= check_value then
+			canUseSkill = false
+		elseif check_relation == 6 and bit32.bor(check_stat, check_value) == check_value then
+			canUseSkill = false
+		elseif check_relation == 7 and bit32.band(check_stat, check_value) >= check_value then
+			canUseSkill = false
+		elseif check_relation == 8 and bit32.band(check_stat, check_value) > 0 then
+			canUseSkill = false
+		elseif check_relation == 9 and bit32.band(check_stat, check_value) == 0 then
+			canUseSkill = false
+		elseif check_relation == 10 and bit32.bor(check_stat, check_value) > check_value then
+			canUseSkill = false
+		elseif check_relation == 11 and bit32.band(check_stat, check_value) < check_value then
+			canUseSkill = false
+		end
+	end
+	return canUseSkill
+end
+
+function displayExtendedSkills()
+	if firstExtendedSkillIndex ~= nil and firstExtendedSkillIndex > 0 then
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			chargen.thief_skill[firstExtendedSkillIndex + i] = {['description'] = skill.description, ['name'] = skill.name, ['value'] = skill.value, ['id'] = firstExtendedSkillIndex + i - 1}
+		end
+	end
+end
+
+function isChargenProficienciesBackButtonClickable()~~~~~
+
+	REPLACE_EVALUATE ~name \'CHARGEN_PROFICIENCIES\'\([^\"]*\)\"~
+	BEGIN
+	END
+		~name 'CHARGEN_PROFICIENCIES'%MATCH1%"
+	firstExtendedSkillIndex = #chargen.thief_skill
+	extendedSkills = {}
+	for i = 1, #extendedskilllist, 1 do
+		local skill = extendedskilllist[i]
+		if canUseExtendedSkill(currentID, skill) then
+			table.insert(extendedSkills, {['description'] = skill['description'], ['name'] = skill['name'], ['stat'] = skill['stat'], ['value'] = EEex_GetActorStat(currentID, skill['stat']), ['base'] = EEex_GetActorStat(currentID, skill['stat']), ['opcode'] = skill['opcode'],})
+		end
+	end
+
+	displayExtendedSkills()
+~
+
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, true)~ ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, true)
+					displayExtendedSkills()~
+
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, false)~ ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, false)
+					displayExtendedSkills()~
+
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() +then~ ~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() then
+					exIndex = currentChargenThiefSkill - firstExtendedSkillIndex~
+
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, true)~ ~						if currentChargenThiefSkill > firstExtendedSkillIndex then
+								if chargen.thief_skill[currentChargenThiefSkill].value < 255 and chargen.extraSkillPoints > 0 then
+									chargen.thief_skill[currentChargenThiefSkill].value = chargen.thief_skill[currentChargenThiefSkill].value + 1
+									extendedSkills[exIndex].value = extendedSkills[exIndex].value + 1
+									chargen.extraSkillPoints = chargen.extraSkillPoints - 1
+								end
+							end
+							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, true)
+							displayExtendedSkills()~
+
+	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, false)~ ~						if currentChargenThiefSkill > firstExtendedSkillIndex then
+							if chargen.thief_skill[currentChargenThiefSkill].value > extendedSkills[exIndex].base then
+								chargen.thief_skill[currentChargenThiefSkill].value = chargen.thief_skill[currentChargenThiefSkill].value - 1
+								extendedSkills[exIndex].value = extendedSkills[exIndex].value - 1
+								chargen.extraSkillPoints = chargen.extraSkillPoints + 1
+								createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, false)
+								displayExtendedSkills()
+							end
+						else
+							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, false)
+							displayExtendedSkills()
+						end~
+
+	REPLACE_EVALUATE ~area 762 704 230 40\([^}]*\)createCharScreen:OnDoneButtonClick()~
+	BEGIN
+	END
+		~~~~~area 762 704 230 40%MATCH1%
+
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			extendedSkillIncrement = skill.value - skill.base
+			if extendedSkillIncrement ~= 0 then
+				EEex_ApplyEffectToActor(currentID, {
+['opcode'] = skill.opcode,
+['target'] = 1,
+['timing'] = 9,
+['parameter1'] = extendedSkillIncrement,
+['special'] = skill.stat,
+['source_target'] = currentID,
+['source_id'] = currentID
+})	
+			end
+		end
+		createCharScreen:OnDoneButtonClick()~~~~~

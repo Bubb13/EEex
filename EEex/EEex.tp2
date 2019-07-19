@@ -28,3 +28,5 @@ REQUIRE_PREDICATE (
 
 	COPY ~EEex\loader~ ~.~ IF_EXISTS
 	COPY ~EEex\copy~ ~override~ IF_EXISTS
+
+	INCLUDE ~EEex/components/ExtendedSkills.tpa~
