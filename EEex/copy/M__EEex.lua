@@ -3557,6 +3557,110 @@ function EEex_UnmemorizeInnateSpell(actorID, index)
 	::_0::
 end
 
+-------------------------------------------------------------
+--  Functions you can use with opcode 403 (Screen Effects) --
+-------------------------------------------------------------
+
+--[[
+To use the EXSTONES function, create an opcode 403 effect in a spell, set the resource to EXSTONES (all capitals), and choose parameters.
+For an example of this function in use, look at EXAMPL1.SPL.
+
+It serves like the Stoneskin opcode, except more versatile.
+
+By default, when the last skin is removed, it will automatically remove all effects of the spell or ability that had
+ included the opcode 403 effect. This way, you can include other effects that will last as long as there are skins remaining.
+
+parameter1 - Determines how many skins there are (how many instances of damage will be blocked). If parameter1 is
+ set to 32767, then the effect will block an infinite number of damage instances.
+
+parameter2 - Determines which damage types are blocked. The number for each damage type is the same as in DAMAGES.IDS,
+ with one exception: crushing damage is 0x4000. If you want to block multiple damage types, add the numbers for each
+ damage type. For example, if you want the skins to block slashing, piercing, crushing, missile, and nonlethal damage,
+ set parameter2 to 0x4990 (0x100 + 0x10 + 0x4000 + 0x80 + 0x800)
+
+special - Bit flags for the effect.
+Bit 0: If set, when the last skin is removed, it will not automatically remove all effects of the source spell.
+Bit 1: If set, when the last skin is removed, it will cast a spell on the creature. The spell resref is specified
+ by resource2 (in an EFF file). If you aren't using this from an EFF file, then the spell resref is set to the
+ resref of the source spell, with an E added at the end.
+Bit 2: If set, whenever a skin is removed, it will cast a spell on the source of the damage. The spell resref is specified
+ by resource3 (in an EFF file). If you aren't using this from an EFF file, then the spell resref is set to the
+ resref of the source spell, with an F added at the end.
+
+If you want to make a specific damage effect bypass the EXSTONES effect without removing a skin, set bit 20 of the
+ special field in the damage effect. This can't be done with base weapon damage, unfortunately.
+--]]
+function EXSTONES(originatingEffectData, effectData, creatureData)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local opcode = EEex_ReadDword(effectData + 0xC)
+	if opcode ~= 12 then return false end
+	local special = EEex_ReadDword(effectData + 0x44)
+	if bit32.band(special, 0x100000) > 0 then return false end
+	local skins_left = EEex_ReadDword(originatingEffectData + 0x18)
+	if skins_left <= 0 then return false end
+	local types_blocked = EEex_ReadDword(originatingEffectData + 0x1C)
+	local flags = EEex_ReadDword(originatingEffectData + 0x44)
+	local parent_resource = EEex_ReadLString(originatingEffectData + 0x90, 8)
+	local damage_type = EEex_ReadWord(effectData + 0x1E, 0x0)
+	local casterlvl = EEex_ReadDword(originatingEffectData + 0xC4)
+	if (damage_type == 0 and bit32.band(types_blocked, 0x4000) > 0) or (damage_type ~= 0 and bit32.band(types_blocked, damage_type) > 0) then
+		if bit32.band(flags, 0x4) > 0 then
+			local hit_spell = EEex_ReadLString(originatingEffectData + 0x74, 8)
+			if hit_spell == "" then
+				hit_spell = parent_resource .. "F"
+			end
+			local damagerID = EEex_ReadDword(effectData + 0x10C)
+			if EEex_IsSprite(damagerID) then
+				EEex_ApplyEffectToActor(damagerID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 9,
+["parameter1"] = casterlvl,
+["parameter2"] = 2,
+["resource"] = hit_spell,
+["source_target"] = damagerID,
+["source_id"] = targetID
+})
+			end
+		end
+		if skins_left ~= 32767 then
+			skins_left = skins_left - 1
+		end
+		EEex_WriteDword(originatingEffectData + 0x18, skins_left)
+		if skins_left <= 0 then
+			EEex_WriteDword(originatingEffectData + 0x110, 0x1)
+			if bit32.band(flags, 0x1) == 0 then
+				EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 321,
+["target"] = 2,
+["timing"] = 9,
+["resource"] = parent_resource,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			end
+			if bit32.band(flags, 0x2) > 0 then
+				local end_spell = EEex_ReadLString(originatingEffectData + 0x6C, 8)
+				if end_spell == "" then
+					end_spell = parent_resource .. "E"
+				end
+				EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 9,
+["parameter1"] = casterlvl,
+["parameter2"] = 2,
+["resource"] = end_spell,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			end
+		end
+		return true
+	end
+	return false
+end
+
 -------------
 -- Startup --
 -------------

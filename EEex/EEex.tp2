@@ -30,3 +30,11 @@ REQUIRE_PREDICATE (
 	COPY ~EEex\copy~ ~override~ IF_EXISTS
 
 	INCLUDE ~EEex/components/ExtendedSkills.tpa~
+
+	COPY_EXISTING ~exampl1.spl~ ~override~
+		SAY NAME1 ~New Stoneskin Example~
+		SAY UNIDENTIFIED_DESC ~This spell shows how you can use the EXSTONES function. Try casting it with:
+
+C:Eval('ForceSpellRES(\"EXAMPL1\",Myself)',0)
+
+This spell will absorb the next 3 instances of slashing, piercing, crushing, missile, nonlethal, or magic damage that would hit the character. Each time it absorbs one of these damage types, it deals 1 electricity damage to the attacker. When all 3 skins are used, the spell will then cast Fireball on the character.~
