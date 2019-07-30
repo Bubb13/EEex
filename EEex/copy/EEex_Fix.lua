@@ -46,6 +46,12 @@ function EEex_InstallFixes()
 
 	EEex_WriteAssembly(EEex_Label("Opcode233FixHalberdIncrement"), {"!lea_esi_[ecx+dword] #1E98 !nop !nop !nop !nop !nop !nop"})
 
+	----------------------------------------------------------
+	-- Pausing the game should not break effect application --
+	----------------------------------------------------------
+
+	EEex_WriteAssembly(EEex_Label("CGameSprite::AddEffect()_FixPause"), {"!jmp_byte"})
+
 	EEex_EnableCodeProtection()
 end
 EEex_InstallFixes()
