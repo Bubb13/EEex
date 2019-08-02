@@ -30,6 +30,7 @@ for _, macroEntry in ipairs({
 	{"call_eax", "FF D0"},
 	{"call_[eax+byte]", "FF 50"},
 	{"call_[eax+dword]", "FF 90"},
+	{"call_[ecx+dword]", "FF 91"},
 	{"call_[edx+dword]", "FF 92"},
 	{"cdq", "99"},
 	{"cmove_eax_ebx", "0F 44 C3"},
@@ -38,6 +39,7 @@ for _, macroEntry in ipairs({
 	{"cmovnz_ebx_eax", "0F 45 D8"},
 	{"cmovnz_edi_ecx", "0F 45 F9"},
 	{"cmp_al_[dword]", "3A 05"},
+	{"cmp_byte:[eax+byte]_byte", "80 78"},
 	{"cmp_byte:[ebp+byte]", "80 7D"},
 	{"cmp_byte:[edi+byte]_byte", "80 7F"},
 	{"cmp_byte:[edx+byte]_byte", "80 7A"},
@@ -71,6 +73,7 @@ for _, macroEntry in ipairs({
 	{"fild_[esp+byte]", "DB 44 24"},
 	{"fild_[esp+dword]", "DB 84 24"},
 	{"fild_[esp]", "DB 04 24"},
+	{"fstp_qword:[edi]", "DD 1F"},
 	{"fstp_qword:[esp+byte]", "DD 5C 24"},
 	{"fstp_qword:[esp+dword]", "DD 9C 24"},
 	{"fstp_qword:[esp]", "DD 1C 24"},
@@ -161,6 +164,8 @@ for _, macroEntry in ipairs({
 	{"mov_ebx_eax", "8B D8"},
 	{"mov_ebx_esp", "8B DC"},
 	{"mov_ebx_[ebp+byte]", "8B 5D"},
+	{"mov_ebx_[esi+dword]", "8B 9E"},
+	{"mov_ecx", "B9"},
 	{"mov_ecx_eax", "8B C8"},
 	{"mov_ecx_ebx", "8B CB"},
 	{"mov_ecx_edi", "8B CF"},
@@ -178,6 +183,7 @@ for _, macroEntry in ipairs({
 	{"mov_ecx_[edx+dword]", "8B 8A"},
 	{"mov_ecx_[edx]", "8B 4A 00"},
 	{"mov_ecx_[esi+byte]", "8B 4E"},
+	{"mov_ecx_[esi]", "8B 0E"},
 	{"mov_ecx_[esp+byte]", "8B 4C 24"},
 	{"mov_edi", "BF"},
 	{"mov_edi_eax", "8B F8"},
@@ -207,6 +213,7 @@ for _, macroEntry in ipairs({
 	{"mov_edx_[edx+dword]", "8B 92"},
 	{"mov_edx_[edx]", "8B 52 00"},
 	{"mov_edx_[esi+byte]", "8B 56"},
+	{"mov_edx_[esi]", "8B 16"},
 	{"mov_esi", "BE"},
 	{"mov_esi_eax", "8B F0"},
 	{"mov_esi_ecx", "8B F1"},
@@ -215,6 +222,7 @@ for _, macroEntry in ipairs({
 	{"mov_esi_[ebx+byte]", "8B 73"},
 	{"mov_esi_[ebx+dword]", "8B B3"},
 	{"mov_esi_[esi+byte]", "8B 76"},
+	{"mov_esi_[esi+dword]", "8B B6"},
 	{"mov_esi_[esi]", "8B 36"},
 	{"mov_esp_[ebp+byte]", "8B 65"},
 	{"mov_esp_[ebp+dword]", "8B A5"},
@@ -292,6 +300,7 @@ for _, macroEntry in ipairs({
 	{"push_edi", "57"},
 	{"push_edx", "52"},
 	{"push_esi", "56"},
+	{"push_esp", "54"},
 	{"push_registers", "53 51 52 56 57"},
 	{"push_state", "55 8B EC 53 51 52 56 57"},
 	{"push_[dword]", "FF 35"},
@@ -309,6 +318,7 @@ for _, macroEntry in ipairs({
 	{"restore_stack_frame", "5F 5E 5A 59 5B 8B E5 5D"},
 	{"ret", "C3"},
 	{"ret_word", "C2"},
+	{"sar_eax", "C1 F8"},
 	{"sar_edx", "C1 FA"},
 	{"setz_al", "0F 94 C0"},
 	{"shl_edx", "C1 E2"},
@@ -321,7 +331,9 @@ for _, macroEntry in ipairs({
 	{"sub_esp_eax", "2B E0"},
 	{"sub_esp_edx", "2B E2"},
 	{"test_al_al", "84 C0"},
+	{"test_eax_dword", "A9"},
 	{"test_eax_eax", "85 C0"},
+	{"test_ebx_dword", "F7 C3"},
 	{"test_ecx_ecx", "85 C9"},
 	{"test_edi_edi", "85 FF"},
 	{"test_edx_edx", "85 D2"},
@@ -351,7 +363,6 @@ for _, macroEntry in ipairs({
 		["quickPrefix"] = "#",
 		["quickSplit"] = function(arg)
 			local toReturn = EEex_SplitByChar(string.sub(arg, 2, #arg), ",")
-			B3dump("toReturn", toReturn)
 			return toReturn
 		end,
 	}},
@@ -370,7 +381,29 @@ for _, macroEntry in ipairs({
 		["quickPrefix"] = "x",
 		["quickSplit"] = function(arg)
 			local toReturn = EEex_SplitByChar(string.sub(arg, 2, #arg), ",")
-			B3dump("toReturn", toReturn)
+			return toReturn
+		end,
+	}},
+	{"relative", {
+
+		["write"] = function(currentWriteAddress, macroArgs, func)
+
+			local targetOffset = tonumber(macroArgs[1].value, 16)
+			local relativeOffsetNeeded = targetOffset - (currentWriteAddress + 4)
+
+			for i = 0, 3, 1 do
+				local byte = bit32.extract(relativeOffsetNeeded, i * 8, 8)
+				func(currentWriteAddress, byte)
+				currentWriteAddress = currentWriteAddress + 1
+			end
+
+			return 4
+
+		end,
+
+		["quickPrefix"] = "^",
+		["quickSplit"] = function(arg)
+			local toReturn = EEex_SplitByChar(string.sub(arg, 2, #arg), ",")
 			return toReturn
 		end,
 	}},
