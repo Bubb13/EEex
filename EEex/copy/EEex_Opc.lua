@@ -964,7 +964,7 @@ function EEex_InstallOpcodeChanges()
 		!mov_esi_[ebx+dword] #91C
 		!ret
 	]]})
-	
+
 	local opcode406HookClippingJmp = EEex_Label("CInfinity::FXRenderClippingPolys")
 	local opcode406HookClipping = EEex_WriteAssemblyAuto({[[
 
@@ -1024,7 +1024,7 @@ function EEex_InstallOpcodeChanges()
 
 		]]},
 	})
-	
+
 	-----------------------------
 	-- Opcode Definitions Hook --
 	-----------------------------

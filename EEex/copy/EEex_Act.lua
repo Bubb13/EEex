@@ -211,7 +211,7 @@ function EEex_InstallNewActions()
 	})
 	EEex_WriteAssembly(matchObjectOfType2Call, {"!jmp_dword", {matchObjectOfType2Hook, 4, 4}})
 
-	-- Force CGameArea::GetNearest() to consider backlist 
+	-- Force CGameArea::GetNearest() to consider backlist
 	-- creatures while in an EEex_MatchObject call
 	local listEndJumpAddress = EEex_Label("CGameArea::GetNearest()_BacklistHook")
 	local listEndJumpDest = listEndJumpAddress + EEex_ReadDword(listEndJumpAddress + 0x2) + 0x6
@@ -274,7 +274,7 @@ function EEex_InstallNewActions()
 
 		@resume
 		; I didn't find anything, allow CGameArea::GetNearest to resume and terminate processing ;
-        !pop_esi
+		!pop_esi
 		!jmp_dword ]], {listEndJumpAddress + 0x6, 4, 4},
 
 	})
