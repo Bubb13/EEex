@@ -24,6 +24,11 @@ REQUIRE_PREDICATE (
 		APPEND ~%data%.IDS~ ~%data_1% %data_2%~ UNLESS ~^%data_1% ~
 	END
 
+	COPY_EXISTING ~ACTION.IDS~ ~override~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~473 EEex_MatchObject(S:Function\*)~ ~473 EEex_MatchObject(S:Function*)
+473 EEex_MatchObjectEx(S:Function*,I:nNearest,I:range*,I:Flags*EEEX_MAT)~
+		UNLESS ~473 EEex_MatchObjectEx~
+
 	COPY_EXISTING ~UI.MENU~ ~override~ INSERT_FILE 0 ~EEex\patches\UI.MENU~ IF_EXISTS
 
 	COPY ~EEex\loader~ ~.~ IF_EXISTS
