@@ -1,1 +1,3 @@
 472 EEex_Lua(S:Function*)
+473 EEex_MatchObject(S:Function*)
+473 EEex_MatchObjectEx(S:Function*,I:nNearest,I:range*,I:Flags*EEEX_MAT)
