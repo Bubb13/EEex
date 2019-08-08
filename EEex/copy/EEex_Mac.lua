@@ -10,6 +10,17 @@ EEex_WriteAssembly support =>
 
 --]]
 
+for _, objectEntry in ipairs({
+	{"number", {
+		["decode"] = function(string)
+			
+		end,
+	}},
+})
+do
+
+end
+
 for _, macroEntry in ipairs({
 	{"add_eax_byte", "83 C0"},
 	{"add_eax_dword", "05"},
@@ -183,6 +194,7 @@ for _, macroEntry in ipairs({
 	{"mov_ecx_[edx+dword]", "8B 8A"},
 	{"mov_ecx_[edx]", "8B 4A 00"},
 	{"mov_ecx_[esi+byte]", "8B 4E"},
+	{"mov_ecx_[esi+dword]", "8B 8E"},
 	{"mov_ecx_[esi]", "8B 0E"},
 	{"mov_ecx_[esp+byte]", "8B 4C 24"},
 	{"mov_edi", "BF"},
@@ -339,6 +351,7 @@ for _, macroEntry in ipairs({
 	{"test_edx_edx", "85 D2"},
 	{"test_esi_esi", "85 F6"},
 	{"test_si_si", "66 85 F6"},
+	{"test_[ebp+byte]_dword", "F7 45"},
 	{"test_[ecx+byte]_byte", "F6 41"},
 	{"test_[ecx+dword]_byte", "F6 81"},
 	{"test_[ecx]_byte", "F6 41 00"},

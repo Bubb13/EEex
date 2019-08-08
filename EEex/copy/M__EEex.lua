@@ -4204,16 +4204,16 @@ end
 
 		Infinity_DoFile("EEex_Men") -- Menu Hooks
 		Infinity_DoFile("EEex_Lua") -- Lua Hooks
-		Infinity_DoFile("EEex_Obj") -- New Script Objects
+		Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
 		Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)
+		Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
+		Infinity_DoFile("EEex_Obj") -- New Script Objects
 		Infinity_DoFile("EEex_AHo") -- Actions Hook
 		Infinity_DoFile("EEex_Bar") -- Actionbar Hook
 		Infinity_DoFile("EEex_Brd") -- Bard Thieving Hook
 		Infinity_DoFile("EEex_Key") -- keyPressed / keyReleased Hook
 		Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
-		Infinity_DoFile("EEex_Tri") -- New Triggers / Trigger Changes
 		Infinity_DoFile("EEex_Ren") -- Render Hook
-		Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
 		Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
 		Infinity_DoFile("EEex_Fix") -- Engine Related Bug Fixes
 		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things

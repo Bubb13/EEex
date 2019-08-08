@@ -7,6 +7,48 @@ EEex_ComplexStatDefinitions = {}
 EEex_CurrentStatOffset = EEex_SimpleStatsSize
 EEex_ComplexStatSpace = 0x0
 
+EEex_VolatileStorageDefinitions = {}
+EEex_VolatileStorageSpace = 0x0
+
+function EEex_RegisterVolatileField(name, attributeTable)
+
+	-- attributeTable["construct"]
+	-- attributeTable["destruct"]
+	-- attributeTable["get"]
+	-- attributeTable["set"]
+	-- attributeTable["size"]
+
+	local offset = EEex_VolatileStorageSpace
+	attributeTable["offset"] = offset
+	EEex_VolatileStorageSpace = EEex_VolatileStorageSpace + attributeTable["size"]
+	EEex_VolatileStorageDefinitions[name] = attributeTable
+	return offset
+end
+
+function EEex_AccessVolatileField(actorID, name)
+	local volatileDef = EEex_VolatileStorageDefinitions[name]
+	local volatileStart = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3B20)
+	return volatileStart + volatileDef["offset"]
+end
+
+function EEex_GetVolatileField(actorID, name)
+	local volatileDef = EEex_VolatileStorageDefinitions[name]
+	local volatileStart = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3B20)
+	local address = volatileStart + volatileDef["offset"]
+	return volatileDef["get"](address)
+end
+
+function EEex_SetVolatileField(actorID, name, value)
+	local volatileDef = EEex_VolatileStorageDefinitions[name]
+	local volatileStart = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3B20)
+	local address = volatileStart + volatileDef["offset"]
+	return volatileDef["set"](address, value)
+end
+
+function EEex_GetVolatileFieldOffset(name)
+	return EEex_VolatileStorageDefinitions[name]["offset"]
+end
+
 function EEex_RegisterComplexStat(name, attributeTable)
 
 	-- attributeTable["construct"]
@@ -115,9 +157,11 @@ function EEex_HookConstructCreature(fromFile, toStruct)
 
 	local newStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
 	local newTempStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
+	local volatileStorage = EEex_Malloc(EEex_VolatileStorageSpace)
 
 	EEex_WriteDword(toStruct + 0x3B18, newStats)
 	EEex_WriteDword(toStruct + 0x3B1C, newTempStats)
+	EEex_WriteDword(toStruct + 0x3B20, volatileStorage)
 
 	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
 		local constructFunction = complexStatDef["construct"]
@@ -128,12 +172,21 @@ function EEex_HookConstructCreature(fromFile, toStruct)
 		end
 	end
 
+	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
+		local constructFunction = volatileDef["construct"]
+		if constructFunction then
+			local offset = volatileDef["offset"]
+			constructFunction(volatileStorage + offset)
+		end
+	end
+
 end
 
 function EEex_HookDeconstructCreature(cre)
 
 	local newStats = EEex_ReadDword(cre + 0x3B18)
 	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
+	local volatileStorage = EEex_ReadDword(cre + 0x3B20)
 
 	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
 		local destructFunction = complexStatDef["destruct"]
@@ -144,8 +197,17 @@ function EEex_HookDeconstructCreature(cre)
 		end
 	end
 
+	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
+		local destructFunction = volatileDef["destruct"]
+		if destructFunction then
+			local offset = volatileDef["offset"]
+			destructFunction(volatileStorage + offset)
+		end
+	end
+
 	EEex_Free(newStats)
 	EEex_Free(newTempStats)
+	EEex_Free(volatileStorage)
 
 end
 
@@ -189,9 +251,9 @@ function B3Cre_InstallCreatureHook()
 
 	EEex_DisableCodeProtection()
 
-	-- Increase creature struct size by 0x8 bytes (in memory)
+	-- Increase creature struct size by 0xC bytes (in memory)
 	for _, address in ipairs(EEex_Label("CreAllocationSize")) do
-		EEex_WriteAssembly(address + 1, {{0x3B20, 4}})
+		EEex_WriteAssembly(address + 1, {{0x3B24, 4}})
 	end
 
 	local hookNameLoad = "EEex_HookConstructCreature"

@@ -284,11 +284,22 @@ function EEex_InstallNewActions()
 	-- (never actually used, as EEex_MatchObject's hook overrides type evaluation)
 	local matchObjectDummyType = EEex_ParseObjectString("None")
 
-	local EEex_MatchObject = {[[
+	-- push chunk    0x14
+	-- push nNearest 0x10
+	-- push range    0xC
+	-- push flags    0x8
+	EEex_WriteAssemblyAuto({[[
 
+		$EEex_MatchObject
+
+		!build_stack_frame
 		!push_registers
 
-		!mov_ebx_[esi+dword] #340
+		; --- actor --- ;
+		!mov_esi_ecx
+
+		; --- flags --- ;
+		!mov_ebx_[ebp+byte] 08
 
 		!test_ebx_dword #1
 		!jnz_dword >ignoreDead_override
@@ -298,7 +309,8 @@ function EEex_InstallNewActions()
 		!push_byte 00 ; ignoreDead ;
 
 		@nNearest
-		!push_[esi+dword] #338
+		; --- nNearest --- ;
+		!push_[ebp+byte] 10
 
 		!test_ebx_dword #2
 		!jnz_dword >ignoreSleeping_override
@@ -344,7 +356,8 @@ function EEex_InstallNewActions()
 		!call_[edx+dword] #94 ; CGameSprite::GetVisualRange ;
 		!jmp_dword >range
 		@range_override_manual
-		!mov_eax_[esi+dword] #33C
+		; --- range --- ;
+		!mov_eax_[ebp+byte] 0C
 		!jmp_dword >range
 		@range_override_max
 		; Define that I want to override range (with the max value possible) ;
@@ -359,7 +372,8 @@ function EEex_InstallNewActions()
 		!mov_ecx_[esi+byte] 14 ; this ;
 
 		; Define the Lua chunk that I'm using to match objects ;
-		!mov_eax_[esi+dword] #344
+		; --- chunk --- ;
+		!mov_eax_[ebp+byte] 14
 		!mov_[dword]_eax ]], {matchObjectString, 4}, [[
 
 		; Define that I am doing an EEex_MatchObject call ;
@@ -375,16 +389,44 @@ function EEex_InstallNewActions()
 		!mov_[dword]_dword ]], {matchObjectOverride, 4}, [[ #0
 
 		!test_eax_eax
-		!jnz_dword >set_object
+		!jnz_dword >return
 		!mov_eax #FFFFFFFF ; -1 ;
 
-		@set_object
-		; Set the EEex_MatchObject scripting object to the result ;
-		!mov_[dword]_eax ]], {EEex_MatchObjectAddress, 4}, [[
-
+		@return
 		!pop_registers
+		!destroy_stack_frame
+		!ret_word 10 00
 
-	]]}
+	]]})
+
+	local matchObjectOffset = EEex_RegisterVolatileField("EEex_MatchObject", {
+		["construct"] = function(address) EEex_WriteDword(address, -1) end,
+		["get"] = EEex_ReadDword,
+		["set"] = EEex_WriteDword,
+		["size"] = 0x4,
+	})
+
+	local EEex_MatchObjectWrapper = {[[
+
+		; --- chunk --- ;
+		!push_[esi+dword] #344
+
+		; --- nNearest --- ;
+		!push_[esi+dword] #338
+
+		; --- range --- ;
+		!push_[esi+dword] #33C
+
+		; --- flags --- ;
+		!push_[esi+dword] #340
+
+		!mov_ecx_esi
+		!call >EEex_MatchObject
+
+		!mov_ecx_[esi+dword] #3B20
+		!mov_[ecx+dword]_eax ]], {matchObjectOffset, 4},
+
+	}
 
 	-----------------------------
 	-- Action Definitions Hook --
@@ -400,7 +442,7 @@ function EEex_InstallNewActions()
 		@473
 		!cmp_eax_dword #1D9
 		!jne_dword >not_defined
-		]], EEex_MatchObject, [[
+		]], EEex_MatchObjectWrapper, [[
 
 		@success
 		!mov_bx FF FF
