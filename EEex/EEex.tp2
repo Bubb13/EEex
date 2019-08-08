@@ -29,6 +29,11 @@ REQUIRE_PREDICATE (
 473 EEex_MatchObjectEx(S:Function*,I:nNearest,I:range*,I:Flags*EEEX_MAT)~
 		UNLESS ~473 EEex_MatchObjectEx~
 
+	COPY_EXISTING ~TRIGGER.IDS~ ~override~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~0x4110 EEex_MatchObject(S:Function\*)~ ~0x4110 EEex_MatchObject(S:Function*)
+0x4110 EEex_MatchObjectEx(S:Function*,I:nNearest,I:range*,I:Flags*EEEX_MAT)~
+		UNLESS ~0x4110 EEex_MatchObjectEx~
+
 	COPY_EXISTING ~UI.MENU~ ~override~ INSERT_FILE 0 ~EEex\patches\UI.MENU~ IF_EXISTS
 
 	COPY ~EEex\loader~ ~.~ IF_EXISTS
