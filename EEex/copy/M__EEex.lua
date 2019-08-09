@@ -1928,6 +1928,48 @@ function EEex_FreeActions(CAIScriptFile)
 	EEex_Free(CAIScriptFile)
 end
 
+------------------------
+--  Trigger Compiler  --
+------------------------
+
+function EEex_ParseTriggersString(string)
+
+	local CAIScriptFile = EEex_Malloc(0xE8)
+	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, CAIScriptFile, 0x0)
+
+	local CString = EEex_Malloc(0x4)
+	local charArray = EEex_Malloc(#string + 1)
+	EEex_WriteString(charArray, string)
+	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {charArray}, CString, 0x0)
+	EEex_Free(charArray)
+
+	-- Destructs CString internally
+	EEex_Call(EEex_Label("CAIScriptFile::ParseConditionalString"), {EEex_ReadDword(CString)}, CAIScriptFile, 0x0)
+	EEex_Free(CString)
+
+	return CAIScriptFile
+
+end
+
+function EEex_EvalTriggersAsActor(CAIScriptFile, actorID)
+	local share = EEex_GetActorShare(actorID)
+	local pendingTriggers = share + 0x2A4
+	local CAICondition = EEex_ReadDword(CAIScriptFile + 0x10)
+	return EEex_Call(EEex_Label("CAICondition::Hold"), {share, pendingTriggers}, CAICondition, 0x0) == 1
+end
+
+function EEex_EvalTriggersStringAsActor(string, actorID)
+	local CAIScriptFile = EEex_ParseTriggersString(string)
+	local toReturn = EEex_EvalTriggersAsActor(CAIScriptFile, actorID)
+	EEex_FreeTriggers(CAIScriptFile)
+	return toReturn
+end
+
+function EEex_FreeTriggers(CAIScriptFile)
+	EEex_Call(EEex_Label("CAIScriptFile::~CAIScriptFile"), {}, CAIScriptFile, 0x0)
+	EEex_Free(CAIScriptFile)
+end
+
 ------------------------------
 --  Actionbar Manipulation  --
 ------------------------------

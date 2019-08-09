@@ -82,6 +82,10 @@ PatAdj=0
 ; CAICondition
 ;---------------------------
 
+[CAICondition::Hold]
+PatBytes=33C58945FC8BC18B4D08535657
+PatAdj=-11
+
 [CAICondition::TriggerHolds()_FixHook]
 PatBytes=5385F674348D642400FF75108D4F08E8
 PatAdj=15
@@ -209,6 +213,10 @@ VerAdj=25
 [CAIScriptFile::CAIScriptFile]
 PatBytes=5356578BF98D4F1C894718
 PatAdj=-9
+
+[CAIScriptFile::ParseConditionalString]
+PatBytes=56578BF18945FC
+PatAdj=-11
 
 [CAIScriptFile::ParseObjectType]
 PatBytes=33C58945FC8B450853568B750C8BD95789854CFFFFFF8D4DD4
