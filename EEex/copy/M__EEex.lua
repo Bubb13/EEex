@@ -1736,6 +1736,54 @@ end
 --  Script Compiler  --
 -----------------------
 
+function EEex_FetchBCS(resref)
+	local CAIScript = EEex_Malloc(0x24)
+	local CResRef = EEex_Malloc(0x8)
+	EEex_WriteLString(CResRef, resref, 8)
+	local CAIScript = EEex_Call(EEex_Label("CAIScript::CAIScript"), {0, EEex_ReadDword(CResRef + 0x4), EEex_ReadDword(CResRef)}, CAIScript, 0x0)
+	EEex_Free(CResRef)
+	return CAIScript
+end
+
+function EEex_CompileBCS(scriptString)
+	local CAIScriptFile = EEex_Malloc(0xE8)
+	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, CAIScriptFile, 0x0)
+	local lines = EEex_SplitByChar(scriptString, "\n")
+	for _, line in ipairs(lines) do
+		local CString = EEex_Malloc(0x4)
+		local charArray = EEex_Malloc(#line + 1)
+		EEex_WriteString(charArray, line)
+		EEex_Call(EEex_Label("CString::CString(char_const_*)"), {charArray}, CString, 0x0)
+		EEex_Free(charArray)
+		EEex_Call(EEex_Label("CAIScriptFile::ParseOneLine"), {EEex_ReadDword(CString)}, CAIScriptFile, 0x0)
+		EEex_Free(CString)
+	end
+	local CAIScriptCopy = EEex_Malloc(0x24)
+	EEex_Call(EEex_Label("CAIScript::CAIScript(CAIScript_*)"), {}, CAIScriptCopy, 0x0)
+	EEex_Call(EEex_Label("CAIScript::Copy"), {CAIScriptCopy + 0x8}, EEex_ReadDword(CAIScriptFile + 0x8), 0x0)
+	EEex_Call(EEex_Label("CAIScriptFile::~CAIScriptFile"), {}, CAIScriptFile, 0x0)
+	EEex_Free(CAIScriptFile)
+	return CAIScriptCopy
+end
+
+function EEex_RunBCSAsActor(CAIScript, actorID)
+	local share = EEex_GetActorShare(actorID)
+	local pendingTriggers = share + 0x2A4
+	local CAIResponse = EEex_Call(EEex_Label("CAIScript::Find"), {share, pendingTriggers}, CAIScript, 0x0)
+	EEex_Call(EEex_Label("CGameAIBase::InsertResponse"), {1, 1, CAIResponse}, share, 0x0)
+	EEex_Call(EEex_Label("CAIResponse::~CAIResponse"), {}, CAIResponse, 0x0)
+	EEex_Free(CAIResponse)
+end
+
+function EEex_FreeBCS(CAIScript)
+	EEex_Call(EEex_Label("CAIScript::~CAIScript"), {}, CAIScript, 0x0)
+	EEex_Free(CAIScript)
+end
+
+-----------------------
+--  Object Compiler  --
+-----------------------
+
 -- TODO: Memory leak?
 -- Parses the given object string in standard BAF syntax and returns a pointer to the compiled CAIObjectType instance.
 -- Use EEex_EvalObjectAsActor() to evaluate the compiled object instance in relation to an actor.
@@ -1775,6 +1823,10 @@ function EEex_EvalObjectStringAsActor(string, actorID)
 	EEex_Free(object)
 	return matchedID
 end
+
+-----------------------
+--  Action Compiler  --
+-----------------------
 
 -- Parses the given string as if it was fed through C:Eval() and
 -- returns the compiled script object, (only filled with actions).
