@@ -45,7 +45,7 @@ function EEex_InstallNewObjects()
 	-- EEex_MatchObject --
 	----------------------
 
-	EEex_MatchObjectAddress = EEex_Malloc(0x4)
+	local matchObjectOffset = EEex_GetVolatileFieldOffset("EEex_MatchObject")
 
 	local matchObjectName = "EEex_MatchObject"
 	local matchObjectAddress = EEex_Malloc(#matchObjectName + 1)
@@ -57,7 +57,8 @@ function EEex_InstallNewObjects()
 		!lea_ecx_[ebp+byte] E8
 		!call >CAIObjectType::operator_equ
 
-		!mov_eax_[dword], ]], {EEex_MatchObjectAddress, 4}, [[
+		!mov_eax_[edi+dword] #3B20
+		!mov_eax_[eax+dword] ]], {matchObjectOffset, 4}, [[
 		!mov_[ebp+byte]_eax F0 ; curType.m_Instance ;
 
 	]]}

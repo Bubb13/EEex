@@ -1,39 +1,11 @@
 
 function EEex_InstallNewTriggers()
 
-	-- m_compareIdOnly =>
-	--     Opcode #101 - IF *NOT* protecting against Opcode #24 (Hardcoded)
+	-------------------------------
+	-- EEex_HasDispellableEffect --
+	-------------------------------
 
-	-- m_compareIdAndFlagsOnly =>
-	--     Opcode #101 - ONLY IF protecting against Opcode #24 (Hardcoded)
-	--     Opcode #169
-
-	-- m_compareIdAndEffectAmountOnly =>
-	--     Opcode #267
-
-	-- m_compareIdAndResrefOnly =>
-	--     Opcode #296
-
-	local luaTriggerActorName = "EEex_LuaTriggerActorID"
-	local luaTriggerActorAddress = EEex_Malloc(#luaTriggerActorName + 1)
-	EEex_WriteString(luaTriggerActorAddress, luaTriggerActorName)
-
-	local luaTriggerReturnName = "EEex_LuaTrigger"
-	local luaTriggerReturnAddress = EEex_Malloc(#luaTriggerReturnName + 1)
-	EEex_WriteString(luaTriggerReturnAddress, luaTriggerReturnName)
-
-	local newTriggersAddress = EEex_WriteAssemblyAuto({[[
-
-		!cmp_eax_dword #103
-		!je_dword >EEex_HasDispellableEffect
-		!cmp_eax_dword #104
-		!je_dword >EEex_LuaTrigger
-		!cmp_eax_dword #105
-		!je_dword >EEex_IsImmuneToOpcode
-		@trigger_failed
-		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_default_label
-
-		@EEex_HasDispellableEffect
+	local EEex_HasDispellableEffect = {[[
 
 		!lea_eax_[ebp+dword] 1C FF FF FF
 		!push_eax
@@ -92,10 +64,22 @@ function EEex_InstallNewTriggers()
 		@done_equiped_effects
 
 		!mov_ebx_eax
-		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_success_label
 
+	]]}
 
-		@EEex_LuaTrigger
+	---------------------
+	-- EEex_LuaTrigger --
+	---------------------
+
+	local luaTriggerActorName = "EEex_LuaTriggerActorID"
+	local luaTriggerActorAddress = EEex_Malloc(#luaTriggerActorName + 1)
+	EEex_WriteString(luaTriggerActorAddress, luaTriggerActorName)
+
+	local luaTriggerReturnName = "EEex_LuaTrigger"
+	local luaTriggerReturnAddress = EEex_Malloc(#luaTriggerReturnName + 1)
+	EEex_WriteString(luaTriggerReturnAddress, luaTriggerReturnName)
+
+	local EEex_LuaTrigger = {[[
 
 		!push_[ebp+byte] F4
 		!push_[dword] *_g_lua
@@ -142,10 +126,13 @@ function EEex_InstallNewTriggers()
 		!call >_lua_settop
 		!add_esp_byte 08
 
-		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_success_label
+	]]}
 
+	---------------------------
+	-- EEex_IsImmuneToOpcode --
+	---------------------------
 
-		@EEex_IsImmuneToOpcode
+	local EEex_IsImmuneToOpcode = {[[
 
 		!lea_eax_[ebp+dword] 1C FF FF FF
 		!push_eax
@@ -185,9 +172,79 @@ function EEex_InstallNewTriggers()
 		@done
 
 		!mov_ebx_eax
+
+	]]}
+
+	----------------------
+	-- EEex_MatchObject --
+	----------------------
+
+	local matchObjectOffset = EEex_GetVolatileFieldOffset("EEex_MatchObject")
+
+	local EEex_MatchObjectWrapper = {[[
+
+		; --- chunk --- ;
+		!push_[ebp+byte] F4 ; -0xC ;
+
+		; --- nNearest --- ;
+		!push_[ebp+byte] D0 ; -0x30 ;
+
+		; --- range --- ;
+		!push_[ebp+byte] EC ; -0x14 ;
+
+		; --- flags --- ;
+		!push_[ebp+byte] F0 ; -0x10 ;
+
+		!mov_ecx_edi
+		!call >EEex_MatchObject
+
+		!mov_ecx_[edi+dword] #3B20
+		!mov_[ecx+dword]_eax ]], {matchObjectOffset, 4}, [[
+
+		!mov_ebx #1
+		!cmp_eax_byte FF ; -1 ;
+		!jne_dword >valid_id
+		!xor_ebx_ebx
+		@valid_id
+
+	]]}
+
+	-------------------------
+	-- New Triggers Switch --
+	-------------------------
+
+	local newTriggersAddress = EEex_WriteAssemblyAuto(EEex_ConcatTables({[[
+
+		!cmp_eax_dword #103
+		!je_dword >EEex_HasDispellableEffect
+		!cmp_eax_dword #104
+		!je_dword >EEex_LuaTrigger
+		!cmp_eax_dword #105
+		!je_dword >EEex_IsImmuneToOpcode
+		!cmp_eax_dword #106
+		!je_dword >EEex_MatchObjectCase
+		@trigger_failed
+		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_default_label
+
+		@EEex_HasDispellableEffect
+		]], EEex_HasDispellableEffect, [[
+		!jmp_dword >return
+
+		@EEex_LuaTrigger
+		]], EEex_LuaTrigger, [[
+		!jmp_dword >return
+
+		@EEex_IsImmuneToOpcode
+		]], EEex_IsImmuneToOpcode, [[
+		!jmp_dword >return
+
+		@EEex_MatchObjectCase
+		]], EEex_MatchObjectWrapper, [[
+
+		@return
 		!jmp_dword >CGameAIBase::EvaluateStatusTrigger()_success_label
 
-	]]})
+	]]}))
 
 	EEex_DisableCodeProtection()
 	EEex_WriteAssembly(EEex_Label("CGameAIBase::EvaluateStatusTrigger()_default_jump"), {{newTriggersAddress, 4, 4}})

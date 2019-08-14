@@ -82,6 +82,10 @@ PatAdj=0
 ; CAICondition
 ;---------------------------
 
+[CAICondition::Hold]
+PatBytes=33C58945FC8BC18B4D08535657
+PatAdj=-11
+
 [CAICondition::TriggerHolds()_FixHook]
 PatBytes=5385F674348D642400FF75108D4F08E8
 PatAdj=15
@@ -165,12 +169,41 @@ VerAdj=14
 
 
 ;---------------------------
+; CAIResponse
+;---------------------------
+
+[CAIResponse::~CAIResponse]
+PatBytes=538BD9568B730C85F6
+PatAdj=0
+VerBytes=8D4F60
+VerAdj=25
+
+
+;---------------------------
 ; CAIScript
 ;---------------------------
 
 [CAIScript::CAIScript]
 PatBytes=8B45088BCB8945F48B450C8945F88D45F4508D45EC
 PatAdj=-37
+
+[CAIScript::CAIScript(CAIScript_*)]
+PatBytes=8BC75F5EC3CC538BD9568B730C85F6
+PatAdj=-26
+
+[CAIScript::Copy]
+PatBytes=558BEC51538B5D085657894DFC8B730485F6
+PatAdj=0
+
+[CAIScript::Find]
+PatBytes=558BEC83EC245356576A248BF133DB
+PatAdj=0
+
+[CAIScript::~CAIScript]
+PatBytes=538BD9568B730C85F6
+PatAdj=0
+VerBytes=8D4F1C
+VerAdj=25
 
 
 ;---------------------------
@@ -181,8 +214,16 @@ PatAdj=-37
 PatBytes=5356578BF98D4F1C894718
 PatAdj=-9
 
+[CAIScriptFile::ParseConditionalString]
+PatBytes=56578BF18945FC
+PatAdj=-11
+
 [CAIScriptFile::ParseObjectType]
 PatBytes=33C58945FC8B450853568B750C8BD95789854CFFFFFF8D4DD4
+PatAdj=-14
+
+[CAIScriptFile::ParseOneLine]
+PatBytes=33C58945FC56518BF18D45088BCC50
 PatAdj=-14
 
 [CAIScriptFile::ParseResponseString]
@@ -349,6 +390,10 @@ PatAdj=-16
 [CGameAIBase::InsertAction]
 PatBytes=C3CCCCCCCCCC558BEC56576A648BF9
 PatAdj=6
+
+[CGameAIBase::InsertResponse]
+PatBytes=33C58945FC568B7508578BF98D4D98897D80
+PatAdj=-14
 
 
 ;---------------------------
