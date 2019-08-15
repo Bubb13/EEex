@@ -1557,6 +1557,44 @@ function EEex_SetMenuVariantFunction(menuName, typeName, myFunction)
 	EEex_SetMenuVariantFunctionTempGlobal = nil
 end
 
+function EEex_FindActionbarMenuItems(menuName)
+	local actionbarItems = {}
+	local menu = EEex_GetMenuStructure(menuName)
+	if menu == 0x0 then return actionbarItems end
+	local currentItem = EEex_ReadDword(menu + 0x1C)
+	while currentItem ~= 0x0 do
+		local actionbar = EEex_ReadDword(currentItem + 0x1AC)
+		if actionbar ~= 0x0 then
+			table.insert(actionbarItems, currentItem)
+		end
+		currentItem = EEex_ReadDword(currentItem + 0x22C)
+	end
+	return actionbarItems
+end
+
+function EEex_GetMenuItemFunctionOffset(typeName)
+	local typeOffsets = {
+		["enabled"] = 0x44,
+		["action"] = 0x1E0,
+	}
+	return typeOffsets[typeName:lower()]
+end
+
+function EEex_GetMenuItemVariantFunction(menuItem, typeName)
+	local offset = EEex_GetMenuItemFunctionOffset(typeName)
+	local registryIndex = EEex_ReadDword(menuItem + offset)
+	return EEex_GetLuaRegistryIndex(registryIndex)
+end
+
+function EEex_SetMenuItemVariantFunction(menuItem, typeName, myFunction)
+	local offset = EEex_GetMenuItemFunctionOffset(typeName)
+	local registryIndex = EEex_ReadDword(menuItem + offset)
+	-- Please excuse the horrid word salad
+	EEex_SetMenuItemVariantFunctionTempGlobal = myFunction
+	EEex_SetLuaRegistryFunction(registryIndex, "EEex_SetMenuItemVariantFunctionTempGlobal")
+	EEex_SetMenuItemVariantFunctionTempGlobal = nil
+end
+
 function EEex_GetMenuAddressFromItem(menuItemName)
 	return EEex_ReadDword(EEex_ReadUserdata(Infinity_FindUIItemByName(menuItemName)) + 0x4)
 end

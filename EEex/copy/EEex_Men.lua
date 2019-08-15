@@ -15,6 +15,19 @@ function EEex_DestroyInjectedTemplate(menuName, templateName, instanceId)
 	EEex_TemplateMenuOverride = 0
 end
 
+EEex_UIMenuLoadListeners = {}
+
+-- Given listener function is called after initial UI.MENU load an when an F5 UI reload is executed.
+function EEex_AddUIMenuLoadListener(listener)
+	table.insert(EEex_UIMenuLoadListeners, listener)
+end
+
+function EEex_UIMenuLoadHook()
+	for i, listener in ipairs(EEex_UIMenuLoadListeners) do
+		listener()
+	end
+end
+
 EEex_PostResetListeners = {}
 
 -- Given listener function is called after an F5 UI reload is executed.
@@ -23,6 +36,9 @@ function EEex_AddPostResetListener(listener)
 end
 
 function EEex_ResetHook()
+	for i, listener in ipairs(EEex_UIMenuLoadListeners) do
+		listener()
+	end
 	for i, listener in ipairs(EEex_PostResetListeners) do
 		listener()
 	end
@@ -61,6 +77,32 @@ function EEex_InstallMenuHooks()
 	local refreshMenuCall = EEex_Label("_uiRefreshMenu")
 	local refreshMenu = refreshMenuCall + EEex_ReadDword(refreshMenuCall) + 0x4
 	EEex_WriteAssembly(refreshMenu + 0x24, {{hookReset, 4, 4}})
+
+	local hookInitialLoadName = "EEex_UIMenuLoadHook"
+	local hookInitialLoadNameAddress = EEex_Malloc(#hookInitialLoadName + 1)
+	EEex_WriteString(hookInitialLoadNameAddress, hookInitialLoadName)
+
+	local hookInitialLoad = EEex_WriteAssemblyAuto({[[
+		!push_[esp+byte] 04
+		!call >_uiLoadMenu
+		!add_esp_byte 04
+		!push_all_registers
+		!push_dword ]], {hookInitialLoadNameAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+		!pop_all_registers
+		!ret
+	]]})
+	EEex_WriteAssembly(EEex_Label("InitialPostUIMenuLoadHook"), {{hookInitialLoad, 4, 4}})
 
 	local templateHookName = "EEex_TemplateMenuOverride"
 	local templateHookNameAddress = EEex_Malloc(#templateHookName + 1)
