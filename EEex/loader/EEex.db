@@ -840,6 +840,10 @@ PatAdj=0
 PatBytes=8BC166C741340000
 PatAdj=-6
 
+[CRes::Demand]
+PatBytes=568BF185F67433
+PatAdj=0
+
 
 ;---------------------------
 ; CResRef
