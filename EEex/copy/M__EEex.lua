@@ -1414,6 +1414,88 @@ function EEex_EnableCodeProtection()
 	EEex_Free(temp)
 end
 
+----------
+-- DIMM --
+----------
+
+-- Mirrors chExtToType, (chTypeToExt would be reverse)
+function EEex_FileExtensionToType(extension)
+
+	local extensions = {
+		["2DA"]  = 0x3F4, -- CResText
+		["ARE"]  = 0x3F2, -- CResArea
+		["BAM"]  = 0x3E8, -- CResCell
+		["BCS"]  = 0x3EF, -- CResText
+		["BIO"]  = 0x3FE, -- CResBIO
+		["BMP"]  = 0x1  , -- CResBitmap
+		["BS"]   = 0x3F9, -- CResText
+		["CHR"]  = 0x3FA, -- CResCHR
+		["CHU"]  = 0x3EA, -- CResUI
+		["CRE"]  = 0x3F1, -- CResCRE
+		["DLG"]  = 0x3F3, -- CResDLG
+		["EFF"]  = 0x3F8, -- CResEffect
+		["GAM"]  = 0x3F5, -- CResGame
+		["GLSL"] = 0x405, -- CResText
+		["GUI"]  = 0x402, -- CResText
+		["IDS"]  = 0x3F0, -- CResText
+		["INI"]  = 0x802, -- CRes(???)
+		["ITM"]  = 0x3ED, -- CResItem
+		["LUA"]  = 0x409, -- CResText
+		["MENU"] = 0x408, -- CResText
+		["MOS"]  = 0x3EC, -- CResMosaic
+		["MVE"]  = 0x2  , -- CRes(???)
+		["PLT"]  = 0x6  , -- CResPLT
+		["PNG"]  = 0x40B, -- CResPng
+		["PRO"]  = 0x3FD, -- CResBinary
+		["PVRZ"] = 0x404, -- CResPVR
+		["SPL"]  = 0x3EE, -- CResSpell
+		["SQL"]  = 0x403, -- CResText
+		["STO"]  = 0x3F6, -- CResStore
+		["TGA"]  = 0x3  , -- CRes(???)
+		["TIS"]  = 0x3EB, -- CResTileSet
+		["TOH"]  = 0x407, -- CRes(???)
+		["TOT"]  = 0x406, -- CRes(???)
+		["TTF"]  = 0x40A, -- CResFont
+		["VEF"]  = 0x3FC, -- CResBinary
+		["VVC"]  = 0x3FB, -- CResBinary
+		["WAV"]  = 0x4  , -- CResWave
+		["WBM"]  = 0x3FF, -- CResWebm
+		["WED"]  = 0x3E9, -- CResWED
+		["WFX"]  = 0x5  , -- CResBinary
+		["WMP"]  = 0x3F7, -- CResWorldMap
+	}
+
+	return extensions[extension:upper()]
+
+end
+
+function EEex_DemandCRes(resref, extension)
+
+	local resrefLocation = EEex_Malloc(0x8)
+	EEex_WriteLString(resrefLocation + 0x0, resref, 8)
+
+	local type = EEex_FileExtensionToType(extension)
+	local CRes = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, type, resrefLocation}, nil, 0xC)
+	EEex_Free(resrefLocation)
+
+	if CRes ~= 0x0 then
+		EEex_Call(EEex_Label("CRes::Demand"), {}, CRes, 0x0)
+		return CRes
+	else
+		return 0x0
+	end
+
+end
+
+function EEex_DemandResData(resref, extension)
+	local CRes = EEex_DemandCRes(resref, extension)
+	if CRes ~= 0x0 then
+		return EEex_ReadDword(CRes + 0x28)
+	else
+		return 0x0
+	end
+end
+
 ---------------------
 --  Input Details  --
 ---------------------
@@ -1555,6 +1637,44 @@ function EEex_SetMenuVariantFunction(menuName, typeName, myFunction)
 	EEex_SetMenuVariantFunctionTempGlobal = myFunction
 	EEex_SetLuaRegistryFunction(registryIndex, "EEex_SetMenuVariantFunctionTempGlobal")
 	EEex_SetMenuVariantFunctionTempGlobal = nil
+end
+
+function EEex_FindActionbarMenuItems(menuName)
+	local actionbarItems = {}
+	local menu = EEex_GetMenuStructure(menuName)
+	if menu == 0x0 then return actionbarItems end
+	local currentItem = EEex_ReadDword(menu + 0x1C)
+	while currentItem ~= 0x0 do
+		local actionbar = EEex_ReadDword(currentItem + 0x1AC)
+		if actionbar ~= 0x0 then
+			table.insert(actionbarItems, currentItem)
+		end
+		currentItem = EEex_ReadDword(currentItem + 0x22C)
+	end
+	return actionbarItems
+end
+
+function EEex_GetMenuItemFunctionOffset(typeName)
+	local typeOffsets = {
+		["enabled"] = 0x44,
+		["action"] = 0x1E0,
+	}
+	return typeOffsets[typeName:lower()]
+end
+
+function EEex_GetMenuItemVariantFunction(menuItem, typeName)
+	local offset = EEex_GetMenuItemFunctionOffset(typeName)
+	local registryIndex = EEex_ReadDword(menuItem + offset)
+	return EEex_GetLuaRegistryIndex(registryIndex)
+end
+
+function EEex_SetMenuItemVariantFunction(menuItem, typeName, myFunction)
+	local offset = EEex_GetMenuItemFunctionOffset(typeName)
+	local registryIndex = EEex_ReadDword(menuItem + offset)
+	-- Please excuse the horrid word salad
+	EEex_SetMenuItemVariantFunctionTempGlobal = myFunction
+	EEex_SetLuaRegistryFunction(registryIndex, "EEex_SetMenuItemVariantFunctionTempGlobal")
+	EEex_SetMenuItemVariantFunctionTempGlobal = nil
 end
 
 function EEex_GetMenuAddressFromItem(menuItemName)

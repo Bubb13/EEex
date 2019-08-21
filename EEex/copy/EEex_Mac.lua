@@ -326,6 +326,7 @@ for _, macroEntry in ipairs({
 	{"push_[edx+byte]", "FF 72"},
 	{"push_[esi+byte]", "FF 76"},
 	{"push_[esi+dword]", "FF B6"},
+	{"push_[esp+byte]", "FF 74 24"},
 	{"push_[esp]", "FF 34 24"},
 	{"restore_stack_frame", "5F 5E 5A 59 5B 8B E5 5D"},
 	{"ret", "C3"},

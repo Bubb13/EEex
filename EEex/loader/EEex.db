@@ -840,6 +840,10 @@ PatAdj=0
 PatBytes=8BC166C741340000
 PatAdj=-6
 
+[CRes::Demand]
+PatBytes=568BF185F67433
+PatAdj=0
+
 
 ;---------------------------
 ; CResRef
@@ -1074,6 +1078,10 @@ PatAdj=31
 [HookStatsTempSet2]
 PatBytes=6639B7700B00007F0C39B7083500000F849F1A00008D9F300B0000C787E834000000000000538D8F54140000E8
 PatAdj=45
+
+[InitialPostUIMenuLoadHook]
+PatBytes=8D45C4C745CC08040000
+PatAdj=78
 
 [IsProtectedFromSpell()_cleanupJump]
 PatBytes=8B871C0400003B4618
