@@ -4430,6 +4430,7 @@ end
 		Infinity_DoFile("EEex_Ren") -- Render Hook
 		Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
 		Infinity_DoFile("EEex_Fix") -- Engine Related Bug Fixes
+		Infinity_DoFile("EEex_Spl")
 		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things
 
 		--------------
