@@ -3338,10 +3338,19 @@ end
 --  do EEex_IsSprite(sourceID), it will return false.
 -- If the source had been a mage casting a fireball, it would've returned true.
 function EEex_IsSprite(actorID)
-	if actorID == 0x0 or actorID == -1 then
+	local creatureData = EEex_GetActorShare(actorID)
+	if actorID == 0x0 or actorID == -1 or creatureData == 0 then
 		return false
 	else
-		return (EEex_ReadByte(EEex_GetActorShare(actorID) + 0x4, 0) == 0x31)
+		if (EEex_ReadByte(creatureData + 0x4, 0) ~= 0x31) then
+			return false
+		else
+			if bit32.band(EEex_ReadDword(creatureData + 0x434), 0xFC0) > 0 then
+				return false
+			else
+				return true
+			end
+		end
 	end
 end
 
