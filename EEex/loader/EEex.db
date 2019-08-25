@@ -544,6 +544,14 @@ PatAdj=-14
 PatBytes=33C58945FC8B4520535657
 PatAdj=-14
 
+[CGameSprite::FeedBack()_DisableCastsHook]
+PatBytes=8D45E46A0050686A00F000
+PatAdj=232
+
+[CGameSprite::FeedBack()_DisableIsCastingHook]
+PatBytes=8D45E46A0050686900F000
+PatAdj=232
+
 [CGameSprite::GetActiveProficiency]
 PatBytes=558BEC8B55088D42A783F82D772F83B94837000000
 PatAdj=0
@@ -861,6 +869,12 @@ PatAdj=0
 PatBytes=558BEC518B450C53568BD933C98B308B46F8890B89450C894B0485C07E72
 PatAdj=0
 
+[CResRef::operator_equequ]
+PatBytes=464183FE08
+PatAdj=-69
+VerBytes=B801000000
+VerAdj=8
+
 [CResRef::operator_notequ]
 PatBytes=558BEC56578B7D0833F62BF98D6424008A040F3C617C0C3C7A7F080FBEC083E820EB030FBEC08A1180FA61720D80FA7A77080FB6D283EA20EB030FB6D23BC27513
 PatAdj=0
@@ -881,6 +895,15 @@ PatAdj=-11
 [CRuleTables::MapCharacterSpecializationToSchool]
 PatBytes=558BEC8B45080FB7C03D000400007F43743B3D80000000
 PatAdj=0
+
+
+;---------------------------
+; CSpell
+;---------------------------
+
+[CSpell::GetGenericName]
+PatBytes=8B40405E8B4008
+PatAdj=-37
 
 
 ;---------------------------
@@ -1212,6 +1235,38 @@ PatAdj=0
 PatBytes=8B8F7C0100008D558C528B018B402CFFD084C0
 PatAdj=0
 
+[SpellFeedbackHook1]
+PatBytes=8D855CFFFFFF8BCF506A00
+PatAdj=11
+
+[SpellFeedbackHook2]
+PatBytes=8D45B08BCF506A00
+PatAdj=8
+
+[SpellFeedbackHook3]
+PatBytes=8D857CFFFFFF8BCB506A00
+PatAdj=11
+
+[SpellFeedbackHook4]
+PatBytes=8D45B08BCB506A00
+PatAdj=8
+
+[SpellFeedbackHook5]
+PatBytes=8B4DAC8BF08B118B5204
+PatAdj=-5
+
+[SpellFeedbackHook6]
+PatBytes=506A008D4DDC
+PatAdj=6
+
+[SpellFeedbackHook7]
+PatBytes=8B8E343400008D8544FFFFFF506A00
+PatAdj=15
+
+[SpellFeedbackHook8]
+PatBytes=8B8E343400008D45F0506A00
+PatAdj=12
+
 [ThievingClassHook]
 PatBytes=8B8D64FFFFFF8B01FF50108BC8E8
 PatAdj=14
@@ -1434,6 +1489,11 @@ Type=1
 [capture]
 PatBytes=33C06A2C5068
 PatAdj=11
+Type=1
+
+[defines]
+PatBytes=8D45DCC70600000000508D4E04
+PatAdj=-4
 Type=1
 
 [dimmGetResObject]
