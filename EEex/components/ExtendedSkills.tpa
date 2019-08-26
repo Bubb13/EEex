@@ -67,36 +67,37 @@ COPY_EXISTING ~ui.menu~ ~override~
 	SPRINT racialenemystring ~oogleblah~
 	TEXT_SPRINT donebuttonstring ~oogleblah~
 	PATCH_IF GAME_IS ~bgee~ BEGIN
-		SPRINT aiscriptstring ~AI Script:~
-		SPRINT turnundeadstring ~Turn Undead Level:~
-		SPRINT backstabmultiplierstring ~Backstab Multiplier:~
-		SPRINT racialenemystring ~Racial Enemy:~
+		SPRINT aiscriptstring ~AI Script~
+		SPRINT turnundeadstring ~Turn Undead Level~
+		SPRINT backstabmultiplierstring ~Backstab Multiplier~
+		SPRINT racialenemystring ~Racial Enemy~
 		TEXT_SPRINT donebuttonstring ~area 762 704 230 40~
 	END
 	PATCH_IF GAME_IS ~bg2ee eet~ BEGIN
-		SPRINT aiscriptstring ~AI Script:~
-		SPRINT turnundeadstring ~Turn Undead Level:~
-		SPRINT backstabmultiplierstring ~Backstab Damage:~
-		SPRINT racialenemystring ~Racial Enemy:~
+		SPRINT aiscriptstring ~AI Script~
+		SPRINT turnundeadstring ~Turn Undead Level~
+		SPRINT backstabmultiplierstring ~Backstab Damage~
+		SPRINT racialenemystring ~Racial Enemy~
 		TEXT_SPRINT donebuttonstring ~area 360 70 302 44~
 	END
 	PATCH_IF GAME_IS ~iwdee~ BEGIN
-		SPRINT aiscriptstring ~Current Script:~
-		SPRINT turnundeadstring ~Turn Undead Level:~
-		SPRINT backstabmultiplierstring ~Backstab Damage:~
-		SPRINT racialenemystring ~Racial Enemy:~
-		TEXT_SPRINT donebuttonstring ~area 762 704 230 40~
+		SPRINT aiscriptstring ~Current Script~
+		SPRINT turnundeadstring ~Turn Undead Level~
+		SPRINT backstabmultiplierstring ~Backstab Damage~
+		SPRINT racialenemystring ~Racial Enemy~
+		TEXT_SPRINT donebuttonstring ~area 762 704 230 44~
+		TEXT_SPRINT donebuttonstring2 ~area 440 654 234 46~
 	END
 	REPLACE_TEXTUALLY CASE_INSENSITIVE ~helpTextString = characters\[currentID\]\.proficiencies\.details~ ~~~~~helpTextString = characters[currentID].proficiencies.details
-		local gsubBase = "%aiscriptstring%"
-		if string.find(helpTextString, "%turnundeadstring%") ~= nil then
-			gsubBase = "%turnundeadscript%"
+		local gsubBase = "%aiscriptstring%:"
+		if string.find(helpTextString, "%turnundeadstring%:") ~= nil then
+			gsubBase = "%turnundeadstring%:"
 		end
-		if string.find(helpTextString, "%backstabmultiplierstring%") ~= nil then
-			gsubBase = "%backstabmultiplierstring%"
+		if string.find(helpTextString, "%backstabmultiplierstring%:") ~= nil then
+			gsubBase = "%backstabmultiplierstring%:"
 		end
-		if string.find(helpTextString, "%racialenemystring%") ~= nil then
-			gsubBase = "%racialenemystring%"
+		if string.find(helpTextString, "%racialenemystring%:") ~= nil then
+			gsubBase = "%racialenemystring%:"
 		end
 		for i = 1, #extendedskilllist, 1 do
 			local skill = extendedskilllist[i]
@@ -112,6 +113,9 @@ COPY_EXISTING ~ui.menu~ ~override~
 			if bit32.band(visibility, 0x1) > 0 and not canUseExtendedSkill(currentID, skill) then
 				skillVisible = false
 			end
+			if string.find(helpTextString, Infinity_FetchString(skill.name)) ~= nil then
+				skillVisible = false
+			end
 			if skillVisible then
 				helpTextString = string.gsub(helpTextString, gsubBase, Infinity_FetchString(skill.name) .. ": " .. skillValue .. "\n" .. gsubBase)
 			end
@@ -120,7 +124,7 @@ COPY_EXISTING ~ui.menu~ ~override~
 	REPLACE_TEXTUALLY CASE_INSENSITIVE ~for k, v in ipairs(characters\[currentID\]\.proficiencies\.class_skills) do~ ~local skillInsertPoint = #characters[currentID].proficiencies.class_skills + 1
 		for i = #characters[currentID].proficiencies.class_skills, 1, -1 do
 			local skillName = Infinity_FetchString(characters[currentID].proficiencies.class_skills[i].strRef)
-			if skillName == "Turn Undead Level" or skillName == "Backstab Multiplier" or skillName == "Racial Enemy" then
+			if skillName == "%turnundeadstring%" or skillName == "%backstabmultiplierstring%" or skillName == "%racialenemystring%" then
 				 skillInsertPoint = i
 			end
 		end
@@ -208,9 +212,10 @@ end
 
 function isChargenProficienciesBackButtonClickable()~~~~~
 
-	REPLACE_EVALUATE ~name \'CHARGEN_PROFICIENCIES\'\([^\"]*\)\"~
-	BEGIN
-	END
+	PATCH_IF !(GAME_IS ~iwdee~) BEGIN
+		REPLACE_EVALUATE ~name \'CHARGEN_PROFICIENCIES\'\([^\"]*\)\"~
+		BEGIN
+		END
 		~name 'CHARGEN_PROFICIENCIES'%MATCH1%"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
@@ -223,6 +228,39 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 
 	displayExtendedSkills()
 ~
+	END ELSE BEGIN
+		REPLACE_EVALUATE ~name \'CHARGEN_SKILLS\'\([^\"]*\)\"~
+		BEGIN
+		END
+		~name 'CHARGEN_SKILLS'%MATCH1%"
+	firstExtendedSkillIndex = #chargen.thief_skill
+	extendedSkills = {}
+	for i = 1, #extendedskilllist, 1 do
+		local skill = extendedskilllist[i]
+		if canUseExtendedSkill(currentID, skill) then
+			table.insert(extendedSkills, {['description'] = skill['description'], ['name'] = skill['name'], ['stat'] = skill['stat'], ['value'] = EEex_GetActorStat(currentID, skill['stat']), ['base'] = EEex_GetActorStat(currentID, skill['stat']), ['opcode'] = skill['opcode'],})
+		end
+	end
+
+	displayExtendedSkills()
+~
+
+		REPLACE_EVALUATE ~name \'LEVELUP_PROFICIENCIES\'\([^\"]*\)\"~
+		BEGIN
+		END
+		~name 'LEVELUP_PROFICIENCIES'%MATCH1%"
+	firstExtendedSkillIndex = #chargen.thief_skill
+	extendedSkills = {}
+	for i = 1, #extendedskilllist, 1 do
+		local skill = extendedskilllist[i]
+		if canUseExtendedSkill(currentID, skill) then
+			table.insert(extendedSkills, {['description'] = skill['description'], ['name'] = skill['name'], ['stat'] = skill['stat'], ['value'] = EEex_GetActorStat(currentID, skill['stat']), ['base'] = EEex_GetActorStat(currentID, skill['stat']), ['opcode'] = skill['opcode'],})
+		end
+	end
+
+	displayExtendedSkills()
+~
+	END
 
 	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, true)~ ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, true)
 					displayExtendedSkills()~
@@ -277,6 +315,30 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 			end
 		end
 		createCharScreen:OnDoneButtonClick()~~~~~
+
+	PATCH_IF (GAME_IS ~iwdee~) BEGIN
+		REPLACE_EVALUATE ~%donebuttonstring2%\([^`]*\)createCharScreen:OnDoneButtonClick();~
+		BEGIN
+		END
+		~~~~~%donebuttonstring2%%MATCH1%
+
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			extendedSkillIncrement = skill.value - skill.base
+			if extendedSkillIncrement ~= 0 then
+				EEex_ApplyEffectToActor(currentID, {
+['opcode'] = skill.opcode,
+['target'] = 1,
+['timing'] = 9,
+['parameter1'] = extendedSkillIncrement,
+['special'] = skill.stat,
+['source_target'] = currentID,
+['source_id'] = currentID
+})
+			end
+		end
+		createCharScreen:OnDoneButtonClick();~~~~~
+	END
 /*
 	REPLACE_EVALUATE ~createCharScreen:OnHighLevelAbilitiesButtonClick()~
 	BEGIN
