@@ -113,9 +113,6 @@ COPY_EXISTING ~ui.menu~ ~override~
 			if bit32.band(visibility, 0x1) > 0 and not canUseExtendedSkill(currentID, skill) then
 				skillVisible = false
 			end
-			if string.find(helpTextString, Infinity_FetchString(skill.name)) ~= nil then
-				skillVisible = false
-			end
 			if skillVisible then
 				helpTextString = string.gsub(helpTextString, gsubBase, Infinity_FetchString(skill.name) .. ": " .. skillValue .. "\n" .. gsubBase)
 			end
@@ -360,3 +357,4 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 		end
 		createCharScreen:OnHighLevelAbilitiesButtonClick()~~~~~
 */
+
