@@ -31,13 +31,13 @@ end
 
 EEex_IgnoreEngineStartup = true
 
-function EEex_HookActionbar(config)
+function EEex_HookActionbar(config, state)
 	if EEex_IgnoreEngineStartup then
 		EEex_IgnoreEngineStartup = false
 		return
 	end
 	for i, func in ipairs(EEex_ActionbarListeners) do
-		func(config)
+		func(config, state)
 	end
 end
 
@@ -74,11 +74,20 @@ function EEex_InstallActionbarHook()
 		!push_[dword] *_g_lua
 		!call >_lua_pushnumber
 		!add_esp_byte 0C
+
+		!push_[ebp+byte] 08
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
 		!push_byte 00
 		!push_byte 00
 		!push_byte 00
 		!push_byte 00
-		!push_byte 01
+		!push_byte 02
 		!push_[dword] *_g_lua
 		!call >_lua_pcallk
 		!add_esp_byte 18

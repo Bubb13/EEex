@@ -42,7 +42,7 @@ function EEex_InstallSplHook()
 		!pop_esi
 		!ret
 	]]})
-	
+
 	EEex_WriteAssembly(EEex_Label("SpellFeedbackHook1"), {"!call", {getGenericNameOverride, 4, 4}})
 	EEex_WriteAssembly(EEex_Label("SpellFeedbackHook2"), {"!call", {getGenericNameOverride, 4, 4}})
 	EEex_WriteAssembly(EEex_Label("SpellFeedbackHook3"), {"!call", {getGenericNameOverride, 4, 4}})

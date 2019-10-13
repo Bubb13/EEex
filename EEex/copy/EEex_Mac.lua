@@ -13,7 +13,7 @@ EEex_WriteAssembly support =>
 for _, objectEntry in ipairs({
 	{"number", {
 		["decode"] = function(string)
-			
+
 		end,
 	}},
 })
@@ -255,6 +255,8 @@ for _, macroEntry in ipairs({
 	{"mov_[ebp]_dword", "C7 45 00"},
 	{"mov_[ebp]_edi", "89 7D 00"},
 	{"mov_[ebp]_esp", "89 65 00"},
+	{"mov_[ecx]_eax", "89 01"},
+	{"mov_[ecx+byte]_eax", "89 41"},
 	{"mov_[ecx+dword]_dword", "C7 81"},
 	{"mov_[ecx+dword]_eax", "89 81"},
 	{"mov_[ecx+dword]_edx", "89 91"},

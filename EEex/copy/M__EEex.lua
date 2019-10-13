@@ -1,12 +1,7 @@
 --[[
 
-This is EEex's main file. The vital initialization and hooks are
-defined within this file. Please don't edit unless you
-ABSOLUTELY know what you are doing... you could very easily cause a game crash in here.
-
-Most new functions that *aren't* hardcoded into the exe are defined in here.
-I haven't documented most of them yet, so have a look around.
-(But please, again, no touchy!)
+This is EEex's main file. Vital initialization hooks and
+most utility functions are defined within this file.
 
 --]]
 
@@ -14,13 +9,19 @@ I haven't documented most of them yet, so have a look around.
 -- Options --
 -------------
 
+-- Limits EEex startup to this file only. I.E. other EEex files and
+-- EEex modules won't be executed / enabled when this is set to true.
 EEex_MinimalStartup = false
 
 --------------------
 -- Initialization --
 --------------------
 
+-- Holds a pointer to the memory reserved by the loader's EEex_Init().
+-- Initial memory is used to hold vital EEex assembly functions,
+-- which are required to allocate, write, and execute assembly from Lua.
 EEex_InitialMemory = nil
+
 if not pcall(function()
 
 	-- !!!----------------------------------------------------------------!!!
@@ -52,13 +53,20 @@ end
 -- State --
 -----------
 
+-- List of listeners to be executed when UI.MENU is reset,
+-- (either from an F5 reload, or programmatically via EEex).
 EEex_ResetListeners = {}
 
+-- Adds the given function to the EEex_ResetListeners list.
 function EEex_AddResetListener(listener)
 	table.insert(EEex_ResetListeners, listener)
 end
 
+-- Used by EEex_Reset() to ignore engine startup, (which isn't a "reset").
 EEex_IgnoreFirstReset = true
+
+-- Executes the listeners in EEex_ResetListeners. Called by first line in
+-- UI.MENU - which should have been inserted by the EEex WeiDU installer.
 function EEex_Reset()
 	if not EEex_IgnoreFirstReset then
 		local resetListenersCopy = EEex_ResetListeners
@@ -75,27 +83,30 @@ end
 -- Memory Utililty --
 ---------------------
 
+-- Lua wrapper for malloc().
 function EEex_Malloc(size)
 	return EEex_Call(EEex_Label("_malloc"), {size}, nil, 0x4)
 end
 
+-- Lua wrapper for free().
 function EEex_Free(address)
 	return EEex_Call(EEex_Label("_SDL_free"), {address}, nil, 0x4)
 end
 
+-- Reads a dword from the given address, extracting and returning the "index"th byte.
 function EEex_ReadByte(address, index)
 	return bit32.extract(EEex_ReadDword(address), index * 0x8, 0x8)
 end
 
+-- Reads a dword from the given address, extracting and returning the "index"th word.
 function EEex_ReadWord(address, index)
 	return bit32.extract(EEex_ReadDword(address), index * 0x10, 0x10)
 end
 
--- Reads a signed 2-byte word at the given address, shifted over by 2*index bytes.
+-- Reads a dword from the given address, extracting and returning the "index"th signed word.
 function EEex_ReadSignedWord(address, index)
 	local readValue = bit32.extract(EEex_ReadDword(address), index * 0x10, 0x10)
-	-- TODO: This is definitely not the right way to do the conversion,
-	-- but I have at least 32 bits to play around with; will do for now.
+	-- TODO: Implement better conversion code.
 	if readValue >= 32768 then
 		return -65536 + readValue
 	else
@@ -103,23 +114,23 @@ function EEex_ReadSignedWord(address, index)
 	end
 end
 
+-- Writes a word at the given address.
 function EEex_WriteWord(address, value)
 	for i = 0, 1, 1 do
 		EEex_WriteByte(address + i, bit32.extract(value, i * 0x8, 0x8))
 	end
 end
 
+-- Writes a dword at the given address.
 function EEex_WriteDword(address, value)
 	for i = 0, 3, 1 do
 		EEex_WriteByte(address + i, bit32.extract(value, i * 0x8, 0x8))
 	end
 end
 
--- Function for editing text fields without a terminating NULL (e.g. resrefs)
--- This is basically like the WeiDU WRITE_ASCII function.
--- EEex_WriteLString(0x20, "SPWI304", 8)
--- equals
--- WRITE_ASCII 0x20 ~SPWI304~ #8
+-- Writes a string to the given address, padding the end with 0's to achieve desired length.
+-- If the string length exactly matches the field length, terminating null is not written.
+-- TODO: Can crash the game if the terminating null byte ends up outside of allocated memory.
 function EEex_WriteLString(address, toWrite, maxLength)
 	local stringLength = string.len(toWrite)
 	local not_so_null = EEex_ReadByte(address + stringLength, 0x0)
@@ -130,7 +141,14 @@ function EEex_WriteLString(address, toWrite, maxLength)
 	end
 end
 
--- OS:WINDOWS
+-- OS: WINDOWS
+-- Calls a function from a DLL. The DLL will be loaded into the process's address space if it isn't already.
+-- dll  => String containing dll's name, not including the extension. Example: "User32".
+-- proc => String containing function name to call. Example: "MessageBoxA".
+-- args => Table containing function args, in reverse order. Example: {0x40, "Caption", "Message", 0x0}.
+-- ecx  => Number representing the "this" register value. Should be nil if proc doesn't use "this".
+-- pop  => Number of bytes, (should be an increment of 0x4), to pop off the stack after returning from proc.
+--         Note: The stack must be balanced by the end of the call - if this value is wrong, the game will crash.
 function EEex_DllCall(dll, proc, args, ecx, pop)
 	local procaddress = #dll + 1
 	local dlladdress = EEex_Malloc(procaddress + #proc + 1)
@@ -148,23 +166,29 @@ end
 -- Debug Utility --
 -------------------
 
+-- Logs a message to the console window, prepending the message with the calling function's name.
 function EEex_FunctionLog(message)
 	local name = debug.getinfo(2, "n").name
 	if name == nil then name = "(Unknown)" end
 	Infinity_Log("[EEex] "..name..": "..message)
 end
 
+-- Throws a Lua error, appending the current stacktrace to the end of the message.
 function EEex_Error(message)
 	error(message.." "..debug.traceback())
 end
 
+-- Checked in EEex_ReadDwordDebug(); if true, prevents debug output.
 EEex_ReadDwordDebug_Suppress = false
+
+-- Called by EEex_ReadDword() to help debug crashes. Disabled by default.
 function EEex_ReadDwordDebug(reading, read)
 	if not EEex_ReadDwordDebug_Suppress then
 		--Infinity_Log("[EEex] EEex_ReadDwordDebug: "..EEex_ToHex(reading).." => "..EEex_ToHex(read))
 	end
 end
 
+-- Dumps the contents of the Lua stack to the console window. For debugging.
 function EEex_DumpLuaStack()
 	EEex_FunctionLog("Lua Stack =>")
 	EEex_ReadDwordDebug_Suppress = true
@@ -191,6 +215,7 @@ function EEex_DumpLuaStack()
 	EEex_ReadDwordDebug_Suppress = false
 end
 
+-- Dumps the contents of dynamically allocated EEex code to the console window. For debugging.
 function EEex_DumpDynamicCode()
 	EEex_ReadDwordDebug_Suppress = true
 	EEex_FunctionLog("EEex => Dynamic Code")
@@ -223,6 +248,7 @@ function EEex_DumpDynamicCode()
 end
 
 -- OS:WINDOWS
+-- Displays a message box to the user. Note: Suspends game until closed, which can be useful for debugging.
 function EEex_MessageBox(message)
 	local caption = "EEex"
 	local messageAddress = EEex_Malloc(#message + 1 + #caption + 1)
@@ -237,6 +263,8 @@ end
 -- Random Utility --
 --------------------
 
+-- Flattens given table so that any nested tables are merged.
+-- Example: {"Hello", {"World"}} becomes {"Hello", "World"}.
 function EEex_ConcatTables(tables)
 	local toReturn = {}
 	for _, _table in ipairs(tables) do
@@ -251,6 +279,7 @@ function EEex_ConcatTables(tables)
 	return toReturn
 end
 
+-- Rounds the given number upwards to the nearest multiple.
 function EEex_RoundUp(numToRound, multiple)
 	if multiple == 0 then
 		return numToRound
@@ -262,10 +291,12 @@ function EEex_RoundUp(numToRound, multiple)
 	return numToRound + multiple - remainder;
 end
 
+-- Checks the first character of a string.
 function EEex_StringStartsWith(string, startsWith)
-   return string.sub(string, 1, #startsWith) == startsWith
+	return string.sub(string, 1, #startsWith) == startsWith
 end
 
+-- Finds the first instance of the given char after or at the starting index.
 function EEex_CharFind(string, char, startingIndex)
 	local limit = #string
 	for i = startingIndex or 1, limit, 1 do
@@ -277,6 +308,8 @@ function EEex_CharFind(string, char, startingIndex)
 	return -1
 end
 
+-- Returns a table populated by the string sequences separated by the given char.
+-- Example: EEex_SplitByChar("Hello World", " ") returns {"Hello", "World"}.
 function EEex_SplitByChar(string, char)
 	local splits = {}
 	local startIndex = 1
@@ -292,6 +325,9 @@ function EEex_SplitByChar(string, char)
 	return splits
 end
 
+-- Given a pointer to a CPtrList, iterates through every
+-- element and calls func() with element as argument. If func()
+-- returns true, the iteration breaks and instantly returns.
 function EEex_IterateCPtrList(CPtrList, func)
 	local m_pNext = EEex_ReadDword(CPtrList + 0x4)
 	while m_pNext ~= 0x0 do
@@ -302,6 +338,7 @@ function EEex_IterateCPtrList(CPtrList, func)
 	end
 end
 
+-- Frees the memory allocated by the given CPtrList pointer.
 function EEex_FreeCPtrList(CPtrList)
 	local m_nCount = EEex_ReadDword(CPtrList + 0xC)
 	while m_nCount ~= 0 do
@@ -312,6 +349,7 @@ function EEex_FreeCPtrList(CPtrList)
 	EEex_Call(EEex_ReadDword(EEex_ReadDword(CPtrList)), {0x1}, CPtrList, 0x0)
 end
 
+-- Returns the current CInfinity instance - mostly contains fields pertaining to rendering and viewport.
 function EEex_GetCurrentCInfinity()
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
@@ -321,6 +359,7 @@ function EEex_GetCurrentCInfinity()
 	return m_cInfinity
 end
 
+-- Constructs and returns a CString from the given Lua string.
 function EEex_ConstructCString(string)
 	local stringAddress = EEex_Malloc(#string + 1)
 	EEex_WriteString(stringAddress, string)
@@ -330,12 +369,14 @@ function EEex_ConstructCString(string)
 	return CStringAddress
 end
 
+-- Copies the given CString and returns its pointer.
 function EEex_CopyCString(CString)
 	local CStringAddress = EEex_Malloc(0x4)
 	EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {CString}, CStringAddress, 0x0)
 	return CStringAddress
 end
 
+-- Frees the memory allocated by the given CString pointer.
 function EEex_FreeCString(CString)
 	EEex_Call(EEex_Label("CString::~CString"), {}, CString, 0x0)
 	EEex_Free(CString)
@@ -2150,9 +2191,10 @@ function EEex_GetActionbarButton(buttonIndex)
 	if buttonIndex < 0 or buttonIndex > 11 then
 		EEex_Error("buttonIndex out of bounds")
 	end
-	local ecx = EEex_ReadDword(EEex_ReadDword(EEex_Label("g_pBaldurChitin")) + EEex_Label("CBaldurChitin::m_pObjectGame"))
-	local actionbarAddress = EEex_ReadDword(EEex_ReadDword(ecx + EEex_ReadByte(ecx + 0x3DA0, 0) * 4 + 0x3DA4) + 0x204) + 0x2654
-	return EEex_ReadDword(actionbarAddress + 0x1440 + buttonIndex * 0x4)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_cButtonArray = m_pObjectGame + 0x2654
+	return EEex_ReadDword(m_cButtonArray + 0x1440 + buttonIndex * 0x4)
 end
 
 -- Returns true if the actionbar button at buttonIndex is currently in the process of being clicked.
@@ -3337,21 +3379,16 @@ end
 -- For example, if you get the sourceID of an effect of a fireball from a trap, and you
 --  do EEex_IsSprite(sourceID), it will return false.
 -- If the source had been a mage casting a fireball, it would've returned true.
-function EEex_IsSprite(actorID)
-	local creatureData = EEex_GetActorShare(actorID)
-	if actorID == 0x0 or actorID == -1 or creatureData == 0 then
-		return false
-	else
-		if (EEex_ReadByte(creatureData + 0x4, 0) ~= 0x31) then
-			return false
-		else
-			if bit32.band(EEex_ReadDword(creatureData + 0x434), 0xFC0) > 0 then
-				return false
-			else
-				return true
-			end
+function EEex_IsSprite(actorID, allowDead)
+	-- EEex uses 0x0 as an "invalid" actorID return value, but it actually
+	-- points to a valid object - (not a sprite, though, so return false).
+	if actorID ~= 0x0 and actorID ~= -0x1 then
+		local share = EEex_GetActorShare(actorID)
+		if EEex_ReadByte(share + 0x4, 0) == 0x31 then
+			return allowDead or bit32.band(EEex_ReadDword(share + 0x434), 0xFC0) == 0x0
 		end
 	end
+	return false
 end
 
 -- Directly applies an effect to an actor based on the args table.
