@@ -2135,14 +2135,61 @@ end
 --  Actionbar Manipulation  --
 ------------------------------
 
-function EEex_SetActionbarState(actionbarConfig)
-	local eax = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
-	local ecx = EEex_ReadDword(eax + EEex_Label("CBaldurChitin::m_pObjectGame"))
-	eax = EEex_ReadByte(ecx + 0x3DA0, 0)
-	eax = EEex_ReadDword(ecx + eax * 4 + 0x3DA4)
-	eax = EEex_ReadDword(eax + 0x204)
-	ecx = eax + 0x2654
-	EEex_Call(EEex_Label("CInfButtonArray::SetState"), {actionbarConfig}, ecx, 0x0)
+--[[
+Unique Config | State(s)
+    [0]       |  = 1,   -- Mage / Sorcerer
+    [1]       |  = 2,   -- Fighter
+    [2]       |  = 3,   -- Cleric
+    [3]       |  = 4,   -- Thief
+    [4]       |  = 5,   -- Bard
+    [5]       |  = 6,   -- Paladin
+    [6]       |  = 7,   -- Fighter Mage
+    [7]       |  = 8,   -- Fighter Cleric
+    [8]       |  = 9,   -- Fighter Thief
+    [9]       |  = 10,  -- Fighter Mage Thief
+    [10]      |  = 11,  -- Druid
+    [11]      |  = 12,  -- Ranger
+    [12]      |  = 13,  -- Mage Thief
+    [13]      |  = 14,  -- Cleric Mage
+    [14]      |  = 15,  -- Cleric Thief
+    [15]      |  = 16,  -- Fighter Druid
+    [16]      |  = 17,  -- Fighter Mage Cleric
+    [17]      |  = 18,  -- Cleric Ranger
+    [18]      |  = 20,  -- Monk
+    [19]      |  = 21,  -- Shaman
+    [20]      |  = 101, -- Select Weapon Ability
+              |
+    [21]      |  = 102, -- Spells (Select Quick Spell)
+              |    103, -- Spells (Cast)
+              |
+    [22]      |  = 104, -- Select Quick Item Ability
+              |    105, -- Use Item
+              |
+    [23]      |  = 106, -- Special Abilities    
+    [24]      |  = 107, -- Select Quick Formation
+    [25]      |  = 108, -- Defunct Select Quick Formation (Not used)
+    [26]      |  = 109, -- Group Selected
+    [27]      |  = 110, -- Unknown (No buttons defined; not used?)
+    [28]      |  = 111, -- Internal List (Opcode #214)
+    [29]      |  = 112, -- Controlled (Class doesn't have a dedicated state)
+              |
+    [30]      |  = 113, -- Cleric / Mage Spells (Cast)
+              |    114, -- Cleric / Mage Spells (Select Quick Spell)
+              |
+--]]
+
+function EEex_SetActionbarState(state)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_cButtonArray = m_pObjectGame + 0x2654
+	EEex_Call(EEex_Label("CInfButtonArray::SetState"), {state}, m_cButtonArray, 0x0)
+end
+
+function EEex_GetActionbarState()
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_cButtonArray = m_pObjectGame + 0x2654
+	return EEex_ReadDword(m_cButtonArray + 0x1474)
 end
 
 EEex_ACTIONBAR_TYPE = {
@@ -2175,16 +2222,11 @@ function EEex_SetActionbarButton(buttonIndex, buttonType)
 	if buttonIndex < 0 or buttonIndex > 11 then
 		EEex_Error("buttonIndex out of bounds")
 	end
-	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
-	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame")) -- (CInfGame)
-	local m_visibleArea = EEex_ReadByte(m_pObjectGame + 0x3DA0, 0) -- (byte)
-	local m_gameArea = EEex_ReadDword(m_pObjectGame + m_visibleArea * 4 + 0x3DA4) -- (CGameArea)
-	if m_gameArea ~= 0x0 then
-		local m_pGame = EEex_ReadDword(m_gameArea + 0x204) -- (CInfGame)
-		local m_cButtonArray = m_pGame + 0x2654 -- (CInfButtonArray)
-		local m_cButton = m_cButtonArray + 0x1440 + buttonIndex * 0x4 -- (dword)
-		EEex_WriteDword(m_cButton, buttonType)
-	end
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_cButtonArray = m_pObjectGame + 0x2654
+	local m_cButton = m_cButtonArray + 0x1440 + buttonIndex * 0x4 -- (dword)
+	EEex_WriteDword(m_cButton, buttonType)
 end
 
 function EEex_GetActionbarButton(buttonIndex)
