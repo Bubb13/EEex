@@ -682,6 +682,10 @@ PatAdj=-25
 ; CInfButtonArray
 ;---------------------------
 
+[CInfButtonArray::ClearList]
+PatBytes=85C9743F83790C00741A
+PatAdj=-6
+
 [CInfButtonArray::OnLButtonPressed()_InvalidSpecialAbility]
 PatBytes=8B84BE4014000083C0F483F8200F87
 PatAdj=15
@@ -690,6 +694,10 @@ PatAdj=15
 PatBytes=8B84BE4014000083C0F483F820
 PatAdj=29
 Type=1
+
+[CInfButtonArray::SetQuickSlot]
+PatBytes=578B7D088B88140D000083B95C3E000000
+PatAdj=-21
 
 [CInfButtonArray::SetState]
 PatBytes=8B8774140000898778140000C787741400006E000000
@@ -761,6 +769,14 @@ PatAdj=0
 
 [CInfGame::SelectToolbar]
 PatBytes=558BEC83EC0C33C0568BF157668986582500000FB6865C3E0000
+PatAdj=0
+
+[CInfGame::SetIconIndex]
+PatBytes=33C58945FC8A4508568BF1
+PatAdj=-11
+
+[CInfGame::SetState]
+PatBytes=558BEC8B450C568BF1898674250000
 PatAdj=0
 
 [CInfGame::UnselectAll]
