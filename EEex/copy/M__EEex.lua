@@ -2179,6 +2179,13 @@ function EEex_GetActionbarState()
 	return EEex_ReadDword(m_cButtonArray + 0x1474)
 end
 
+function EEex_GetLastActionbarState()
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+	local m_cButtonArray = m_pObjectGame + 0x2654
+	return EEex_ReadDword(m_cButtonArray + 0x1478)
+end
+
 EEex_ACTIONBAR_TYPE = {
 	["BARD_SONG"] = 2,
 	["CAST_SPELL"] = 3,
