@@ -50,7 +50,23 @@ function EEex_InstallFixes()
 	-- Pausing the game should not break effect application --
 	----------------------------------------------------------
 
-	EEex_WriteAssembly(EEex_Label("CGameSprite::AddEffect()_FixPause"), {"!jmp_byte"})
+	local fixPauseAddress = EEex_Label("CGameSprite::AddEffect()_FixPause")
+	local fixPauseJmpDest = fixPauseAddress + EEex_ReadByte(fixPauseAddress + 0x1, 0) + 0x2
+	local fixPause = EEex_WriteAssemblyAuto({[[
+
+		; Game Paused ;
+		!jne_dword ]], {fixPauseJmpDest, 4, 4}, [[
+
+		; Immediate Resolve ;
+		!test_ebx_ebx
+		!jz_dword ]], {fixPauseJmpDest, 4, 4}, [[
+
+		; Source Type Item ;
+		!cmp_[edi+dword]_byte #8C 02
+		!jne_dword ]], {fixPauseJmpDest, 4, 4}, [[
+		!jmp_dword ]], {fixPauseAddress + 0x6, 4, 4},
+	})
+	EEex_WriteAssembly(fixPauseAddress, {"!jmp_dword", {fixPause, 4, 4}, "!nop"})
 
 	EEex_EnableCodeProtection()
 end

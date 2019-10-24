@@ -516,7 +516,7 @@ PatAdj=-9
 
 [CGameSprite::AddEffect()_FixPause]
 PatBytes=8D8EA833000057E8
-PatAdj=34
+PatAdj=30
 
 [CGameSprite::AddKnownSpell]
 PatBytes=8D4DC0538B5D0856578B7D10897D988945BC
