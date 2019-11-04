@@ -13,7 +13,7 @@ EEex_WriteAssembly support =>
 for _, objectEntry in ipairs({
 	{"number", {
 		["decode"] = function(string)
-			
+
 		end,
 	}},
 })
@@ -54,6 +54,7 @@ for _, macroEntry in ipairs({
 	{"cmp_byte:[ebp+byte]", "80 7D"},
 	{"cmp_byte:[edi+byte]_byte", "80 7F"},
 	{"cmp_byte:[edx+byte]_byte", "80 7A"},
+	{"cmp_byte:[esi]_byte", "80 3E"},
 	{"cmp_eax_byte", "83 F8"},
 	{"cmp_eax_dword", "3D"},
 	{"cmp_eax_ebx", "3B C3"},
@@ -77,6 +78,7 @@ for _, macroEntry in ipairs({
 	{"cmp_[ecx+byte]_byte", "83 79"},
 	{"cmp_[ecx+byte]_esi", "39 71"},
 	{"cmp_[ecx+dword]_byte", "83 B9"},
+	{"cmp_[edi+dword]_byte", "83 BF"},
 	{"cmp_[esi+byte]_byte", "83 7E"},
 	{"cmp_[esi+dword]_byte", "80 BE"},
 	{"dec_eax", "48"},
@@ -147,6 +149,7 @@ for _, macroEntry in ipairs({
 	{"mov_al_[esi]", "8A 46 00"},
 	{"mov_bx", "66 BB"},
 	{"mov_byte:[ebp+byte]_byte", "C6 45"},
+	{"mov_byte:[edi]_byte", "C6 07"},
 	{"mov_eax", "B8"},
 	{"mov_eax_ebx", "8B C3"},
 	{"mov_eax_edx", "8B C2"},
@@ -255,11 +258,13 @@ for _, macroEntry in ipairs({
 	{"mov_[ebp]_dword", "C7 45 00"},
 	{"mov_[ebp]_edi", "89 7D 00"},
 	{"mov_[ebp]_esp", "89 65 00"},
+	{"mov_[ecx+byte]_eax", "89 41"},
 	{"mov_[ecx+dword]_dword", "C7 81"},
 	{"mov_[ecx+dword]_eax", "89 81"},
 	{"mov_[ecx+dword]_edx", "89 91"},
 	{"mov_[ecx+eax*4]_edx", "89 14 81"},
 	{"mov_[ecx+edi*4]_edx", "89 14 B9"},
+	{"mov_[ecx]_eax", "89 01"},
 	{"mov_[edi+byte]_al", "88 47"},
 	{"mov_[edi+byte]_byte", "C6 47"},
 	{"mov_[edi+byte]_dword", "C7 47"},
@@ -348,6 +353,7 @@ for _, macroEntry in ipairs({
 	{"test_eax_dword", "A9"},
 	{"test_eax_eax", "85 C0"},
 	{"test_ebx_dword", "F7 C3"},
+	{"test_ebx_ebx", "85 DB"},
 	{"test_ecx_ecx", "85 C9"},
 	{"test_edi_edi", "85 FF"},
 	{"test_edx_edx", "85 D2"},
@@ -363,6 +369,7 @@ for _, macroEntry in ipairs({
 	{"xor_ebx_ebx", "33 DB"},
 	{"xor_ecx_ecx", "33 C9"},
 	{"xor_edi_edi", "33 FF"},
+	{"xor_edx_edx", "33 D2"},
 	{"xor_esi_esi", "33 F6"},
 	{"dec", {
 		["write"] = function(currentWriteAddress, macroArgs, func)
