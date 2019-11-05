@@ -839,8 +839,12 @@ function EEex_InstallOpcodeChanges()
 			end
 		end)
 	end
-	EEex_AddActionbarListener(op404UpdateButton)
-	EEex_AddResetListener(function() EEex_AddActionbarListener(op404UpdateButton) end)
+
+	EEex_Opcode404InitListeners = function()
+		EEex_AddActionbarListener(op404UpdateButton)
+		EEex_AddResetListener(EEex_Opcode404InitListeners)
+	end
+	EEex_Opcode404InitListeners()
 
 	-------------------------------------------
 	-- New Opcode #405 (OverrideButtonIndex) --
@@ -902,8 +906,12 @@ function EEex_InstallOpcodeChanges()
 			end
 		end)
 	end
-	EEex_AddActionbarListener(op405UpdateButton)
-	EEex_AddResetListener(function() EEex_AddActionbarListener(op405UpdateButton) end)
+
+	EEex_Opcode405InitListeners = function()
+		EEex_AddActionbarListener(op405UpdateButton)
+		EEex_AddResetListener(EEex_Opcode405InitListeners)
+	end
+	EEex_Opcode405InitListeners()
 
 	--------------------------------------
 	-- New Opcode #406 (RenderOverride) --
