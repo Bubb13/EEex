@@ -54,6 +54,69 @@ STR_VAR
 END
 */
 
+
+//Patch function that replaces set or all occurrences of the given regexp pattern in the file with the given string.
+//Use EVAL to perform variable substitution on the string and/or the regexp pattern.
+//Unlike REPLACE_TEXTUALLY the pattern can be multi-line text, even without using regexp.
+//Just like REPLACE_BCS_BLOCK the function ignores pattern whitespace.
+//The function can be also used as a COUNT_REGEXP_INSTANCES alternative with the above mentioned features.
+//Optional PATCH_WARN message is printed if the task could not be performed (pattern not found or different amount of pattern matches than expected).
+
+DEFINE_PATCH_FUNCTION REPLACE_MULTILINE //By K4thos
+	INT_VAR
+		num = "-1"     //amount of times the pattern should be replaced with string (-1 by default which is at least 1 but without max limit)
+		strict = 0     //set to 1 to enable strict checking (auto escapes $^.*+?[]\ special characters)
+		verbose = 1    //set to 0 to skip printing patching message
+		warn = 1       //set to 0 to skip printing warning message if the function can't do what you ask it to do
+		only_count = 0 //set to to 1 to skip pattern replacing and just return num_matches (COUNT_REGEXP_INSTANCES alternative)
+	STR_VAR
+		pattern = ""   //pattern that you want to replace
+		string = ""    //string that the pattern will be replaced with
+	RET
+		num_matches    //amount of times the pattern has been found
+	BEGIN
+	TEXT_SPRINT percent ~%~
+	INNER_PATCH_SAVE textToReplace ~%pattern%~ BEGIN
+		PATCH_IF strict = 1 BEGIN
+			REPLACE_TEXTUALLY ~\\~ ~\\\\~
+			REPLACE_TEXTUALLY ~\[~ ~\[~
+			REPLACE_TEXTUALLY ~\]~ ~\]~
+			REPLACE_EVALUATE ~\([\$\^\.\*\+\?]\)~ BEGIN END ~\%MATCH1%~
+		END
+		REPLACE_TEXTUALLY ~[%WNL%%LNL%%MNL%%TAB% ]+~ ~[%WNL%%LNL%%MNL%%TAB% ]+~
+	END
+	SET num_matches = 0
+	PATCH_IF only_count = 0 BEGIN
+		REPLACE_EVALUATE CASE_INSENSITIVE ~%textToReplace%~ BEGIN
+			SET num_matches = num_matches + 1
+			INNER_PATCH_SAVE string ~%string%~ BEGIN
+				REPLACE_TEXTUALLY ~%percent%MATCH\([0-9]+\)%percent%~ ~%MATCH\1%~
+			END
+		END ~%string%~
+		SET warned = 0
+		PATCH_IF num_matches != num BEGIN
+			PATCH_IF num_matches = 0 BEGIN
+				PATCH_IF warn = 1 BEGIN
+					PATCH_WARN ~WARNING %SOURCE_FILESPEC% - pattern not found:%LNL%%pattern%~
+				END
+				SET warned = 1
+			END ELSE PATCH_IF num >= 0 AND (num_matches > num OR num_matches < num) BEGIN
+				PATCH_IF warn = 1 BEGIN
+					PATCH_WARN ~WARNING %SOURCE_FILESPEC% - pattern replaced %num_matches% time(s) instead of %num%:%LNL%%pattern%~
+				END
+				SET warned = 1
+			END
+		END
+		PATCH_IF verbose = 1 AND warned = 0 BEGIN
+//			PATCH_PRINT ~Patching %SOURCE_FILESPEC% - pattern replaced %num_matches% time(s):%LNL%%pattern% => %string%~
+			PATCH_PRINT ~Patching %SOURCE_FILESPEC% - pattern replaced %num_matches% time(s):%LNL%%pattern%~
+		END
+	END ELSE BEGIN
+		COUNT_REGEXP_INSTANCES ~%textToReplace%~ num_matches
+	END
+END
+
+
 /*
 The patches to UI.MENU are done in an awkward way. Basically, at the point in UI.MENU where I
 want to insert some code, I see if there is a line of code that doesn't exist anywhere else in
@@ -88,7 +151,7 @@ COPY_EXISTING ~ui.menu~ ~override~
 		TEXT_SPRINT donebuttonstring ~area 762 704 230 44~
 		TEXT_SPRINT donebuttonstring2 ~area 440 654 234 46~
 	END
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~helpTextString = characters\[currentID\]\.proficiencies\.details~ ~~~~~helpTextString = characters[currentID].proficiencies.details
+	LPF REPLACE_MULTILINE STR_VAR pattern=~helpTextString = characters\[currentID\]\.proficiencies\.details~ string= EVAL ~~~~~helpTextString = characters[currentID].proficiencies.details
 		local gsubBase = "%aiscriptstring%:"
 		if string.find(helpTextString, "%turnundeadstring%:") ~= nil then
 			gsubBase = "%turnundeadstring%:"
@@ -116,9 +179,9 @@ COPY_EXISTING ~ui.menu~ ~override~
 			if skillVisible then
 				helpTextString = string.gsub(helpTextString, gsubBase, Infinity_FetchString(skill.name) .. ": " .. skillValue .. "\n" .. gsubBase)
 			end
-		end~~~~~
+		end~~~~~ END
 
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~for k, v in ipairs(characters\[currentID\]\.proficiencies\.class_skills) do~ ~local skillInsertPoint = #characters[currentID].proficiencies.class_skills + 1
+	LPF REPLACE_MULTILINE STR_VAR pattern=~for k, v in ipairs(characters\[currentID\]\.proficiencies\.class_skills) do~ string= EVAL ~local skillInsertPoint = #characters[currentID].proficiencies.class_skills + 1
 		for i = #characters[currentID].proficiencies.class_skills, 1, -1 do
 			local skillName = Infinity_FetchString(characters[currentID].proficiencies.class_skills[i].strRef)
 			if skillName == "%turnundeadstring%" or skillName == "%backstabmultiplierstring%" or skillName == "%racialenemystring%" then
@@ -144,9 +207,9 @@ COPY_EXISTING ~ui.menu~ ~override~
 				skillInsertPoint = skillInsertPoint + 1
 			end
 		end
-		for k, v in ipairs(characters[currentID].proficiencies.class_skills) do~
+		for k, v in ipairs(characters[currentID].proficiencies.class_skills) do~ END
 
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~function isChargenProficienciesBackButtonClickable()~ ~~~~~function canUseExtendedSkill(actorID, skill)
+	LPF REPLACE_MULTILINE STR_VAR pattern=~function isChargenProficienciesBackButtonClickable()~ string=~~~~~function canUseExtendedSkill(actorID, skill)
 	local canUseSkill = false
 	local class = EEex_GetActorClass(actorID)
 	local kit = EEex_GetActorKit(actorID)
@@ -207,13 +270,10 @@ function displayExtendedSkills()
 	end
 end
 
-function isChargenProficienciesBackButtonClickable()~~~~~
+function isChargenProficienciesBackButtonClickable()~~~~~ END
 
 	PATCH_IF !(GAME_IS ~iwdee~) BEGIN
-		REPLACE_EVALUATE ~name \'CHARGEN_PROFICIENCIES\'\([^\"]*\)\"~
-		BEGIN
-		END
-		~name 'CHARGEN_PROFICIENCIES'%MATCH1%"
+		LPF REPLACE_MULTILINE STR_VAR pattern=~name \'CHARGEN_PROFICIENCIES\'\([^\"]*\)\"~ string=~name 'CHARGEN_PROFICIENCIES'\1"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
 	for i = 1, #extendedskilllist, 1 do
@@ -224,12 +284,10 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 	end
 
 	displayExtendedSkills()
-~
+~ END
+
 	END ELSE BEGIN
-		REPLACE_EVALUATE ~name \'CHARGEN_SKILLS\'\([^\"]*\)\"~
-		BEGIN
-		END
-		~name 'CHARGEN_SKILLS'%MATCH1%"
+		LPF REPLACE_MULTILINE STR_VAR pattern=~name \'CHARGEN_SKILLS\'\([^\"]*\)\"~ string=~name 'CHARGEN_SKILLS'\1"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
 	for i = 1, #extendedskilllist, 1 do
@@ -240,12 +298,8 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 	end
 
 	displayExtendedSkills()
-~
-
-		REPLACE_EVALUATE ~name \'LEVELUP_PROFICIENCIES\'\([^\"]*\)\"~
-		BEGIN
-		END
-		~name 'LEVELUP_PROFICIENCIES'%MATCH1%"
+~ END
+		LPF REPLACE_MULTILINE STR_VAR pattern=~name \'LEVELUP_PROFICIENCIES\'\([^\"]*\)\"~ string=~name 'LEVELUP_PROFICIENCIES'\1"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
 	for i = 1, #extendedskilllist, 1 do
@@ -256,19 +310,20 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 	end
 
 	displayExtendedSkills()
-~
+~ END
+
 	END
 
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, true)~ ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, true)
-					displayExtendedSkills()~
+	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, true)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, true)
+					displayExtendedSkills()~ END
 
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, false)~ ~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, false)
-					displayExtendedSkills()~
+	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, false)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, false)
+					displayExtendedSkills()~ END
 
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() +then~ ~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() then
-					exIndex = currentChargenThiefSkill - firstExtendedSkillIndex~
+	LPF REPLACE_MULTILINE STR_VAR pattern=~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() then~ string=~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() then
+					exIndex = currentChargenThiefSkill - firstExtendedSkillIndex~ END
 
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, true)~ ~						if currentChargenThiefSkill > firstExtendedSkillIndex then
+	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, true)~ string=~						if currentChargenThiefSkill > firstExtendedSkillIndex then
 								if chargen.thief_skill[currentChargenThiefSkill].value < 255 and chargen.extraSkillPoints > 0 then
 									chargen.thief_skill[currentChargenThiefSkill].value = chargen.thief_skill[currentChargenThiefSkill].value + 1
 									extendedSkills[exIndex].value = extendedSkills[exIndex].value + 1
@@ -276,9 +331,9 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 								end
 							end
 							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, true)
-							displayExtendedSkills()~
+							displayExtendedSkills()~ END
 
-	REPLACE_TEXTUALLY CASE_INSENSITIVE ~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, false)~ ~						if currentChargenThiefSkill > firstExtendedSkillIndex then
+	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, false)~ string=~						if currentChargenThiefSkill > firstExtendedSkillIndex then
 							if chargen.levelingUp and chargen.thief_skill[currentChargenThiefSkill].value > extendedSkills[exIndex].base then
 								chargen.thief_skill[currentChargenThiefSkill].value = chargen.thief_skill[currentChargenThiefSkill].value - 1
 								extendedSkills[exIndex].value = extendedSkills[exIndex].value - 1
@@ -289,12 +344,9 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 						else
 							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, false)
 							displayExtendedSkills()
-						end~
+						end~ END
 
-	REPLACE_EVALUATE ~%donebuttonstring%\([^`]*\)createCharScreen:OnDoneButtonClick()~
-	BEGIN
-	END
-		~~~~~%donebuttonstring%%MATCH1%
+	LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~%donebuttonstring%\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~%donebuttonstring%\1
 
 		for i = 1, #extendedSkills, 1 do
 			local skill = extendedSkills[i]
@@ -311,13 +363,11 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 })
 			end
 		end
-		createCharScreen:OnDoneButtonClick()~~~~~
+		createCharScreen:OnDoneButtonClick()~~~~~ END
+
 
 	PATCH_IF (GAME_IS ~iwdee~) BEGIN
-		REPLACE_EVALUATE ~%donebuttonstring2%\([^`]*\)createCharScreen:OnDoneButtonClick();~
-		BEGIN
-		END
-		~~~~~%donebuttonstring2%%MATCH1%
+		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~%donebuttonstring2%\([^`]*\)createCharScreen:OnDoneButtonClick();~ string= EVAL ~~~~~%donebuttonstring2%\1
 
 		for i = 1, #extendedSkills, 1 do
 			local skill = extendedSkills[i]
@@ -334,7 +384,8 @@ function isChargenProficienciesBackButtonClickable()~~~~~
 })
 			end
 		end
-		createCharScreen:OnDoneButtonClick();~~~~~
+		createCharScreen:OnDoneButtonClick();~~~~~ END
+
 	END
 /*
 	REPLACE_EVALUATE ~createCharScreen:OnHighLevelAbilitiesButtonClick()~

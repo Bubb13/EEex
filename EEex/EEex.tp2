@@ -39,8 +39,6 @@ REQUIRE_PREDICATE (
 	COPY ~EEex\loader~ ~.~ IF_EXISTS
 	COPY ~EEex\copy~ ~override~ IF_EXISTS
 
-	INCLUDE ~EEex/components/ExtendedSkills.tpa~
-
 	COPY_EXISTING ~exampl1.spl~ ~override~
 		SAY NAME1 ~New Stoneskin Example~
 		SAY UNIDENTIFIED_DESC ~This spell shows how you can use the EXSTONES function. Try casting it with:
@@ -48,3 +46,67 @@ REQUIRE_PREDICATE (
 C:Eval('ForceSpellRES(\"EXAMPL1\",Myself)',0)
 
 This spell will absorb the next 3 instances of slashing, piercing, crushing, missile, nonlethal, or magic damage that would hit the character. Each time it absorbs one of these damage types, it deals 1 electricity damage to the attacker. When all 3 skins are used, the spell will then cast Fireball on the character.~
+
+	COPY_EXISTING ~exampl2.spl~ ~override~
+		SAY NAME1 ~Damage Reduction Example~
+		SAY UNIDENTIFIED_DESC ~This spell shows how you can use the EXDAMRED function. Try casting it with:
+
+C:Eval('ForceSpellRES(\"EXAMPL2\",Myself)',0)
+
+This spell will absorb the first 5 damage of any instance of slashing, crushing, or nonlethal damage that would hit the creature. Once it has absorbed a total of 20 points of such damage, the spell ends. In addition, while the spell is active, it will also absorb the first 7 damage of any instance of missile or acid damage, and there's no limit to how much of this damage it can absorb. However, any magic damage that would be dealt to creature will be increased by 5.~
+
+	COPY_EXISTING ~exflameb.itm~ ~override~
+		SAY NAME2 ~Real Sword of Flame~
+		SAY IDENTIFIED_DESC ~This sword is an example of how you can use the EXDAMAGE function. Create it with:
+
+C:CreateItem('EXFLAMEB',0,0,0)
+
+The fire damage of this sword actually increases based on the wielder's Strength, long sword proficiency, and other damage bonuses from things like Gauntlets of Weapon Expertise.
+
+STATISTICS:
+
+THAC0: +1
+Damage: 1d8+1 (fire)
+Speed Factor: 3
+Proficiency Type: Long Sword
+Type: One-handed
+Requires:
+ 6 Strength
+
+Weight: 4~
+
+	COPY_EXISTING ~dmgtypes.2da~ ~override~
+		READ_2DA_ENTRY 0 4 5 ex_fire_damage_strref
+		READ_2DA_ENTRY 1 4 5 ex_piercing_damage_strref
+		READ_2DA_ENTRY 2 4 5 ex_slashing_damage_strref
+		READ_2DA_ENTRY 3 4 5 ex_crushing_damage_strref
+		READ_2DA_ENTRY 4 4 5 ex_missile_damage_strref
+		READ_2DA_ENTRY 5 4 5 ex_electricity_damage_strref
+		READ_2DA_ENTRY 6 4 5 ex_cold_damage_strref
+		READ_2DA_ENTRY 7 4 5 ex_magic_damage_strref
+		READ_2DA_ENTRY 8 4 5 ex_acid_damage_strref
+		READ_2DA_ENTRY 9 4 5 ex_poison_damage_strref
+		READ_2DA_ENTRY 10 4 5 ex_magicfire_damage_strref
+		READ_2DA_ENTRY 11 4 5 ex_magiccold_damage_strref
+		READ_2DA_ENTRY 12 4 5 ex_stunning_damage_strref
+
+	OUTER_SET ex_damage_reduction_feedback_strref = RESOLVE_STR_REF(~<EX_DAMRED>~)
+
+	COPY_EXISTING ~m__eeex.lua~ ~override~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_slashing_damage_strref *= *0~ ~ex_slashing_damage_strref = %ex_slashing_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_piercing_damage_strref *= *0~ ~ex_piercing_damage_strref = %ex_piercing_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_crushing_damage_strref *= *0~ ~ex_crushing_damage_strref = %ex_crushing_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_missile_damage_strref *= *0~ ~ex_missile_damage_strref = %ex_missile_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_stunning_damage_strref *= *0~ ~ex_stunning_damage_strref = %ex_stunning_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_fire_damage_strref *= *0~ ~ex_fire_damage_strref = %ex_fire_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_cold_damage_strref *= *0~ ~ex_cold_damage_strref = %ex_cold_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_electricity_damage_strref *= *0~ ~ex_electricity_damage_strref = %ex_electricity_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_acid_damage_strref *= *0~ ~ex_acid_damage_strref = %ex_acid_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_poison_damage_strref *= *0~ ~ex_poison_damage_strref = %ex_poison_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magic_damage_strref *= *0~ ~ex_magic_damage_strref = %ex_magic_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magicfire_damage_strref *= *0~ ~ex_magicfire_damage_strref = %ex_magicfire_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magiccold_damage_strref *= *0~ ~ex_magiccold_damage_strref = %ex_magiccold_damage_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_damage_reduction_feedback_strref *= *0~ ~ex_damage_reduction_feedback_strref = %ex_damage_reduction_feedback_strref%~
+
+BEGIN ~Make it possible to add new thieving skills to the game (only install if you're going to install a mod that adds new thieving skills)~ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+	INCLUDE ~EEex/components/ExtendedSkills.tpa~

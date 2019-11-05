@@ -3853,6 +3853,125 @@ function EEex_UnmemorizeInnateSpell(actorID, index)
 	::_0::
 end
 
+---------------------------------------------------------
+--  Functions you can use with opcode 402 (Invoke Lua) --
+---------------------------------------------------------
+--[[
+To use the EXDAMAGE function, create an opcode 402 effect in an item or spell, set the resource to EXDAMAGE (all capitals),
+ set the timing to instant, limited and the duration to 0, and choose parameters.
+For an example of this function in use, look at EXFLAMEB.ITM.
+
+The EXDAMAGE function deals damage to the target. The main use of it is to put it on a weapon that should deal non-physical
+ damage, such as the Flame Blade. The function can add bonuses to the damage dealt based on the character's Strength, proficiencies,
+ general weapon damage bonuses, melee damage bonuses, missile damage bonuses, or fist damage bonuses. This can't be done simply
+ by applying a damage effect normally.
+
+parameter1 - The first byte determines the damage, the second byte determines the dice size, the third byte determines the dice number,
+ and the fourth byte determines the proficiency used. For example, if the effect is from a bastard sword and should do 2d4+3 damage,
+ parameter1 should be this:
+ 0x59020403
+ 0x59 is the bastard sword proficiency number, 0x2 is the dice number, 0x4 is the dice size, and 0x3 is the damage bonus.
+ If a proficiency is not specified, it doesn't give a damage bonus based on proficiency.
+
+parameter2 - It's the same as parameter2 on the damage opcode: the first two bytes determine whether to just deal damage or set HP or whatever.
+ The last two bytes determine the damage type. If you simply want to deal fire damage, parameter2 would be 0x80000 (look at DMGTYPE.IDS).
+
+savingthrow - This function uses several extra bits on this parameter:
+Bit 16: If set, the source character's Strength bonus is added to the damage.
+Bit 17: If set, the damage is treated as the base damage of a melee weapon, so it gets damage bonuses from opcodes 73 and 285.
+Bit 18: If set, the damage is treated as the base damage of a missile weapon, so it gets damage bonuses from opcodes 73 and 286.
+Bit 19: If set, the damage is treated as the base damage of a fist weapon, so it gets damage bonuses from opcodes 73 and 289.
+If more than one of bits 17, 18, and 19 are set, opcode 73 damage bonuses are not applied multiple times. Also, if at least one
+ of those three bits are set, the minimum damage of each die will be increased based on the source character's Luck and opcode 250 bonuses.
+ If none of those three bits are set, the maximum damage of each die is decreased based on the target character's Luck bonuses.
+
+special - It's the same as special on the damage opcode, except the "Save for half" bit is not available.
+--]]
+ex_proficiency_damage = {[0] = 0, [1] = 0, [2] = 2, [3] = 3, [4] = 4, [5] = 5}
+ex_strength_damage = {[0] = -20, [1] = -4, [2] = -2, [3] = -1, [4] = -1, [5] = -1, [6] = 0, [7] = 0, [8] = 0, [9] = 0, [10] = 0, [11] = 0, [12] = 0, [13] = 0, [14] = 0, [15] = 0, [16] = 1, [17] = 1, [18] = 2, [19] = 7, [20] = 8, [21] = 9, [22] = 10, [23] = 11, [24] = 12, [25] = 14}
+function EXDAMAGE(effectData, creatureData)
+	local sourceID = EEex_ReadDword(effectData + 0x10C)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local damage = EEex_ReadByte(effectData + 0x18, 0x0)
+	local dicesize = EEex_ReadByte(effectData + 0x19, 0x0)
+	local dicenumber = EEex_ReadByte(effectData + 0x1A, 0x0)
+	local proficiency = EEex_ReadByte(effectData + 0x1B, 0x0)
+	local parameter2 = EEex_ReadDword(effectData + 0x1C)
+	local savingthrow = bit32.band(EEex_ReadDword(effectData + 0x3C), 0xFFFFFFE0)
+	local special = bit32.band(EEex_ReadDword(effectData + 0x44), 0xFFFFFEFF)
+	local parent_resource = EEex_ReadLString(effectData + 0x90, 8)
+	local casterlvl = EEex_ReadDword(effectData + 0xC4)
+	if proficiency > 0 and ex_proficiency_damage[EEex_GetActorStat(sourceID, proficiency)] ~= nil then
+		damage = damage + ex_proficiency_damage[EEex_GetActorStat(sourceID, proficiency)]
+	end
+	if bit32.band(savingthrow, 0x10000) > 0 then
+		local strength = EEex_GetActorStat(sourceID, 36)
+		if strength < 0 then
+			strength = 0
+		elseif strength > 25 then
+			strength = 25
+		end
+		damage = damage + ex_strength_damage[strength]
+		if strength == 18 then
+			local exStrength = EEex_GetActorStat(sourceID, 37)
+			if exStrength >= 1 then
+				damage = damage + 1
+			end
+			if exStrength >= 76 then
+				damage = damage + 1
+			end
+			if exStrength >= 91 then
+				damage = damage + 1
+			end
+			if exStrength >= 100 then
+				damage = damage + 1
+			end
+		end
+	end
+	if bit32.band(savingthrow, 0x20000) > 0 then
+		damage = damage + EEex_GetActorStat(sourceID, 167)
+	end
+	if bit32.band(savingthrow, 0x40000) > 0 then
+		damage = damage + EEex_GetActorStat(sourceID, 168)
+	end
+	if bit32.band(savingthrow, 0x80000) > 0 then
+		damage = damage + EEex_GetActorStat(sourceID, 171)
+	end
+	local luck = 0
+	if bit32.band(savingthrow, 0x20000) > 0 or bit32.band(savingthrow, 0x40000) > 0 or bit32.band(savingthrow, 0x80000) > 0 then
+		damage = damage + EEex_GetActorStat(sourceID, 50)
+		luck = EEex_GetActorStat(sourceID, 32) + EEex_GetActorStat(sourceID, 145)
+		parent_resource = ""
+	else
+		if EEex_GetActorStat(targetID, 32) ~= 0 then
+			luck = 0 - EEex_GetActorStat(targetID, 32)
+		end
+	end
+	if dicesize > 0 then
+		for i = 1, dicenumber, 1 do
+			local currentRoll = math.random(dicesize)
+			if luck > 0 and currentRoll <= luck then
+				currentRoll = luck + 1
+			elseif luck < 0 and currentRoll > (dicesize + luck) then
+				currentRoll = dicesize + luck
+			end
+			damage = damage + currentRoll
+		end
+	end
+	EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 12,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = damage,
+["parameter2"] = parameter2,
+["savingthrow"] = savingthrow,
+["special"] = special,
+["parent_resource"] = parent_resource,
+["source_target"] = targetID,
+["source_id"] = sourceID
+})
+end
+
 -------------------------------------------------------------
 --  Functions you can use with opcode 403 (Screen Effects) --
 -------------------------------------------------------------
@@ -3863,9 +3982,6 @@ For an example of this function in use, look at EXAMPL1.SPL.
 
 It serves like the Stoneskin opcode, except more versatile.
 
-By default, when the last skin is removed, it will automatically remove all effects of the spell or ability that had
- included the opcode 403 effect. This way, you can include other effects that will last as long as there are skins remaining.
-
 parameter1 - Determines how many skins there are (how many instances of damage will be blocked). If parameter1 is
  set to 32767, then the effect will block an infinite number of damage instances.
 
@@ -3875,7 +3991,8 @@ parameter2 - Determines which damage types are blocked. The number for each dama
  set parameter2 to 0x4990 (0x100 + 0x10 + 0x4000 + 0x80 + 0x800)
 
 special - Bit flags for the effect.
-Bit 0: If set, when the last skin is removed, it will not automatically remove all effects of the source spell.
+Bit 0: If set, when the last skin is removed, it will remove all effects of the source spell. This way, you can
+ include other effects that will last as long as there are skins remaining.
 Bit 1: If set, when the last skin is removed, it will cast a spell on the creature. The spell resref is specified
  by resource2 (in an EFF file). If you aren't using this from an EFF file, then the spell resref is set to the
  resref of the source spell, with an E added at the end.
@@ -3925,12 +4042,22 @@ function EXSTONES(originatingEffectData, effectData, creatureData)
 		EEex_WriteDword(originatingEffectData + 0x18, skins_left)
 		if skins_left <= 0 then
 			EEex_WriteDword(originatingEffectData + 0x110, 0x1)
-			if bit32.band(flags, 0x1) == 0 then
+			if bit32.band(flags, 0x1) == 0x1 then
 				EEex_ApplyEffectToActor(targetID, {
 ["opcode"] = 321,
 ["target"] = 2,
 ["timing"] = 9,
 ["resource"] = parent_resource,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			else
+				EEex_WriteLString(originatingEffectData + 0x90, "EXDELETE", 8)
+				EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 321,
+["target"] = 2,
+["timing"] = 9,
+["resource"] = "EXDELETE",
 ["source_target"] = targetID,
 ["source_id"] = targetID
 })
@@ -3953,6 +4080,230 @@ function EXSTONES(originatingEffectData, effectData, creatureData)
 			end
 		end
 		return true
+	end
+	return false
+end
+
+ex_slashing_damage_strref = 0
+ex_piercing_damage_strref = 0
+ex_crushing_damage_strref = 0
+ex_missile_damage_strref = 0
+ex_stunning_damage_strref = 0
+ex_fire_damage_strref = 0
+ex_cold_damage_strref = 0
+ex_electricity_damage_strref = 0
+ex_acid_damage_strref = 0
+ex_poison_damage_strref = 0
+ex_magic_damage_strref = 0
+ex_magicfire_damage_strref = 0
+ex_magiccold_damage_strref = 0
+ex_damage_reduction_feedback_strref = 0
+
+ex_damage_types = {
+[0] = {22, 87, ex_crushing_damage_strref},
+[1] = {17, 27, ex_acid_damage_strref},
+[2] = {15, 28, ex_cold_damage_strref},
+[4] = {16, 29, ex_electricity_damage_strref},
+[8] = {14, 30, ex_fire_damage_strref},
+[16] = {23, 88, ex_piercing_damage_strref},
+[32] = {74, 173, ex_poison_damage_strref},
+[64] = {73, 31, ex_magic_damage_strref},
+[128] = {24, 89, ex_missile_damage_strref},
+[256] = {21, 86, ex_slashing_damage_strref},
+[512] = {19, 84, ex_magicfire_damage_strref},
+[1024] = {20, 85, ex_magiccold_damage_strref},
+[2048] = {22, 87, ex_stunning_damage_strref}
+}
+
+--[[
+To use the EXDAMRED function, create an opcode 403 effect in a spell, set the resource to EXDAMRED (all capitals), and choose parameters.
+For an example of this function in use, look at EXAMPL2.SPL.
+
+It gives the creature 3e-like damage resistance, preventing the first parameter1 damage of the damage types specified by parameter2. It
+ can prevent a total of parameter3 damage before the effect ends. If parameter3 is 0, then the total damage preventable is unlimited.
+
+By default, whenever damage is prevented, it will display a string saying how much damage was prevented and how many points are left.
+
+parameter1 - Determines how many points are subtracted from incoming damage. If parameter1 is negative, it increases
+ the damage dealt.
+
+parameter2 - Determines which damage types are blocked. The number for each damage type is the same as in DAMAGES.IDS,
+ with one exception: crushing damage is 0x4000. If you want to block multiple damage types, add the numbers for each
+ damage type. For example, if you want the skins to block slashing, piercing, crushing, missile, and nonlethal damage,
+ set parameter2 to 0x4990 (0x100 + 0x10 + 0x4000 + 0x80 + 0x800)
+
+parameter3 - Determines the total number of points of damage that can be prevented before the effect ends. If this value
+ is 0, then there's no limit to the total damage that can be prevented. If you aren't using an EFF file, then you can
+ enter this value in the third and fourth bytes of parameter2. For example, if you want the effect to prevent the first 
+ 4 points of slashing damage, to a total of 8 points, you'd set parameter1 to 4 and either set parameter3 to 8 or set
+ parameter2 to 0x80100.
+
+special - Bit flags for the effect.
+Bit 0: If set, when the effect ends, it will remove all effects of the source spell. This way, you can
+ include other effects that will last as long as there is damage resistance remaining.
+Bit 1: If set, when the effect ends, it will cast a spell on the creature. The spell resref is specified
+ by resource2 (in an EFF file). If you aren't using this from an EFF file, then the spell resref is set to the
+ resref of the source spell, with an E added at the end.
+Bit 2: If set, whenever damage is prevented, it will cast a spell on the source of the damage. The spell resref is specified
+ by resource3 (in an EFF file). If you aren't using this from an EFF file, then the spell resref is set to the
+ resref of the source spell, with an F added at the end.
+Bit 3: If set, it will not display the feedback string whenever damage is prevented.
+
+If you want to make a specific damage effect bypass the EXDAMRED effect without being absorbed, set bit 20 of the
+ special field in the damage effect. This can't be done with base weapon damage, unfortunately.
+--]]
+function EXDAMRED(originatingEffectData, effectData, creatureData)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local opcode = EEex_ReadDword(effectData + 0xC)
+	if opcode ~= 12 then return false end
+	local special = EEex_ReadDword(effectData + 0x44)
+	if bit32.band(special, 0x100000) > 0 then return false end
+	local reduction = EEex_ReadSignedWord(originatingEffectData + 0x18, 0x0)
+	local reduction_remaining_location = "parameter3"
+	local reduction_remaining = EEex_ReadWord(originatingEffectData + 0x5C, 0x0)
+	if reduction_remaining == 0 then
+		local reduction_remaining_location = "parameter2"
+		reduction_remaining = EEex_ReadWord(originatingEffectData + 0x1E, 0x0)
+	end
+	local types_blocked = EEex_ReadDword(originatingEffectData + 0x1C)
+	local flags = EEex_ReadDword(originatingEffectData + 0x44)
+	local parent_resource = EEex_ReadLString(originatingEffectData + 0x90, 8)
+	local damage = EEex_ReadDword(effectData + 0x18)
+	local damage_type = EEex_ReadWord(effectData + 0x1E, 0x0)
+	local dice_number = EEex_ReadDword(effectData + 0x34)
+	local dice_size = EEex_ReadDword(effectData + 0x38)
+	local isBaseWeaponDamage = false
+	if EEex_ReadLString(effectData + 0x90, 8) == "" then
+		isBaseWeaponDamage = true
+	end
+	local casterlvl = EEex_ReadDword(originatingEffectData + 0xC4)
+	if (damage_type == 0 and bit32.band(types_blocked, 0x4000) > 0) or (damage_type ~= 0 and bit32.band(types_blocked, damage_type) > 0) then
+		if reduction_remaining > 0 then
+			if reduction > 0 and reduction > reduction_remaining then
+				reduction = reduction_remaining
+			elseif reduction < 0 and math.abs(reduction) > reduction_remaining then
+				reduction = 0 - reduction_remaining
+			end
+		end
+		local damagerID = EEex_ReadDword(effectData + 0x10C)
+		local luck = 0
+		if isBaseWeaponDamage then
+			luck = EEex_GetActorStat(damagerID, 32) + EEex_GetActorStat(damagerID, 145)
+		elseif EEex_GetActorStat(targetID, 32) ~= 0 then
+			luck = 0 - EEex_GetActorStat(targetID, 32)
+		end
+		if dice_size > 0 then
+			for i = 1, dice_number, 1 do
+				local currentRoll = math.random(dice_size)
+				if luck > 0 and currentRoll <= luck then
+					currentRoll = luck + 1
+				elseif luck < 0 and currentRoll > (dice_size + luck) then
+					currentRoll = dice_size + luck
+				end
+				damage = damage + currentRoll
+			end
+		end
+		if reduction > damage then
+			reduction = damage
+		end
+		damage = damage - reduction
+		local noMoreReduction = false
+		if reduction_remaining > 0 then
+			reduction_remaining = reduction_remaining - math.abs(reduction)
+			if reduction_remaining <= 0 then
+				noMoreReduction = true
+			end
+		end
+		EEex_WriteDword(effectData + 0x18, damage)
+		EEex_WriteDword(effectData + 0x34, 0)
+		EEex_WriteDword(effectData + 0x38, 0)
+		if bit32.band(flags, 0x8) == 0 and reduction > 0 then
+			local stringDisplay = ex_damage_reduction_feedback_string_1 .. reduction .. " " .. Infinity_FetchString(ex_damage_types[damage_type][3]) .. ex_damage_reduction_feedback_string_2
+			if reduction_remaining > 0 or noMoreReduction then
+				if reduction_remaining == 1 then
+					stringDisplay = stringDisplay .. "; " .. reduction_remaining .. ex_damage_reduction_feedback_string_4
+				else
+					stringDisplay = stringDisplay .. "; " .. reduction_remaining .. ex_damage_reduction_feedback_string_3
+				end
+			end
+			Infinity_SetToken("EX_DAMRED", stringDisplay)
+			EEex_ApplyEffectToActor(targetID, {
+	["opcode"] = 139,
+	["target"] = 2,
+	["parameter1"] = ex_damage_reduction_feedback_strref,
+	["timing"] = 1,
+	["source_target"] = targetID,
+	["source_id"] = targetID
+	})
+		end
+		if bit32.band(flags, 0x4) > 0 then
+			local hit_spell = EEex_ReadLString(originatingEffectData + 0x74, 8)
+			if hit_spell == "" then
+				hit_spell = parent_resource .. "F"
+			end
+			
+			if EEex_IsSprite(damagerID) then
+				EEex_ApplyEffectToActor(damagerID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 9,
+["parameter1"] = casterlvl,
+["parameter2"] = 2,
+["resource"] = hit_spell,
+["source_target"] = damagerID,
+["source_id"] = targetID
+})
+			end
+		end
+		if reduction_remaining_location == "parameter3" then
+			EEex_WriteWord(originatingEffectData + 0x5C, reduction_remaining)
+		elseif reduction_remaining_location == "parameter2" then
+			EEex_WriteWord(originatingEffectData + 0x1A, reduction_remaining)
+		end
+		if noMoreReduction then
+			EEex_WriteDword(originatingEffectData + 0x110, 0x1)
+			if bit32.band(flags, 0x1) == 0x1 then
+				EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 321,
+["target"] = 2,
+["timing"] = 9,
+["resource"] = parent_resource,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			else
+				EEex_WriteLString(originatingEffectData + 0x90, "EXDELETE", 8)
+				EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 321,
+["target"] = 2,
+["timing"] = 9,
+["resource"] = "EXDELETE",
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			end
+			if bit32.band(flags, 0x2) > 0 then
+				local end_spell = EEex_ReadLString(originatingEffectData + 0x6C, 8)
+				if end_spell == "" then
+					end_spell = parent_resource .. "E"
+				end
+				EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 9,
+["parameter1"] = casterlvl,
+["parameter2"] = 2,
+["resource"] = end_spell,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			end
+		end
+		if damage <= 0 then
+			return true
+		else
+			return false
+		end
 	end
 	return false
 end
