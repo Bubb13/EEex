@@ -1,33 +1,24 @@
-<b class="Bold">Provided loader created by @mrfearless: https://github.com/mrfearless/EEexLoader</b>
-
 <h1>Overview:</h1>
-EEex is an executable extender for Beamdog's Enhanced Edition of the Infinity Engine. Its goal is to externalize certain parts of the engine to grant modders a greater degree of control over otherwise hardcoded mechanics. EEex does <b class="Bold">not </b>make any gameplay changes itself - it merely enables other mods to do so.
+EEex is an executable extender for Beamdog's Enhanced Edition of the Infinity Engine. Its goal is to externalize certain parts of the engine to grant modders a greater degree of control over otherwise hardcoded mechanics. EEex does <b class="Bold">not</b> make any gameplay changes itself - it merely enables other mods to do so.
 <br>
 
-<h1>Just give me the link!</h1>
-<b class="Bold">Alpha versions of this project can be found <a href="https://github.com/Bubb13/EEex/releases">here</a>.</b>
+<h1>Download:</h1>
+Alpha versions of this project are now available on <a href="https://github.com/Bubb13/EEex/releases">GitHub</a>.
 
-<br><b class="Bold"><i class="Italic">EEex will support MacOS and Linux on launch, however, the current alpha version only supports Windows. In addition, BG2:EE v2.5.16.6 is the only supported game at the time of writing.</i></b>
+<b class="Bold"><i class="Italic">The current alpha version only supports Windows platforms, however, MacOS and Linux support is planned for release. Supported game versions include BG:EE v2.5.17.0, BG2:EE v2.5.16.6, and IWD:EE v2.5.17.0.</i></b>
 <br>
 
-<h1>What does it do?</h1>
-EEex, when installed, directly modifies the game's executable in order to insert a loader. This loader is used to alter the game's code on startup; the modifications that are made depend on the version of EEex installed, and any installed mods that make use of EEex's capabilities.
+<h1>Function:</h1>
+EEex uses a <a href="https://github.com/mrfearless/EEexLoader">loader</a> created by @fearless to modify the game's executable after it has been loaded into memory. The exact modifications made depend on the version of EEex installed, and any installed mods that make use of EEex's capabilities.
 <br>
 
-<h1>I'm a user, what do I need to do to install?</h1>
-EEex is installed just as any other WeiDU mod. Simply extract the archive's contents into your game's base folder, and run the setup - it will take care of the rest. <b class="Bold">Please note that since EEex alters the game executable itself, you should ensure that the game is closed before running the installer!</b>
+<h1>Installation:</h1>
+EEex is installed just as any other WeiDU mod. Simply extract the archive's contents into your game's base folder, and run the setup - it will take care of the rest. <b class="Bold">Please note that the game has to be started using EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash.</b>
 
-<br><b class="Bold"><i class="Italic">EEex is currently in alpha, and as such it is highly unstable. All immediate crashes are believed to be fixed, though you still risk a crash at any time. Use with care.</i></b>
+<b class="Bold">Stability:</b> EEex is currently in alpha, and as such the odd crash may occur. If you encounter a crash, please report the issue - stating any installed mods, steps that lead to the crash, and upload the generated crash .dmp.
 <br>
 
-<h1>I'm a modder, how do I use EEex?</h1>
-EEex makes changes to many different parts of the engine. Accessing and making use of new opcodes, actions, triggers, and objects is as simple as installing EEex.
+<h1>Documentation:</h1>
+EEex makes extensive use of the EE Lua environment, with most of its functionality implemented as Lua code. Features include new Lua functions, opcodes, scripting actions, triggers, and objects. Please see the <a href="https://eeex-docs.readthedocs.io/en/latest/">EEex Documentation</a> for an overview of EEex's features.
 
-<br>The real power of EEex, however, comes from its ability to change hardcoded engine behavior. The hooks that enable these alterations are completely defined and controlled by the Lua environment, and as such, modders wishing to use these systems will have to either:
-
-<br><b class="Bold">a)</b> Insert a M_*.lua file into the override folder.<br>
-<i class="Italic">or</i><br>
-<b class="Bold">b)</b> Edit UI.MENU directly. 
-
-<br><i class="Italic"><b class="Bold">Detailed documentation pending.</b></i>
-<br>
+<b class="Bold">The above documentation is a work in progress. If you wish to contribute, visit the <a href="https://eeex-docs.readthedocs.io/en/latest/Community/contributing.html">contributing</a> page for details.</b>
