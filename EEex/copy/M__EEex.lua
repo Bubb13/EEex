@@ -2799,6 +2799,163 @@ function EEex_GetKnownInnateSpells(actorID)
 	return toReturn
 end
 
+-------------------------
+-- Player Spell System --
+-------------------------
+
+function EEex_ReadySpell(m_CGameSprite, m_CButtonData, instantUse, offInternal)
+
+	local stackArgs = {}
+	table.insert(stackArgs, instantUse) -- 0 = Cast, 1 = Choose (for quickslot type things)
+	for i = 0x30, 0x0, -0x4 do
+		table.insert(stackArgs, EEex_ReadDword(m_CButtonData + i))
+	end
+
+	if not offInternal then
+		EEex_Call(EEex_Label("CGameSprite::ReadySpell"), stackArgs, m_CGameSprite, 0x0)
+	else
+		EEex_Call(EEex_Label("CGameSprite::ReadyOffInternalList"), stackArgs, m_CGameSprite, 0x0)
+	end
+end
+
+function EEex_UseCGameButtonList(m_CGameSprite, m_CGameButtonList, resref, action)
+
+	local found = false
+	EEex_IterateCPtrList(m_CGameButtonList, function(m_CButtonData)
+
+		-- m_CButtonData.m_abilityId.m_res
+		local m_res = EEex_ReadLString(m_CButtonData + 0x22, 0x8)
+
+		if m_res == resref then
+
+			action(m_CButtonData)
+
+			found = true
+			return true -- breaks out of EEex_IterateCPtrList()
+		end
+	end)
+
+	EEex_FreeCPtrList(m_CGameButtonList)
+	return found
+end
+
+function EEex_GetQuickButtons(m_CGameSprite, buttonType, existenceCheck)
+	return EEex_Call(EEex_Label("CGameSprite::GetQuickButtons"), {existenceCheck, buttonType}, m_CGameSprite, 0x0)
+end
+
+function EEex_GetSpellAbilityData(m_CGameSprite, resref)
+
+	local CResSpell = EEex_DemandCRes(resref, "SPL")
+	if CResSpell == 0x0 then return 0x0 end
+	local spellData = EEex_ReadDword(CResSpell + 0x28)
+
+	local CSpell = EEex_Malloc(0xC)
+	EEex_WriteDword(CSpell, CResSpell)
+	EEex_WriteLString(CSpell + 0x4, resref, 0x8)
+
+	local abilitiesCount = EEex_ReadWord(spellData + 0x68, 0)
+	if abilitiesCount == 0 then return 0x0 end
+	local currentAbilityAddress = spellData + EEex_ReadDword(spellData + 0x64)
+
+	local casterLevel = EEex_Call(EEex_Label("CGameSprite::GetCasterLevel"), {1, CSpell}, m_CGameSprite, 0x0)
+	EEex_Free(CSpell)
+
+	local foundAbilityOffset = nil
+	for i = 1, abilitiesCount, 1 do
+		local minLevel = EEex_ReadWord(currentAbilityAddress + 0x10, 0)
+		if casterLevel >= minLevel then
+			foundAbilityOffset = currentAbilityAddress
+		else
+			break
+		end
+		currentAbilityAddress = currentAbilityAddress + 0x28
+	end
+	return foundAbilityOffset or 0x0
+end
+
+-- Player must be in a quick spell select and spell must be memorized + currently accessible
+function EEex_PlayerSetQuickSpellResref(resref)
+
+	if worldScreen ~= e:GetActiveEngine() then return end
+
+	local actorID = EEex_GetActorIDSelected()
+	if not EEex_IsSprite(actorID) then return end
+	local m_CGameSprite = EEex_GetActorShare(actorID)
+
+	local m_CGameButtonList = EEex_GetQuickButtons(m_CGameSprite, 2, 0)
+	EEex_UseCGameButtonList(m_CGameSprite, m_CGameButtonList, resref, function(m_CButtonData)
+		local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
+		local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
+		local m_cButtonArray = m_pObjectGame + 0x2654
+		local m_quickButtonToConfigure = EEex_ReadDword(m_cButtonArray + 0x1600)
+		EEex_Call(EEex_Label("CInfButtonArray::SetQuickSlot"), {2, m_quickButtonToConfigure, m_CButtonData}, nil, 0xC)
+		EEex_ReadySpell(m_CGameSprite, m_CButtonData, 1, false)
+		EEex_SetActionbarState(EEex_GetLastActionbarState())
+	end)
+end
+
+-- Spell must be memorized and currently accessible
+function EEex_PlayerCastResref(resref)
+
+	if worldScreen ~= e:GetActiveEngine() then return end
+
+	local actorID = EEex_GetActorIDSelected()
+	if not EEex_IsSprite(actorID) then return end
+	local m_CGameSprite = EEex_GetActorShare(actorID)
+
+	local spellAbilityData = EEex_GetSpellAbilityData(m_CGameSprite, resref)
+	if spellAbilityData == 0x0 then return end
+	local spellLocation = EEex_ReadWord(spellAbilityData + 0x2, 0)
+
+	local spellButtonDataList = EEex_GetQuickButtons(m_CGameSprite, spellLocation, 0)
+	EEex_UseCGameButtonList(m_CGameSprite, spellButtonDataList, resref, function(m_CButtonData)
+		EEex_ReadySpell(m_CGameSprite, m_CButtonData, 0, false)
+		EEex_SetActionbarState(EEex_GetLastActionbarState())
+	end)
+end
+
+-- Opcode #214 must be active and the resref must be part of the Opcode #214 spell list
+function EEex_PlayerCastResrefInternal(resref)
+
+	if worldScreen ~= e:GetActiveEngine() then return end
+
+	local actorID = EEex_GetActorIDSelected()
+	if not EEex_IsSprite(actorID) then return end
+	local m_CGameSprite = EEex_GetActorShare(actorID)
+
+	local spellButtonDataList = EEex_Call(EEex_Label("CGameSprite::GetInternalButtonList"), {}, m_CGameSprite, 0x0)
+	EEex_UseCGameButtonList(m_CGameSprite, spellButtonDataList, resref, function(m_CButtonData)
+		EEex_ReadySpell(m_CGameSprite, m_CButtonData, 0, true)
+		EEex_SetActionbarState(EEex_GetLastActionbarState())
+	end)
+end
+
+-- No requirements
+function EEex_PlayerCastResrefNoDec(resref)
+
+	if worldScreen ~= e:GetActiveEngine() then return end
+
+	local actorID = EEex_GetActorIDSelected()
+	if not EEex_IsSprite(actorID) then return end
+	local share = EEex_GetActorShare(actorID)
+
+	local spellAbilityData = EEex_GetSpellAbilityData(share, resref)
+	if spellAbilityData == 0x0 then return end
+
+	local CButtonData = EEex_Malloc(0x34)
+	EEex_Call(EEex_Label("CButtonData::CButtonData"), {}, CButtonData, 0x0)
+	local targetType = EEex_ReadByte(spellAbilityData + 0xC, 0)
+	-- m_itemType = 6 is an EEex addition that bypasses all casting prerequisites
+	EEex_WriteWord(CButtonData + 0x1C, targetType ~= 0x7 and 0x6 or 0x5) -- m_itemType
+	EEex_WriteLString(CButtonData + 0x22, resref, 0x8) -- m_res
+	EEex_WriteByte(CButtonData + 0x2A, targetType) -- m_targetType
+	EEex_WriteByte(CButtonData + 0x2B, EEex_ReadByte(spellAbilityData + 0xD, 0)) -- m_targetCount
+
+	EEex_ReadySpell(share, CButtonData, 0, true)
+	EEex_Free(CButtonData)
+	EEex_SetActionbarState(EEex_GetLastActionbarState())
+end
+
 ----------------
 -- Game State --
 ----------------

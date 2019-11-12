@@ -263,6 +263,15 @@ Type=1
 
 
 ;---------------------------
+; CButtonData
+;---------------------------
+
+[CButtonData::CButtonData]
+PatBytes=83C8FF8D4B226689431C6689431E668943208D45F4
+PatAdj=-42
+
+
+;---------------------------
 ; CChitin
 ;---------------------------
 
@@ -552,12 +561,20 @@ PatAdj=232
 PatBytes=8D45E46A0050686900F000
 PatAdj=232
 
+[CGameSprite::GetAbilityProjectileType()_Opcode214FixHook]
+PatBytes=894DC08975F866833E01
+PatAdj=10
+
 [CGameSprite::GetActiveProficiency]
 PatBytes=558BEC8B55088D42A783F82D772F83B94837000000
 PatAdj=0
 
 [CGameSprite::GetActiveStats]
 PatBytes=83B948370000008D81300B000075068D8154140000C3
+PatAdj=0
+
+[CGameSprite::GetCasterLevel]
+PatBytes=558BEC83EC0C56578B7D088BF185FF
 PatAdj=0
 
 [CGameSprite::GetDirection]
@@ -599,6 +616,10 @@ PatAdj=-68
 [CGameSprite::ReadyOffInternalList]
 PatBytes=8D4508508D8F74350000
 PatAdj=-23
+
+[CGameSprite::ReadyOffInternalList()_ItemTypeJump]
+PatBytes=0FBF879035000083E8030F84
+PatAdj=10
 
 [CGameSprite::ReadySpell]
 PatBytes=898530FFFFFF8B4614F6400C04
@@ -667,6 +688,10 @@ PatAdj=-11
 [CGameSprite::UnmemorizeSpellPriest]
 PatBytes=8BBC81600800008D504F
 PatAdj=-11
+
+[CGameSprite::UpdateAOE()_Opcode214FixHook]
+PatBytes=8B46068D4DF48945E88B460A8945EC
+PatAdj=-5
 
 [CGameSprite::`vftable']
 PatBytes=558BEC5153568BF1578BBE48330000C706
@@ -782,6 +807,22 @@ PatAdj=0
 [CInfGame::UnselectAll]
 PatBytes=558BEC51578BF98D8F483E0000
 PatAdj=0
+
+[CInfGame::UseMagicOnGround()_ItemTypeJump]
+PatBytes=0FBF87943500008B8E44250000
+PatAdj=-13
+
+[CInfGame::UseMagicOnGround()_Opcode214FixHook]
+PatBytes=8D8504FEFFFF5068C0000000
+PatAdj=48
+
+[CInfGame::UseMagicOnObject()_ItemTypeJump]
+PatBytes=0FBF87943500008D8DBCFEFFFF
+PatAdj=-13
+
+[CInfGame::UseMagicOnObject()_Opcode214FixHook]
+PatBytes=8D85F0FDFFFF508D45E85068BF0000008D8D58FEFFFF
+PatAdj=58
 
 
 ;---------------------------

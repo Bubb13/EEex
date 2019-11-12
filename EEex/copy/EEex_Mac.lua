@@ -22,6 +22,7 @@ do
 end
 
 for _, macroEntry in ipairs({
+	{"(word)", "66"},
 	{"add_eax_byte", "83 C0"},
 	{"add_eax_dword", "05"},
 	{"add_eax_edx", "03 C2"},
