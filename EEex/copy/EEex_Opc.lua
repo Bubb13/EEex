@@ -666,7 +666,7 @@ function EEex_InstallOpcodeChanges()
 
 	local checkAddScreenHook = EEex_WriteAssemblyAuto({[[
 
-		!push_registers
+		!push_all_registers
 
 		!push_dword ]], {checkAddScreenHookNameAddress, 4}, [[
 		!push_[dword] *_g_lua
@@ -710,7 +710,7 @@ function EEex_InstallOpcodeChanges()
 		!pop_eax
 
 		!test_eax_eax
-		!pop_registers
+		!pop_all_registers
 
 		!jz_dword >resume_normally
 
