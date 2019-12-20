@@ -2843,6 +2843,29 @@ function EEex_GetQuickButtons(m_CGameSprite, buttonType, existenceCheck)
 	return EEex_Call(EEex_Label("CGameSprite::GetQuickButtons"), {existenceCheck, buttonType}, m_CGameSprite, 0x0)
 end
 
+function EEex_GetSpellAbilityDataLevel(resref, casterLevel)
+
+	local CResSpell = EEex_DemandCRes(resref, "SPL")
+	if CResSpell == 0x0 then return 0x0 end
+	local spellData = EEex_ReadDword(CResSpell + 0x28)
+
+	local abilitiesCount = EEex_ReadWord(spellData + 0x68, 0)
+	if abilitiesCount == 0 then return 0x0 end
+	local currentAbilityAddress = spellData + EEex_ReadDword(spellData + 0x64)
+
+	local foundAbilityOffset = nil
+	for i = 1, abilitiesCount, 1 do
+		local minLevel = EEex_ReadWord(currentAbilityAddress + 0x10, 0)
+		if casterLevel >= minLevel then
+			foundAbilityOffset = currentAbilityAddress
+		else
+			break
+		end
+		currentAbilityAddress = currentAbilityAddress + 0x28
+	end
+	return foundAbilityOffset or 0x0
+end
+
 function EEex_GetSpellAbilityData(m_CGameSprite, resref)
 
 	local CResSpell = EEex_DemandCRes(resref, "SPL")
