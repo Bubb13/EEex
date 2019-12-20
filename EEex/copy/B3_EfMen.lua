@@ -1,9 +1,10 @@
 
------------------
--- Keybindings --
------------------
+-------------
+-- Options --
+-------------
 
 B3EffectMenu_Key = EEex_GetKeyFromName("Left Shift")
+B3EffectMenu_RowCount = 4
 
 -----------------------
 -- Hooks / Listeners --
@@ -17,6 +18,10 @@ end
 function B3EffectMenu_LoadMenu()
 
 	EEex_LoadMenuFile("B3_EfMen")
+
+	local rowTotal = 35 * B3EffectMenu_RowCount
+	Infinity_SetArea("B3EffectMenu_Menu_Background", nil, nil, nil, rowTotal + 20)
+	Infinity_SetArea("B3EffectMenu_Menu_List", nil, nil, nil, rowTotal)
 
 	local actionbarOnOpen = EEex_GetMenuVariantFunction("WORLD_ACTIONBAR", "onopen")
 	EEex_SetMenuVariantFunction("WORLD_ACTIONBAR", "onopen", function()
@@ -90,7 +95,16 @@ function B3EffectMenu_LaunchInfo()
 		if spellData == 0x0 then return end -- Continue EEex_IterateCPtrList
 
 		local casterLevel = EEex_ReadDword(CGameEffect + 0xC4)
+		if casterLevel <= 0 then casterLevel = 1 end
+
 		local abilityData = EEex_GetSpellAbilityDataLevel(sourceResref, casterLevel)
+
+		-- The caster shouldn't have been able to cast this spell, just use the first ability
+		if abilityData == 0x0 then
+			abilityData = EEex_GetSpellAbilityDataIndex(sourceResref, 0)
+			-- The spell didn't even have an ability...
+			if abilityData == 0x0 then return end -- Continue EEex_IterateCPtrList
+		end
 
 		local spellName = Infinity_FetchString(EEex_ReadDword(spellData + 0x8))
 		if spellName == "" then spellName = "(No Name)" end
