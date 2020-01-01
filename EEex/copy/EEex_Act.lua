@@ -428,6 +428,46 @@ function EEex_InstallNewActions()
 
 	}
 
+	---------------------------------------
+	-- EEex_SetTarget(S:Name*,O:Target*) --
+	---------------------------------------
+
+	EEex_SetTargetInternal = function(sprite)
+
+		local targetShare = EEex_Call(EEex_Label("CGameAIBase::GetTargetShare"), {}, sprite, 0x0)
+		local targetName = EEex_ReadString(EEex_ReadDword(sprite + 0x344))
+
+		local targetMap = EEex_AccessVolatileField(EEex_GetActorIDShare(sprite), "EEex_Target")
+		EEex_SetVariable(targetMap, targetName, targetShare ~= 0x0 and EEex_GetActorIDShare(targetShare) or -1)
+
+	end
+
+	local EEex_SetTargetAction = {[[
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_SetTargetInternal"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_esi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+	]]}
+
 	-----------------------------
 	-- Action Definitions Hook --
 	-----------------------------
@@ -441,8 +481,14 @@ function EEex_InstallNewActions()
 
 		@473
 		!cmp_eax_dword #1D9
-		!jne_dword >not_defined
+		!jne_dword >474
 		]], EEex_MatchObjectWrapper, [[
+		!jmp_dword >success
+
+		@474
+		!cmp_eax_dword #1DA
+		!jne_dword >not_defined
+		]], EEex_SetTargetAction, [[
 
 		@success
 		!mov_bx FF FF

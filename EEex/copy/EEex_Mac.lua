@@ -75,6 +75,7 @@ for _, macroEntry in ipairs({
 	{"cmp_[ebp+byte]_dword", "81 7D"},
 	{"cmp_[ebp+byte]_ebx", "39 5D"},
 	{"cmp_[ebp+dword]_byte", "83 BD"},
+	{"cmp_[ebx+byte]_byte", "80 7B"},
 	{"cmp_[ebx+dword]_byte", "80 BB"},
 	{"cmp_[ecx+byte]_byte", "83 79"},
 	{"cmp_[ecx+byte]_esi", "39 71"},

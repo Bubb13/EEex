@@ -128,6 +128,12 @@ function EEex_WriteDword(address, value)
 	end
 end
 
+function EEex_WriteStringAuto(string)
+	local address = EEex_Malloc(#string + 1)
+	EEex_WriteString(address, string)
+	return address
+end
+
 -- OS: WINDOWS
 -- Calls a function from a DLL. The DLL will be loaded into the process's address space if it isn't already.
 -- dll  => String containing dll's name, not including the extension. Example: "User32".
