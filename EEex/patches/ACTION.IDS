@@ -2,3 +2,4 @@
 473 EEex_MatchObject(S:Function*)
 473 EEex_MatchObjectEx(S:Function*,I:nNearest,I:range*,I:Flags*EEEX_MAT)
 474 EEex_SetTarget(S:Name*,O:Target*)
+475 EEex_ChangeCurrentScript(S:Script*)

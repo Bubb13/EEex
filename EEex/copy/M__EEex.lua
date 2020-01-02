@@ -5147,6 +5147,7 @@ end
 		--  Engine Hooks  --
 		--------------------
 
+		Infinity_DoFile("EEex_Gen") -- General Code
 		Infinity_DoFile("EEex_Men") -- Menu Hooks
 		Infinity_DoFile("EEex_Lua") -- Lua Hooks
 		Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
