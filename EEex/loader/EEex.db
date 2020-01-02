@@ -176,6 +176,10 @@ VerAdj=14
 ; CAIResponse
 ;---------------------------
 
+[CAIResponse::InListEnd]
+PatBytes=558BEC568B71105785F6
+PatAdj=0
+
 [CAIResponse::~CAIResponse]
 PatBytes=538BD9568B730C85F6
 PatAdj=0
@@ -202,6 +206,10 @@ PatAdj=0
 [CAIScript::Find]
 PatBytes=558BEC83EC245356576A248BF133DB
 PatAdj=0
+
+[CAIScript::Find()_InstantHook]
+PatBytes=668B43028BCF8B5DFC6689470266895F04
+PatAdj=25
 
 [CAIScript::~CAIScript]
 PatBytes=538BD9568B730C85F6

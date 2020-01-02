@@ -509,6 +509,50 @@ function EEex_InstallNewActions()
 
 	]]}
 
+	--------------------------------------------
+	-- ActionOverride(EEex_Instant,A:Action*) --
+	--------------------------------------------
+
+	local findContinueAddress = EEex_Label("CAIScript::Find()_InstantHook")
+	local findContinueHook = EEex_WriteAssemblyAuto({[[
+
+		!push_all_registers
+
+		!mov_esi_[ecx+byte] 0C
+		!test_esi_esi
+		!jz_dword >empty
+
+		!mov_edi_[ebp+byte] 0C ; caller ;
+
+		@loop
+		!mov_ebx_[esi+byte] 08
+		!cmp_byte:[ebx+byte]_byte 10 76
+		!jnz_dword >continue
+
+		!push_ebx
+		!mov_ecx_edi
+		!mov_eax_[edi]
+		!call_[eax+dword] #8C
+
+		!mov_ecx_edi
+		!mov_eax_[edi]
+		!call_[eax+dword] #80
+
+		!(word) !mov_[ebx]_dword 00 00
+
+		@continue
+		!mov_esi_[esi]
+		!test_esi_esi
+		!jnz_dword >loop
+
+		@empty
+		!pop_all_registers
+		!call >CAIResponse::InListEnd
+		!jmp_dword ]], {findContinueAddress + 0x5, 4, 4},
+
+	})
+	EEex_WriteAssembly(findContinueAddress, {"!jmp_dword", {findContinueHook, 4, 4}})
+
 	-----------------------------
 	-- Action Definitions Hook --
 	-----------------------------
