@@ -33,7 +33,9 @@ end
 
 function EEex_GameObjectBeingDeleted(objectID)
 
+	if objectID == -1 then return end
 	local objectData = EEex_ObjectData[objectID]
+
 	local volatileStorage = objectData["volatileFields"]
 
 	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
