@@ -304,6 +304,7 @@ for _, macroEntry in ipairs({
 	{"nop", "90"},
 	{"or_eax_byte", "83 C8"},
 	{"or_ebx_byte", "83 CB"},
+	{"or_esi_byte", "83 CE"},
 	{"pop_all_registers", "5F 5E 5A 59 5B 58"},
 	{"pop_complete_state", "5F 5E 5A 59 5B 58 5D"},
 	{"pop_eax", "58"},

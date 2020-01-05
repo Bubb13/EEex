@@ -422,8 +422,13 @@ function EEex_InstallNewActions()
 
 		!mov_ecx_esi
 		!call >EEex_MatchObject
+		!push_eax
 
-		!mov_ecx_[esi+dword] #3B20
+		!mov_ecx_esi
+		!call >EEex_AccessVolatileFields
+		!mov_ecx_eax
+
+		!pop_eax
 		!mov_[ecx+dword]_eax ]], {matchObjectOffset, 4},
 
 	}

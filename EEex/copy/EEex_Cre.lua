@@ -1,4 +1,6 @@
 
+EEex_ObjectData = {}
+
 -- Arbitrary new maximum: can be adjusted if the need arises.
 EEex_NewStatsCount = 0xFFFF
 EEex_SimpleStatsSize = EEex_NewStatsCount * 4
@@ -9,6 +11,65 @@ EEex_ComplexStatSpace = 0x0
 
 EEex_VolatileStorageDefinitions = {}
 EEex_VolatileStorageSpace = 0x0
+
+function EEex_GameObjectAdded(object)
+
+	local volatileStorage = EEex_Malloc(EEex_VolatileStorageSpace)
+
+	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
+		local constructFunction = volatileDef["construct"]
+		if constructFunction then
+			local offset = volatileDef["offset"]
+			constructFunction(volatileStorage + offset)
+		end
+	end
+
+	local objectID = EEex_ReadDword(object + 0x34)
+	EEex_ObjectData[objectID] = {
+		["volatileFields"] = volatileStorage,
+	}
+
+end
+
+function EEex_GameObjectBeingDeleted(objectID)
+
+	local objectData = EEex_ObjectData[objectID]
+	local volatileStorage = objectData["volatileFields"]
+
+	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
+		local destructFunction = volatileDef["destruct"]
+		if destructFunction then
+			local offset = volatileDef["offset"]
+			destructFunction(volatileStorage + offset)
+		end
+	end
+
+	EEex_Free(volatileStorage)
+	EEex_ObjectData[objectID] = nil
+
+end
+
+function EEex_GameObjectsBeingCleaned()
+
+	for _, objectData in pairs(EEex_ObjectData) do
+
+		local volatileStorage = objectData["volatileFields"]
+
+		for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
+			local destructFunction = volatileDef["destruct"]
+			if destructFunction then
+				local offset = volatileDef["offset"]
+				destructFunction(volatileStorage + offset)
+			end
+		end
+
+		EEex_Free(volatileStorage)
+
+	end
+
+	EEex_ObjectData = {}
+
+end
 
 function EEex_RegisterVolatileField(name, attributeTable)
 
@@ -27,20 +88,20 @@ end
 
 function EEex_AccessVolatileField(actorID, name)
 	local volatileDef = EEex_VolatileStorageDefinitions[name]
-	local volatileStart = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3B20)
+	local volatileStart = EEex_ObjectData[actorID]["volatileFields"]
 	return volatileStart + volatileDef["offset"]
 end
 
 function EEex_GetVolatileField(actorID, name)
 	local volatileDef = EEex_VolatileStorageDefinitions[name]
-	local volatileStart = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3B20)
+	local volatileStart = EEex_ObjectData[actorID]["volatileFields"]
 	local address = volatileStart + volatileDef["offset"]
 	return volatileDef["get"](address)
 end
 
 function EEex_SetVolatileField(actorID, name, value)
 	local volatileDef = EEex_VolatileStorageDefinitions[name]
-	local volatileStart = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3B20)
+	local volatileStart = EEex_ObjectData[actorID]["volatileFields"]
 	local address = volatileStart + volatileDef["offset"]
 	return volatileDef["set"](address, value)
 end
@@ -157,11 +218,9 @@ function EEex_HookConstructCreature(fromFile, toStruct)
 
 	local newStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
 	local newTempStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
-	local volatileStorage = EEex_Malloc(EEex_VolatileStorageSpace)
 
 	EEex_WriteDword(toStruct + 0x3B18, newStats)
 	EEex_WriteDword(toStruct + 0x3B1C, newTempStats)
-	EEex_WriteDword(toStruct + 0x3B20, volatileStorage)
 
 	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
 		local constructFunction = complexStatDef["construct"]
@@ -172,21 +231,12 @@ function EEex_HookConstructCreature(fromFile, toStruct)
 		end
 	end
 
-	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
-		local constructFunction = volatileDef["construct"]
-		if constructFunction then
-			local offset = volatileDef["offset"]
-			constructFunction(volatileStorage + offset)
-		end
-	end
-
 end
 
 function EEex_HookDeconstructCreature(cre)
 
 	local newStats = EEex_ReadDword(cre + 0x3B18)
 	local newTempStats = EEex_ReadDword(cre + 0x3B1C)
-	local volatileStorage = EEex_ReadDword(cre + 0x3B20)
 
 	for _, complexStatDef in pairs(EEex_ComplexStatDefinitions) do
 		local destructFunction = complexStatDef["destruct"]
@@ -197,17 +247,8 @@ function EEex_HookDeconstructCreature(cre)
 		end
 	end
 
-	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
-		local destructFunction = volatileDef["destruct"]
-		if destructFunction then
-			local offset = volatileDef["offset"]
-			destructFunction(volatileStorage + offset)
-		end
-	end
-
 	EEex_Free(newStats)
 	EEex_Free(newTempStats)
-	EEex_Free(volatileStorage)
 
 end
 
@@ -251,9 +292,210 @@ function B3Cre_InstallCreatureHook()
 
 	EEex_DisableCodeProtection()
 
-	-- Increase creature struct size by 0xC bytes (in memory)
+	---------------------------
+	-- EEex_ObjectData Hooks --
+	---------------------------
+
+	--------------------------
+	-- EEex_GameObjectAdded --
+	--------------------------
+
+	local objectAddedHookAddress = EEex_Label("CGameObjectArray::Add()_EndHook")
+	objectAddedHookAddress = objectAddedHookAddress + EEex_ReadDword(objectAddedHookAddress) + 0x4
+
+	-- Have to go searching for the hook address, as the function changed between game versions
+
+	local destructCString = EEex_Label("CString::~CString")
+	local findCall = function(address)
+		return EEex_ReadByte(address, 0) == 0xE8 and (address + EEex_ReadDword(address + 0x1) + 0x5) == destructCString
+	end
+
+	while not findCall(objectAddedHookAddress) do
+		objectAddedHookAddress = objectAddedHookAddress + 1
+	end
+
+	local objectAddedHook = EEex_WriteAssemblyAuto({[[
+
+		!call >CString::~CString
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_GameObjectAdded"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_edi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!pop_all_registers
+		!jmp_dword ]], {objectAddedHookAddress + 0x5, 4, 4},
+
+	})
+	EEex_WriteAssembly(objectAddedHookAddress, {"!jmp_dword", {objectAddedHook, 4, 4}})
+
+	---------------------------------
+	-- EEex_GameObjectBeingDeleted --
+	---------------------------------
+
+	-- If you're here because something broke, good luck.
+
+	local objectBeingDeletedHookAddress = EEex_Label("CGameDoor::RemoveFromArea()_DeleteCall")
+	objectBeingDeletedHookAddress = objectBeingDeletedHookAddress + EEex_ReadDword(objectBeingDeletedHookAddress) + 0x4
+
+	local objectBeingDeletedHook = EEex_WriteAssemblyAuto({[[
+
+		$restore
+		!nop !nop !nop !nop !nop !nop !nop 
+
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_GameObjectBeingDeleted"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_[ebp+byte] 08
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!pop_all_registers
+		!jmp_dword ]], {objectBeingDeletedHookAddress + 0x7, 4, 4},
+
+	})
+
+	local restoreAddress = EEex_Label("restore")
+	for i = 0, 6, 1 do
+		EEex_WriteByte(restoreAddress + i, EEex_ReadByte(objectBeingDeletedHookAddress + i, 0))
+	end
+
+	EEex_WriteAssembly(objectBeingDeletedHookAddress, {"!jmp_dword", {objectBeingDeletedHook, 4, 4}, "!nop !nop"})
+
+	----------------------------------
+	-- EEex_GameObjectsBeingCleaned --
+	----------------------------------
+
+	local objectsBeingCleanedHookAddress = EEex_Label("CGameObjectArray::Clean") + 0x6
+	local objectsBeingCleanedHook = EEex_WriteAssemblyAuto({[[
+
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_GameObjectsBeingCleaned"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!pop_all_registers
+
+		; Redefine what I altered ;
+		!push_esi
+		!or_esi_byte FF
+		!(word) !test_eax_eax
+
+		!jmp_dword ]], {objectsBeingCleanedHookAddress + 0x7, 4, 4},
+
+	})
+	EEex_WriteAssembly(objectsBeingCleanedHookAddress, {"!jmp_dword", {objectsBeingCleanedHook, 4, 4}, "!nop !nop"})
+
+	--------------------------------
+	-- $EEex_AccessVolatileFields --
+	--------------------------------
+
+	EEex_WriteAssemblyAuto({[[
+
+		$EEex_AccessVolatileFields
+		!push_registers
+
+		; Referenced below ;
+		!push_[ecx+byte] 34
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_ObjectData"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		; Uses push highlighted above ; 
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte FE
+		!push_[dword] *_g_lua
+		!call >_lua_gettable
+		!add_esp_byte 08
+
+		!push_dword ]], {EEex_WriteStringAuto("volatileFields"), 4}, [[
+		!push_byte FF
+		!push_[dword] *_g_lua
+		!call >_lua_getfield
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte FF
+		!push_[dword] *_g_lua
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+
+		!push_eax
+
+		!push_byte FC
+		!push_[dword] *_g_lua
+		!call >_lua_settop
+		!add_esp_byte 08
+
+		!pop_eax
+
+		!pop_registers
+		!ret
+
+	]]})
+
+	-----------------------
+	-- CGameSprite Hooks --
+	-----------------------
+
+	-- Increase creature struct size by 0x8 bytes (in memory)
 	for _, address in ipairs(EEex_Label("CreAllocationSize")) do
-		EEex_WriteAssembly(address + 1, {{0x3B24, 4}})
+		EEex_WriteAssembly(address + 1, {{0x3B20, 4}})
 	end
 
 	local hookNameLoad = "EEex_HookConstructCreature"

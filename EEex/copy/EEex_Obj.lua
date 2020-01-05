@@ -59,7 +59,8 @@ function EEex_InstallNewObjects()
 		!lea_ecx_[ebp+byte] E8
 		!call >CAIObjectType::operator_equ
 
-		!mov_eax_[edi+dword] #3B20
+		!mov_ecx_edi
+		!call >EEex_AccessVolatileFields
 		!mov_eax_[eax+dword] ]], {matchObjectOffset, 4}, [[
 		!mov_[ebp+byte]_eax F0 ; curType.m_Instance ;
 

@@ -468,6 +468,15 @@ PatAdj=12
 
 
 ;---------------------------
+; CGameDoor
+;---------------------------
+
+[CGameDoor::RemoveFromArea()_DeleteCall]
+PatBytes=84C075088B068BCE6A01FF105EC3
+PatAdj=-4
+
+
+;---------------------------
 ; CGameEffect
 ;---------------------------
 
@@ -529,6 +538,14 @@ Type=1
 ;---------------------------
 ; CGameObjectArray
 ;---------------------------
+
+[CGameObjectArray::Add()_EndHook]
+PatBytes=C7473C000000008B03894740
+PatAdj=13
+
+[CGameObjectArray::Clean]
+PatBytes=5683CEFF6685C0
+PatAdj=-6
 
 [CGameObjectArray::GetShare]
 PatBytes=C7020000000083F8FF74408BC8C1F91081E1FF7F0000
@@ -1418,11 +1435,19 @@ PatAdj=-20
 PatBytes=834608088B4D10
 PatAdj=-75
 
+[_lua_getfield]
+PatBytes=8B55108BD88B7E088BCA
+PatAdj=-19
+
 [_lua_getglobal]
 PatBytes=558BEC53568B7508BA02000000578B460C8B4828
 PatAdj=0
 VerBytes=83C0F8
 VerAdj=87
+
+[_lua_gettable]
+PatBytes=558BEC8B550C568B75088BCE8B4608
+PatAdj=0
 
 [_lua_gettop]
 PatBytes=558BEC8B45088B48108B40082B0183E808C1F8035DC3
