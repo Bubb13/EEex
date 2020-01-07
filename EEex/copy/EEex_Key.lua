@@ -50,6 +50,14 @@ function EEex_KeyReleased(key)
 	end
 end
 
+function EEex_GetKeyFromName(name)
+	local nameMem = EEex_Malloc(#name + 1)
+	EEex_WriteString(nameMem, name)
+	local code = EEex_Call(EEex_Label("SDL_GetKeyFromName"), {nameMem}, nil, 0x4)
+	EEex_Free(nameMem)
+	return code
+end
+
 function EEex_IsKeyDown(key)
 	return EEex_KeysDown[key]
 end

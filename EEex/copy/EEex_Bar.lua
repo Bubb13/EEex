@@ -19,11 +19,13 @@ EEex_AddActionbarListener(B3ActionbarListener)
 
 --]]
 
-EEex_ActionbarListeners = {}
+EEex_ActionbarListeners = nil
 
-EEex_AddResetListener(function()
+function EEex_InitBar()
 	EEex_ActionbarListeners = {}
-end)
+	EEex_AddResetListener(EEex_InitBar)
+end
+EEex_InitBar()
 
 function EEex_AddActionbarListener(func)
 	table.insert(EEex_ActionbarListeners, func)

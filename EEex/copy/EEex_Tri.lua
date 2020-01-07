@@ -197,8 +197,13 @@ function EEex_InstallNewTriggers()
 
 		!mov_ecx_edi
 		!call >EEex_MatchObject
+		!push_eax
 
-		!mov_ecx_[edi+dword] #3B20
+		!mov_ecx_edi
+		!call >EEex_AccessVolatileFields
+		!mov_ecx_eax
+
+		!pop_eax
 		!mov_[ecx+dword]_eax ]], {matchObjectOffset, 4}, [[
 
 		!mov_ebx #1

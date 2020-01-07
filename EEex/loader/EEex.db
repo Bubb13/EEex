@@ -121,6 +121,10 @@ PatAdj=-8
 PatBytes=5356578B7D088BD9538D8D34FFFFFF89BD40FFFFFF8945E833F6C745EC0000000066C745F90000C645FB00C745F0FFFFFFFFC745F400000000C645F800
 PatAdj=-24
 
+[CAIObjectType::Decode()_NameHook]
+PatBytes=83C40885C00F84BC000000
+PatAdj=5
+
 [CAIObjectType::Decode()_default_jump]
 PatBytes=0FB6C24883F8710F87A70B0000
 PatAdj=9
@@ -172,6 +176,10 @@ VerAdj=14
 ; CAIResponse
 ;---------------------------
 
+[CAIResponse::InListEnd]
+PatBytes=558BEC568B71105785F6
+PatAdj=0
+
 [CAIResponse::~CAIResponse]
 PatBytes=538BD9568B730C85F6
 PatAdj=0
@@ -198,6 +206,10 @@ PatAdj=0
 [CAIScript::Find]
 PatBytes=558BEC83EC245356576A248BF133DB
 PatAdj=0
+
+[CAIScript::Find()_InstantHook]
+PatBytes=668B43028BCF8B5DFC6689470266895F04
+PatAdj=25
 
 [CAIScript::~CAIScript]
 PatBytes=538BD9568B730C85F6
@@ -260,6 +272,15 @@ PatAdj=0
 PatBytes=8B4E088B36518B88
 PatAdj=8
 Type=1
+
+
+;---------------------------
+; CButtonData
+;---------------------------
+
+[CButtonData::CButtonData]
+PatBytes=83C8FF8D4B226689431C6689431E668943208D45F4
+PatAdj=-42
 
 
 ;---------------------------
@@ -387,6 +408,10 @@ PatAdj=0
 PatBytes=8945FC8B450853568B75188BD98945F08B450C578945A48B45146A0C895DB88945B08975AC
 PatAdj=-16
 
+[CGameAIBase::GetTargetShare]
+PatBytes=56578BF96A00578D8F10030000
+PatAdj=0
+
 [CGameAIBase::InsertAction]
 PatBytes=C3CCCCCCCCCC558BEC56576A648BF9
 PatAdj=6
@@ -440,6 +465,15 @@ PatAdj=0
 [CGameArea::Render()_hook]
 PatBytes=EB068DB384040000578BCE
 PatAdj=12
+
+
+;---------------------------
+; CGameDoor
+;---------------------------
+
+[CGameDoor::RemoveFromArea()_DeleteCall]
+PatBytes=84C075088B068BCE6A01FF105EC3
+PatAdj=-4
 
 
 ;---------------------------
@@ -505,6 +539,14 @@ Type=1
 ; CGameObjectArray
 ;---------------------------
 
+[CGameObjectArray::Add()_EndHook]
+PatBytes=C7473C000000008B03894740
+PatAdj=13
+
+[CGameObjectArray::Clean]
+PatBytes=5683CEFF6685C0
+PatAdj=-6
+
 [CGameObjectArray::GetShare]
 PatBytes=C7020000000083F8FF74408BC8C1F91081E1FF7F0000
 PatAdj=-9
@@ -552,12 +594,20 @@ PatAdj=232
 PatBytes=8D45E46A0050686900F000
 PatAdj=232
 
+[CGameSprite::GetAbilityProjectileType()_Opcode214FixHook]
+PatBytes=894DC08975F866833E01
+PatAdj=10
+
 [CGameSprite::GetActiveProficiency]
 PatBytes=558BEC8B55088D42A783F82D772F83B94837000000
 PatAdj=0
 
 [CGameSprite::GetActiveStats]
 PatBytes=83B948370000008D81300B000075068D8154140000C3
+PatAdj=0
+
+[CGameSprite::GetCasterLevel]
+PatBytes=558BEC83EC0C56578B7D088BF185FF
 PatAdj=0
 
 [CGameSprite::GetDirection]
@@ -599,6 +649,10 @@ PatAdj=-68
 [CGameSprite::ReadyOffInternalList]
 PatBytes=8D4508508D8F74350000
 PatAdj=-23
+
+[CGameSprite::ReadyOffInternalList()_ItemTypeJump]
+PatBytes=0FBF879035000083E8030F84
+PatAdj=10
 
 [CGameSprite::ReadySpell]
 PatBytes=898530FFFFFF8B4614F6400C04
@@ -667,6 +721,10 @@ PatAdj=-11
 [CGameSprite::UnmemorizeSpellPriest]
 PatBytes=8BBC81600800008D504F
 PatAdj=-11
+
+[CGameSprite::UpdateAOE()_Opcode214FixHook]
+PatBytes=8B46068D4DF48945E88B460A8945EC
+PatAdj=-5
 
 [CGameSprite::`vftable']
 PatBytes=558BEC5153568BF1578BBE48330000C706
@@ -782,6 +840,22 @@ PatAdj=0
 [CInfGame::UnselectAll]
 PatBytes=558BEC51578BF98D8F483E0000
 PatAdj=0
+
+[CInfGame::UseMagicOnGround()_ItemTypeJump]
+PatBytes=0FBF87943500008B8E44250000
+PatAdj=-13
+
+[CInfGame::UseMagicOnGround()_Opcode214FixHook]
+PatBytes=8D8504FEFFFF5068C0000000
+PatAdj=48
+
+[CInfGame::UseMagicOnObject()_ItemTypeJump]
+PatBytes=0FBF87943500008D8DBCFEFFFF
+PatAdj=-13
+
+[CInfGame::UseMagicOnObject()_Opcode214FixHook]
+PatBytes=8D85F0FDFFFF508D45E85068BF0000008D8D58FEFFFF
+PatAdj=58
 
 
 ;---------------------------
@@ -977,6 +1051,10 @@ VerAdj=32
 
 [CVariableHash::AddKey]
 PatBytes=558BEC83EC28538B5D0856578BF9C745E800000000
+PatAdj=0
+
+[CVariableHash::CVariableHash]
+PatBytes=558BEC5153568BF1BA54000000
 PatAdj=0
 
 [CVariableHash::FindKey]
@@ -1251,6 +1329,10 @@ PatAdj=0
 PatBytes=8B8F7C0100008D558C528B018B402CFFD084C0
 PatAdj=0
 
+[SDL_GetKeyFromName]
+PatBytes=570FB63E56
+PatAdj=-16
+
 [SpellFeedbackHook1]
 PatBytes=8D855CFFFFFF8BCF506A00
 PatAdj=11
@@ -1353,11 +1435,19 @@ PatAdj=-20
 PatBytes=834608088B4D10
 PatAdj=-75
 
+[_lua_getfield]
+PatBytes=8B55108BD88B7E088BCA
+PatAdj=-19
+
 [_lua_getglobal]
 PatBytes=558BEC53568B7508BA02000000578B460C8B4828
 PatAdj=0
 VerBytes=83C0F8
 VerAdj=87
+
+[_lua_gettable]
+PatBytes=558BEC8B550C568B75088BCE8B4608
+PatAdj=0
 
 [_lua_gettop]
 PatBytes=558BEC8B45088B48108B40082B0183E808C1F8035DC3

@@ -422,11 +422,141 @@ function EEex_InstallNewActions()
 
 		!mov_ecx_esi
 		!call >EEex_MatchObject
+		!push_eax
 
-		!mov_ecx_[esi+dword] #3B20
+		!mov_ecx_esi
+		!call >EEex_AccessVolatileFields
+		!mov_ecx_eax
+
+		!pop_eax
 		!mov_[ecx+dword]_eax ]], {matchObjectOffset, 4},
 
 	}
+
+	---------------------------------------
+	-- EEex_SetTarget(S:Name*,O:Target*) --
+	---------------------------------------
+
+	EEex_SetTargetInternal = function(sprite)
+
+		local targetShare = EEex_Call(EEex_Label("CGameAIBase::GetTargetShare"), {}, sprite, 0x0)
+		local targetName = EEex_ReadString(EEex_ReadDword(sprite + 0x344))
+
+		local targetMap = EEex_AccessVolatileField(EEex_GetActorIDShare(sprite), "EEex_Target")
+		EEex_SetVariable(targetMap, targetName, targetShare ~= 0x0 and EEex_GetActorIDShare(targetShare) or -1)
+
+	end
+
+	local EEex_SetTargetAction = {[[
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_SetTargetInternal"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_esi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+	]]}
+
+	-----------------------------------------
+	-- EEex_ChangeCurrentScript(S:Script*) --
+	-----------------------------------------
+
+	EEex_ChangeCurrentScriptInternal = function(sprite)
+
+		local m_curScriptNum = EEex_ReadWord(sprite + 0x2E8, 0)
+		-- SCRLEV.IDS has a hole at IDS=3, while internally it doesn't
+		m_curScriptNum = m_curScriptNum < 3 and m_curScriptNum or m_curScriptNum + 1
+
+		local scriptNameMem = EEex_ReadDword(sprite + 0x344)
+		EEex_Call(EEex_Label("EEex_SetScriptLevel"), {m_curScriptNum, scriptNameMem}, sprite, 0x0)
+
+	end
+
+	local EEex_ChangeCurrentScript = {[[
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_ChangeCurrentScriptInternal"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_esi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+	]]}
+
+	--------------------------------------------
+	-- ActionOverride(EEex_Instant,A:Action*) --
+	--------------------------------------------
+
+	local findContinueAddress = EEex_Label("CAIScript::Find()_InstantHook")
+	local findContinueHook = EEex_WriteAssemblyAuto({[[
+
+		!push_all_registers
+
+		!mov_esi_[ecx+byte] 0C
+		!test_esi_esi
+		!jz_dword >empty
+
+		!mov_edi_[ebp+byte] 0C ; caller ;
+
+		@loop
+		!mov_ebx_[esi+byte] 08
+		!cmp_byte:[ebx+byte]_byte 10 76
+		!jnz_dword >continue
+
+		!push_ebx
+		!mov_ecx_edi
+		!mov_eax_[edi]
+		!call_[eax+dword] #8C
+
+		!mov_ecx_edi
+		!mov_eax_[edi]
+		!call_[eax+dword] #80
+
+		!(word) !mov_[ebx]_dword 00 00
+
+		@continue
+		!mov_esi_[esi]
+		!test_esi_esi
+		!jnz_dword >loop
+
+		@empty
+		!pop_all_registers
+		!call >CAIResponse::InListEnd
+		!jmp_dword ]], {findContinueAddress + 0x5, 4, 4},
+
+	})
+	EEex_WriteAssembly(findContinueAddress, {"!jmp_dword", {findContinueHook, 4, 4}})
 
 	-----------------------------
 	-- Action Definitions Hook --
@@ -441,8 +571,20 @@ function EEex_InstallNewActions()
 
 		@473
 		!cmp_eax_dword #1D9
-		!jne_dword >not_defined
+		!jne_dword >474
 		]], EEex_MatchObjectWrapper, [[
+		!jmp_dword >success
+
+		@474
+		!cmp_eax_dword #1DA
+		!jne_dword >475
+		]], EEex_SetTargetAction, [[
+		!jmp_dword >success
+
+		@475
+		!cmp_eax_dword #1DB
+		!jne_dword >not_defined
+		]], EEex_ChangeCurrentScript, [[
 
 		@success
 		!mov_bx FF FF
