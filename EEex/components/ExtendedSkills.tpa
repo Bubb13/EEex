@@ -134,7 +134,11 @@ COPY_EXISTING ~ui.menu~ ~override~
 		SPRINT turnundeadstring ~Turn Undead Level~
 		SPRINT backstabmultiplierstring ~Backstab Multiplier~
 		SPRINT racialenemystring ~Racial Enemy~
-		TEXT_SPRINT donebuttonstring ~area 762 704 230 40~
+		PATCH_IF GAME_INCLUDES ~sod~ BEGIN
+			TEXT_SPRINT donebuttonstring ~area 762 704 230 40~
+		END ELSE BEGIN
+			TEXT_SPRINT donebuttonstring ~HIGH_LEVEL_ABILITIES_BUTTON~
+		END
 	END
 	PATCH_IF GAME_IS ~bg2ee eet~ BEGIN
 		SPRINT aiscriptstring ~AI Script~
