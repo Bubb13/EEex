@@ -380,6 +380,14 @@ PatAdj=0
 PatBytes=6AFF6A006A006A006A006A006A008D4E48
 PatAdj=-26
 
+[CGameAIBase::DecodeSpell]
+PatBytes=558BEC83EC088D4DFC5657
+PatAdj=0
+
+[CGameAIBase::DecodeSpell()_SetResrefHook]
+PatBytes=83C40C8D45F88D4DFC50
+PatAdj=22
+
 [CGameAIBase::EvaluateStatusTrigger()_default_jump]
 PatBytes=0FBF45CC05F6BFFFFF3D020100000F87A81D0000
 PatAdj=16
@@ -1007,6 +1015,14 @@ PatAdj=0
 [CString::CString(char_const_*)]
 PatBytes=538B5D08578BF9890785DB
 PatAdj=-8
+
+[CString::operator_equ(CString*)]
+PatBytes=558BEC538B5D08568BF18B0B8B163BD1
+PatAdj=0
+
+[CString::operator_equ(const_char*)]
+PatBytes=CCCCCCCCCCCCCCCCCCCCCCCCCC558BEC568B7508578BF985F6751133D25652
+PatAdj=13
 
 [CString::~CString]
 PatBytes=568BF18B0E8D41F43B05
