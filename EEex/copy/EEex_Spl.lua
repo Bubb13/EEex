@@ -167,6 +167,67 @@ function EEex_InstallSplHook()
 	hookCastType(EEex_Label("CInfGame::UseMagicOnObject()_ItemTypeJump"))
 	hookCastType(EEex_Label("CInfGame::UseMagicOnGround()_ItemTypeJump"))
 
+	------------------
+	-- MARKED_SPELL --
+	------------------
+
+	local markedSpellOffset = EEex_RegisterVolatileField("EEex_MarkedSpell", {
+		["construct"] = function(address)
+			EEex_WriteDword(address, EEex_ReadDword(EEex_Label("_afxPchNil")))
+		end,
+		["destruct"] = function(address)
+			EEex_Call(EEex_Label("CString::~CString"), {}, address, 0x0)
+		end,
+		["get"] = function(address)
+			return EEex_ReadString(EEex_ReadDword(address))
+		end,
+		["set"] = function(address, value)
+			local stringMem = EEex_WriteStringAuto(value)
+			EEex_Call(EEex_Label("CString::operator_equ(const_char*)"), {stringMem}, address, 0x0)
+			EEex_Free(stringMem)
+		end,
+		["size"] = 0x4,
+	})
+
+	local decodeSpellPreserveThisHookAddress = EEex_Label("CGameAIBase::DecodeSpell")
+	local decodeSpellPreserveThisHook = EEex_WriteAssemblyAuto({[[
+		!push_ebp
+		!mov_ebp_esp
+		!sub_esp_byte 0C
+		!mov_[ebp+byte]_ecx F4
+		!jmp_dword ]], {decodeSpellPreserveThisHookAddress + 0x6, 4, 4},
+	})
+	EEex_WriteAssembly(decodeSpellPreserveThisHookAddress, {"!jmp_dword", {decodeSpellPreserveThisHook, 4, 4}, "!nop"})
+
+	local decodeSpellHookAddress = EEex_Label("CGameAIBase::DecodeSpell()_SetResrefHook")
+	local decodeSpellHook = EEex_WriteAssemblyAuto({[[
+
+		!mov_eax_[ebp+byte] 08 ; spellId ;
+		!test_eax_eax
+		!jz_dword >marked_spell
+		
+		!call >CString::operator_equ(CString*)
+		!jmp_dword ]], {decodeSpellHookAddress + 0x5, 4, 4}, [[
+
+		@marked_spell
+		!push_all_registers
+		!push_ecx
+
+		!mov_ecx_[ebp+byte] F4
+		!call >EEex_AccessVolatileFields
+
+		!pop_ecx
+		!add_eax_dword ]], {markedSpellOffset, 4}, [[
+		!push_eax
+		!call >CString::operator_equ(CString*)
+
+		!pop_all_registers
+		!add_esp_byte 04
+		!jmp_dword ]], {decodeSpellHookAddress + 0x5, 4, 4},
+
+	})
+	EEex_WriteAssembly(decodeSpellHookAddress, {"!jmp_dword", {decodeSpellHook, 4, 4}})
+
 	EEex_EnableCodeProtection()
 
 end
