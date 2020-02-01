@@ -3736,14 +3736,18 @@ end)
 function EEex_IterateActorEffects(actorID, func)
 	local esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
 	while esi ~= 0x0 do
-		local edi = EEex_ReadDword(esi + 0x8) - 0x4
-		func(edi)
+		local eData = EEex_ReadDword(esi + 0x8) - 0x4
+		if eData > 0x0 then
+			func(eData)
+		end
 		esi = EEex_ReadDword(esi)
 	end
 	esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3380)
 	while esi ~= 0x0 do
-		local edi = EEex_ReadDword(esi + 0x8) - 0x4
-		func(edi)
+		local eData = EEex_ReadDword(esi + 0x8) - 0x4
+		if eData > 0x0 then
+			func(eData)
+		end
 		esi = EEex_ReadDword(esi)
 	end
 end
@@ -3807,35 +3811,37 @@ function EEex_AlterActorEffect(actorID, match_table, set_table, multi_match)
 	local match_count = 0
 	while esi ~= 0x0 and match_count < multi_match do
 		local edi = EEex_ReadDword(esi + 0x8) - 0x4
-		local matched = true
-		for key,value in ipairs(match_table) do
-			local readSize = EEex_effOff[value[1]][2]
-			if readSize == 4 then
-				if EEex_ReadDword(edi + EEex_effOff[value[1]][1]) ~= value[2] then
-					matched = false
-				end
-			elseif readSize == 2 then
-				if EEex_ReadWord(edi + EEex_effOff[value[1]][1], 0x0) ~= value[2] then
-					matched = false
-				end
-			else
-				if EEex_ReadLString(edi + EEex_effOff[value[1]][1], readSize) ~= value[2] then
-					matched = false
-				end
-			end
-		end
-		if matched then
-			for key,value in ipairs(set_table) do
-				local writeSize = EEex_effOff[value[1]][2]
-				if writeSize == 4 then
-					EEex_WriteDword(edi + EEex_effOff[value[1]][1], value[2])
-				elseif writeSize == 2 then
-					EEex_WriteWord(edi + EEex_effOff[value[1]][1], value[2])
+		if edi > 0x0 then
+			local matched = true
+			for key,value in ipairs(match_table) do
+				local readSize = EEex_effOff[value[1]][2]
+				if readSize == 4 then
+					if EEex_ReadDword(edi + EEex_effOff[value[1]][1]) ~= value[2] then
+						matched = false
+					end
+				elseif readSize == 2 then
+					if EEex_ReadWord(edi + EEex_effOff[value[1]][1], 0x0) ~= value[2] then
+						matched = false
+					end
 				else
-					EEex_WriteLString(edi + EEex_effOff[value[1]][1], value[2], writeSize)
+					if EEex_ReadLString(edi + EEex_effOff[value[1]][1], readSize) ~= value[2] then
+						matched = false
+					end
 				end
 			end
-			match_count = match_count + 1
+			if matched then
+				for key,value in ipairs(set_table) do
+					local writeSize = EEex_effOff[value[1]][2]
+					if writeSize == 4 then
+						EEex_WriteDword(edi + EEex_effOff[value[1]][1], value[2])
+					elseif writeSize == 2 then
+						EEex_WriteWord(edi + EEex_effOff[value[1]][1], value[2])
+					else
+						EEex_WriteLString(edi + EEex_effOff[value[1]][1], value[2], writeSize)
+					end
+				end
+				match_count = match_count + 1
+			end
 		end
 		esi = EEex_ReadDword(esi)
 	end
