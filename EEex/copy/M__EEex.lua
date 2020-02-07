@@ -1086,6 +1086,24 @@ function EEex_WriteAssemblyFunction(functionName, assembly)
 	return functionAddress
 end
 
+-- Convenience function that, when given an address to the start of a standard x86asm call,
+-- inserts the given assembly definition in such a way that it runs after the call has taken place.
+-- Automatically inserts a valid jmp instruction, (@return label), that resumes normal execution.
+function EEex_HookAfterCall(address, assembly)
+	EEex_WriteAssembly(address, {"!jmp_dword", {EEex_WriteAssemblyAuto(
+		EEex_ConcatTables({
+			{
+				"!call", {address + EEex_ReadDword(address + 0x1) + 0x5, 4, 4},
+			},
+			assembly,
+			{[[
+				@return
+				!jmp_dword ]], {address + 0x5, 4, 4},
+			},
+		})
+	), 4, 4}})
+end
+
 function EEex_WriteOpcode(opcodeFunctions)
 
 	--[[
@@ -3009,12 +3027,49 @@ function EEex_GetGameTick()
 	return m_gameTime
 end
 
-function EEex_FetchVariable(CVariableHash, variableName)
+-- Attaches a LOCALS storage opcode for the given variable.
+function EEex_ForceLocalVariableMarshal(actorID, variableName)
+
+	local share = EEex_GetActorShare(actorID)
+	local localVariables = EEex_ReadDword(share + 0x3758)
+
+	local CVariable = EEex_FetchCVariable(localVariables, variableName)
+	local stringLength = #EEex_ReadLString(CVariable + 0x34, 32)
+
+	EEex_ApplyEffectToActor(actorID, {
+		["opcode"] = 187,
+		["source_id"] = actorID,
+		["source_x"] = EEex_ReadDword(share + 0x8),
+		["source_y"] = EEex_ReadDword(share + 0xC),
+		["effvar"] = variableName,
+		["resist_dispel"] = EEex_ReadWord(CVariable + 0x20, 0),
+		["parameter3"] = EEex_ReadWord(CVariable + 0x22, 0),
+		["parameter2"] = EEex_ReadDword(CVariable + 0x24),
+		["parameter1"] = EEex_ReadDword(CVariable + 0x28),
+		["parameter4"] = EEex_FloatToLong(CVariable + 0x2C),
+		["timing"] = 9,
+		["resource"] = EEex_ReadLString(CVariable + 0x34, 8),
+		["special"] = 1,
+		["vvcresource"] = stringLength > 8 and EEex_ReadLString(CVariable + 0x3C, 8) or "",
+		["resource2"] = stringLength > 16 and EEex_ReadLString(CVariable + 0x44, 8) or "",
+		["immediateResolve"] = 0,
+	})
+
+end
+
+-- Fetches the CVariable corresponding to variableName.
+function EEex_FetchCVariable(CVariableHash, variableName)
 	local localAddress = EEex_Malloc(#variableName + 5)
 	EEex_WriteString(localAddress + 0x4, variableName)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {localAddress + 0x4}, localAddress, 0x0)
 	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
 	EEex_Free(localAddress)
+	return varAddress
+end
+
+-- Fetches the numeric value corresponding to variableName.
+function EEex_FetchVariable(CVariableHash, variableName)
+	local varAddress = EEex_FetchCVariable(CVariableHash, variableName)
 	if varAddress ~= 0x0 then
 		return EEex_ReadDword(varAddress + 0x28)
 	else
@@ -3063,6 +3118,26 @@ function EEex_SetVariable(CVariableHash, variableName, value)
 		EEex_Free(newVarAddress)
 	end
 	EEex_FreeCString(variableNamePtr)
+end
+
+-- Demands a CVariable under the given variableName exists in the CVariableHash.
+-- If the variable isn't already in the CVariablehash, it is created / added.
+-- Returns the CVariable corresponding to variableName.
+function EEex_DemandCVariable(CVariableHash, variableName)
+
+	local existingVarAddress = EEex_FetchCVariable(CVariableHash, variableName)
+	if existingVarAddress == 0x0 then
+
+		local newVarAddress = EEex_Malloc(0x54)
+		EEex_Call(EEex_Label("CVariable::CVariable"), {}, newVarAddress, 0x0)
+		EEex_WriteLString(newVarAddress, variableName, 32)
+		EEex_Call(EEex_Label("CVariableHash::AddKey"), {newVarAddress}, CVariableHash, 0x0)
+		EEex_Free(newVarAddress)
+
+		return EEex_FetchCVariable(CVariableHash, variableName)
+	else
+		return existingVarAddress
+	end
 end
 
 -- Sets a "GLOBAL" variable in the .GAM as if a
@@ -3129,6 +3204,28 @@ end
 ---------------------
 --  Actor Details  --
 ---------------------
+
+-- Sets the given script for actorID; scriptLevel corresponds to SCRLEV.IDS
+function EEex_SetActorScript(actorID, resref, scriptLevel)
+	EEex_SetActorScriptInternal(EEex_GetActorShare(actorID), resref, scriptLevel)
+end
+
+function EEex_SetActorScriptInternal(share, resref, scriptLevel)
+
+	local resrefMem = EEex_WriteStringAuto(resref)
+
+	local CAIScript = EEex_Malloc(0x24)
+	EEex_Call(EEex_Label("CAIScript::CAIScript"), {
+		0, -- playerscript
+		EEex_ReadDword(resrefMem + 0x4), -- 2/2 of resref
+		EEex_ReadDword(resrefMem + 0x0), -- 1/2 of resref
+	}, CAIScript, 0x0)
+
+	EEex_Free(resrefMem)
+
+	-- CGameSprite::SetScript
+	EEex_Call(EEex_ReadDword(EEex_ReadDword(share) + 0x90), {CAIScript, scriptLevel}, share, 0x0)
+end
 
 function EEex_GetActorAlignment(actorID)
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x30, 0x3)
@@ -3665,6 +3762,11 @@ function EEex_ApplyEffectToActor(actorID, args)
 		end
 	end
 
+	local writeStringArg = function(address, argKey, length)
+		local string = args[argKey]
+		EEex_WriteLString(address, string or "", length)
+	end
+
 	EEex_WriteWord(Item_effect_st + 0x0, argOrError("opcode"))               -- Required
 	EEex_WriteByte(Item_effect_st + 0x2, argOrDefault("target", 1))          -- Default: 1 (Self)
 	EEex_WriteByte(Item_effect_st + 0x3, argOrDefault("power", 0))           -- Default: 0
@@ -3711,7 +3813,7 @@ function EEex_ApplyEffectToActor(actorID, args)
 	EEex_WriteDword(CGameEffect + 0x98, argOrDefault("resource_flags", 0))
 	EEex_WriteDword(CGameEffect + 0x9C, argOrDefault("impact_projectile", 0))
 	EEex_WriteDword(CGameEffect + 0xA0, argOrDefault("sourceslot", 0xFFFFFFFF))
-	writeResrefArg(CGameEffect + 0xA4, "effvar")
+	writeStringArg(CGameEffect + 0xA4, "effvar", 32)
 	EEex_WriteDword(CGameEffect + 0xC4, argOrDefault("casterlvl", 1))
 	EEex_WriteDword(CGameEffect + 0xC8, argOrDefault("internal_flags", 1))
 	EEex_WriteDword(CGameEffect + 0xCC, argOrDefault("sectype", 0))
@@ -3719,7 +3821,7 @@ function EEex_ApplyEffectToActor(actorID, args)
 	local share = EEex_GetActorShare(actorID)
 	local vtable = EEex_ReadDword(share)
 	-- int immediateResolve, int noSave, char list, CGameEffect *pEffect
-	EEex_Call(EEex_ReadDword(vtable + 0x74), {1, 0, 1, CGameEffect}, share, 0x0)
+	EEex_Call(EEex_ReadDword(vtable + 0x74), {argOrDefault("immediateResolve", 1), 0, 1, CGameEffect}, share, 0x0)
 end
 
 -- For each effect on the actor, the function is passed offset 0x0 of
@@ -4774,6 +4876,33 @@ end
 		!call >_lua_pushnumber \z
 		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
 	})
+
+	EEex_WriteAssemblyFunction("EEex_FloatToLong", {[[
+
+		!push_state
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+
+		!fld_qword:[eax]
+		!call >__ftol2_sse
+
+		!push_eax
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[ebp+byte] 08
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!pop_state
+		!ret
+
+	]]})
 
 	-- Disabled legacy EEex_ReadDword (no debug hook included)
 	--[[

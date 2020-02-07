@@ -12,6 +12,56 @@ EEex_ComplexStatSpace = 0x0
 EEex_VolatileStorageDefinitions = {}
 EEex_VolatileStorageSpace = 0x0
 
+-- Responsible for initializing EEex scripts stored in creature LOCALS
+function EEex_HookUnmarshalScripts(cre)
+
+	local localVariables = EEex_ReadDword(cre + 0x3758)
+
+	local areaScriptVariable = EEex_FetchCVariable(localVariables, "EEex_AreaScript")
+	if areaScriptVariable ~= 0x0 then
+		local resref = EEex_ReadLString(areaScriptVariable + 0x34, 8)
+		if resref ~= "" then EEex_SetActorScriptInternal(cre, resref, 1) end
+	end
+
+	local specificsScriptVariable = EEex_FetchCVariable(localVariables, "EEex_SpecificsScript")
+	if specificsScriptVariable ~= 0x0 then
+		local resref = EEex_ReadLString(specificsScriptVariable + 0x34, 8)
+		if resref ~= "" then EEex_SetActorScriptInternal(cre, resref, 2) end
+	end
+
+end
+
+-- Responsible for saving EEex scripts stored in creature LOCALS
+function EEex_HookMarshalVariableScripts(cre)
+
+	-- EEex_ForceLocalVariableMarshal() attaches a LOCALS storage opcode
+	-- for the given variable. Used to force the engine to save EEex's
+	-- script variables, even when it normally doesn't write new variables,
+	-- (on character export, for example).
+
+	local actorID = EEex_GetActorIDShare(cre)
+	local localVariables = EEex_ReadDword(cre + 0x3758)
+
+	local areaScriptInternal = EEex_ReadDword(cre + 0x26C)
+	local areaScript = areaScriptInternal ~= 0 and EEex_ReadLString(areaScriptInternal, 8) or ""
+	local areaScriptVariable = EEex_DemandCVariable(localVariables, "EEex_AreaScript")
+	EEex_WriteLString(areaScriptVariable + 0x34, areaScript, 32)
+	EEex_ForceLocalVariableMarshal(actorID, "EEex_AreaScript")
+
+	local specificsScriptInternal = EEex_ReadDword(cre + 0x270)
+	local specificsScript = specificsScriptInternal ~= 0 and EEex_ReadLString(specificsScriptInternal, 8) or ""
+	local specificsScriptVariable = EEex_DemandCVariable(localVariables, "EEex_SpecificsScript")
+	EEex_WriteLString(specificsScriptVariable + 0x34, specificsScript, 32)
+	EEex_ForceLocalVariableMarshal(actorID, "EEex_SpecificsScript")
+
+end
+
+-- Responsible for loading EEex's actor-struct AREA script field, (at offset +0xB0)
+function EEex_HookLoadAreaInformation(cre, actorStruct)
+	local areaScriptResref = EEex_ReadLString(actorStruct + 0xB0, 8)
+	if areaScriptResref ~= "" then EEex_SetActorScriptInternal(cre, areaScriptResref, 1) end
+end
+
 function EEex_GameObjectAdded(object)
 
 	local volatileStorage = EEex_Malloc(EEex_VolatileStorageSpace)
@@ -290,9 +340,127 @@ function EEex_HookCopyStats(cre)
 
 end
 
-function B3Cre_InstallCreatureHook()
+function EEex_InstallCreatureHooks()
 
 	EEex_DisableCodeProtection()
+
+	--------------------------------
+	-- EEex Script Variable Hooks --
+	--------------------------------
+
+	----------------------------------
+	-- EEex_HookLoadAreaInformation --
+	----------------------------------
+
+	EEex_HookAfterCall(EEex_Label("CGameSprite::LoadAreaInformation()_Hook"), {[[
+
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_HookLoadAreaInformation"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_ebx
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_esi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 02
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!pop_all_registers
+
+	]]})
+
+	-------------------------------
+	-- EEex_HookUnmarshalScripts --
+	-------------------------------
+
+	EEex_HookAfterCall(EEex_Label("CGameSprite::Unmarshal()_UnmarshalScripts_Hook"), {[[
+
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_HookUnmarshalScripts"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_edi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!pop_all_registers
+
+	]]})
+
+	-------------------------------------
+	-- EEex_HookMarshalVariableScripts --
+	-------------------------------------
+
+	EEex_HookAfterCall(EEex_Label("CGameSprite::Marshal()_CGameSpriteEquipment::Marshal_Hook"), {[[
+
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_HookMarshalVariableScripts"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_[ebp+byte] A8
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!pop_all_registers
+
+	]]})
+
+	-- Disable vanilla engine writing SPECIFICS script back to actor-struct,
+	-- as EEex is implementing the same behavior by storing in LOCALS.
+	EEex_WriteAssembly(EEex_Label("CGameSprite::Marshal()_SpecificsScriptWriteback_Hook"), {"!jmp_byte"})
 
 	---------------------------
 	-- EEex_ObjectData Hooks --
@@ -857,4 +1025,4 @@ function B3Cre_InstallCreatureHook()
 
 	EEex_EnableCodeProtection()
 end
-B3Cre_InstallCreatureHook()
+EEex_InstallCreatureHooks()

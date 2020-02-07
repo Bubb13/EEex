@@ -89,6 +89,7 @@ for _, macroEntry in ipairs({
 	{"fild_[esp+byte]", "DB 44 24"},
 	{"fild_[esp+dword]", "DB 84 24"},
 	{"fild_[esp]", "DB 04 24"},
+	{"fld_qword:[eax]", "DD 00"},
 	{"fstp_qword:[edi]", "DD 1F"},
 	{"fstp_qword:[esp+byte]", "DD 5C 24"},
 	{"fstp_qword:[esp+dword]", "DD 9C 24"},
