@@ -4279,6 +4279,199 @@ function EXDAMAGE(effectData, creatureData)
 })
 end
 
+--[[
+To use the EXMODMEM function, create an opcode 402 effect in an item or spell, set the resource to EXMODMEM (all capitals),
+ set the timing to instant, limited and the duration to 0, and choose parameters.
+
+The EXMODMEM function changes which spells the target can cast. It can either restore spell uses (like Wonderous Recall) or
+ deplete spell uses (like Nishruu attacks). It can affect wizard and/or priest spells.
+
+parameter1 - Determines the maximum number of spell uses that can be restored/removed. If set to 0, there is no limit.
+
+parameter2 - Determines the highest spell level that can be restored (1 - 9).
+
+savingthrow - This function uses several extra bits on this parameter:
+Bit 16: If set, the function will not restore/remove wizard spells (by default it looks through both wizard and priest spells).
+Bit 17: If set, the function will not restore/remove priest spells (by default it looks through both wizard and priest spells).
+Bit 19: If set, the function removes memorized spells rather than restoring them.
+Bit 20: If set, the function will not restore/remove more than one spell of each of the eight spell schools.
+Bit 21: If set, the function will only restore/remove a specific spell. By default, that spell is the same one that called this
+ function. If you set resource2 to a spell resref (calling this function from an EFF file), it will check for that spell instead.
+Bit 22: If set, the function will not restore/remove a specific spell. By default, that spell is the same one that called this
+ function. If you set resource3 to a spell resref (calling this function from an EFF file), it will check for that spell instead.
+
+special - Determines the lowest spell level that can be restored (1 - 9).
+--]]
+ex_wizard_classes = {1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0}
+ex_priest_classes = {0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1}
+function EXMODMEM(effectData, creatureData)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local parameter1 = EEex_ReadDword(effectData + 0x18)
+	local parameter2 = EEex_ReadDword(effectData + 0x1C)
+	local savingthrow = EEex_ReadDword(effectData + 0x3C)
+	local processWizardSpells = (bit32.band(savingthrow, 0x10000) == 0)
+	local processPriestSpells = (bit32.band(savingthrow, 0x20000) == 0)
+--	local lowestLevelFirst = (bit32.band(savingthrow, 0x40000) > 0)
+	local subtractSpells = (bit32.band(savingthrow, 0x80000) > 0)
+	local onePerSchool = (bit32.band(savingthrow, 0x100000) > 0)
+	local matchSpecificSpell = (bit32.band(savingthrow, 0x200000) > 0)
+	local ignoreSpecificSpell = (bit32.band(savingthrow, 0x400000) > 0)
+	local printFeedback = (bit32.band(savingthrow, 0x800000) > 0)
+	local targetClass = EEex_GetActorClass(targetID)
+	if ex_wizard_classes[targetClass] ~= 1 then
+		processWizardSpells = false
+	end
+	if ex_priest_classes[targetClass] ~= 1 then
+		processPriestSpells = false
+	end
+	local parent_resource = EEex_ReadLString(effectData + 0x90, 8)
+	local matchSpell = EEex_ReadLString(effectData + 0x6C, 8)
+	if matchSpell == "" then
+		matchSpell = parent_resource
+	end
+	local ignoreSpell = EEex_ReadLString(effectData + 0x74, 8)
+	if ignoreSpell == "" then
+		ignoreSpell = parent_resource
+	end
+	local special = EEex_ReadDword(effectData + 0x44)
+	local parameter3 = EEex_ReadDword(effectData + 0x5C)
+	local schools_found = {false, false, false, false, false, false, false, false}
+	if parameter3 > 0 then 
+		for i = 1, 8, 1 do
+			if bit32.band(parameter3, 2 ^ i) > 0 then
+				schools_found[i] = true
+			end
+		end
+	end
+	local numFound = 0
+	if parameter2 < 0 then
+		parameter2 = 1
+	elseif parameter2 > 9 then
+		parameter2 = 9
+	end
+	if special < 0 then
+		special = 1
+	elseif special > parameter2 then
+		special = parameter2
+	end
+
+	local increment = -1
+--[[
+	if lowestLevelFirst then
+		local temp = parameter2
+		parameter2 = special
+		special = temp
+		increment = 1
+	end
+--]]
+	for i = parameter2, special, increment do
+		if processWizardSpells then 
+			EEex_ProcessWizardMemorization(targetID, function(level, resrefLocation)
+				if level == i then
+					local resref = EEex_ReadLString(resrefLocation, 8)
+					local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
+					local spellMemorized = (bit32.band(flags, 0x1) > 0)
+					if parameter2 >= level and ((spellMemorized and subtractSpells) or (spellMemorized == false and subtractSpells == false)) and (matchSpecificSpell == false or matchSpell == resref) and (ignoreSpecificSpell == false or ignoreSpell ~= resref) then
+						local spellData = EEex_GetSpellData(resref)
+						if spellData ~= 0 then
+							local spellSchool = EEex_ReadByte(spellData + 0x25, 0x0)
+							if (parameter1 <= 0 or numFound < parameter1) and ((onePerSchool == false and parameter3 == 0) or (schools_found[spellSchool] ~= nil and schools_found[spellSchool] == false)) then
+								if onePerSchool then 
+									schools_found[spellSchool] = true
+								end
+								if subtractSpells then
+									EEex_WriteWord(resrefLocation + 0x8, bit32.band(flags, 0xFFFE))
+--[[
+									if printFeedback then
+										Infinity_SetToken("EX_SPNAME", Infinity_FetchString(EEex_ReadDword(spellData + 0x8)))
+										EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 139,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = ex_modify_spell_memory_strref_2,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+									end
+--]]
+								else
+									EEex_WriteWord(resrefLocation + 0x8, bit32.bor(flags, 0x1))
+--[[
+									if printFeedback then
+										Infinity_SetToken("EX_SPNAME", Infinity_FetchString(EEex_ReadDword(spellData + 0x8)))
+										EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 139,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = ex_modify_spell_memory_strref_1,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+									end
+--]]
+								end
+								numFound = numFound + 1
+							end
+						end
+					end
+				end
+			end)
+		end
+		if i <= 7 and processPriestSpells then 
+			EEex_ProcessPriestMemorization(targetID, function(level, resrefLocation)
+				if level == i then
+					local resref = EEex_ReadLString(resrefLocation, 8)
+					local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
+					local spellMemorized = (bit32.band(flags, 0x1) > 0)
+					if parameter2 >= level and ((spellMemorized and subtractSpells) or (spellMemorized == false and subtractSpells == false)) and (matchSpecificSpell == false or matchSpell == resref) and (ignoreSpecificSpell == false or ignoreSpell ~= resref) then
+						local spellData = EEex_GetSpellData(resref)
+						if spellData ~= 0 then
+							local spellSchool = EEex_ReadByte(spellData + 0x25, 0x0)
+							if (parameter1 <= 0 or numFound < parameter1) and ((onePerSchool == false and parameter3 == 0) or (schools_found[spellSchool] ~= nil and schools_found[spellSchool] == false)) then
+								if onePerSchool then 
+									schools_found[spellSchool] = true
+								end
+								if subtractSpells then
+									EEex_WriteWord(resrefLocation + 0x8, bit32.band(flags, 0xFFFE))
+--[[
+									if printFeedback then
+										Infinity_SetToken("EX_SPNAME", Infinity_FetchString(EEex_ReadDword(spellData + 0x8)))
+										EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 139,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = ex_modify_spell_memory_strref_2,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+									end
+--]]
+								else
+									EEex_WriteWord(resrefLocation + 0x8, bit32.bor(flags, 0x1))
+--[[
+									if printFeedback then
+										Infinity_SetToken("EX_SPNAME", Infinity_FetchString(EEex_ReadDword(spellData + 0x8)))
+										EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 139,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = ex_modify_spell_memory_strref_1,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+									end
+--]]
+								end
+								numFound = numFound + 1
+							end
+						end
+					end
+				end
+			end)
+		end
+	end
+end
+
 -------------------------------------------------------------
 --  Functions you can use with opcode 403 (Screen Effects) --
 -------------------------------------------------------------
@@ -4391,36 +4584,9 @@ function EXSTONES(originatingEffectData, effectData, creatureData)
 	return false
 end
 
-ex_slashing_damage_strref = 0
-ex_piercing_damage_strref = 0
-ex_crushing_damage_strref = 0
-ex_missile_damage_strref = 0
-ex_stunning_damage_strref = 0
-ex_fire_damage_strref = 0
-ex_cold_damage_strref = 0
-ex_electricity_damage_strref = 0
-ex_acid_damage_strref = 0
-ex_poison_damage_strref = 0
-ex_magic_damage_strref = 0
-ex_magicfire_damage_strref = 0
-ex_magiccold_damage_strref = 0
-ex_damage_reduction_feedback_strref = 0
 
-ex_damage_types = {
-[0] = {22, 87, ex_crushing_damage_strref},
-[1] = {17, 27, ex_acid_damage_strref},
-[2] = {15, 28, ex_cold_damage_strref},
-[4] = {16, 29, ex_electricity_damage_strref},
-[8] = {14, 30, ex_fire_damage_strref},
-[16] = {23, 88, ex_piercing_damage_strref},
-[32] = {74, 173, ex_poison_damage_strref},
-[64] = {73, 31, ex_magic_damage_strref},
-[128] = {24, 89, ex_missile_damage_strref},
-[256] = {21, 86, ex_slashing_damage_strref},
-[512] = {19, 84, ex_magicfire_damage_strref},
-[1024] = {20, 85, ex_magiccold_damage_strref},
-[2048] = {22, 87, ex_stunning_damage_strref}
-}
+
+
 
 --[[
 To use the EXDAMRED function, create an opcode 403 effect in a spell, set the resource to EXDAMRED (all capitals), and choose parameters.
@@ -4465,6 +4631,21 @@ function EXDAMRED(originatingEffectData, effectData, creatureData)
 	if opcode ~= 12 then return false end
 	local special = EEex_ReadDword(effectData + 0x44)
 	if bit32.band(special, 0x100000) > 0 then return false end
+	ex_damage_types = {
+[0] = {22, 87, ex_crushing_damage_strref},
+[1] = {17, 27, ex_acid_damage_strref},
+[2] = {15, 28, ex_cold_damage_strref},
+[4] = {16, 29, ex_electricity_damage_strref},
+[8] = {14, 30, ex_fire_damage_strref},
+[16] = {23, 88, ex_piercing_damage_strref},
+[32] = {74, 173, ex_poison_damage_strref},
+[64] = {73, 31, ex_magic_damage_strref},
+[128] = {24, 89, ex_missile_damage_strref},
+[256] = {21, 86, ex_slashing_damage_strref},
+[512] = {19, 84, ex_magicfire_damage_strref},
+[1024] = {20, 85, ex_magiccold_damage_strref},
+[2048] = {22, 87, ex_stunning_damage_strref}
+}
 	local reduction = EEex_ReadSignedWord(originatingEffectData + 0x18, 0x0)
 	local reduction_remaining_location = "parameter3"
 	local reduction_remaining = EEex_ReadWord(originatingEffectData + 0x5C, 0x0)

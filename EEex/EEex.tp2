@@ -89,10 +89,15 @@ Weight: 4~
 		READ_2DA_ENTRY 10 4 5 ex_magicfire_damage_strref
 		READ_2DA_ENTRY 11 4 5 ex_magiccold_damage_strref
 		READ_2DA_ENTRY 12 4 5 ex_stunning_damage_strref
+		BUT_ONLY_IF_IT_CHANGES
 
+	OUTER_SET ex_modify_spell_memory_strref_1 = RESOLVE_STR_REF(~Regained spell: <EX_SPNAME>~)
+	OUTER_SET ex_modify_spell_memory_strref_2 = RESOLVE_STR_REF(~Lost spell: <EX_SPNAME>~)
 	OUTER_SET ex_damage_reduction_feedback_strref = RESOLVE_STR_REF(~<EX_DAMRED>~)
 
-	COPY_EXISTING ~m__eeex.lua~ ~override~
+	COPY_EXISTING ~m__exstr.lua~ ~override~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_modify_spell_memory_strref_1 *= *0~ ~ex_modify_spell_memory_strref_1 = %ex_modify_spell_memory_strref_1%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_modify_spell_memory_strref_2 *= *0~ ~ex_modify_spell_memory_strref_2 = %ex_modify_spell_memory_strref_2%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_slashing_damage_strref *= *0~ ~ex_slashing_damage_strref = %ex_slashing_damage_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_piercing_damage_strref *= *0~ ~ex_piercing_damage_strref = %ex_piercing_damage_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_crushing_damage_strref *= *0~ ~ex_crushing_damage_strref = %ex_crushing_damage_strref%~
