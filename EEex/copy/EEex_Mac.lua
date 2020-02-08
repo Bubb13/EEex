@@ -63,6 +63,7 @@ for _, macroEntry in ipairs({
 	{"cmp_eax_edx", "3B C2"},
 	{"cmp_eax_[ebx+byte]", "3B 43"},
 	{"cmp_ebx_[ebp+byte]", "3B 5D"},
+	{"cmp_ecx_eax", "39 C1"},
 	{"cmp_edi_dword", "81 FF"},
 	{"cmp_edi_[ebp+byte]", "3B 7D"},
 	{"cmp_edx_ebx", "3B D3"},
