@@ -104,7 +104,7 @@ function EEex_InstallNewTriggers()
 		!push_byte 00
 		!push_[dword] *_g_lua
 		!call >_lua_pushboolean
-		!add_esp_byte 04
+		!add_esp_byte 08
 		!push_dword ]], {luaTriggerReturnAddress, 4}, [[
 		!push_[dword] *_g_lua
 		!call >_lua_setglobal
