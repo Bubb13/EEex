@@ -638,6 +638,18 @@ PatAdj=-13
 PatBytes=8DB7800A000033DB8975888BF78B7D88895D848D4900
 PatAdj=-138
 
+[CGameSprite::LoadAreaInformation()_Hook]
+PatBytes=8945E88D464850
+PatAdj=7
+
+[CGameSprite::Marshal()_CGameSpriteEquipment::Marshal_Hook]
+PatBytes=8B45A08BB57CFFFFFF8D0480
+PatAdj=-5
+
+[CGameSprite::Marshal()_SpecificsScriptWriteback_Hook]
+PatBytes=89818C00000083BE7002000000
+PatAdj=13
+
 [CGameSprite::MemorizeSpell]
 PatBytes=8B5D188945E48B450C568BF18945E8
 PatAdj=-20
@@ -717,6 +729,14 @@ VerAdj=41
 [CGameSprite::Shatter]
 PatBytes=8D55C8FF7610B840020000
 PatAdj=-38
+
+[CGameSprite::Unmarshal()_ProcessEffectList_Hook]
+PatBytes=8D831C0400008DB3300B0000508BCE
+PatAdj=47
+
+[CGameSprite::Unmarshal()_UnmarshalScripts_Hook]
+PatBytes=C787E439000000000000C787D8390000FFFFFFFF
+PatAdj=33
 
 [CGameSprite::UnmemorizeSpellInnate]
 PatBytes=8BBC81A00800008D505F
@@ -1014,6 +1034,10 @@ PatAdj=0
 
 [CString::CString(char_const_*)]
 PatBytes=538B5D08578BF9890785DB
+PatAdj=-8
+
+[CString::CString(const_char*,int)]
+PatBytes=568BF1578B7D0C890685FF
 PatAdj=-8
 
 [CString::operator_equ(CString*)]
@@ -1472,6 +1496,10 @@ PatAdj=0
 [_lua_pcallk]
 PatBytes=8B5514538B5D0C568B75085785D2
 PatAdj=-20
+
+[_lua_pushboolean]
+PatBytes=558BEC8B550833C039450C
+PatAdj=0
 
 [_lua_pushcclosure]
 PatBytes=558BEC83E4F856578B7D1085FF751C8B55088B450C8B4A088901C7410416A5F77F834208085F5E8BE55DC3

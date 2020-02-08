@@ -87,6 +87,7 @@ function EEex_InstallNewTriggers()
 		!call >_luaL_loadstring
 		!add_esp_byte 08
 
+		; Set EEex_LuaTriggerActorID ;
 		!push_[edi+byte] 34
 		!fild_[esp]
 		!sub_esp_byte 04
@@ -94,8 +95,17 @@ function EEex_InstallNewTriggers()
 		!push_[dword] *_g_lua
 		!call >_lua_pushnumber
 		!add_esp_byte 0C
-
 		!push_dword ]], {luaTriggerActorAddress, 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_setglobal
+		!add_esp_byte 08
+
+		; Default value for EEex_LuaTrigger is false ;
+		!push_byte 00
+		!push_[dword] *_g_lua
+		!call >_lua_pushboolean
+		!add_esp_byte 08
+		!push_dword ]], {luaTriggerReturnAddress, 4}, [[
 		!push_[dword] *_g_lua
 		!call >_lua_setglobal
 		!add_esp_byte 08
@@ -103,12 +113,26 @@ function EEex_InstallNewTriggers()
 		!push_byte 00
 		!push_byte 00
 		!push_byte 00
-		!push_byte 00
+		!push_byte 01
 		!push_byte 00
 		!push_[dword] *_g_lua
 		!call >_lua_pcallk
 		!add_esp_byte 18
 
+		!push_byte FF
+		!push_[dword] *_g_lua
+		!call >_lua_toboolean
+		!add_esp_byte 08
+
+		!test_eax_eax
+		!jnz_dword >skip_global_fetch
+
+		!push_byte FE
+		!push_[dword] *_g_lua
+		!call >_lua_settop
+		!add_esp_byte 08
+
+		; Legacy EEex_LuaTrigger return ;
 		!push_dword ]], {luaTriggerReturnAddress, 4}, [[
 		!push_[dword] *_g_lua
 		!call >_lua_getglobal
@@ -119,6 +143,7 @@ function EEex_InstallNewTriggers()
 		!call >_lua_toboolean
 		!add_esp_byte 08
 
+		@skip_global_fetch
 		!mov_ebx_eax
 
 		!push_byte FE
