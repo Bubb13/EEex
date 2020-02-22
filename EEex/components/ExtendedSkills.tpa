@@ -155,7 +155,19 @@ COPY_EXISTING ~ui.menu~ ~override~
 		TEXT_SPRINT donebuttonstring ~area 762 704 230 44~
 		TEXT_SPRINT donebuttonstring2 ~area 440 654 234 46~
 	END
-	LPF REPLACE_MULTILINE STR_VAR pattern=~helpTextString = characters\[currentID\]\.proficiencies\.details~ string= EVAL ~~~~~helpTextString = characters[currentID].proficiencies.details
+	TEXT_SPRINT plusminustruestring ~true~
+	TEXT_SPRINT plusminusfalsestring ~false~
+	PATCH_IF MOD_IS_INSTALLED ~LeUI.tp2~ ~0~ BEGIN
+		PATCH_IF MOD_IS_INSTALLED ~LeUI.tp2~ ~4~ BEGIN
+			TEXT_SPRINT plusminustruestring ~reverseButtonPosition~
+			TEXT_SPRINT plusminusfalsestring ~not reverseButtonPosition~
+		END ELSE BEGIN
+			TEXT_SPRINT plusminustruestring ~not reverseButtonPosition~
+			TEXT_SPRINT plusminusfalsestring ~reverseButtonPosition~
+		END
+	END
+	PATCH_IF !(MOD_IS_INSTALLED ~dragonspear_ui++.tp2~ ~1~) AND !(MOD_IS_INSTALLED ~LeUI.tp2~ ~0~) BEGIN
+		LPF REPLACE_MULTILINE STR_VAR pattern=~helpTextString = characters\[currentID\]\.proficiencies\.details~ string= EVAL ~~~~~helpTextString = characters[currentID].proficiencies.details
 		local gsubBase = "%aiscriptstring%:"
 		if string.find(helpTextString, "%turnundeadstring%:") ~= nil then
 			gsubBase = "%turnundeadstring%:"
@@ -180,11 +192,14 @@ COPY_EXISTING ~ui.menu~ ~override~
 			if bit32.band(visibility, 0x1) > 0 and not canUseExtendedSkill(currentID, skill) then
 				skillVisible = false
 			end
+			if string.find(helpTextString, Infinity_FetchString(skill.name) .. ": " .. skillValue) ~= nil then
+				skillVisible = false
+			end
 			if skillVisible then
 				helpTextString = string.gsub(helpTextString, gsubBase, Infinity_FetchString(skill.name) .. ": " .. skillValue .. "\n" .. gsubBase)
 			end
 		end~~~~~ END
-
+	END
 	LPF REPLACE_MULTILINE STR_VAR pattern=~for k, v in ipairs(characters\[currentID\]\.proficiencies\.class_skills) do~ string= EVAL ~local skillInsertPoint = #characters[currentID].proficiencies.class_skills + 1
 		for i = #characters[currentID].proficiencies.class_skills, 1, -1 do
 			local skillName = Infinity_FetchString(characters[currentID].proficiencies.class_skills[i].strRef)
@@ -206,6 +221,11 @@ COPY_EXISTING ~ui.menu~ ~override~
 			if bit32.band(visibility, 0x1) > 0 and not canUseExtendedSkill(currentID, skill) then
 				skillVisible = false
 			end
+			for k, v in ipairs(characters[currentID].proficiencies.class_skills) do
+				if v.strRef == skill.name then
+					skillVisible = false
+				end
+			end
 			if skillVisible then
 				table.insert(characters[currentID].proficiencies.class_skills, skillInsertPoint, {['strRef'] = skill.name, ['current'] = skillValue})
 				skillInsertPoint = skillInsertPoint + 1
@@ -213,7 +233,9 @@ COPY_EXISTING ~ui.menu~ ~override~
 		end
 		for k, v in ipairs(characters[currentID].proficiencies.class_skills) do~ END
 
-	LPF REPLACE_MULTILINE STR_VAR pattern=~function isChargenProficienciesBackButtonClickable()~ string=~~~~~function canUseExtendedSkill(actorID, skill)
+	LPF REPLACE_MULTILINE STR_VAR pattern=~--reload language~ string=~~~~~--reload language
+
+function canUseExtendedSkill(actorID, skill)
 	local canUseSkill = false
 	local class = EEex_GetActorClass(actorID)
 	local kit = EEex_GetActorKit(actorID)
@@ -273,11 +295,10 @@ function displayExtendedSkills()
 		end
 	end
 end
-
-function isChargenProficienciesBackButtonClickable()~~~~~ END
+~~~~~ END
 
 	PATCH_IF !(GAME_IS ~iwdee~) BEGIN
-		LPF REPLACE_MULTILINE STR_VAR pattern=~name \'CHARGEN_PROFICIENCIES\'\([^\"]*\)\"~ string=~name 'CHARGEN_PROFICIENCIES'\1"
+		LPF REPLACE_MULTILINE STR_VAR pattern=~name [\'\"]CHARGEN_PROFICIENCIES[\'\"]\([^`]*\)[oO]n[oO]pen\([^\"]*\)\"~ string=~name 'CHARGEN_PROFICIENCIES'\1onopen\2"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
 	for i = 1, #extendedskilllist, 1 do
@@ -291,7 +312,7 @@ function isChargenProficienciesBackButtonClickable()~~~~~ END
 ~ END
 
 	END ELSE BEGIN
-		LPF REPLACE_MULTILINE STR_VAR pattern=~name \'CHARGEN_SKILLS\'\([^\"]*\)\"~ string=~name 'CHARGEN_SKILLS'\1"
+		LPF REPLACE_MULTILINE STR_VAR pattern=~name [\'\"]CHARGEN_SKILLS[\'\"]\([^`]*\)[oO]n[oO]pen\([^\"]*\)\"~ string=~name 'CHARGEN_SKILLS'\1onopen\2"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
 	for i = 1, #extendedskilllist, 1 do
@@ -303,7 +324,7 @@ function isChargenProficienciesBackButtonClickable()~~~~~ END
 
 	displayExtendedSkills()
 ~ END
-		LPF REPLACE_MULTILINE STR_VAR pattern=~name \'LEVELUP_PROFICIENCIES\'\([^\"]*\)\"~ string=~name 'LEVELUP_PROFICIENCIES'\1"
+		LPF REPLACE_MULTILINE STR_VAR pattern=~name [\'\"]LEVELUP_PROFICIENCIES[\'\"]\([^`]*\)[oO]n[oO]pen\([^\"]*\)\"~ string=~name 'LEVELUP_PROFICIENCIES'\1onopen\2"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
 	for i = 1, #extendedskilllist, 1 do
@@ -317,39 +338,66 @@ function isChargenProficienciesBackButtonClickable()~~~~~ END
 ~ END
 
 	END
-
-	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, true)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, true)
+	PATCH_IF !(MOD_IS_INSTALLED ~LeUI.tp2~ ~0~) BEGIN
+		LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, %plusminustruestring%)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, %plusminustruestring%)
 					displayExtendedSkills()~ END
 
-	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, false)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, false)
+		LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, %plusminusfalsestring%)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, %plusminusfalsestring%)
 					displayExtendedSkills()~ END
+	END ELSE BEGIN
+		LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(allChargenProficiencies\[currentChargenProficiency\]\.id, %plusminustruestring%)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, %plusminustruestring%)
+					displayExtendedSkills()~ END
+
+		LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(allChargenProficiencies\[currentChargenProficiency\]\.id, %plusminusfalsestring%)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, %plusminusfalsestring%)
+					displayExtendedSkills()~ END
+	END
 
 	LPF REPLACE_MULTILINE STR_VAR pattern=~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() then~ string=~if createCharScreen:IsThiefSkillPlusMinusButtonClickable() then
 					exIndex = currentChargenThiefSkill - firstExtendedSkillIndex~ END
 
-	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, true)~ string=~						if currentChargenThiefSkill > firstExtendedSkillIndex then
+	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, %plusminustruestring%)~ string=~						if currentChargenThiefSkill > firstExtendedSkillIndex then
 								if chargen.thief_skill[currentChargenThiefSkill].value < 255 and chargen.extraSkillPoints > 0 then
 									chargen.thief_skill[currentChargenThiefSkill].value = chargen.thief_skill[currentChargenThiefSkill].value + 1
 									extendedSkills[exIndex].value = extendedSkills[exIndex].value + 1
 									chargen.extraSkillPoints = chargen.extraSkillPoints - 1
 								end
 							end
-							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, true)
+							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, %plusminustruestring%)
 							displayExtendedSkills()~ END
 
-	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, false)~ string=~						if currentChargenThiefSkill > firstExtendedSkillIndex then
+	LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen\.thief_skill\[currentChargenThiefSkill\]\.id, %plusminusfalsestring%)~ string=~						if currentChargenThiefSkill > firstExtendedSkillIndex then
 							if chargen.levelingUp and chargen.thief_skill[currentChargenThiefSkill].value > extendedSkills[exIndex].base then
 								chargen.thief_skill[currentChargenThiefSkill].value = chargen.thief_skill[currentChargenThiefSkill].value - 1
 								extendedSkills[exIndex].value = extendedSkills[exIndex].value - 1
 								chargen.extraSkillPoints = chargen.extraSkillPoints + 1
-								createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, false)
+								createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, %plusminusfalsestring%)
 								displayExtendedSkills()
 							end
 						else
-							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, false)
+							createCharScreen:OnThiefSkillPlusMinusButtonClick(chargen.thief_skill[currentChargenThiefSkill].id, %plusminusfalsestring%)
 							displayExtendedSkills()
 						end~ END
 
+	PATCH_IF !(GAME_IS ~iwdee~) BEGIN
+		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~name [\'\"]CHARGEN_PROFICIENCIES[\'\"]\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~name 'CHARGEN_PROFICIENCIES'\1
+
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			extendedSkillIncrement = skill.value - skill.base
+			if extendedSkillIncrement ~= 0 then
+				EEex_ApplyEffectToActor(currentID, {
+['opcode'] = skill.opcode,
+['target'] = 1,
+['timing'] = 9,
+['parameter1'] = extendedSkillIncrement,
+['special'] = skill.stat,
+['source_target'] = currentID,
+['source_id'] = currentID
+})
+			end
+		end
+		createCharScreen:OnDoneButtonClick()~~~~~ END
+/*
 	LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~%donebuttonstring%\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~%donebuttonstring%\1
 
 		for i = 1, #extendedSkills, 1 do
@@ -368,9 +416,48 @@ function isChargenProficienciesBackButtonClickable()~~~~~ END
 			end
 		end
 		createCharScreen:OnDoneButtonClick()~~~~~ END
+*/
 
+	END ELSE BEGIN
 
-	PATCH_IF (GAME_IS ~iwdee~) BEGIN
+		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~name [\'\"]LEVELUP_PROFICIENCIES[\'\"]\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~name 'LEVELUP_PROFICIENCIES'\1
+
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			extendedSkillIncrement = skill.value - skill.base
+			if extendedSkillIncrement ~= 0 then
+				EEex_ApplyEffectToActor(currentID, {
+['opcode'] = skill.opcode,
+['target'] = 1,
+['timing'] = 9,
+['parameter1'] = extendedSkillIncrement,
+['special'] = skill.stat,
+['source_target'] = currentID,
+['source_id'] = currentID
+})
+			end
+		end
+		createCharScreen:OnDoneButtonClick()~~~~~ END
+
+		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~name [\'\"]CHARGEN_SKILLS[\'\"]\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~name 'CHARGEN_SKILLS'\1
+
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			extendedSkillIncrement = skill.value - skill.base
+			if extendedSkillIncrement ~= 0 then
+				EEex_ApplyEffectToActor(currentID, {
+['opcode'] = skill.opcode,
+['target'] = 1,
+['timing'] = 9,
+['parameter1'] = extendedSkillIncrement,
+['special'] = skill.stat,
+['source_target'] = currentID,
+['source_id'] = currentID
+})
+			end
+		end
+		createCharScreen:OnDoneButtonClick()~~~~~ END
+/*
 		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~%donebuttonstring2%\([^`]*\)createCharScreen:OnDoneButtonClick();~ string= EVAL ~~~~~%donebuttonstring2%\1
 
 		for i = 1, #extendedSkills, 1 do
@@ -389,7 +476,7 @@ function isChargenProficienciesBackButtonClickable()~~~~~ END
 			end
 		end
 		createCharScreen:OnDoneButtonClick();~~~~~ END
-
+*/
 	END
 /*
 	REPLACE_EVALUATE ~createCharScreen:OnHighLevelAbilitiesButtonClick()~
