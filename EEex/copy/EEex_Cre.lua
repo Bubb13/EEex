@@ -62,7 +62,7 @@ function EEex_HookLoadAreaInformation(cre, actorStruct)
 	if areaScriptResref ~= "" then EEex_SetActorScriptInternal(cre, areaScriptResref, 1) end
 end
 
-function EEex_GameObjectAdded(object)
+function EEex_GameObjectAdded(objectID)
 
 	local volatileStorage = EEex_Malloc(EEex_VolatileStorageSpace)
 
@@ -74,7 +74,6 @@ function EEex_GameObjectAdded(object)
 		end
 	end
 
-	local objectID = EEex_ReadDword(object + 0x34)
 	EEex_ObjectData[objectID] = {
 		["volatileFields"] = volatileStorage,
 	}
@@ -85,6 +84,11 @@ function EEex_GameObjectBeingDeleted(objectID)
 
 	if objectID == -1 then return end
 	local objectData = EEex_ObjectData[objectID]
+
+	-- Object was already deleted by something else, like CInfGame being destroyed.
+	if not objectData then
+		return
+	end 
 
 	local volatileStorage = objectData["volatileFields"]
 
@@ -494,7 +498,7 @@ function EEex_InstallCreatureHooks()
 		!call >_lua_getglobal
 		!add_esp_byte 08
 
-		!push_edi
+		!push_[ebx]
 		!fild_[esp]
 		!sub_esp_byte 04
 		!fstp_qword:[esp]
