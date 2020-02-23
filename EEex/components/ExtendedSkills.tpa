@@ -312,7 +312,7 @@ end
 ~ END
 
 	END ELSE BEGIN
-		LPF REPLACE_MULTILINE STR_VAR pattern=~name [\'\"]CHARGEN_SKILLS[\'\"]\([^`]*\)[oO]n[oO]pen\([^\"]*\)\"~ string=~name 'CHARGEN_SKILLS'\1onopen\2"
+		LPF REPLACE_MULTILINE STR_VAR pattern=~name [\'\"]CHARGEN_SKILLS[\'\"]\([^\"]*\)\"~ string=~name 'CHARGEN_SKILLS'\1"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
 	for i = 1, #extendedskilllist, 1 do
@@ -324,6 +324,7 @@ end
 
 	displayExtendedSkills()
 ~ END
+
 		LPF REPLACE_MULTILINE STR_VAR pattern=~name [\'\"]LEVELUP_PROFICIENCIES[\'\"]\([^`]*\)[oO]n[oO]pen\([^\"]*\)\"~ string=~name 'LEVELUP_PROFICIENCIES'\1onopen\2"
 	firstExtendedSkillIndex = #chargen.thief_skill
 	extendedSkills = {}
@@ -336,7 +337,6 @@ end
 
 	displayExtendedSkills()
 ~ END
-
 	END
 	PATCH_IF !(MOD_IS_INSTALLED ~LeUI.tp2~ ~0~) BEGIN
 		LPF REPLACE_MULTILINE STR_VAR pattern=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen\.proficiency\[currentChargenProficiency\]\.id, %plusminustruestring%)~ string=~createCharScreen:OnProficiencyPlusMinusButtonClick(chargen.proficiency[currentChargenProficiency].id, %plusminustruestring%)
@@ -419,7 +419,26 @@ end
 */
 
 	END ELSE BEGIN
+/*
+		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~name [\'\"]CHARGEN_SKILLS[\'\"]\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~name 'CHARGEN_SKILLS'\1
 
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			extendedSkillIncrement = skill.value - skill.base
+			if extendedSkillIncrement ~= 0 then
+				EEex_ApplyEffectToActor(currentID, {
+['opcode'] = skill.opcode,
+['target'] = 1,
+['timing'] = 9,
+['parameter1'] = extendedSkillIncrement,
+['special'] = skill.stat,
+['source_target'] = currentID,
+['source_id'] = currentID
+})
+			end
+		end
+		createCharScreen:OnDoneButtonClick()~~~~~ END
+*/
 		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~name [\'\"]LEVELUP_PROFICIENCIES[\'\"]\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~name 'LEVELUP_PROFICIENCIES'\1
 
 		for i = 1, #extendedSkills, 1 do
@@ -439,25 +458,8 @@ end
 		end
 		createCharScreen:OnDoneButtonClick()~~~~~ END
 
-		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~name [\'\"]CHARGEN_SKILLS[\'\"]\([^`]*\)createCharScreen:OnDoneButtonClick()~ string= EVAL ~~~~~name 'CHARGEN_SKILLS'\1
 
-		for i = 1, #extendedSkills, 1 do
-			local skill = extendedSkills[i]
-			extendedSkillIncrement = skill.value - skill.base
-			if extendedSkillIncrement ~= 0 then
-				EEex_ApplyEffectToActor(currentID, {
-['opcode'] = skill.opcode,
-['target'] = 1,
-['timing'] = 9,
-['parameter1'] = extendedSkillIncrement,
-['special'] = skill.stat,
-['source_target'] = currentID,
-['source_id'] = currentID
-})
-			end
-		end
-		createCharScreen:OnDoneButtonClick()~~~~~ END
-/*
+
 		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~%donebuttonstring2%\([^`]*\)createCharScreen:OnDoneButtonClick();~ string= EVAL ~~~~~%donebuttonstring2%\1
 
 		for i = 1, #extendedSkills, 1 do
@@ -476,7 +478,7 @@ end
 			end
 		end
 		createCharScreen:OnDoneButtonClick();~~~~~ END
-*/
+
 	END
 /*
 	REPLACE_EVALUATE ~createCharScreen:OnHighLevelAbilitiesButtonClick()~
