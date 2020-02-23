@@ -288,7 +288,7 @@ function canUseExtendedSkill(actorID, skill)
 end
 
 function displayExtendedSkills()
-	if firstExtendedSkillIndex ~= nil and firstExtendedSkillIndex > 0 then
+	if firstExtendedSkillIndex ~= nil then
 		for i = 1, #extendedSkills, 1 do
 			local skill = extendedSkills[i]
 			chargen.thief_skill[firstExtendedSkillIndex + i] = {['description'] = skill.description, ['name'] = skill.name, ['value'] = skill.value, ['id'] = firstExtendedSkillIndex + i - 1}
