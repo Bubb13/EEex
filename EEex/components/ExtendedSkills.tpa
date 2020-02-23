@@ -502,3 +502,22 @@ end
 		createCharScreen:OnHighLevelAbilitiesButtonClick()~~~~~
 */
 
+	PATCH_IF (GAME_IS ~bg2ee eet~) AND (MOD_IS_INSTALLED ~LeUI.tp2~ ~0~) BEGIN
+		LPF REPLACE_MULTILINE STR_VAR pattern= EVAL ~createCharScreen:OnHighLevelAbilitiesButtonClick()~ string= EVAL ~~~~~
+		for i = 1, #extendedSkills, 1 do
+			local skill = extendedSkills[i]
+			extendedSkillIncrement = skill.value - skill.base
+			if extendedSkillIncrement ~= 0 then
+				EEex_ApplyEffectToActor(currentID, {
+['opcode'] = skill.opcode,
+['target'] = 1,
+['timing'] = 9,
+['parameter1'] = extendedSkillIncrement,
+['special'] = skill.stat,
+['source_target'] = currentID,
+['source_id'] = currentID
+})
+			end
+		end
+		createCharScreen:OnHighLevelAbilitiesButtonClick()~~~~~ END
+	END
