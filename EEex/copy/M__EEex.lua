@@ -1581,13 +1581,13 @@ end
 function EEex_IsCursorWithin(x, y, width, height)
 	local mouseX, mouseY = EEex_GetTrueMousePos()
 	return mouseX >= x and mouseX <= (x + width)
-	       and mouseY >= y and mouseY <= (y + height)
+	   and mouseY >= y and mouseY <= (y + height)
 end
 
 function EEex_IsCursorWithinMenu(menuName, menuItemName)
-	local offsetX, offsetY = Infinity_GetOffset(menuName)
+	local menuX, menuY, menuW, menuH = EEex_GetMenuArea(menuName)
 	local itemX, itemY, itemWidth, itemHeight = Infinity_GetArea(menuItemName)
-	return EEex_IsCursorWithin(offsetX + itemX, offsetY + itemY, itemWidth, itemHeight)
+	return EEex_IsCursorWithin(menuX + itemX, menuY + itemY, itemWidth, itemHeight)
 end
 
 function EEex_GetFPS()
@@ -1658,6 +1658,49 @@ function EEex_GetMenuStructure(menuName)
 	local result = EEex_Call(EEex_Label("_findMenu"), {0x0, 0x0, stringAddress}, nil, 0xC)
 	EEex_Free(stringAddress)
 	return result
+end
+
+-- Returns the given menu's x, y, w, and h components - or nil if passed invalid menuName.
+function EEex_GetMenuArea(menuName)
+
+	local menuStruct = EEex_GetMenuStructure(menuName)
+	if menuStruct == 0x0 then return end
+
+	local screenW, screenH = Infinity_GetScreenSize()
+
+	local ha = EEex_ReadDword(menuStruct + 0x3C)
+	local va = EEex_ReadDword(menuStruct + 0x40)
+
+	local w = EEex_ReadDword(menuStruct + 0x44)
+	local h = EEex_ReadDword(menuStruct + 0x48)
+
+	local returnX = 0
+	local returnY = 0
+
+	-- right
+	if ha == 1 then
+		returnX = screenW - w
+	-- center
+	elseif ha == 2 then
+		-- The negative case is nonsensical, but that's how the assembly works.
+		local windowW = screenW >= 0 and screenW or screenW + 1
+		local menuW = w >= 0 and w or w + 1
+		returnX = windowW / 2 - menuW / 2
+	end
+
+	-- bottom
+	if va == 1 then
+		returnY = screenH - h
+	-- center
+	elseif va == 2 then
+		local windowH = screenH >= 0 and screenH or screenH + 1
+		local menuH = h >= 0 and h or h + 1
+		returnY = windowH / 2 - menuH / 2
+	end
+
+	local offsetX, offsetY = Infinity_GetOffset(menuName)
+	return returnX + offsetX, returnY + offsetY, w, h
+
 end
 
 function EEex_GetMenuFunctionOffset(typeName)
