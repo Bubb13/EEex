@@ -35,14 +35,6 @@ SpellNoDecRES("SPWI304",Player1)
 --  "unused" resource field in NearInfinity and select "Edit as string"), whenever the creature
 --  would attack someone, they instead run away.
 
-EEex_AddActionOpcodeHook("EXCOWARD", function(originatingEffectData, actionData, creatureData)
-	local actionID = EEex_GetActionID(actionData)
-	if actionID == 3 or actionID == 105 or actionID == 134 then
-		EEex_SetActionID(actionData, 355)
-		EEex_WriteDword(actionData + 0x40, 600)
-	end
-end)
-
 EEex_HookActionFunctions = {}
 EEex_HookActionOpcodeFunctions = {}
 
@@ -124,6 +116,14 @@ function EEex_HookAction(actionData)
 		end)
 	end
 end
+
+EEex_AddActionHookOpcode("EXCOWARD", function(originatingEffectData, actionData, creatureData)
+	local actionID = EEex_GetActionID(actionData)
+	if actionID == 3 or actionID == 105 or actionID == 134 then
+		EEex_SetActionID(actionData, 355)
+		EEex_WriteDword(actionData + 0x40, 600)
+	end
+end)
 
 function EEex_InstallActionHook()
 	local hookName = "EEex_HookAction"
