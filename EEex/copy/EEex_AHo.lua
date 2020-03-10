@@ -30,10 +30,20 @@ SpellNoDecRES("SPWI304",Player1)
 
 --]]
 
+-- Here's another way you can use action hooks. If you give a creature an opcode 401 effect,
+--  set parameter1 to 1, special to 999, and the resource field to "EXCOWARD" (right-click the
+--  "unused" resource field in NearInfinity and select "Edit as string"), whenever the creature
+--  would attack someone, they instead run away.
+
 EEex_HookActionFunctions = {}
+EEex_HookActionOpcodeFunctions = {}
 
 function EEex_AddActionHook(func)
 	table.insert(EEex_HookActionFunctions, func)
+end
+
+function EEex_AddActionHookOpcode(func_name, func)
+	EEex_HookActionOpcodeFunctions[func_name] = func
 end
 
 function EEex_GetActionID(actionData)
@@ -50,6 +60,14 @@ end
 
 function EEex_SetActionTarget(actionData, newTarget)
 	return EEex_WriteDword(actionData + 0x20, newTarget)
+end
+
+function EEex_GetActionParameter2(actionData)
+	return EEex_ReadDword(actionData + 0x40)
+end
+
+function EEex_SetActionParameter2(actionData, newParameter2)
+	return EEex_WriteDword(actionData + 0x40, newParameter2)
 end
 
 function EEex_GetActionString1(actionData)
@@ -82,7 +100,30 @@ function EEex_HookAction(actionData)
 	for _, hook in ipairs(hooksCopy) do
 		hook(actionData)
 	end
+	
+	local actorID = EEex_ReadDword(actionData - 0x2C4)
+	if actorID > 0 and EEex_GetActorStat(actorID, 999) > 0 then
+		EEex_IterateActorEffects(actorID, function(eData)
+			local opcode = EEex_ReadDword(eData + 0x10)
+			local parameter1 = EEex_ReadDword(eData + 0x1C)
+			local stat = EEex_ReadDword(eData + 0x48)
+			if opcode == 401 and parameter1 > 0 and stat == 999 then
+				local func_name = EEex_ReadLString(eData + 0x30, 8)
+				if EEex_HookActionOpcodeFunctions[func_name] ~= nil then
+					EEex_HookActionOpcodeFunctions[func_name](eData - 0x4, actionData, actionData - 0x2F8)
+				end
+			end
+		end)
+	end
 end
+
+EEex_AddActionHookOpcode("EXCOWARD", function(originatingEffectData, actionData, creatureData)
+	local actionID = EEex_GetActionID(actionData)
+	if actionID == 3 or actionID == 105 or actionID == 134 then
+		EEex_SetActionID(actionData, 355)
+		EEex_WriteDword(actionData + 0x40, 600)
+	end
+end)
 
 function EEex_InstallActionHook()
 	local hookName = "EEex_HookAction"

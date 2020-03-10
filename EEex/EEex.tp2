@@ -55,6 +55,14 @@ C:Eval('ForceSpellRES(\"EXAMPL2\",Myself)',0)
 
 This spell will absorb the first 5 damage of any instance of slashing, crushing, or nonlethal damage that would hit the creature. Once it has absorbed a total of 20 points of such damage, the spell ends. In addition, while the spell is active, it will also absorb the first 7 damage of any instance of missile or acid damage, and there's no limit to how much of this damage it can absorb. However, any magic damage that would be dealt to creature will be increased by 5.~
 
+	COPY_EXISTING ~exampl3.spl~ ~override~
+		SAY NAME1 ~Cowardice~
+		SAY UNIDENTIFIED_DESC ~This spell shows how you can use action hooks. Try casting it with:
+
+C:Eval('ForceSpellRES(\"EXAMPL3\",Myself)',0)
+
+This spell will change the target's actions. Whenever the creature would attack a creature, they instead run away.~
+
 	COPY_EXISTING ~exflameb.itm~ ~override~
 		SAY NAME2 ~Real Sword of Flame~
 		SAY IDENTIFIED_DESC ~This sword is an example of how you can use the EXDAMAGE function. Create it with:
