@@ -3303,6 +3303,66 @@ function EEex_GetActorKit(actorID)
 	return EEex_Call(EEex_Label("CGameSprite::GetKit"), {}, EEex_GetActorShare(actorID), 0x0)
 end
 
+-- Returns a number based on how different the EAs of the two actors are.
+-- Return value of 0: the actors are allies (both green, both blue, both red)
+-- Return value of 1: the actors are neutral (green and blue, blue and red)
+-- Return value of 2: the actors are enemies (green and red)
+function EEex_CompareActorAllegiances(actorID1, actorID2)
+	local ea1 = EEex_GetActorAllegiance(actorID1)
+	local ea2 = EEex_GetActorAllegiance(actorID2)
+	local eaGroup1 = 2
+	local eaGroup2 = 2
+	if ea1 >= 2 and ea1 <= 30 then
+		eaGroup1 = 1
+	elseif ea1 >= 200 then
+		eaGroup1 = 3
+	end
+	if ea2 >= 2 and ea2 <= 30 then
+		eaGroup2 = 1
+	elseif ea1 >= 200 then
+		eaGroup2 = 3
+	end
+	return math.abs(eaGroup1 - eaGroup2)
+end
+-- Gets the actor's level for casting a spell of the specified type.
+--  Possible values for spellType:
+--   1: Wizard
+--   2: Priest
+--   4: Innate
+function EEex_GetActorCasterLevel(actorID, spellType)
+	local casterLevel = 1
+	local class = EEex_GetActorClass(actorID)
+	local level1 = EEex_GetActorStat(actorID, 34)
+	local level2 = EEex_GetActorStat(actorID, 68)
+	local level3 = EEex_GetActorStat(actorID, 69)
+	if spellType == 1 then
+		if class == 1 or class == 5 or class == 13 or class == 19 or class > 21 then
+			casterLevel = level1 + EEex_GetActorStat(actorID, 79)
+		elseif class == 7 or class == 10 or class == 14 or class == 17 then
+			casterLevel = level2 + EEex_GetActorStat(actorID, 79)
+		end
+	elseif spellType == 2 then
+		if class == 3 or class == 6 or class == 11 or class == 12 or class == 14 or class == 15 or class == 18 or class == 21 or class > 21 then
+			casterLevel = level1 + EEex_GetActorStat(actorID, 80)
+		elseif class == 8 or class == 16 then
+			casterLevel = level2 + EEex_GetActorStat(actorID, 80)
+		elseif class == 17 then
+			casterLevel = level3 + EEex_GetActorStat(actorID, 80)
+		end
+	else
+		if level1 > casterLevel then
+			casterLevel = level1
+		end
+		if level2 > casterLevel then
+			casterLevel = level2
+		end
+		if level3 > casterLevel then
+			casterLevel = level3
+		end
+	end
+	return casterLevel
+end
+
 -- Returns the actor's current area resref as a string.
 -- If the game was just loaded, sometimes the actor doesn't know what
 --  area they're in yet, so it'll return "" in that case.
@@ -4361,6 +4421,7 @@ function EXMODMEM(effectData, creatureData)
 	local ignoreSpecificSpell = (bit32.band(savingthrow, 0x400000) > 0)
 	local printFeedback = (bit32.band(savingthrow, 0x800000) > 0)
 	local targetClass = EEex_GetActorClass(targetID)
+	local isSorcererClass = (targetClass == 19 or targetClass == 21)
 	if ex_wizard_classes[targetClass] ~= 1 then
 		processWizardSpells = false
 	end
@@ -4387,6 +4448,7 @@ function EXMODMEM(effectData, creatureData)
 		end
 	end
 	local numFound = 0
+	local numLeft = 0
 	if parameter2 < 0 then
 		parameter2 = 1
 	elseif parameter2 > 9 then
@@ -4407,18 +4469,28 @@ function EXMODMEM(effectData, creatureData)
 		increment = 1
 	end
 --]]
+	local sorcererSpellsFound = {}
+	local sorcererSpellMax = 0
 	for i = parameter2, special, increment do
+		sorcererSpellsFound = {}
+		numLeft = parameter1 - numFound
+		sorcererSpellMax = 0
 		if processWizardSpells then 
 			EEex_ProcessWizardMemorization(targetID, function(level, resrefLocation)
 				if level == i then
 					local resref = EEex_ReadLString(resrefLocation, 8)
+					if sorcererSpellsFound[resref] == nil then	
+						sorcererSpellsFound[resref] = 1
+					else
+						sorcererSpellsFound[resref] = sorcererSpellsFound[resref] + 1
+					end
 					local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
 					local spellMemorized = (bit32.band(flags, 0x1) > 0)
-					if parameter2 >= level and ((spellMemorized and subtractSpells) or (spellMemorized == false and subtractSpells == false)) and (matchSpecificSpell == false or matchSpell == resref) and (ignoreSpecificSpell == false or ignoreSpell ~= resref) then
+					if parameter2 >= level and ((spellMemorized and subtractSpells) or (spellMemorized == false and subtractSpells == false)) and (matchSpecificSpell == false or matchSpell == resref or isSorcererClass) and (ignoreSpecificSpell == false or ignoreSpell ~= resref or isSorcererClass) then
 						local spellData = EEex_GetSpellData(resref)
 						if spellData ~= 0 then
 							local spellSchool = EEex_ReadByte(spellData + 0x25, 0x0)
-							if (parameter1 <= 0 or numFound < parameter1) and ((onePerSchool == false and parameter3 == 0) or (schools_found[spellSchool] ~= nil and schools_found[spellSchool] == false)) then
+							if (parameter1 <= 0 or ((isSorcererClass == false or sorcererSpellsFound[resref] <= numLeft) and (isSorcererClass or numFound < parameter1))) and ((onePerSchool == false and parameter3 == 0) or (schools_found[spellSchool] ~= nil and schools_found[spellSchool] == false)) then
 								if onePerSchool then 
 									schools_found[spellSchool] = true
 								end
@@ -4453,24 +4525,39 @@ function EXMODMEM(effectData, creatureData)
 									end
 --]]
 								end
-								numFound = numFound + 1
+								if isSorcererClass then
+									if sorcererSpellsFound[resref] > sorcererSpellMax then
+										sorcererSpellMax = sorcererSpellsFound[resref]
+									end
+								else
+									numFound = numFound + 1
+								end
 							end
 						end
 					end
 				end
 			end)
 		end
+		numFound = numFound + sorcererSpellMax
+		sorcererSpellsFound = {}
+		numLeft = parameter1 - numFound
+		sorcererSpellMax = 0
 		if i <= 7 and processPriestSpells then 
-			EEex_ProcessPriestMemorization(targetID, function(level, resrefLocation)
+			EEex_ProcessClericMemorization(targetID, function(level, resrefLocation)
 				if level == i then
 					local resref = EEex_ReadLString(resrefLocation, 8)
+					if sorcererSpellsFound[resref] == nil then	
+						sorcererSpellsFound[resref] = 1
+					else
+						sorcererSpellsFound[resref] = sorcererSpellsFound[resref] + 1
+					end
 					local flags = EEex_ReadWord(resrefLocation + 0x8, 0x0)
 					local spellMemorized = (bit32.band(flags, 0x1) > 0)
-					if parameter2 >= level and ((spellMemorized and subtractSpells) or (spellMemorized == false and subtractSpells == false)) and (matchSpecificSpell == false or matchSpell == resref) and (ignoreSpecificSpell == false or ignoreSpell ~= resref) then
+					if parameter2 >= level and ((spellMemorized and subtractSpells) or (spellMemorized == false and subtractSpells == false)) and (matchSpecificSpell == false or matchSpell == resref or isSorcererClass) and (ignoreSpecificSpell == false or ignoreSpell ~= resref or isSorcererClass) then
 						local spellData = EEex_GetSpellData(resref)
 						if spellData ~= 0 then
 							local spellSchool = EEex_ReadByte(spellData + 0x25, 0x0)
-							if (parameter1 <= 0 or numFound < parameter1) and ((onePerSchool == false and parameter3 == 0) or (schools_found[spellSchool] ~= nil and schools_found[spellSchool] == false)) then
+							if (parameter1 <= 0 or ((isSorcererClass == false or sorcererSpellsFound[resref] <= numLeft) and (isSorcererClass or numFound < parameter1))) and ((onePerSchool == false and parameter3 == 0) or (schools_found[spellSchool] ~= nil and schools_found[spellSchool] == false)) then
 								if onePerSchool then 
 									schools_found[spellSchool] = true
 								end
@@ -4505,13 +4592,20 @@ function EXMODMEM(effectData, creatureData)
 									end
 --]]
 								end
-								numFound = numFound + 1
+								if isSorcererClass then
+									if sorcererSpellsFound[resref] > sorcererSpellMax then
+										sorcererSpellMax = sorcererSpellsFound[resref]
+									end
+								else
+									numFound = numFound + 1
+								end
 							end
 						end
 					end
 				end
 			end)
 		end
+		numFound = numFound + sorcererSpellMax
 	end
 end
 
@@ -4836,6 +4930,171 @@ function EXDAMRED(originatingEffectData, effectData, creatureData)
 			return false
 		end
 	end
+	return false
+end
+
+--[[
+To use the EXSPLDEF function, create an opcode 403 effect in a spell, set the resource to EXSPLDEF (all capitals), and choose parameters.
+
+The EXSPLDEF function works like Spell Deflection, Spell Turning or Spell Trap, except it works against area of effect spells, 
+ and has a few more options.
+
+parameter1 - Determines the lowest spell level that can be deflected (0 - 9).
+
+parameter2 - Determines the highest spell level that can be deflected (0 - 9).
+
+special - Determines the number of spell levels that can be deflected. If set to -1, there is no limit.
+
+savingthrow - This function uses several extra bits on this parameter:
+Bit 17: If set, once the last spell level is deflected, another spell is cast on the creature whose spell
+ was deflected. The spell resref is specified by resource2 (in an EFF file). If you aren't using this from an
+ EFF file, then the spell resref is set to the resref of the source spell, with an E added at the end.
+Bit 18: If set, whenever a spell is deflected, another spell is cast on the creature whose spell
+ was deflected. The spell resref is specified by resource3 (in an EFF file). If you aren't using this from an
+ EFF file, then the spell resref is set to the resref of the source spell, with an F added at the end.
+Bit 19: If set, up to special spells (rather than spell levels) are deflected.
+Bit 20: If NOT set, the function will remove all effects of the spell that called EXSPLDEF once the last spell level is deflected.
+Bit 21: If set, only spells with the hostile flag, or that deal damage, will be deflected.
+Bit 22: If set, the function will reflect rather than deflect the spell.
+Bit 23: If set, the function will absorb the spell as with Spell Trap, restoring one of the character's previously-used spells.
+
+
+--]]
+previous_spells_turned = {}
+function EXSPLDEF(originatingEffectData, effectData, creatureData)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local opcode = EEex_ReadDword(effectData + 0xC)
+	local sourceID = EEex_ReadDword(effectData + 0x10C)
+	local parent_resource = EEex_ReadLString(originatingEffectData + 0x90, 8)
+	local internal_flags = EEex_ReadDword(effectData + 0xC8)
+	if bit32.band(internal_flags, 0x4000000) > 0 or targetID <= 0 or sourceID <= 0 or targetID == sourceID then return false end
+	local savingthrow = EEex_ReadDword(originatingEffectData + 0x3C)
+	local parameter1 = EEex_ReadDword(originatingEffectData + 0x18)
+	local parameter2 = EEex_ReadDword(originatingEffectData + 0x1C)
+	local match_spellRES = EEex_ReadLString(originatingEffectData + 0x18, 8)
+	local spellRES = EEex_ReadLString(effectData + 0x90, 8)
+	local theopcode = EEex_ReadDword(effectData + 0xC)
+	local spellLevel = EEex_ReadDword(effectData + 0x14)
+	local endSpellRES = EEex_ReadLString(effectData + 0x6C, 8)
+	local repeatSpellRES = EEex_ReadLString(effectData + 0x74, 8)
+	if endSpellRES == "" then
+		endSpellRES = parent_resource .. "E"
+	end
+	if repeatSpellRES == "" then
+		repeatSpellRES = parent_resource .. "F"
+	end
+--[[
+	local spellData = 0
+
+	if spellRES ~= "" and EEex_ReadDword(effectData + 0x8C) == 1 then
+		spellData = EEex_GetSpellData(spellRES)
+	end
+	if spellData > 0 then
+		spellLevel = EEex_ReadDword(spellData + 0x34)
+		if EEex_ReadWord(spellData + 0x1C, 0x0) > 2 then
+			spellLevel = 0
+		end
+	end
+	if spellLevel == 0 and bit32.band(savingthrow, 0x10000) == 0 then return false end
+--]]
+	if spellLevel < parameter1 or spellLevel > parameter2 then return false end
+	if bit32.band(savingthrow, 0x200000) > 0 and theopcode ~= 12 and theopcode ~= 25 and theopcode ~= 78 and bit32.band(EEex_ReadDword(effectData + 0x98), 0x400) == 0 then return false end
+	local special = EEex_ReadDword(originatingEffectData + 0x44)
+	local time_applied = EEex_ReadDword(effectData + 0x68)
+	if previous_spells_turned["" .. targetID] == nil then
+		previous_spells_turned["" .. targetID] = {}
+	end
+	if previous_spells_turned["" .. targetID][spellRES] == nil or math.abs(previous_spells_turned["" .. targetID][spellRES] - time_applied) > 1 then
+		if special == 0 then
+			return false
+		elseif special ~= -1 then
+			if bit32.band(savingthrow, 0x80000) == 0 and spellLevel > 0 then
+				special = special - spellLevel
+				if special < 0 then
+					special = 0
+				end
+			else
+				special = special - 1
+			end
+			EEex_WriteDword(originatingEffectData + 0x44, special)
+		end
+		if bit32.band(savingthrow, 0x400000) == 0 then
+			EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 206,
+["target"] = 2,
+["timing"] = 10,
+["duration"] = 1,
+["resource"] = spellRES,
+["internal_flags"] = 0x4000000,
+["source_target"] = targetID,
+["source_id"] = targetID
+})		
+		else
+			EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 207,
+["target"] = 2,
+["timing"] = 10,
+["duration"] = 1,
+["resource"] = spellRES,
+["internal_flags"] = 0x4000000,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+		end
+		if bit32.band(savingthrow, 0x800000) > 0 then
+			EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 261,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = spellLevel,
+["parameter2"] = 0,
+["internal_flags"] = 0x4000000,
+["source_target"] = targetID,
+["source_id"] = targetID
+})		
+		end
+		if bit32.band(savingthrow, 0x40000) > 0 then
+			EEex_ApplyEffectToActor(sourceID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = EEex_ReadDword(originatingEffectData + 0xC4),
+["parameter2"] = 2,
+["resource"] = repeatSpellRES,
+["internal_flags"] = 0x4000000,
+["source_target"] = sourceID,
+["source_id"] = targetID
+})
+		end
+		if special == 0 then
+			if bit32.band(savingthrow, 0x20000) > 0 then
+				EEex_ApplyEffectToActor(sourceID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = EEex_ReadDword(originatingEffectData + 0xC4),
+["parameter2"] = 2,
+["resource"] = endSpellRES,
+["internal_flags"] = 0x4000000,
+["source_target"] = sourceID,
+["source_id"] = targetID
+})
+			end
+			if bit32.band(savingthrow, 0x100000) == 0 then
+			EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 321,
+["target"] = 2,
+["timing"] = 6,
+["duration"] = EEex_GetGameTick() + 1,
+["resource"] = parent_resource,
+["internal_flags"] = 0x4000000,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			end
+		end
+	end
+	previous_spells_turned["" .. targetID][spellRES] = time_applied
 	return false
 end
 

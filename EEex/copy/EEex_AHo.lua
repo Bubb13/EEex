@@ -30,13 +30,9 @@ SpellNoDecRES("SPWI304",Player1)
 
 --]]
 
--- Here's another way you can use action hooks. If you give a creature an opcode 401 effect,
---  set parameter1 to 1, special to 999, and the resource field to "EXCOWARD" (right-click the
---  "unused" resource field in NearInfinity and select "Edit as string"), whenever the creature
---  would attack someone, they instead run away.
-
 EEex_HookActionFunctions = {}
 EEex_HookActionOpcodeFunctions = {}
+EEex_HookActionGlobalFunctions = {}
 
 function EEex_AddActionHook(func)
 	table.insert(EEex_HookActionFunctions, func)
@@ -44,6 +40,10 @@ end
 
 function EEex_AddActionHookOpcode(func_name, func)
 	EEex_HookActionOpcodeFunctions[func_name] = func
+end
+
+function EEex_AddActionHookGlobal(func_name, func)
+	EEex_HookActionGlobalFunctions[func_name] = func
 end
 
 function EEex_GetActionID(actionData)
@@ -100,7 +100,6 @@ function EEex_HookAction(actionData)
 	for _, hook in ipairs(hooksCopy) do
 		hook(actionData)
 	end
-	
 	local actorID = EEex_ReadDword(actionData - 0x2C4)
 	if actorID > 0 and EEex_GetActorStat(actorID, 999) > 0 then
 		EEex_IterateActorEffects(actorID, function(eData)
@@ -115,13 +114,154 @@ function EEex_HookAction(actionData)
 			end
 		end)
 	end
+	for _, hook in pairs(EEex_HookActionGlobalFunctions) do
+		hook(actionData, actionData - 0x2F8)
+	end
 end
+
+-- Here's another way you can use action hooks. If you give a creature an opcode 401 effect,
+--  set parameter1 to 1, special to 999, and the resource field to "EXCOWARD" (right-click the
+--  "unused" resource field in NearInfinity and select "Edit as string"), whenever the creature
+--  would attack someone, they instead run away.
 
 EEex_AddActionHookOpcode("EXCOWARD", function(originatingEffectData, actionData, creatureData)
 	local actionID = EEex_GetActionID(actionData)
 	if actionID == 3 or actionID == 105 or actionID == 134 then
 		EEex_SetActionID(actionData, 355)
 		EEex_WriteDword(actionData + 0x40, 600)
+	end
+end)
+
+-- This function will make it so a character will not attack allies while berserk.
+
+EEex_AddActionHookOpcode("EXBERSER", function(originatingEffectData, actionData, creatureData)
+	local actionID = EEex_GetActionID(actionData)
+	local sourceID = EEex_ReadDword(creatureData + 0x34)
+	local targetID = EEex_ReadDword(actionData + 0x20)
+	if actionID == 3 and EEex_CompareActorAllegiances(sourceID, targetID) == 0 and (bit32.band(EEex_ReadDword(creatureData + 0x434), 0x2) > 0 or bit32.band(EEex_ReadDword(creatureData + 0xB30), 0x2) > 0) then
+		local enemyID = EEex_EvalObjectStringAsActor("NearestEnemyOf(Myself)", sourceID)
+		if enemyID > 0 then
+			targetID = enemyID
+			EEex_WriteDword(actionData + 0x20, targetID)
+		else
+			EEex_SetActionID(actionData, 0)
+		end
+	end
+end)
+
+-- This function will make it so a creature with a fear effect will run away from enemies
+--  rather than just run around randomly.
+
+EEex_AddActionHookOpcode("EXFEAR", function(originatingEffectData, actionData, creatureData)
+	local actionID = EEex_GetActionID(actionData)
+	local sourceID = EEex_ReadDword(creatureData + 0x34)
+	local targetID = EEex_ReadDword(actionData + 0x20)
+	if actionID == 200 and (bit32.band(EEex_ReadDword(creatureData + 0x434), 0x4) > 0 or bit32.band(EEex_ReadDword(creatureData + 0xB30), 0x4) > 0) then
+		local enemyID = EEex_EvalObjectStringAsActor("NearestEnemyOf(Myself)", sourceID)
+		if enemyID > 0 then
+			targetID = enemyID
+			EEex_SetActionID(actionData, 355)
+			EEex_WriteDword(actionData + 0x20, targetID)
+			EEex_WriteDword(actionData + 0x40, 100)
+		end
+	end
+end)
+
+-- If you'd like the above two functions to simply apply to all creatures who are berserk or fearful
+--  without having to give creatures opcode 401 effects, uncomment the two functions below.
+
+--[[
+EEex_AddActionHookGlobal("EXBERSER", function(actionData, creatureData)
+	local actionID = EEex_GetActionID(actionData)
+	local sourceID = EEex_ReadDword(creatureData + 0x34)
+	local targetID = EEex_ReadDword(actionData + 0x20)
+	if actionID == 3 and EEex_CompareActorAllegiances(sourceID, targetID) == 0 and (bit32.band(EEex_ReadDword(creatureData + 0x434), 0x2) > 0 or bit32.band(EEex_ReadDword(creatureData + 0xB30), 0x2) > 0) then
+		local enemyID = EEex_EvalObjectStringAsActor("NearestEnemyOf(Myself)", sourceID)
+		if enemyID > 0 then
+			targetID = enemyID
+			EEex_WriteDword(actionData + 0x20, targetID)
+		else
+			EEex_SetActionID(actionData, 0)
+		end
+	end
+end)
+
+EEex_AddActionHookGlobal("EXFEAR", function(actionData, creatureData)
+	local actionID = EEex_GetActionID(actionData)
+	local sourceID = EEex_ReadDword(creatureData + 0x34)
+	local targetID = EEex_ReadDword(actionData + 0x20)
+	if actionID == 200 and (bit32.band(EEex_ReadDword(creatureData + 0x434), 0x4) > 0 or bit32.band(EEex_ReadDword(creatureData + 0xB30), 0x4) > 0) then
+		local enemyID = EEex_EvalObjectStringAsActor("NearestEnemyOf(Myself)", sourceID)
+		if enemyID > 0 then
+			targetID = enemyID
+			EEex_SetActionID(actionData, 355)
+			EEex_WriteDword(actionData + 0x20, targetID)
+			EEex_WriteDword(actionData + 0x40, 100)
+		end
+	end
+end)
+--]]
+
+-- This function doesn't modify any actions by default, but adds another option for spells.
+--  If you set bit 28 of a spell's flags (offset 0x18 in a SPL file), the spell will be instantly
+--  applied to the target when cast, as with the ApplySpell() action, except it will still consume
+--  a spell slot.
+
+EEex_AddActionHookGlobal("EXAPPLSP", function(actionData, creatureData)
+	local actionID = EEex_GetActionID(actionData)
+	local sourceID = EEex_ReadDword(creatureData + 0x34)
+	if actionID == 31 then
+		local spellRES = EEex_GetActorSpellRES(sourceID)
+		local spellData = EEex_GetSpellData(spellRES)
+		if bit32.band(EEex_ReadDword(spellData + 0x18), 0x10000000) > 0 then
+			local targetID = EEex_ReadDword(actionData + 0x20)
+			local targetX = EEex_ReadDword(EEex_GetActorShare(targetID) + 0x8)
+			local targetY = EEex_ReadDword(EEex_GetActorShare(targetID) + 0xC)
+			local casterLevel = EEex_GetActorCasterLevel(sourceID, EEex_ReadWord(spellData + 0x1C, 0x0))
+			EEex_SetActionID(actionData, 147)
+			EEex_WriteDword(actionData + 0x20, EEex_ReadWord(actionData + 0x40, 0x0))
+			EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = casterLevel,
+["parameter2"] = 1,
+["casterlvl"] = casterLevel,
+["resource"] = spellRES,
+["source_x"] = EEex_ReadDword(creatureData + 0x8),
+["source_y"] = EEex_ReadDword(creatureData + 0xC),
+["target_x"] = targetX,
+["target_y"] = targetY,
+["source_target"] = targetID,
+["source_id"] = sourceID
+})
+		end
+	elseif actionID == 95 then
+		local spellRES = EEex_GetActorSpellRES(sourceID)
+		local spellData = EEex_GetSpellData(spellRES)
+		if bit32.band(EEex_ReadDword(spellData + 0x18), 0x10000000) > 0 then
+			local targetID = EEex_ReadDword(actionData + 0x20)
+			local targetX = EEex_GetActionPointX(actionData)
+			local targetY = EEex_GetActionPointY(actionData)
+			local casterLevel = EEex_GetActorCasterLevel(sourceID, EEex_ReadWord(spellData + 0x1C, 0x0))
+			EEex_SetActionID(actionData, 147)
+			EEex_WriteDword(actionData + 0x20, EEex_ReadWord(actionData + 0x40, 0x0))
+			EEex_ApplyEffectToActor(sourceID, {
+["opcode"] = 148,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = casterLevel,
+["parameter2"] = 1,
+["casterlvl"] = casterLevel,
+["resource"] = spellRES,
+["source_x"] = EEex_ReadDword(creatureData + 0x8),
+["source_y"] = EEex_ReadDword(creatureData + 0xC),
+["target_x"] = targetX,
+["target_y"] = targetY,
+["source_target"] = sourceID,
+["source_id"] = sourceID
+})
+		end
 	end
 end)
 
