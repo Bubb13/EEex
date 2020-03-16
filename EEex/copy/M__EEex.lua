@@ -4609,6 +4609,105 @@ function EXMODMEM(effectData, creatureData)
 	end
 end
 
+--[[
+To use the EXMODSMP function, create an opcode 402 effect in an item or spell, set the resource to EXMODSMP (all capitals),
+ set the timing to instant, limited and the duration to 0, and choose parameters.
+For an example of this function in use, look at EXAMPLE4.SPL.
+
+The EXMODSMP function modifies the search map of the current area. The search map determines which parts of an area block
+ movement, which parts can or can't be seen through, and the footstep sounds characters make when they walk on part of
+ the area. The EXMODSMP function lets you replace one kind of terrain with another. For example, you could replace all
+ walls in the area with see-through walls.
+
+parameter1 - The radius of the effect. Only terrain within parameter1 range of the target point will be modified. The scale
+ is the same as in .PRO files (i.e. a radius of 256 is 15 feet, like the radius of a fireball). If parameter1 is set to -1,
+ then the radius is unlimited, affecting all terrain in the area.
+
+parameter2 - The type of terrain to transform into. It should be between 0 and 15. Here are the types of terrain, taken from
+ the IESDP Index (https://gibberlings3.github.io/iesdp/appendices/search.htm):
+0 - Obstacle - impassable, light blocking
+1 - Sand ?
+2 - Wood
+3 - Wood
+4 - Stone - echo-ey
+5 - Grass - soft
+6 - Water - passable
+7 - Stone - hard
+8 - Obstacle - impassable, non light blocking
+9 - Wood
+10 - Wall - impassable
+11 - Water - passable
+12 - Water - impassable
+13 - Roof - impassable
+14 - Worldmap exit
+15 - Grass
+
+savingthrow - Bits 16 to 31 determine the types of terrain affected by the transformation. For each terrain in the list above,
+ add 16 to the number there and you get the bit for that type of terrain. So impassable water is bit 28, for example.
+
+If you'd like to make it so all walls in the area can be seen through, set parameter1 to -1, parameter2 to 8, and check bit 16
+ of savingthrow.
+--]]
+function EXMODSMP(effectData, creatureData)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local range = EEex_ReadDword(effectData + 0x18)
+	local newColor = EEex_ReadDword(effectData + 0x1C)
+	local matchingColors = EEex_ReadWord(effectData + 0x3E, 0x0)
+	local targetX = EEex_ReadDword(effectData + 0x84)
+	local targetY = EEex_ReadDword(effectData + 0x88)
+	local areaRes = EEex_GetActorAreaRes(targetID)
+	if areaRes == "" then return end
+	local areaX, areaY = EEex_GetActorAreaSize(targetID)
+	local bitmapData = EEex_DemandResData(areaRes .. "SR", "BMP")
+	local fileSize = EEex_ReadDword(bitmapData + 0x2)
+	local dataOffset = EEex_ReadDword(bitmapData + 0xA)
+	local bitmapX = EEex_ReadDword(bitmapData + 0x12)
+	local bitmapY = EEex_ReadDword(bitmapData + 0x16)
+	local pixelSizeX = 16
+	local pixelSizeY = 12
+	local current = 0
+	local currentA = 0
+	local currentB = 0
+	local currentX = 0
+	local currentY = 0
+	if range == -1 then
+		for i = dataOffset, fileSize - 1, 1 do
+			current = EEex_ReadByte(bitmapData + i, 0)
+			currentA = math.floor(current / 16)
+			currentB = current % 16
+			if bit32.band(matchingColors, 2 ^ currentA) > 0 then
+				currentA = newColor
+			end
+			if bit32.band(matchingColors, 2 ^ currentB) > 0 then
+				currentB = newColor
+			end
+			EEex_WriteByte(bitmapData + i, currentA * 16 + currentB)
+		end
+	else
+		local i = dataOffset
+		for y = bitmapY - 1, 0, -1 do
+			for x = 0, bitmapX - 1, 2 do
+				current = EEex_ReadByte(bitmapData + i, 0)
+				currentX = math.floor((x + .5) * pixelSizeX)
+				currentY = math.floor((y + .5) * pixelSizeY)
+				currentA = math.floor(current / 16)
+				if EEex_GetDistance(currentX, currentY, targetX, targetY) < range and bit32.band(matchingColors, 2 ^ currentA) > 0 then
+					currentA = newColor
+				end
+				if x < bitmapX - 1 then
+					currentX = math.floor((x + 1.5) * pixelSizeX)
+					currentB = current % 16
+					if EEex_GetDistance(currentX, currentY, targetX, targetY) < range and bit32.band(matchingColors, 2 ^ currentB) > 0 then
+						currentB = newColor
+					end
+				end
+				EEex_WriteByte(bitmapData + i, currentA * 16 + currentB)
+				i = i + 1
+			end
+		end
+	end
+end
+
 -------------------------------------------------------------
 --  Functions you can use with opcode 403 (Screen Effects) --
 -------------------------------------------------------------

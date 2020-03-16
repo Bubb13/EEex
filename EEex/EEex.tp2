@@ -63,6 +63,16 @@ C:Eval('ForceSpellRES(\"EXAMPL3\",Myself)',0)
 
 This spell will change the target's actions. Whenever the creature would attack a creature, they instead run away.~
 
+	COPY_EXISTING ~exampl4.spl~ ~override~
+		SAY NAME1 ~Passwall~
+		SAY UNIDENTIFIED_DESC ~This spell shows how you can use action hooks. Try adding it as a spell to a mage or bard in the party with this command:
+
+C:Eval('AddSpecialAbility(\"EXAMPL4\")',0)
+
+(This will let the character in the 1st portrait slot learn this spell as a 1st-level wizard spell.)
+
+Target a point next to a wall with this spell, and it will allow characters to move through and see through the wall.~
+
 	COPY_EXISTING ~exflameb.itm~ ~override~
 		SAY NAME2 ~Real Sword of Flame~
 		SAY IDENTIFIED_DESC ~This sword is an example of how you can use the EXDAMAGE function. Create it with:
