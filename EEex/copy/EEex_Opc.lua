@@ -36,8 +36,53 @@ function EEex_HookCheckAddScreen(effectData, creatureData)
 end
 --[[
 New stats:
-- Stat 613: A character's attacks and spells will bypass Mirror Image if stat 613 is set to 1.
-- Stat 617: Changes the damage type of a character's weapons. Set it to a damage type ID from DAMAGES.IDS,
+- Stat 612: Sets flags on the Special parameter of damage dealt by the character. If you'd like it to set bit 10,
+  set Stat 612 to 0x400. Setting certain savingthrow bits on the opcode 401 effect adds conditions:
+ 			Bit 8: Flags are unset rather than set.
+            Bit 16: Flags are changed if the damage is acid damage.
+            Bit 17: Flags are changed if the damage is cold damage.
+            Bit 18: Flags are changed if the damage is electricity damage.
+            Bit 19: Flags are changed if the damage is fire damage.
+            Bit 20: Flags are changed if the damage is piercing damage.
+            Bit 21: Flags are changed if the damage is poison damage.
+            Bit 22: Flags are changed if the damage is magic damage.
+            Bit 23: Flags are changed if the damage is missile damage.
+            Bit 24: Flags are changed if the damage is slashing damage.
+            Bit 25: Flags are changed if the damage is magic fire damage.
+            Bit 26: Flags are changed if the damage is magic cold damage.
+            Bit 27: Flags are changed if the damage is nonlethal damage.
+            Bit 28: Flags are changed if the damage is crushing damage.
+            Bit 29: Flags are not changed on the base damage of the character's weapons.
+            Bit 30: Flags are not changed on the damage of the character's spells.
+            Bit 31: Flags are not changed on the non-base damage of the character's items.
+             If none of bits 16-28 are set, flags are changed regardless of damage type.
+- Stat 613: The character's attacks and spells will bypass Mirror Image if stat 613 is set to 1.
+- Stat 616: Increases damage dealt by the character by a flat amount. Setting certain savingthrow bits
+ on the opcode 401 effect adds conditions:
+ 			Bit 8: Rather than adding an amount of damage, it adds that many extra dice to the damage roll.
+ 			Bit 12: The damage is added to damage against good creatures.
+ 			Bit 13: The damage is added to damage against evil creatures.
+ 			Bit 14: The damage is added to damage against lawful creatures.
+ 			Bit 15: The damage is added to damage against chaotic creatures.
+            Bit 16: The damage is added to acid damage.
+            Bit 17: The damage is added to cold damage.
+            Bit 18: The damage is added to electricity damage.
+            Bit 19: The damage is added to fire damage.
+            Bit 20: The damage is added to piercing damage.
+            Bit 21: The damage is added to poison damage.
+            Bit 22: The damage is added to magic damage.
+            Bit 23: The damage is added to missile damage.
+            Bit 24: The damage is added to slashing damage.
+            Bit 25: The damage is added to magic fire damage.
+            Bit 26: The damage is added to magic cold damage.
+            Bit 27: The damage is added to nonlethal damage.
+            Bit 28: The damage is added to crushing damage.
+            Bit 29: The damage is not added to the base damage of the character's weapons.
+            Bit 30: The damage is not added to the damage of the character's spells.
+            Bit 31: The damage is not added to the non-base damage of the character's items.
+             If none of bits 12-15 are set, the damage is added regardless of alignment. If none
+              of bits 16-28 are set, the damage is added regardless of type.
+- Stat 617: Changes the damage type of the character's weapons. Set it to a damage type ID from DAMAGES.IDS,
  then add 1 to it. If you want the character to deal fire damage with their weapons, set stat 617 to 9.
 - Stat 619: Adds an additional saving throw penalty to the character's spells. For example, if stat 619 is
  set to 2, all the character's spells are made at an additional -2 penalty.
@@ -54,6 +99,10 @@ New stats:
 - Stat 629: Adds an additional saving throw penalty to the character's necromancy spells, stacking with stat 619.
 - Stat 630: Adds an additional saving throw penalty to the character's alteration spells, stacking with stat 619.
 - Stat 631: Adds an additional saving throw penalty to the character's generalist spells, stacking with stat 619.
+- Stat 658: Applies a spell on any creature summoned by the character, with the summoner as the source. 
+ The spell is specified by the resource field of the opcode 401 effect. Setting certain savingthrow bits
+ on the opcode 401 effect adds conditions:
+            Bit 20: The spell will be cast on the summoner instead, with the summoned creature as the source.
 --]]
 EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 --	Infinity_DisplayString("Opcode " .. EEex_ReadDword(effectData + 0xC) .. " on " .. EEex_GetActorName(EEex_ReadDword(creatureData + 0x34)))
@@ -66,8 +115,8 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 	
 	local targetID = EEex_ReadDword(creatureData + 0x34)
 	local sourceID = EEex_ReadDword(effectData + 0x10C)
-	local sourceData = EEex_GetActorShare(sourceID)
 --[[
+	local sourceData = EEex_GetActorShare(sourceID)
 	local constantID = -1
 	if EEex_IsSprite(sourceID, true) then
 		constantID = EEex_ReadDword(sourceData + 0x610)
@@ -120,6 +169,7 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 	local dicenumber = EEex_ReadDword(effectData + 0x34)
 	local dicesize = EEex_ReadDword(effectData + 0x38)
 	local savingthrow = EEex_ReadDword(effectData + 0x3C)
+	local special = EEex_ReadDword(effectData + 0x44)
 	local restype = EEex_ReadDword(effectData + 0x8C)
 	
 	if EEex_IsSprite(sourceID) and opcode ~= 402 then
@@ -142,7 +192,19 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 			EEex_WriteDword(effectData + 0x40, savebonus - schoolBonus)
 		end
 	end
-	
+	if opcode == 68 and parent_resource == "" and sourceID == -1 then
+		EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 402,
+["target"] = 2,
+["timing"] = 6,
+["duration"] = EEex_GetGameTick() + 1,
+["resource"] = "EXSUMSPL",
+["parent_resource"] = "EXSUMSPL",
+["internal_flags"] = 0x2000000,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+	end
 	if opcode == 12 then
 		local damage = EEex_ReadDword(effectData + 0x18)
 		local damage_method = EEex_ReadWord(effectData + 0x1C, 0x0)
@@ -150,50 +212,86 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 		local damage_type = EEex_ReadWord(effectData + 0x1E, 0x0)
 	
 		if EEex_IsSprite(sourceID) then
-			local extradice = EEex_GetActorStat(sourceID, 616)
-			if extradice ~= 0 then
+			local new_damage_type = EEex_GetActorStat(sourceID, 617)
+			if new_damage_type ~= 0 and restype == 0 and parent_resource == "" then
+				damage_type = new_damage_type - 1
+				EEex_WriteWord(effectData + 0x1E, damage_type)
+			end
+			if EEex_GetActorStat(sourceID, 612) > 0 then
 				EEex_IterateActorEffects(sourceID, function(eData)
-					if EEex_ReadDword(eData + 0x10) == 401 and EEex_ReadDword(eData + 0x48) == 616 then
-						local the_extradice = EEex_ReadByte(eData + 0x1C, 0x0)
-						local the_flags_a = EEex_ReadByte(eData + 0x1D, 0x0)
-						local the_flags_b = EEex_ReadByte(eData + 0x1E, 0x0)
-						local the_flags_c = EEex_ReadByte(eData + 0x1F, 0x0)
+					if EEex_ReadDword(eData + 0x10) == 401 and EEex_ReadDword(eData + 0x48) == 612 then
+						local the_newdamageflags = EEex_ReadDword(eData + 0x1C)
+						local the_savingthrow = EEex_ReadDword(eData + 0x40)
 						local conditionsMet = true
-						if bit32.band(the_flags_b, 0x40) ~= 0 and bit32.band(EEex_GetActorAlignment(targetID), the_flags_c) == 0 then
+						if bit32.band(the_savingthrow, 0x20000000) ~= 0 and restype == 0 then
+							conditionsMet = false
+						elseif bit32.band(the_savingthrow, 0x40000000) ~= 0 and restype == 1 then
+							conditionsMet = false
+						elseif bit32.band(the_savingthrow, 0x80000000) ~= 0 and restype == 2 then
 							conditionsMet = false
 						end
-						if bit32.band(the_flags_b, 0x1) ~= 0 and restype == 0 then
+						local match_damage_types = bit32.band(the_savingthrow, 0x1FFF0000)
+						if match_damage_types > 0 and (bit32.band(match_damage_types, parameter2) == 0 or (bit32.band(match_damage_types, 0x10000000) == 0 and damage_type == 0)) then
 							conditionsMet = false
-						elseif bit32.band(the_flags_b, 0x2) ~= 0 and restype == 1 then
-							conditionsMet = false
-						elseif bit32.band(the_flags_b, 0x4) ~= 0 and restype == 2 then
-							conditionsMet = false
-						end
-						if damage_type ~= 0x1 and damage_type ~= 0x2 and damage_type ~= 0x4 and damage_type ~= 0x8 and damage_type ~= 0x20 and damage_type ~= 0x40 and damage_type ~= 0x200 and damage_type ~= 0x400 then
-							if bit32.band(the_flags_b, 0x8) ~= 0 then
-								conditionsMet = false
-							end
-						else
-							if bit32.band(the_flags_b, 0x10) ~= 0 then
-								conditionsMet = false
-							end
 						end
 						if conditionsMet then
-							if bit32.band(the_flags_a, 0x40) ~= 0 then
-								damage = damage + the_extradice
+							if bit32.band(the_savingthrow, 0x100) == 0 then
+								special = bit32.bor(special, the_newdamageflags)
+							else
+								special = bit32.band(special, 0xFFFFFFFF - the_newdamageflags)
+							end
+							EEex_WriteDword(effectData + 0x44, special)
+						end
+					end
+				end)
+			end
+			if EEex_GetActorStat(sourceID, 616) ~= 0 then
+				EEex_IterateActorEffects(sourceID, function(eData)
+					if EEex_ReadDword(eData + 0x10) == 401 and EEex_ReadDword(eData + 0x48) == 616 then
+						local the_extradamage = EEex_ReadDword(eData + 0x1C)
+						local the_savingthrow = EEex_ReadDword(eData + 0x40)
+						local conditionsMet = true
+
+						local match_alignment = bit32.band(the_savingthrow, 0xF000)
+						if match_alignment > 0 then
+							local targetAlignment = EEex_GetActorAlignment(targetID)
+							local alignmentMasks = 0
+							if bit32.band(targetAlignment, 0x3) == 0x1 then
+								alignmentMasks = bit32.bor(alignmentMasks, 0x1000)
+							elseif bit32.band(targetAlignment, 0x3) == 0x3 then
+								alignmentMasks = bit32.bor(alignmentMasks, 0x2000)
+							end
+							if bit32.band(targetAlignment, 0x30) == 0x10 then
+								alignmentMasks = bit32.bor(alignmentMasks, 0x4000)
+							elseif bit32.band(targetAlignment, 0x30) == 0x30 then
+								alignmentMasks = bit32.bor(alignmentMasks, 0x8000)
+							end
+							if bit32.band(match_alignment, alignmentMasks) == 0 then
+								conditionsMet = false
+							end
+						end
+						if bit32.band(the_savingthrow, 0x20000000) ~= 0 and restype == 0 then
+							conditionsMet = false
+						elseif bit32.band(the_savingthrow, 0x40000000) ~= 0 and restype == 1 then
+							conditionsMet = false
+						elseif bit32.band(the_savingthrow, 0x80000000) ~= 0 and restype == 2 then
+							conditionsMet = false
+						end
+						local match_damage_types = bit32.band(the_savingthrow, 0x1FFF0000)
+						if match_damage_types > 0 and (bit32.band(match_damage_types, parameter2) == 0 or (bit32.band(match_damage_types, 0x10000000) > 0 and damage_type == 0)) then
+							conditionsMet = false
+						end
+						if conditionsMet then
+							if bit32.band(the_savingthrow, 0x100) == 0 then
+								damage = damage + the_extradamage
 								EEex_WriteDword(effectData + 0x18, damage)
 							else
-								dicenumber = dicenumber + the_extradice
+								dicenumber = dicenumber + the_extradamage
 								EEex_WriteDword(effectData + 0x34, dicenumber)
 							end
 						end
 					end
 				end)
-			end
-			local new_damage_type = EEex_GetActorStat(sourceID, 617)
-			if new_damage_type ~= 0 and restype == 0 and parent_resource == "" then
-				damage_type = new_damage_type - 1
-				EEex_WriteWord(effectData + 0x1E, damage_type)
 			end
 			local minimumDamage = EEex_GetActorStat(sourceID, 621)
 			if minimumDamage > 0 and dicesize > 0 and restype == 1 then
@@ -215,6 +313,46 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 	end
 	return false
 end)
+
+function EXSUMSPL(effectData, creatureData)
+	EEex_WriteDword(effectData + 0x110, 1)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local summonerID = EEex_ReadDword(creatureData + 0x130)
+	if EEex_IsSprite(summonerID, false) and EEex_GetActorStat(summonerID, 658) > 0 then
+		EEex_IterateActorEffects(summonerID, function(eData)
+			if EEex_ReadDword(eData + 0x10) == 401 and EEex_ReadDword(eData + 0x1C) > 0 and EEex_ReadDword(eData + 0x48) == 658 then
+				local the_resource = EEex_ReadLString(eData + 0x30, 8)
+				if bit32.band(EEex_ReadDword(eData + 0x40), 0x100000) > 0 then
+					EEex_ApplyEffectToActor(summonerID, {
+["opcode"] = 146,
+["target"] = 2,
+["parameter1"] = 1,
+["parameter2"] = 1,
+["casterlvl"] = 1,
+["timing"] = 9,
+["resource"] = the_resource,
+["parent_resource"] = "EXSUMSPL",
+["source_target"] = summonerID,
+["source_id"] = targetID
+})
+				else
+					EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 146,
+["target"] = 2,
+["parameter1"] = 1,
+["parameter2"] = 1,
+["casterlvl"] = 1,
+["timing"] = 9,
+["resource"] = the_resource,
+["parent_resource"] = "EXSUMSPL",
+["source_target"] = targetID,
+["source_id"] = summonerID
+})
+				end
+			end
+		end)
+	end
+end
 
 function EEex_InstallOpcodeChanges()
 

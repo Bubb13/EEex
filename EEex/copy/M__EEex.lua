@@ -3864,7 +3864,7 @@ function EEex_IsValidBackstabDirection(attackerID, targetID)
 end
 
 -- Returns true if the actor is a creature.
--- Returns false if the actor is BALDUR.BCS, an area script, a door, a container, or a region.
+-- Returns false if the actor is BALDUR.BCS, a creature that no longer exists, an area script, a door, a container, or a region.
 -- For example, if you get the sourceID of an effect of a fireball from a trap, and you
 --  do EEex_IsSprite(sourceID), it will return false.
 -- If the source had been a mage casting a fireball, it would've returned true.
@@ -3873,7 +3873,9 @@ function EEex_IsSprite(actorID, allowDead)
 	-- points to a valid object - (not a sprite, though, so return false).
 	if actorID ~= 0x0 and actorID ~= -0x1 then
 		local share = EEex_GetActorShare(actorID)
-		if EEex_ReadByte(share + 0x4, 0) == 0x31 then
+		if share <= 0 then
+			return false
+		elseif EEex_ReadByte(share + 0x4, 0) == 0x31 then
 			return allowDead or bit32.band(EEex_ReadDword(share + 0x434), 0xFC0) == 0x0
 		end
 	end
