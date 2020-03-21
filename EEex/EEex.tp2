@@ -10,7 +10,7 @@ REQUIRE_PREDICATE (
 	OR (GAME_IS ~iwdee~)
 ) ~Game not supported.~
 
-	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER SPELL BEGIN
+	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER SPELL STATS BEGIN
 		COPY ~EEex\patches\%file%.IDS~ ~EEex\patches~
 			COUNT_2DA_ROWS 2 rows
 			FOR (i = 0; i <= rows; ++i) BEGIN
@@ -112,6 +112,7 @@ Weight: 4~
 	OUTER_SET ex_modify_spell_memory_strref_1 = RESOLVE_STR_REF(~Regained spell: <EX_SPNAME>~)
 	OUTER_SET ex_modify_spell_memory_strref_2 = RESOLVE_STR_REF(~Lost spell: <EX_SPNAME>~)
 	OUTER_SET ex_damage_reduction_feedback_strref = RESOLVE_STR_REF(~<EX_DAMRED>~)
+	OUTER_SET ex_damage_absorption_feedback_strref = RESOLVE_STR_REF(~<EX_DAMABS>~)
 
 	COPY_EXISTING ~m__exstr.lua~ ~override~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_modify_spell_memory_strref_1 *= *0~ ~ex_modify_spell_memory_strref_1 = %ex_modify_spell_memory_strref_1%~
@@ -130,6 +131,10 @@ Weight: 4~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magicfire_damage_strref *= *0~ ~ex_magicfire_damage_strref = %ex_magicfire_damage_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magiccold_damage_strref *= *0~ ~ex_magiccold_damage_strref = %ex_magiccold_damage_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_damage_reduction_feedback_strref *= *0~ ~ex_damage_reduction_feedback_strref = %ex_damage_reduction_feedback_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_damage_absorption_feedback_strref *= *0~ ~ex_damage_absorption_feedback_strref = %ex_damage_absorption_feedback_strref%~
 
 BEGIN ~Make it possible to add new thieving skills to the game (only install if you're going to install a mod that adds new thieving skills)~ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 	INCLUDE ~EEex/components/ExtendedSkills.tpa~
+
+BEGIN ~Make it possible to reach over 127% or under -128% resistance, and make it so a creature's spell is not interrupted by damage if the creature takes no damage~ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+	INCLUDE ~EEex/components/DamageAbsorption.tpa~

@@ -1,8 +1,18 @@
+EEex_ScreenEffectsGlobalFunctions = {}
 
+function EEex_AddScreenEffectsGlobal(func_name, func)
+	EEex_ScreenEffectsGlobalFunctions[func_name] = func
+end
 -- Final step in Opcode #403 mechanics. If it becomes apparent
 -- that running this logic in Lua is too slow, it can be rewritten
 -- in assembly.
 function EEex_HookCheckAddScreen(effectData, creatureData)
+
+	for func_name, func in pairs(EEex_ScreenEffectsGlobalFunctions) do
+		if func(effectData, creatureData) then
+			return true
+		end
+	end
 
 	local actorID = EEex_GetActorIDShare(creatureData)
 	local screenList = EEex_AccessComplexStat(actorID, "EEex_ScreenEffectsList")
@@ -24,6 +34,187 @@ function EEex_HookCheckAddScreen(effectData, creatureData)
 		return true
 	end
 end
+--[[
+New stats:
+- Stat 613: A character's attacks and spells will bypass Mirror Image if stat 613 is set to 1.
+- Stat 617: Changes the damage type of a character's weapons. Set it to a damage type ID from DAMAGES.IDS,
+ then add 1 to it. If you want the character to deal fire damage with their weapons, set stat 617 to 9.
+- Stat 619: Adds an additional saving throw penalty to the character's spells. For example, if stat 619 is
+ set to 2, all the character's spells are made at an additional -2 penalty.
+- Stat 620: Increases the healing from the character's healing spells by a percentage. If stat 620 is set 
+ to 100, healing spells cast by the character will heal twice as many hit points.
+- Stat 621: Increases the minimum damage (per die) of the character's spells. If stat 621 is set to 20,
+ the character will deal maximum damage with their spells.
+- Stat 623: Adds an additional saving throw penalty to the character's abjuration spells, stacking with stat 619.
+- Stat 624: Adds an additional saving throw penalty to the character's conjuration spells, stacking with stat 619.
+- Stat 625: Adds an additional saving throw penalty to the character's divination spells, stacking with stat 619.
+- Stat 626: Adds an additional saving throw penalty to the character's enchantment spells, stacking with stat 619.
+- Stat 627: Adds an additional saving throw penalty to the character's illusion spells, stacking with stat 619.
+- Stat 628: Adds an additional saving throw penalty to the character's evocation spells, stacking with stat 619.
+- Stat 629: Adds an additional saving throw penalty to the character's necromancy spells, stacking with stat 619.
+- Stat 630: Adds an additional saving throw penalty to the character's alteration spells, stacking with stat 619.
+- Stat 631: Adds an additional saving throw penalty to the character's generalist spells, stacking with stat 619.
+--]]
+EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
+--	Infinity_DisplayString("Opcode " .. EEex_ReadDword(effectData + 0xC) .. " on " .. EEex_GetActorName(EEex_ReadDword(creatureData + 0x34)))
+--	if EEex_ReadDword(effectData + 0xC) == 187 then return true end
+--	if true then return false end
+	local internal_flags = EEex_ReadDword(effectData + 0xC8)
+	local opcode = EEex_ReadDword(effectData + 0xC)
+	local timing = EEex_ReadDword(effectData + 0x20)
+	if bit32.band(internal_flags, 0x2000000) > 0 or opcode == 187 or timing == 2 then return false end
+	
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local sourceID = EEex_ReadDword(effectData + 0x10C)
+	local sourceData = EEex_GetActorShare(sourceID)
+--[[
+	local constantID = -1
+	if EEex_IsSprite(sourceID, true) then
+		constantID = EEex_ReadDword(sourceData + 0x610)
+		if constantID == -1 then
+			if EEex_GetActorIDCharacter(0) > 0 then
+				local protagonistData = EEex_GetActorShare(EEex_GetActorIDCharacter(0))
+				constantID = EEex_ReadDword(protagonistData + 0x614) + 2
+				EEex_WriteDword(protagonistData + 0x614, constantID)
+				EEex_WriteDword(sourceData + 0x610, constantID)
+				
+				EEex_ApplyEffectToActor(sourceID, {
+["opcode"] = 402,
+["target"] = 2,
+["timing"] = 9,
+["resource"] = "EXCONID1",
+["internal_flags"] = 0x2000000,
+["source_target"] = sourceID,
+["source_id"] = sourceID
+})
+			end
+		end
+		EEex_WriteDword(effectData + 0x64, constantID)
+		EEex_ConstantID[constantID] = sourceID
+	end
+	if EEex_IsSprite(targetID, true) then
+		constantID = EEex_ReadDword(creatureData + 0x610)
+		if constantID == -1 then
+			if EEex_GetActorIDCharacter(0) > 0 then
+				local protagonistData = EEex_GetActorShare(EEex_GetActorIDCharacter(0))
+				constantID = EEex_ReadDword(protagonistData + 0x614) + 2
+				EEex_WriteDword(protagonistData + 0x614, constantID)
+				EEex_WriteDword(creatureData + 0x610, constantID)
+				EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 402,
+["target"] = 2,
+["timing"] = 9,
+["resource"] = "EXCONID1",
+["internal_flags"] = 0x2000000,
+["source_target"] = targetID,
+["source_id"] = targetID
+})
+			end
+		end
+	end
+--]]
+	if not EEex_IsSprite(targetID) then return false end
+	local parent_resource = EEex_ReadLString(effectData + 0x90, 8)
+	local parameter1 = EEex_ReadDword(effectData + 0x18)
+	local parameter2 = EEex_ReadDword(effectData + 0x1C)
+	local dicenumber = EEex_ReadDword(effectData + 0x34)
+	local dicesize = EEex_ReadDword(effectData + 0x38)
+	local savingthrow = EEex_ReadDword(effectData + 0x3C)
+	local restype = EEex_ReadDword(effectData + 0x8C)
+	
+	if EEex_IsSprite(sourceID) and opcode ~= 402 then
+		local bypassMirrorImageStat = EEex_GetActorStat(sourceID, 613)
+		if bypassMirrorImageStat == 1 or (bypassMirrorImageStat == 2 and (restype == 0 or restype == 2)) or (bypassMirrorImageStat == 3 and restype == 1) then
+			savingthrow = bit32.bor(savingthrow, 0x1000000)
+			EEex_WriteDword(effectData + 0x3C, savingthrow)
+		end
+	end
+	if restype == 1 and EEex_IsSprite(sourceID) then
+		if opcode == 17 then
+			local healingMultiplier = EEex_GetActorStat(sourceID, 620)
+			EEex_WriteDword(effectData + 0x18, parameter1 + math.floor(parameter1 * healingMultiplier / 100))
+			EEex_WriteDword(effectData + 0x34, dicenumber + math.floor(dicenumber * healingMultiplier / 100))
+		end
+		local savebonus = EEex_ReadDword(effectData + 0x40)
+		local school = EEex_ReadDword(effectData + 0x48)
+		local schoolBonus = EEex_GetActorStat(sourceID, 622 + school) + EEex_GetActorStat(sourceID, 619)
+		if schoolBonus ~= 0 then
+			EEex_WriteDword(effectData + 0x40, savebonus - schoolBonus)
+		end
+	end
+	
+	if opcode == 12 then
+		local damage = EEex_ReadDword(effectData + 0x18)
+		local damage_method = EEex_ReadWord(effectData + 0x1C, 0x0)
+		if damage_method ~= 0 then return false end
+		local damage_type = EEex_ReadWord(effectData + 0x1E, 0x0)
+	
+		if EEex_IsSprite(sourceID) then
+			local extradice = EEex_GetActorStat(sourceID, 616)
+			if extradice ~= 0 then
+				EEex_IterateActorEffects(sourceID, function(eData)
+					if EEex_ReadDword(eData + 0x10) == 401 and EEex_ReadDword(eData + 0x48) == 616 then
+						local the_extradice = EEex_ReadByte(eData + 0x1C, 0x0)
+						local the_flags_a = EEex_ReadByte(eData + 0x1D, 0x0)
+						local the_flags_b = EEex_ReadByte(eData + 0x1E, 0x0)
+						local the_flags_c = EEex_ReadByte(eData + 0x1F, 0x0)
+						local conditionsMet = true
+						if bit32.band(the_flags_b, 0x40) ~= 0 and bit32.band(EEex_GetActorAlignment(targetID), the_flags_c) == 0 then
+							conditionsMet = false
+						end
+						if bit32.band(the_flags_b, 0x1) ~= 0 and restype == 0 then
+							conditionsMet = false
+						elseif bit32.band(the_flags_b, 0x2) ~= 0 and restype == 1 then
+							conditionsMet = false
+						elseif bit32.band(the_flags_b, 0x4) ~= 0 and restype == 2 then
+							conditionsMet = false
+						end
+						if damage_type ~= 0x1 and damage_type ~= 0x2 and damage_type ~= 0x4 and damage_type ~= 0x8 and damage_type ~= 0x20 and damage_type ~= 0x40 and damage_type ~= 0x200 and damage_type ~= 0x400 then
+							if bit32.band(the_flags_b, 0x8) ~= 0 then
+								conditionsMet = false
+							end
+						else
+							if bit32.band(the_flags_b, 0x10) ~= 0 then
+								conditionsMet = false
+							end
+						end
+						if conditionsMet then
+							if bit32.band(the_flags_a, 0x40) ~= 0 then
+								damage = damage + the_extradice
+								EEex_WriteDword(effectData + 0x18, damage)
+							else
+								dicenumber = dicenumber + the_extradice
+								EEex_WriteDword(effectData + 0x34, dicenumber)
+							end
+						end
+					end
+				end)
+			end
+			local new_damage_type = EEex_GetActorStat(sourceID, 617)
+			if new_damage_type ~= 0 and restype == 0 and parent_resource == "" then
+				damage_type = new_damage_type - 1
+				EEex_WriteWord(effectData + 0x1E, damage_type)
+			end
+			local minimumDamage = EEex_GetActorStat(sourceID, 621)
+			if minimumDamage > 0 and dicesize > 0 and restype == 1 then
+				if minimumDamage >= dicesize then
+					minimumDamage = dicesize - 1
+				end
+				dicesize = dicesize - minimumDamage
+				damage = damage + (dicenumber * minimumDamage)
+				EEex_WriteDword(effectData + 0x18, damage)
+				EEex_WriteDword(effectData + 0x38, dicesize)
+			end
+		end
+	
+		if EEex_Modules["ME_DAMAB"] then
+			return EEex_DamageAbsorption(effectData, creatureData)
+		else
+			return false
+		end
+	end
+	return false
+end)
 
 function EEex_InstallOpcodeChanges()
 
