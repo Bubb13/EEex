@@ -3688,8 +3688,8 @@ end
 
 function EEex_GetActorStat(actorID, statID)
 	if not EEex_IsSprite(actorID) then return 0 end
-	local ecx = EEex_Call(EEex_Label("CGameSprite::GetActiveStats"), {}, EEex_GetActorShare(actorID), 0x0)
-	return EEex_Call(EEex_Label("CDerivedStats::GetAtOffset"), {statID}, ecx, 0x0)
+	local share = EEex_GetActorShare(actorID)
+	return EEex_Call(EEex_Label("EEex_AccessStat"), {statID}, share, 0x0)
 end
 
 -- Returns true if the actor has the specified state, based on the numbers in STATE.IDS.

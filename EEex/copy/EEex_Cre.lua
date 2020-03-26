@@ -961,52 +961,6 @@ function EEex_InstallCreatureHooks()
 	EEex_WriteAssembly(EEex_Label("HookStatsTempSet1"), {{hookCopy1, 4, 4}})
 	EEex_WriteAssembly(EEex_Label("HookStatsTempSet2"), {{hookCopy2, 4, 4}})
 
-	-- lua wrapper for above function; overrides the default
-	-- value in M__EEex.lua that uses inbuilt functions.
-	EEex_WriteAssemblyFunction("EEex_GetActorStat", {[[
-
-		!build_stack_frame
-		!sub_esp_byte 04
-		!push_registers
-
-		!push_byte 00
-		!push_byte 02
-		!push_[dword] *_g_lua
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-
-		!push_byte 00
-		!push_byte 01
-		!push_[dword] *_g_lua
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-
-		!lea_ecx_[ebp+byte] FC
-		!push_ecx
-		!push_eax
-		!call >CGameObjectArray::GetShare
-		!add_esp_byte 08
-		!mov_ecx_[ebp+byte] FC
-
-		!call ]], {hookAccessState, 4, 4}, [[
-
-		!push_eax
-		!fild_[esp]
-		!sub_esp_byte 04
-		!fstp_qword:[esp]
-		!push_[ebp+byte] 08
-		!call >_lua_pushnumber
-		!add_esp_byte 0C
-
-		!mov_eax #01
-		!restore_stack_frame
-		!ret
-
-	]]})
-
 	-- CheckStat
 	EEex_WriteAssembly(EEex_Label("HookCheckStat"), {{hookAccessState, 4, 4}, "!nop !nop !nop !nop !nop !nop !nop"})
 
