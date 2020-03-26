@@ -10,7 +10,7 @@ REQUIRE_PREDICATE (
 	OR (GAME_IS ~iwdee~)
 ) ~Game not supported.~
 
-	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER SPELL BEGIN
+	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER SPELL STATS BEGIN
 		COPY ~EEex\patches\%file%.IDS~ ~EEex\patches~
 			COUNT_2DA_ROWS 2 rows
 			FOR (i = 0; i <= rows; ++i) BEGIN
@@ -77,7 +77,7 @@ Target a point next to a wall with this spell, and it will allow characters to m
 		SAY NAME2 ~Real Sword of Flame~
 		SAY IDENTIFIED_DESC ~This sword is an example of how you can use the EXDAMAGE function. Create it with:
 
-C:CreateItem('EXFLAMEB',0,0,0)
+C:CreateItem('EXFLAMEB')
 
 The fire damage of this sword actually increases based on the wielder's Strength, long sword proficiency, and other damage bonuses from things like Gauntlets of Weapon Expertise.
 
@@ -92,6 +92,102 @@ Requires:
  6 Strength
 
 Weight: 4~
+
+	COPY_EXISTING ~exsta612.itm~ ~override~
+		SAY NAME2 ~Amulet of Not Waking Sleepers~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 612. Create it with:
+
+C:CreateItem('EXSTA612')
+
+With this amulet equipped, your attacks will not wake up sleeping creatures.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta613.itm~ ~override~
+		SAY NAME2 ~Amulet of Bypassing Mirror Image~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 613. Create it with:
+
+C:CreateItem('EXSTA613')
+
+With this amulet equipped, your attacks and spells will bypass Mirror Image.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta616.itm~ ~override~
+		SAY NAME2 ~Amulet of Extra Spell Damage~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 616. Create it with:
+
+C:CreateItem('EXSTA616')
+
+With this amulet equipped, any fire, cold, electricity, acid, or magic damage dealt to an evil creature by your spells is increased by 5.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta617.itm~ ~override~
+		SAY NAME2 ~Amulet of Fire Weapons~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 617. Create it with:
+
+C:CreateItem('EXSTA617')
+
+With this amulet equipped, the base damage of your weapons is converted to fire damage.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta619.itm~ ~override~
+		SAY NAME2 ~Amulet of Spell Potency~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 619. Create it with:
+
+C:CreateItem('EXSTA619')
+
+With this amulet equipped, saving throws against your spells are made at an additional -20 penalty.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta620.itm~ ~override~
+		SAY NAME2 ~Amulet of Healing~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 620. Create it with:
+
+C:CreateItem('EXSTA620')
+
+With this amulet equipped, your healing spells heal three times as many hit points.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta621.itm~ ~override~
+		SAY NAME2 ~Amulet of Maximized Spells~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 621. Create it with:
+
+C:CreateItem('EXSTA621')
+
+With this amulet equipped, your spells will deal maximum damage.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta658.itm~ ~override~
+		SAY NAME2 ~Amulet of Summon Empowerment~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 658. Create it with:
+
+C:CreateItem('EXSTA658')
+
+With this amulet equipped, you will automatically cast Chaotic Commands on any creature you summon.
+
+STATISTICS:
+
+Weight: 3~
 
 	COPY_EXISTING ~dmgtypes.2da~ ~override~
 		READ_2DA_ENTRY 0 4 5 ex_fire_damage_strref
@@ -112,6 +208,7 @@ Weight: 4~
 	OUTER_SET ex_modify_spell_memory_strref_1 = RESOLVE_STR_REF(~Regained spell: <EX_SPNAME>~)
 	OUTER_SET ex_modify_spell_memory_strref_2 = RESOLVE_STR_REF(~Lost spell: <EX_SPNAME>~)
 	OUTER_SET ex_damage_reduction_feedback_strref = RESOLVE_STR_REF(~<EX_DAMRED>~)
+	OUTER_SET ex_damage_absorption_feedback_strref = RESOLVE_STR_REF(~<EX_DAMABS>~)
 
 	COPY_EXISTING ~m__exstr.lua~ ~override~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_modify_spell_memory_strref_1 *= *0~ ~ex_modify_spell_memory_strref_1 = %ex_modify_spell_memory_strref_1%~
@@ -130,6 +227,10 @@ Weight: 4~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magicfire_damage_strref *= *0~ ~ex_magicfire_damage_strref = %ex_magicfire_damage_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magiccold_damage_strref *= *0~ ~ex_magiccold_damage_strref = %ex_magiccold_damage_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_damage_reduction_feedback_strref *= *0~ ~ex_damage_reduction_feedback_strref = %ex_damage_reduction_feedback_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_damage_absorption_feedback_strref *= *0~ ~ex_damage_absorption_feedback_strref = %ex_damage_absorption_feedback_strref%~
 
 BEGIN ~Make it possible to add new thieving skills to the game (only install if you're going to install a mod that adds new thieving skills)~ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 	INCLUDE ~EEex/components/ExtendedSkills.tpa~
+
+BEGIN ~Make it possible to reach over 127% or under -128% resistance, and make it so a creature's spell is not interrupted by damage if the creature takes no damage~ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+	INCLUDE ~EEex/components/DamageAbsorption.tpa~

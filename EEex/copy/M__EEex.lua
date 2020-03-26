@@ -79,6 +79,9 @@ function EEex_Reset()
 	end
 end
 
+Infinity_DoFile("M__EXSTR") -- Strref file for EEex; this needs to be run early so tables can
+-- reference the strrefs.
+
 ---------------------
 -- Memory Utililty --
 ---------------------
@@ -96,6 +99,17 @@ end
 -- Reads a dword from the given address, extracting and returning the "index"th byte.
 function EEex_ReadByte(address, index)
 	return bit32.extract(EEex_ReadDword(address), index * 0x8, 0x8)
+end
+
+-- Reads a dword from the given address, extracting and returning the "index"th signed byte.
+function EEex_ReadSignedByte(address, index)
+	local readValue = bit32.extract(EEex_ReadDword(address), index * 0x8, 0x8)
+	-- TODO: Implement better conversion code.
+	if readValue >= 128 then
+		return -256 + readValue
+	else
+		return readValue
+	end
 end
 
 -- Reads a dword from the given address, extracting and returning the "index"th word.
@@ -250,6 +264,46 @@ function EEex_MessageBox(message)
 	EEex_WriteString(captionAddress, caption)
 	EEex_DllCall("User32", "MessageBoxA", {EEex_Flags({0x40}), captionAddress, messageAddress, 0x0}, nil, 0x0)
 	EEex_Free(messageAddress)
+end
+
+-- Like Infinity_DisplayString, but can print nil values, booleans, and entire tables.
+function EEex_DS(string)
+	Infinity_DisplayString(EEex_ToString(string))
+end
+
+function EEex_ToString(string)
+	if string == nil then
+		return "nil"
+	else
+		local stringType = type(string)
+		if stringType == "boolean" then
+			if string then
+				return "true"
+			else
+				return "false"
+			end
+		elseif stringType == "function" then
+			return "function()"
+		elseif stringType == "table" then
+			local tableString = "{"
+			if string[1] == nil then
+				for k, v in pairs(string) do
+					tableString = tableString .. "[" .. EEex_ToString(k) .. "] = " .. EEex_ToString(v) .. ", "
+				end
+			else
+				for k, v in ipairs(string) do
+					tableString = tableString .. EEex_ToString(v) .. ", "
+				end
+			end
+			tableString = tableString .. "}"
+			return tableString
+		elseif stringType == "string" then
+			return "\"" .. string .. "\""
+		else
+			return string
+		end
+		
+	end
 end
 
 --------------------
@@ -3810,7 +3864,7 @@ function EEex_IsValidBackstabDirection(attackerID, targetID)
 end
 
 -- Returns true if the actor is a creature.
--- Returns false if the actor is BALDUR.BCS, an area script, a door, a container, or a region.
+-- Returns false if the actor is BALDUR.BCS, a creature that no longer exists, an area script, a door, a container, or a region.
 -- For example, if you get the sourceID of an effect of a fireball from a trap, and you
 --  do EEex_IsSprite(sourceID), it will return false.
 -- If the source had been a mage casting a fireball, it would've returned true.
@@ -3819,7 +3873,9 @@ function EEex_IsSprite(actorID, allowDead)
 	-- points to a valid object - (not a sprite, though, so return false).
 	if actorID ~= 0x0 and actorID ~= -0x1 then
 		local share = EEex_GetActorShare(actorID)
-		if EEex_ReadByte(share + 0x4, 0) == 0x31 then
+		if share <= 0 then
+			return false
+		elseif EEex_ReadByte(share + 0x4, 0) == 0x31 then
 			return allowDead or bit32.band(EEex_ReadDword(share + 0x434), 0xFC0) == 0x0
 		end
 	end
@@ -4823,7 +4879,21 @@ end
 
 
 
-
+ex_damage_types = {
+[0] = {22, 87, ex_crushing_damage_strref},
+[1] = {17, 27, ex_acid_damage_strref},
+[2] = {15, 28, ex_cold_damage_strref},
+[4] = {16, 29, ex_electricity_damage_strref},
+[8] = {14, 30, ex_fire_damage_strref},
+[16] = {23, 88, ex_piercing_damage_strref},
+[32] = {74, 173, ex_poison_damage_strref},
+[64] = {73, 31, ex_magic_damage_strref},
+[128] = {24, 89, ex_missile_damage_strref},
+[256] = {21, 86, ex_slashing_damage_strref},
+[512] = {19, 84, ex_magicfire_damage_strref},
+[1024] = {20, 85, ex_magiccold_damage_strref},
+[2048] = {22, 87, ex_stunning_damage_strref}
+}
 --[[
 To use the EXDAMRED function, create an opcode 403 effect in a spell, set the resource to EXDAMRED (all capitals), and choose parameters.
 For an example of this function in use, look at EXAMPL2.SPL.
@@ -4861,27 +4931,14 @@ Bit 3: If set, it will not display the feedback string whenever damage is preven
 If you want to make a specific damage effect bypass the EXDAMRED effect without being absorbed, set bit 20 of the
  special field in the damage effect. This can't be done with base weapon damage, unfortunately.
 --]]
+
 function EXDAMRED(originatingEffectData, effectData, creatureData)
 	local targetID = EEex_ReadDword(creatureData + 0x34)
 	local opcode = EEex_ReadDword(effectData + 0xC)
 	if opcode ~= 12 then return false end
 	local special = EEex_ReadDword(effectData + 0x44)
 	if bit32.band(special, 0x100000) > 0 then return false end
-	ex_damage_types = {
-[0] = {22, 87, ex_crushing_damage_strref},
-[1] = {17, 27, ex_acid_damage_strref},
-[2] = {15, 28, ex_cold_damage_strref},
-[4] = {16, 29, ex_electricity_damage_strref},
-[8] = {14, 30, ex_fire_damage_strref},
-[16] = {23, 88, ex_piercing_damage_strref},
-[32] = {74, 173, ex_poison_damage_strref},
-[64] = {73, 31, ex_magic_damage_strref},
-[128] = {24, 89, ex_missile_damage_strref},
-[256] = {21, 86, ex_slashing_damage_strref},
-[512] = {19, 84, ex_magicfire_damage_strref},
-[1024] = {20, 85, ex_magiccold_damage_strref},
-[2048] = {22, 87, ex_stunning_damage_strref}
-}
+
 	local reduction = EEex_ReadSignedWord(originatingEffectData + 0x18, 0x0)
 	local reduction_remaining_location = "parameter3"
 	local reduction_remaining = EEex_ReadWord(originatingEffectData + 0x5C, 0x0)

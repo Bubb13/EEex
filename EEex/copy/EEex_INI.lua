@@ -6,4 +6,5 @@ EEex_Modules = {
 	["B3_Invis"] = false,
 	["B3_Portr"] = false,
 	["B3_Timer"] = false,
+	["ME_DAMAB"] = false,
 }

@@ -18,3 +18,25 @@ ex_damage_reduction_feedback_string_1 = "Damage reduction blocks "
 ex_damage_reduction_feedback_string_2 = " damage"
 ex_damage_reduction_feedback_string_3 = " points remaining"
 ex_damage_reduction_feedback_string_4 = " point remaining"
+ex_damage_absorption_feedback_strref = 0
+ex_damage_absorption_feedback_string_1 = "Absorbed the "
+ex_damage_absorption_feedback_string_2 = " damage"
+ex_damage_absorption_feedback_string_3 = " from "
+ex_damage_absorption_feedback_string_4 = ", healing "
+ex_damage_absorption_feedback_string_5 = " Hit Points"
+
+ex_damage_types = {
+[0] = {22, 87, ex_crushing_damage_strref},
+[1] = {17, 27, ex_acid_damage_strref},
+[2] = {15, 28, ex_cold_damage_strref},
+[4] = {16, 29, ex_electricity_damage_strref},
+[8] = {14, 30, ex_fire_damage_strref},
+[16] = {23, 88, ex_piercing_damage_strref},
+[32] = {74, 173, ex_poison_damage_strref},
+[64] = {73, 31, ex_magic_damage_strref},
+[128] = {24, 89, ex_missile_damage_strref},
+[256] = {21, 86, ex_slashing_damage_strref},
+[512] = {19, 84, ex_magicfire_damage_strref},
+[1024] = {20, 85, ex_magiccold_damage_strref},
+[2048] = {22, 87, ex_stunning_damage_strref}
+}
