@@ -1619,6 +1619,10 @@ PatAdj=-257
 PatBytes=558BEC83EC08566A006A00
 PatAdj=0
 
+[_saveMenus()_HookCheckItemSave]
+PatBytes=8BFF8B461885C0
+PatAdj=13
+
 [_strncpy]
 PatBytes=56538BD98B742414F7C6030000008B7C2410
 PatAdj=-13
@@ -1668,6 +1672,16 @@ Type=1
 [g_pChitin]
 PatBytes=9869D8980000006A14031D
 PatAdj=11
+Type=1
+
+[menus]
+PatBytes=8945C08B45108945C48D45AC
+PatAdj=13
+Type=1
+
+[n]
+PatBytes=8945C08B45108945C48D45AC
+PatAdj=-4
 Type=1
 
 [operator_new]
