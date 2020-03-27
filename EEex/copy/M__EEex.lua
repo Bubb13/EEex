@@ -2466,35 +2466,31 @@ end
 -- because offset 0x34 in the SPL file is the spell's level.
 -- Warning: this will crash if the spell is not in the game.
 function EEex_GetSpellData(resref)
-	local resrefLocation = EEex_Malloc(0x8)
-	EEex_WriteLString(resrefLocation + 0x0, resref, 8)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	EEex_Free(resrefLocation)
-	if eax ~= 0x0 then
-		return EEex_ReadDword(eax + 0x40)
+	local CRes = EEex_DemandCRes(resref, "SPL")
+	if CRes ~= 0x0 then
+		return EEex_ReadDword(CRes + 0x40)
 	else
-		return 0
+		return 0x0
 	end
 end
 
 function EEex_IsSpellValid(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
+	local eax = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
 	return eax ~= 0x0
 end
 
 function EEex_GetSpellDescription(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	return Infinity_FetchString(EEex_ReadDword(EEex_ReadDword(eax + 0x40) + 0x50))
+	local eax = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
+	return Infinity_FetchString(EEex_ReadDword(eax + 0x50))
 end
 
 function EEex_GetSpellIcon(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	return EEex_ReadString(EEex_ReadDword(eax + 0x40) + 0x3A)
+	local eax = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
+	return EEex_ReadString(eax + 0x3A)
 end
 
 function EEex_GetSpellName(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	local step1 = EEex_ReadDword(eax + 0x40)
+	local step1 = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
 	if step1 ~= 0x0 then
 		return Infinity_FetchString(EEex_ReadDword(step1 + 0x8))
 	else
