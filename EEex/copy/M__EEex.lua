@@ -1158,6 +1158,81 @@ function EEex_HookAfterCall(address, assembly)
 	), 4, 4}})
 end
 
+function EEex_HookJump(address, restoreSize, assembly)
+
+	local storeBytes = function(startAddress, size)
+		local bytes = {}
+		local limit = startAddress + size - 1
+		for i = startAddress, limit, 1 do
+			table.insert(bytes, {EEex_ReadByte(i, 0), 1})
+		end
+		return bytes
+	end
+
+	local byteToDwordJmp = {
+		[0x70] = {{0x0F, 1}, {0x80, 1}},
+		[0x71] = {{0x0F, 1}, {0x81, 1}},
+		[0x72] = {{0x0F, 1}, {0x82, 1}},
+		[0x73] = {{0x0F, 1}, {0x83, 1}},
+		[0x74] = {{0x0F, 1}, {0x84, 1}},
+		[0x75] = {{0x0F, 1}, {0x85, 1}},
+		[0x76] = {{0x0F, 1}, {0x86, 1}},
+		[0x77] = {{0x0F, 1}, {0x87, 1}},
+		[0x78] = {{0x0F, 1}, {0x88, 1}},
+		[0x79] = {{0x0F, 1}, {0x89, 1}},
+		[0x7A] = {{0x0F, 1}, {0x8A, 1}},
+		[0x7B] = {{0x0F, 1}, {0x8B, 1}},
+		[0x7C] = {{0x0F, 1}, {0x8C, 1}},
+		[0x7D] = {{0x0F, 1}, {0x8D, 1}},
+		[0x7E] = {{0x0F, 1}, {0x8E, 1}},
+		[0x7F] = {{0x0F, 1}, {0x8F, 1}},
+		[0xEB] = {{0xE9, 1}},
+	}
+
+	local instructionByte = EEex_ReadByte(address, 0)
+	local instructionBytes = {}
+	local instructionSize = nil
+	local offset = nil
+
+	local switchBytes = byteToDwordJmp[instructionByte]
+	if switchBytes then
+		instructionBytes = switchBytes
+		instructionSize = 2
+		offset = EEex_ReadByte(address + 1, 0)
+	elseif instructionByte == 0xE9 then
+		instructionBytes = {{instructionByte, 1}}
+		instructionSize = 5
+		offset = EEex_ReadDword(address + 1)
+	else
+		instructionBytes = {{instructionByte, 1}, {EEex_ReadByte(address + 1, 0), 1}}
+		instructionSize = 6
+		offset = EEex_ReadDword(address + 2)
+	end
+
+	local afterInstruction = address + instructionSize
+	local jmpFailDest = afterInstruction + restoreSize
+	local restoreBytes = storeBytes(afterInstruction, restoreSize)
+	local jmpDest = afterInstruction + offset
+
+	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+
+	local hookCode = EEex_WriteAssemblyAuto(EEex_ConcatTables({
+		assembly,
+		"@jmp",
+		instructionBytes,
+		{
+			{jmpDest, 4, 4},
+		},
+		"@jmp_fail",
+		restoreBytes,
+		{[[
+			!jmp_dword ]], {jmpFailDest, 4, 4},
+		},
+	}))
+	
+	EEex_WriteAssembly(address, {"!jmp_dword", {hookCode, 4, 4}})
+end
+
 function EEex_WriteOpcode(opcodeFunctions)
 
 	--[[
@@ -2391,35 +2466,31 @@ end
 -- because offset 0x34 in the SPL file is the spell's level.
 -- Warning: this will crash if the spell is not in the game.
 function EEex_GetSpellData(resref)
-	local resrefLocation = EEex_Malloc(0x8)
-	EEex_WriteLString(resrefLocation + 0x0, resref, 8)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	EEex_Free(resrefLocation)
-	if eax ~= 0x0 then
-		return EEex_ReadDword(eax + 0x40)
+	local CRes = EEex_DemandCRes(resref, "SPL")
+	if CRes ~= 0x0 then
+		return EEex_ReadDword(CRes + 0x40)
 	else
-		return 0
+		return 0x0
 	end
 end
 
 function EEex_IsSpellValid(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
+	local eax = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
 	return eax ~= 0x0
 end
 
 function EEex_GetSpellDescription(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	return Infinity_FetchString(EEex_ReadDword(EEex_ReadDword(eax + 0x40) + 0x50))
+	local eax = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
+	return Infinity_FetchString(EEex_ReadDword(eax + 0x50))
 end
 
 function EEex_GetSpellIcon(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	return EEex_ReadString(EEex_ReadDword(eax + 0x40) + 0x3A)
+	local eax = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
+	return EEex_ReadString(eax + 0x3A)
 end
 
 function EEex_GetSpellName(resrefLocation)
-	local eax = EEex_Call(EEex_Label("dimmGetResObject"), {0x0, 0x3EE, resrefLocation}, nil, 0xC)
-	local step1 = EEex_ReadDword(eax + 0x40)
+	local step1 = EEex_GetSpellData(EEex_ReadLString(resrefLocation, 8))
 	if step1 ~= 0x0 then
 		return Infinity_FetchString(EEex_ReadDword(step1 + 0x8))
 	else
@@ -3613,8 +3684,8 @@ end
 
 function EEex_GetActorStat(actorID, statID)
 	if not EEex_IsSprite(actorID) then return 0 end
-	local ecx = EEex_Call(EEex_Label("CGameSprite::GetActiveStats"), {}, EEex_GetActorShare(actorID), 0x0)
-	return EEex_Call(EEex_Label("CDerivedStats::GetAtOffset"), {statID}, ecx, 0x0)
+	local share = EEex_GetActorShare(actorID)
+	return EEex_Call(EEex_Label("EEex_AccessStat"), {statID}, share, 0x0)
 end
 
 -- Returns true if the actor has the specified state, based on the numbers in STATE.IDS.

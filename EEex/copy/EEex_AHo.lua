@@ -95,11 +95,13 @@ function EEex_SetActionPointY(actionData, newY)
 end
 
 function EEex_HookAction(actionData)
+
 	local hooksCopy = EEex_HookActionFunctions
 	EEex_HookActionFunctions = {}
 	for _, hook in ipairs(hooksCopy) do
 		hook(actionData)
 	end
+
 	local actorID = EEex_ReadDword(actionData - 0x2C4)
 	if actorID > 0 and EEex_GetActorStat(actorID, 999) > 0 then
 		EEex_IterateActorEffects(actorID, function(eData)
@@ -114,9 +116,11 @@ function EEex_HookAction(actionData)
 			end
 		end)
 	end
+
 	for _, hook in pairs(EEex_HookActionGlobalFunctions) do
 		hook(actionData, actionData - 0x2F8)
 	end
+
 end
 
 -- Here's another way you can use action hooks. If you give a creature an opcode 401 effect,
@@ -221,20 +225,20 @@ EEex_AddActionHookGlobal("EXAPPLSP", function(actionData, creatureData)
 			EEex_SetActionID(actionData, 147)
 			EEex_WriteDword(actionData + 0x20, EEex_ReadWord(actionData + 0x40, 0x0))
 			EEex_ApplyEffectToActor(targetID, {
-["opcode"] = 146,
-["target"] = 2,
-["timing"] = 1,
-["parameter1"] = casterLevel,
-["parameter2"] = 1,
-["casterlvl"] = casterLevel,
-["resource"] = spellRES,
-["source_x"] = EEex_ReadDword(creatureData + 0x8),
-["source_y"] = EEex_ReadDword(creatureData + 0xC),
-["target_x"] = targetX,
-["target_y"] = targetY,
-["source_target"] = targetID,
-["source_id"] = sourceID
-})
+				["opcode"] = 146,
+				["target"] = 2,
+				["timing"] = 1,
+				["parameter1"] = casterLevel,
+				["parameter2"] = 1,
+				["casterlvl"] = casterLevel,
+				["resource"] = spellRES,
+				["source_x"] = EEex_ReadDword(creatureData + 0x8),
+				["source_y"] = EEex_ReadDword(creatureData + 0xC),
+				["target_x"] = targetX,
+				["target_y"] = targetY,
+				["source_target"] = targetID,
+				["source_id"] = sourceID
+			})
 		end
 	elseif actionID == 95 then
 		local spellRES = EEex_GetActorSpellRES(sourceID)
@@ -247,32 +251,36 @@ EEex_AddActionHookGlobal("EXAPPLSP", function(actionData, creatureData)
 			EEex_SetActionID(actionData, 147)
 			EEex_WriteDword(actionData + 0x20, EEex_ReadWord(actionData + 0x40, 0x0))
 			EEex_ApplyEffectToActor(sourceID, {
-["opcode"] = 148,
-["target"] = 2,
-["timing"] = 1,
-["parameter1"] = casterLevel,
-["parameter2"] = 1,
-["casterlvl"] = casterLevel,
-["resource"] = spellRES,
-["source_x"] = EEex_ReadDword(creatureData + 0x8),
-["source_y"] = EEex_ReadDword(creatureData + 0xC),
-["target_x"] = targetX,
-["target_y"] = targetY,
-["source_target"] = sourceID,
-["source_id"] = sourceID
-})
+				["opcode"] = 148,
+				["target"] = 2,
+				["timing"] = 1,
+				["parameter1"] = casterLevel,
+				["parameter2"] = 1,
+				["casterlvl"] = casterLevel,
+				["resource"] = spellRES,
+				["source_x"] = EEex_ReadDword(creatureData + 0x8),
+				["source_y"] = EEex_ReadDword(creatureData + 0xC),
+				["target_x"] = targetX,
+				["target_y"] = targetY,
+				["source_target"] = sourceID,
+				["source_id"] = sourceID
+			})
 		end
 	end
 end)
 
 function EEex_InstallActionHook()
+	
 	local hookName = "EEex_HookAction"
 	local hookNameAddress = EEex_Malloc(#hookName + 1)
 	EEex_WriteString(hookNameAddress, hookName)
 
 	local hookAddress = EEex_WriteAssemblyAuto({[[
-		!push_[esp]
-		!mov_[esp+byte]_ecx 04
+
+		!push_all_registers
+
+		!mov_edi_ecx
+		!push_esi
 		!call >CAIAction::Decode
 
 		!push_dword ]], {hookNameAddress, 4}, [[
@@ -280,6 +288,7 @@ function EEex_InstallActionHook()
 		!call >_lua_getglobal
 		!add_esp_byte 08
 
+		!push_edi
 		!fild_[esp]
 		!sub_esp_byte 04
 		!fstp_qword:[esp]
@@ -296,6 +305,8 @@ function EEex_InstallActionHook()
 		!call >_lua_pcallk
 		!add_esp_byte 18
 
+		!pop_all_registers
+		!add_esp_byte 04
 		!jmp_dword >CGameSprite::SetCurrAction()_after_decode
 	]]})
 

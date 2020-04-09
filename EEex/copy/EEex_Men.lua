@@ -22,7 +22,28 @@ function EEex_AddUIMenuLoadListener(listener)
 	table.insert(EEex_UIMenuLoadListeners, listener)
 end
 
+EEex_NativeMenus = {}
+
+function EEex_IsNativeMenu(menuName)
+	return EEex_NativeMenus[menuName] ~= nil
+end
+
+function EEex_HookCheckSaveMenuItem(uiMenu)
+	local menuName = EEex_ReadString(EEex_ReadDword(uiMenu + 0x10))
+	return EEex_IsNativeMenu(menuName)
+end
+
 function EEex_UIMenuLoadHook()
+
+	EEex_NativeMenus = {}
+	local numMenus = EEex_ReadDword(EEex_Label("n"))
+	local currentAddress = EEex_Label("menus") + 0x10
+	for i = 1, numMenus, 1 do
+		local menuName = EEex_ReadString(EEex_ReadDword(currentAddress))
+		EEex_NativeMenus[menuName] = true
+		currentAddress = currentAddress + 0x54
+	end
+
 	for i, listener in ipairs(EEex_UIMenuLoadListeners) do
 		listener()
 	end
@@ -168,7 +189,59 @@ function EEex_InstallMenuHooks()
 		!jmp_dword ]], {destroyTemplateAddress + 0x6, 4, 4},
 	})
 	EEex_WriteAssembly(destroyTemplateAddress, {"!jmp_dword", {destroyTemplateMenuHook, 4, 4}, "!nop"})
+	
+	-------------------------------------------------------------------
+	-- Prevent EEex_LoadMenuFile() from causing crash when using F11 --
+	-------------------------------------------------------------------
 
+	EEex_HookJump(EEex_Label("_saveMenus()_HookCheckItemSave"), 3, {[[
+
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_HookCheckSaveMenuItem"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!mov_eax_[ebp+byte] F4
+		!sub_eax_byte 1C
+		!push_eax
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 01
+		!push_byte 01
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!push_byte FF
+		!push_[dword] *_g_lua
+		!call >_lua_toboolean
+		!add_esp_byte 08
+		!push_eax
+		!push_byte FE
+		!push_[dword] *_g_lua
+		!call >_lua_settop
+		!add_esp_byte 08
+		!pop_eax
+
+		!test_eax_eax
+		!pop_all_registers
+
+		!jz_dword >jmp_success
+
+		!cmp_[esi+byte]_byte 10 00
+
+	]]})
+	
 	EEex_EnableCodeProtection()
 end
 EEex_InstallMenuHooks()
