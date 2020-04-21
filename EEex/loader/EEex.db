@@ -268,6 +268,10 @@ PatAdj=0
 ; CBaldurChitin
 ;---------------------------
 
+[CBaldurChitin::Init()_After]
+PatBytes=83C40885C0740FFF750C8BC8FF7508
+PatAdj=48
+
 [CBaldurChitin::m_pObjectGame]
 PatBytes=8B4E088B36518B88
 PatAdj=8
@@ -1013,6 +1017,15 @@ PatAdj=-11
 [CRuleTables::MapCharacterSpecializationToSchool]
 PatBytes=558BEC8B45080FB7C03D000400007F43743B3D80000000
 PatAdj=0
+
+
+;---------------------------
+; CScreenWorld
+;---------------------------
+
+[CScreenWorld::TogglePauseGame]
+PatBytes=53568BF18945CC578D4DD0
+PatAdj=-21
 
 
 ;---------------------------
