@@ -10,7 +10,7 @@ REQUIRE_PREDICATE (
 	OR (GAME_IS ~iwdee~)
 ) ~Game not supported.~
 
-	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER SPELL STATS BEGIN
+	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER STATS BEGIN
 		COPY ~EEex\patches\%file%.IDS~ ~EEex\patches~
 			COUNT_2DA_ROWS 2 rows
 			FOR (i = 0; i <= rows; ++i) BEGIN
