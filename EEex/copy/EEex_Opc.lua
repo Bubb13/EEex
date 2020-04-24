@@ -946,7 +946,7 @@ function EEex_InstallOpcodeChanges()
 	local checkAddScreenHookDest = checkAddScreenHookAddress + EEex_ReadDword(checkAddScreenHookAddress + 5) + 9
 
 	local checkAddScreenHookName = "EEex_HookCheckAddScreen"
-	local checkAddScreenHookNameAddress = EEex_Malloc(#checkAddScreenHookName + 1)
+	local checkAddScreenHookNameAddress = EEex_Malloc(#checkAddScreenHookName + 1, 32)
 	EEex_WriteString(checkAddScreenHookNameAddress, checkAddScreenHookName)
 
 	local checkAddScreenHook = EEex_WriteAssemblyAuto({[[
@@ -1042,9 +1042,10 @@ function EEex_InstallOpcodeChanges()
 			!mov_esi_ecx
 			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
 
+			!push_dword #66 ; callerID ;
 			!push_byte 08
 			!call >_malloc
-			!add_esp_byte 04
+			!add_esp_byte 08
 			!mov_edi_eax
 
 			!mov_[edi]_esi ; Element Offset 0x0 ;
@@ -1085,9 +1086,10 @@ function EEex_InstallOpcodeChanges()
 			!mov_esi_ecx
 			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
 
+			!push_dword #67 ; callerID ;
 			!push_byte 08
 			!call >_malloc
-			!add_esp_byte 04
+			!add_esp_byte 08
 			!mov_edi_eax
 
 			!mov_eax_[esi+byte] 18 ; Param1 ;
@@ -1147,9 +1149,10 @@ function EEex_InstallOpcodeChanges()
 			!mov_esi_ecx
 			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
 
+			!push_dword #68 ; callerID ;
 			!push_byte 0C
 			!call >_malloc
-			!add_esp_byte 04
+			!add_esp_byte 08
 			!mov_edi_eax
 
 			!mov_eax_[esi+byte] 18 ; Param1 ;
@@ -1202,7 +1205,7 @@ function EEex_InstallOpcodeChanges()
 	-- New Opcode #406 (RenderOverride) --
 	--------------------------------------
 
-	local noClippingAddress = EEex_Malloc(0x4)
+	local noClippingAddress = EEex_Malloc(0x4, 33)
 
 	local opcode406RenderAsFlying = EEex_WriteAssemblyAuto({[[
 

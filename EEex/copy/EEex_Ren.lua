@@ -4,7 +4,7 @@ EEex_LinesToDraw = {}
 function EEex_InstallRenderHook()
 
 	local hookLinesToDraw = "EEex_LinesToDraw"
-	local hookLinesToDrawAddress = EEex_Malloc(#hookLinesToDraw + 1)
+	local hookLinesToDrawAddress = EEex_Malloc(#hookLinesToDraw + 1, 34)
 	EEex_WriteString(hookLinesToDrawAddress, hookLinesToDraw)
 
 	local renderHookAddress = EEex_WriteAssemblyAuto({[[

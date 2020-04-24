@@ -83,7 +83,7 @@ function EEex_InstallMenuHooks()
 	EEex_DisableCodeProtection()
 
 	local hookName = "EEex_ResetHook"
-	local hookNameAddress = EEex_Malloc(#hookName + 1)
+	local hookNameAddress = EEex_Malloc(#hookName + 1, 27)
 	EEex_WriteString(hookNameAddress, hookName)
 
 	local hookReset = EEex_WriteAssemblyAuto({[[
@@ -113,7 +113,7 @@ function EEex_InstallMenuHooks()
 	EEex_WriteAssembly(refreshMenu + 0x24, {{hookReset, 4, 4}})
 
 	local hookInitialLoadName = "EEex_UIMenuLoadHook"
-	local hookInitialLoadNameAddress = EEex_Malloc(#hookInitialLoadName + 1)
+	local hookInitialLoadNameAddress = EEex_Malloc(#hookInitialLoadName + 1, 28)
 	EEex_WriteString(hookInitialLoadNameAddress, hookInitialLoadName)
 
 	local hookInitialLoad = EEex_WriteAssemblyAuto({[[
@@ -139,7 +139,7 @@ function EEex_InstallMenuHooks()
 	EEex_WriteAssembly(EEex_Label("InitialPostUIMenuLoadHook"), {{hookInitialLoad, 4, 4}})
 
 	local templateHookName = "EEex_TemplateMenuOverride"
-	local templateHookNameAddress = EEex_Malloc(#templateHookName + 1)
+	local templateHookNameAddress = EEex_Malloc(#templateHookName + 1, 29)
 	EEex_WriteString(templateHookNameAddress, templateHookName)
 
 	local templateMenuHook = EEex_WriteAssemblyAuto({[[

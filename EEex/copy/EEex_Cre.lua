@@ -64,7 +64,7 @@ end
 
 function EEex_GameObjectAdded(objectID)
 
-	local volatileStorage = EEex_Malloc(EEex_VolatileStorageSpace)
+	local volatileStorage = EEex_Malloc(EEex_VolatileStorageSpace, 13)
 
 	for _, volatileDef in pairs(EEex_VolatileStorageDefinitions) do
 		local constructFunction = volatileDef["construct"]
@@ -210,7 +210,7 @@ function EEex_RegisterSimpleListStat(name, elementSize)
 			end)
 			EEex_Call(EEex_Label("CObList::RemoveAll"), {}, dest, 0x0)
 			EEex_IterateCPtrList(source, function(overridePtr)
-				local copyOverridePtr = EEex_Malloc(elementSize)
+				local copyOverridePtr = EEex_Malloc(elementSize, 14)
 				EEex_Call(EEex_Label("_memcpy"), {elementSize, overridePtr, copyOverridePtr}, nil, 0xC)
 				EEex_Call(EEex_Label("CPtrList::AddTail"), {copyOverridePtr}, dest, 0x0)
 			end)
@@ -245,7 +245,7 @@ function EEex_RegisterComplexListStat(name, attributeTable)
 			end)
 			EEex_Call(EEex_Label("CObList::RemoveAll"), {}, dest, 0x0)
 			EEex_IterateCPtrList(source, function(overridePtr)
-				local copyOverridePtr = EEex_Malloc(attributeTable["size"])
+				local copyOverridePtr = EEex_Malloc(attributeTable["size"], 15)
 				attributeTable["construct"](copyOverridePtr)
 				attributeTable["copy"](overridePtr, copyOverridePtr)
 				EEex_Call(EEex_Label("CPtrList::AddTail"), {copyOverridePtr}, dest, 0x0)
@@ -272,8 +272,8 @@ end
 
 function EEex_HookConstructCreature(fromFile, toStruct)
 
-	local newStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
-	local newTempStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace)
+	local newStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace, 16)
+	local newTempStats = EEex_Malloc(EEex_SimpleStatsSize + EEex_ComplexStatSpace, 17)
 
 	EEex_WriteDword(toStruct + 0x3B18, newStats)
 	EEex_WriteDword(toStruct + 0x3B1C, newTempStats)
@@ -673,7 +673,7 @@ function EEex_InstallCreatureHooks()
 	end
 
 	local hookNameLoad = "EEex_HookConstructCreature"
-	local hookNameLoadAddress = EEex_Malloc(#hookNameLoad + 1)
+	local hookNameLoadAddress = EEex_Malloc(#hookNameLoad + 1, 18)
 	EEex_WriteString(hookNameLoadAddress, hookNameLoad)
 
 	local hookAddressLoad = EEex_WriteAssemblyAuto({[[
@@ -718,13 +718,13 @@ function EEex_InstallCreatureHooks()
 	EEex_WriteAssembly(EEex_Label("HookConstructCreature2"), {{hookAddressLoad, 4, 4}})
 
 	local hookNameReload = "EEex_HookReloadStats"
-	local hookNameReloadAddress = EEex_Malloc(#hookNameReload + 1)
+	local hookNameReloadAddress = EEex_Malloc(#hookNameReload + 1, 19)
 	EEex_WriteString(hookNameReloadAddress, hookNameReload)
 
 	-- Instead of repushing all of the stack args, I'm using a
 	-- hack here and storing the ret ptr somewhere in memory,
 	-- then restoring it right before it is time to return.
-	local hookReloadRetPtr = EEex_Malloc(0x4)
+	local hookReloadRetPtr = EEex_Malloc(0x4, 20)
 
 	local hookReload1 = EEex_WriteAssemblyAuto({[[
 
@@ -805,7 +805,7 @@ function EEex_InstallCreatureHooks()
 	EEex_WriteAssembly(EEex_Label("HookReloadStats4"), {{hookReload2, 4, 4}})
 
 	local hookNameDeconstruct = "EEex_HookDeconstructCreature"
-	local hookNameDeconstructAddress = EEex_Malloc(#hookNameDeconstruct + 1)
+	local hookNameDeconstructAddress = EEex_Malloc(#hookNameDeconstruct + 1, 21)
 	EEex_WriteString(hookNameDeconstructAddress, hookNameDeconstruct)
 
 	local deconstructHookAddress = EEex_Label("CGameSprite::~CGameSprite")
@@ -901,7 +901,7 @@ function EEex_InstallCreatureHooks()
 	]]})
 
 	local hookNameCopy = "EEex_HookCopyStats"
-	local hookNameCopyAddress = EEex_Malloc(#hookNameCopy + 1)
+	local hookNameCopyAddress = EEex_Malloc(#hookNameCopy + 1, 22)
 	EEex_WriteString(hookNameCopyAddress, hookNameCopy)
 
 	local hookCopy1 = EEex_WriteAssemblyAuto({[[

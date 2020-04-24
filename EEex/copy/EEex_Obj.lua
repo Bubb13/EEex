@@ -10,7 +10,7 @@ function EEex_InstallNewObjects()
 	--------------------
 
 	local luaObjectName = "EEex_LuaObject"
-	local luaObjectAddress = EEex_Malloc(#luaObjectName + 1)
+	local luaObjectAddress = EEex_Malloc(#luaObjectName + 1, 30)
 	EEex_WriteString(luaObjectAddress, luaObjectName)
 
 	local EEex_LuaObject = {[[
@@ -50,7 +50,7 @@ function EEex_InstallNewObjects()
 	local matchObjectOffset = EEex_GetVolatileFieldOffset("EEex_MatchObject")
 
 	local matchObjectName = "EEex_MatchObject"
-	local matchObjectAddress = EEex_Malloc(#matchObjectName + 1)
+	local matchObjectAddress = EEex_Malloc(#matchObjectName + 1, 31)
 	EEex_WriteString(matchObjectAddress, matchObjectName)
 
 	local EEex_MatchObject = {[[

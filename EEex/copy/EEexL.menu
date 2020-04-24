@@ -1,0 +1,9 @@
+menu
+{
+	name "EEexL_Menu"
+	ignoreEsc
+	label
+	{
+		enabled "EEexL_Tick()"
+	}
+}

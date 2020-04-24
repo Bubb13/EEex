@@ -14,7 +14,7 @@ function EEex_InstallNewActions()
 	------------------------
 
 	local luaActorName = "EEex_LuaActorID"
-	local luaActorAddress = EEex_Malloc(#luaActorName + 1)
+	local luaActorAddress = EEex_Malloc(#luaActorName + 1, 2)
 	EEex_WriteString(luaActorAddress, luaActorName)
 
 	local EEex_Lua = {[[
@@ -55,19 +55,19 @@ function EEex_InstallNewActions()
 
 	-- Define Lua global used to pass current actorID to match function
 	local matchObjectGlobalName = "EEex_MatchObjectID"
-	local matchObjectGlobalAddress = EEex_Malloc(#matchObjectGlobalName + 1)
+	local matchObjectGlobalAddress = EEex_Malloc(#matchObjectGlobalName + 1, 3)
 	EEex_WriteString(matchObjectGlobalAddress, matchObjectGlobalName)
 
 	-- Define Lua global used to return result from match function
 	local matchObjectReturnName = "EEex_MatchObject"
-	local matchObjectReturnAddress = EEex_Malloc(#matchObjectReturnName + 1)
+	local matchObjectReturnAddress = EEex_Malloc(#matchObjectReturnName + 1, 4)
 	EEex_WriteString(matchObjectReturnAddress, matchObjectReturnName)
 
 	-- Define assembly globals used to flag and store data about current EEex_MatchObject call
-	local matchObjectString = EEex_Malloc(0x4)
-	local matchObjectOverride = EEex_Malloc(0x4)
-	local matchObjectOverrideRange = EEex_Malloc(0x4)
-	local matchObjectDoBacklist = EEex_Malloc(0x4)
+	local matchObjectString = EEex_Malloc(0x4, 5)
+	local matchObjectOverride = EEex_Malloc(0x4, 6)
+	local matchObjectOverrideRange = EEex_Malloc(0x4, 7)
+	local matchObjectDoBacklist = EEex_Malloc(0x4, 8)
 	EEex_WriteDword(matchObjectOverride, 0x0)
 	EEex_WriteDword(matchObjectOverrideRange, 0x0)
 	EEex_WriteDword(matchObjectDoBacklist, 0x0)

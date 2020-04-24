@@ -13,6 +13,10 @@ most utility functions are defined within this file.
 -- EEex modules won't be executed / enabled when this is set to true.
 EEex_MinimalStartup = false
 
+-- Automatically detects and logs potential memory leaks. Do not turn this on
+-- arbitrarily, it uses a lot of resources and can't be sustained for long.
+EEex_LeakDetectionMode = false
+
 --------------------
 -- Initialization --
 --------------------
@@ -87,8 +91,8 @@ Infinity_DoFile("M__EXSTR") -- Strref file for EEex; this needs to be run early 
 ---------------------
 
 -- Lua wrapper for malloc().
-function EEex_Malloc(size)
-	return EEex_Call(EEex_Label("_malloc"), {size}, nil, 0x4)
+function EEex_Malloc(size, callerID)
+	return EEex_Call(EEex_Label("_malloc"), {callerID, size}, nil, 0x8)
 end
 
 -- Lua wrapper for free().
@@ -143,7 +147,7 @@ function EEex_WriteDword(address, value)
 end
 
 function EEex_WriteStringAuto(string)
-	local address = EEex_Malloc(#string + 1)
+	local address = EEex_Malloc(#string + 1, 39)
 	EEex_WriteString(address, string)
 	return address
 end
@@ -158,7 +162,7 @@ end
 --         Note: The stack must be balanced by the end of the call - if this value is wrong, the game will crash.
 function EEex_DllCall(dll, proc, args, ecx, pop)
 	local procaddress = #dll + 1
-	local dlladdress = EEex_Malloc(procaddress + #proc + 1)
+	local dlladdress = EEex_Malloc(procaddress + #proc + 1, 40)
 	procaddress = dlladdress + procaddress
 	EEex_WriteString(dlladdress, dll)
 	EEex_WriteString(procaddress, proc)
@@ -258,7 +262,7 @@ end
 -- Displays a message box to the user. Note: Suspends game until closed, which can be useful for debugging.
 function EEex_MessageBox(message)
 	local caption = "EEex"
-	local messageAddress = EEex_Malloc(#message + 1 + #caption + 1)
+	local messageAddress = EEex_Malloc(#message + 1 + #caption + 1, 41)
 	local captionAddress = messageAddress + #message + 1
 	EEex_WriteString(messageAddress, message)
 	EEex_WriteString(captionAddress, caption)
@@ -408,9 +412,9 @@ end
 
 -- Constructs and returns a CString from the given Lua string.
 function EEex_ConstructCString(string)
-	local stringAddress = EEex_Malloc(#string + 1)
+	local stringAddress = EEex_Malloc(#string + 1, 42)
 	EEex_WriteString(stringAddress, string)
-	local CStringAddress = EEex_Malloc(0x4)
+	local CStringAddress = EEex_Malloc(0x4, 43)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {stringAddress}, CStringAddress, 0x0)
 	EEex_Free(stringAddress)
 	return CStringAddress
@@ -418,7 +422,7 @@ end
 
 -- Copies the given CString and returns its pointer.
 function EEex_CopyCString(CString)
-	local CStringAddress = EEex_Malloc(0x4)
+	local CStringAddress = EEex_Malloc(0x4, 44)
 	EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {CString}, CStringAddress, 0x0)
 	return CStringAddress
 end
@@ -1351,7 +1355,7 @@ function EEex_WriteOpcode(opcodeFunctions)
 		]]})
 	end
 
-	local vtbl = EEex_Malloc(0x2C)
+	local vtbl = EEex_Malloc(0x2C, 45)
 	local opcodeConstructor = EEex_WriteOpcodeConstructor(vtbl)
 	local opcodeCopy = EEex_WriteOpcodeCopy(vtbl)
 
@@ -1466,7 +1470,7 @@ end
 
 -- OS:WINDOWS
 function EEex_GetAllocGran()
-	local systemInfo = EEex_Malloc(0x24)
+	local systemInfo = EEex_Malloc(0x24, 46)
 	EEex_DllCall("Kernel32", "GetSystemInfo", {systemInfo}, nil, 0x0)
 	local allocGran = EEex_ReadDword(systemInfo + 0x1C)
 	EEex_Free(systemInfo)
@@ -1572,7 +1576,7 @@ end
 -- Enables writing to the .text section of the
 -- exe (code).
 function EEex_DisableCodeProtection()
-	local temp = EEex_Malloc(0x4)
+	local temp = EEex_Malloc(0x4, 47)
 	-- 0x40 = PAGE_EXECUTE_READWRITE
 	-- 0x401000 = Start of .text section in memory.
 	-- 0x49F000 = Size of .text section in memory.
@@ -1587,7 +1591,7 @@ end
 -- Reverts the .text section protections back
 -- to default.
 function EEex_EnableCodeProtection()
-	local temp = EEex_Malloc(0x4)
+	local temp = EEex_Malloc(0x4, 24)
 	-- 0x20 = PAGE_EXECUTE_READ
 	-- 0x401000 = Start of .text section in memory.
 	-- 0x49F000 = Size of .text section in memory.
@@ -1652,7 +1656,7 @@ end
 
 function EEex_DemandCRes(resref, extension)
 
-	local resrefLocation = EEex_Malloc(0x8)
+	local resrefLocation = EEex_Malloc(0x8, 48)
 	EEex_WriteLString(resrefLocation + 0x0, resref, 8)
 
 	local type = EEex_FileExtensionToType(extension)
@@ -1692,13 +1696,13 @@ end
 -- Translates the given screenX and screenY into a worldX and worldY. Use EEex_GetTrueMousePos() to obtain valid screen coordinates.
 function EEex_ScreenToWorldXY(screenX, screenY)
 	local CInfinity = EEex_GetCurrentCInfinity()
-	local screenXY = EEex_Malloc(0x8)
+	local screenXY = EEex_Malloc(0x8, 49)
 	EEex_WriteDword(screenXY + 0x0, screenX)
 	EEex_WriteDword(screenXY + 0x4, screenY)
-	local viewportXY = EEex_Malloc(0x8)
+	local viewportXY = EEex_Malloc(0x8, 50)
 	EEex_Call(EEex_Label("CInfinity::ScreenToViewport"), {screenXY, viewportXY}, CInfinity, 0x0)
 	EEex_Free(screenXY)
-	local worldXY = EEex_Malloc(0x8)
+	local worldXY = EEex_Malloc(0x8, 51)
 	EEex_Call(EEex_Label("CInfinity::GetWorldCoordinates"), {viewportXY, worldXY}, CInfinity, 0x0)
 	EEex_Free(viewportXY)
 	local worldX = EEex_ReadDword(worldXY + 0x0)
@@ -1746,13 +1750,13 @@ end
 -------------------------
 
 function EEex_FetchMenuRes(resref)
-	local resrefAddress = EEex_Malloc(#resref + 1)
+	local resrefAddress = EEex_Malloc(#resref + 1, 52)
 	EEex_WriteString(resrefAddress, resref)
-	local res = EEex_Malloc(0x38)
+	local res = EEex_Malloc(0x38, 53)
 	EEex_Call(EEex_Label("CRes::CRes"), {}, res, 0x0)
 	EEex_WriteDword(res + 0x4, resrefAddress)
 	EEex_WriteDword(res + 0x8, 0x408)
-	local pointerToRes = EEex_Malloc(0x4)
+	local pointerToRes = EEex_Malloc(0x4, 54)
 	EEex_WriteDword(pointerToRes, res)
 	local result = EEex_Call(EEex_Label("_bsearch"), {
 		EEex_Label("CompareCResByTypeThenName"),
@@ -1782,7 +1786,7 @@ function EEex_LoadMenuFile(resref)
 end
 
 function EEex_GetMenuStructure(menuName)
-	local stringAddress = EEex_Malloc(#menuName + 0x1)
+	local stringAddress = EEex_Malloc(#menuName + 0x1, 55)
 	EEex_WriteString(stringAddress, menuName)
 	local result = EEex_Call(EEex_Label("_findMenu"), {0x0, 0x0, stringAddress}, nil, 0xC)
 	EEex_Free(stringAddress)
@@ -1923,7 +1927,7 @@ end
 
 function EEex_StoreTemplateInstance(menuName, templateName, instanceID, storeIntoName)
 
-	local stringAddress = EEex_Malloc(#templateName + 0x1)
+	local stringAddress = EEex_Malloc(#templateName + 0x1, 56)
 	EEex_WriteString(stringAddress, templateName)
 
 	local eax = nil
@@ -1978,7 +1982,7 @@ end
 -------------------------
 
 function EEex_GetActorShare(actorID)
-	local resultBlock = EEex_Malloc(0x4)
+	local resultBlock = EEex_Malloc(0x4, 57)
 	EEex_Call(EEex_Label("CGameObjectArray::GetShare"), {resultBlock, actorID}, nil, 0x8)
 	local result = EEex_ReadDword(resultBlock)
 	EEex_Free(resultBlock)
@@ -2081,8 +2085,8 @@ end
 -----------------------
 
 function EEex_FetchBCS(resref)
-	local CAIScript = EEex_Malloc(0x24)
-	local CResRef = EEex_Malloc(0x8)
+	local CAIScript = EEex_Malloc(0x24, 58)
+	local CResRef = EEex_Malloc(0x8, 59)
 	EEex_WriteLString(CResRef, resref, 8)
 	local CAIScript = EEex_Call(EEex_Label("CAIScript::CAIScript"), {0, EEex_ReadDword(CResRef + 0x4), EEex_ReadDword(CResRef)}, CAIScript, 0x0)
 	EEex_Free(CResRef)
@@ -2090,19 +2094,19 @@ function EEex_FetchBCS(resref)
 end
 
 function EEex_CompileBCS(scriptString)
-	local CAIScriptFile = EEex_Malloc(0xE8)
+	local CAIScriptFile = EEex_Malloc(0xE8, 60)
 	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, CAIScriptFile, 0x0)
 	local lines = EEex_SplitByChar(scriptString, "\n")
 	for _, line in ipairs(lines) do
-		local CString = EEex_Malloc(0x4)
-		local charArray = EEex_Malloc(#line + 1)
+		local CString = EEex_Malloc(0x4, 61)
+		local charArray = EEex_Malloc(#line + 1, 62)
 		EEex_WriteString(charArray, line)
 		EEex_Call(EEex_Label("CString::CString(char_const_*)"), {charArray}, CString, 0x0)
 		EEex_Free(charArray)
 		EEex_Call(EEex_Label("CAIScriptFile::ParseOneLine"), {EEex_ReadDword(CString)}, CAIScriptFile, 0x0)
 		EEex_Free(CString)
 	end
-	local CAIScriptCopy = EEex_Malloc(0x24)
+	local CAIScriptCopy = EEex_Malloc(0x24, 63)
 	EEex_Call(EEex_Label("CAIScript::CAIScript(CAIScript_*)"), {}, CAIScriptCopy, 0x0)
 	EEex_Call(EEex_Label("CAIScript::Copy"), {CAIScriptCopy + 0x8}, EEex_ReadDword(CAIScriptFile + 0x8), 0x0)
 	EEex_Call(EEex_Label("CAIScriptFile::~CAIScriptFile"), {}, CAIScriptFile, 0x0)
@@ -2132,10 +2136,10 @@ end
 -- Parses the given object string in standard BAF syntax and returns a pointer to the compiled CAIObjectType instance.
 -- Use EEex_EvalObjectAsActor() to evaluate the compiled object instance in relation to an actor.
 function EEex_ParseObjectString(string)
-	local scriptFile = EEex_Malloc(0xE8)
+	local scriptFile = EEex_Malloc(0xE8, 64)
 	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, scriptFile, 0x0)
 	local objectString = EEex_ConstructCString(string)
-	local objectTypeResult = EEex_Malloc(0x14)
+	local objectTypeResult = EEex_Malloc(0x14, 65)
 	EEex_Call(EEex_Label("CAIScriptFile::ParseObjectType"), {objectString, objectTypeResult}, scriptFile, 0x0)
 	EEex_Call(EEex_Label("CAIScriptFile::~CAIScriptFile"), {}, scriptFile, 0x0)
 	EEex_Call(EEex_Label("CString::~CString"), {}, objectString, 0x0)
@@ -2144,7 +2148,7 @@ end
 
 -- Evaluates an object pointer, (returned by EEex_ParseObjectString()), as if it was evaluated by the given actor.
 function EEex_EvalObjectAsActor(object, actorID)
-	local objectCopy = EEex_Malloc(0x14)
+	local objectCopy = EEex_Malloc(0x14, 66)
 	EEex_Call(EEex_Label("CAIObjectType::CAIObjectType"), {-0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, objectCopy, 0x0)
 	EEex_Call(EEex_Label("CAIObjectType::operator_equ"), {object}, objectCopy, 0x0)
 	local actorShare = EEex_GetActorShare(actorID)
@@ -2177,11 +2181,11 @@ end
 -- Use in conjunction with one of the EEex_EvalActions* functions.
 function EEex_ParseActionsString(string)
 
-	local CAIScriptFile = EEex_Malloc(0xE8)
+	local CAIScriptFile = EEex_Malloc(0xE8, 67)
 	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, CAIScriptFile, 0x0)
 
-	local CString = EEex_Malloc(0x4)
-	local charArray = EEex_Malloc(#string + 1)
+	local CString = EEex_Malloc(0x4, 68)
+	local charArray = EEex_Malloc(#string + 1, 69)
 	EEex_WriteString(charArray, string)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {charArray}, CString, 0x0)
 	EEex_Free(charArray)
@@ -2205,7 +2209,7 @@ function EEex_EvalActionsAsActorResume(CAIScriptFile, actorID)
 	local actionList = CAIResponse + 0x8
 
 	-- Copy currently executing action
-	local currentCopy = EEex_Malloc(0x64)
+	local currentCopy = EEex_Malloc(0x64, 70)
 	EEex_Call(EEex_Label("CAIAction::CAIAction(CAIAction_const_&)"), {share + 0x2F8}, currentCopy, 0x0)
 
 	EEex_IterateCPtrList(actionList, function(CAIAction)
@@ -2278,11 +2282,11 @@ end
 
 function EEex_ParseTriggersString(string)
 
-	local CAIScriptFile = EEex_Malloc(0xE8)
+	local CAIScriptFile = EEex_Malloc(0xE8, 71)
 	EEex_Call(EEex_Label("CAIScriptFile::CAIScriptFile"), {}, CAIScriptFile, 0x0)
 
-	local CString = EEex_Malloc(0x4)
-	local charArray = EEex_Malloc(#string + 1)
+	local CString = EEex_Malloc(0x4, 72)
+	local charArray = EEex_Malloc(#string + 1, 73)
 	EEex_WriteString(charArray, string)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {charArray}, CString, 0x0)
 	EEex_Free(charArray)
@@ -3077,7 +3081,7 @@ function EEex_GetSpellAbilityData(m_CGameSprite, resref)
 	if CResSpell == 0x0 then return 0x0 end
 	local spellData = EEex_ReadDword(CResSpell + 0x28)
 
-	local CSpell = EEex_Malloc(0xC)
+	local CSpell = EEex_Malloc(0xC, 74)
 	EEex_WriteDword(CSpell, CResSpell)
 	EEex_WriteLString(CSpell + 0x4, resref, 0x8)
 
@@ -3170,7 +3174,7 @@ function EEex_PlayerCastResrefNoDec(resref)
 	local spellAbilityData = EEex_GetSpellAbilityData(share, resref)
 	if spellAbilityData == 0x0 then return end
 
-	local CButtonData = EEex_Malloc(0x34)
+	local CButtonData = EEex_Malloc(0x34, 75)
 	EEex_Call(EEex_Label("CButtonData::CButtonData"), {}, CButtonData, 0x0)
 	local targetType = EEex_ReadByte(spellAbilityData + 0xC, 0)
 	-- m_itemType = 6 is an EEex addition that bypasses all casting prerequisites
@@ -3227,7 +3231,7 @@ end
 
 -- Fetches the CVariable corresponding to variableName.
 function EEex_FetchCVariable(CVariableHash, variableName)
-	local localAddress = EEex_Malloc(#variableName + 5)
+	local localAddress = EEex_Malloc(#variableName + 5, 76)
 	EEex_WriteString(localAddress + 0x4, variableName)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {localAddress + 0x4}, localAddress, 0x0)
 	local varAddress = EEex_Call(EEex_Label("CVariableHash::FindKey"), {EEex_ReadDword(localAddress)}, CVariableHash, 0x0)
@@ -3256,7 +3260,7 @@ end
 function EEex_GetAreaGlobal(areaResref, globalName)
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
-	local areaResrefAddress = EEex_Malloc(#globalName + 5)
+	local areaResrefAddress = EEex_Malloc(#globalName + 5, 77)
 	EEex_WriteString(areaResrefAddress + 0x4, areaResref)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {areaResrefAddress + 0x4}, areaResrefAddress, 0x0)
 	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"), {EEex_ReadDword(areaResrefAddress)}, m_pObjectGame, 0x0)
@@ -3277,7 +3281,7 @@ function EEex_SetVariable(CVariableHash, variableName, value)
 	if existingVarAddress ~= 0x0 then
 		EEex_WriteDword(existingVarAddress + 0x28, value)
 	else
-		local newVarAddress = EEex_Malloc(0x54)
+		local newVarAddress = EEex_Malloc(0x54, 78)
 		EEex_Call(EEex_Label("CVariable::CVariable"), {}, newVarAddress, 0x0)
 		local variableNameAddress = EEex_ReadDword(variableNamePtr)
 		EEex_Call(EEex_Label("_strncpy"), {0x20, variableNameAddress, newVarAddress}, nil, 0xC)
@@ -3296,7 +3300,7 @@ function EEex_DemandCVariable(CVariableHash, variableName)
 	local existingVarAddress = EEex_FetchCVariable(CVariableHash, variableName)
 	if existingVarAddress == 0x0 then
 
-		local newVarAddress = EEex_Malloc(0x54)
+		local newVarAddress = EEex_Malloc(0x54, 79)
 		EEex_Call(EEex_Label("CVariable::CVariable"), {}, newVarAddress, 0x0)
 		EEex_WriteLString(newVarAddress, variableName, 32)
 		EEex_Call(EEex_Label("CVariableHash::AddKey"), {newVarAddress}, CVariableHash, 0x0)
@@ -3325,7 +3329,7 @@ end
 function EEex_SetAreaGlobal(areaResref, globalName, value)
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
-	local areaResrefAddress = EEex_Malloc(#globalName + 5)
+	local areaResrefAddress = EEex_Malloc(#globalName + 5, 80)
 	EEex_WriteString(areaResrefAddress + 0x4, areaResref)
 	EEex_Call(EEex_Label("CString::CString(char_const_*)"), {areaResrefAddress + 0x4}, areaResrefAddress, 0x0)
 	local areaAddress = EEex_Call(EEex_Label("CInfGame::GetArea"), {EEex_ReadDword(areaResrefAddress)}, m_pObjectGame, 0x0)
@@ -3336,9 +3340,9 @@ function EEex_SetAreaGlobal(areaResref, globalName, value)
 end
 
 function EEex_2DALoad(_2DAResref)
-	local resrefAddress = EEex_Malloc(#_2DAResref + 1)
+	local resrefAddress = EEex_Malloc(#_2DAResref + 1, 81)
 	EEex_WriteString(resrefAddress, _2DAResref)
-	local C2DArray = EEex_Malloc(0x20)
+	local C2DArray = EEex_Malloc(0x20, 82)
 	EEex_Memset(C2DArray, 0x20, 0x0)
 	EEex_WriteDword(C2DArray + 0x18, EEex_Label("_afxPchNil"))
 	EEex_Call(EEex_Label("C2DArray::Load"), {resrefAddress}, C2DArray, 0x0)
@@ -3361,7 +3365,7 @@ function EEex_GetActorClassString(actorID)
 	local m_pObjectGame = EEex_ReadDword(g_pBaldurChitin + EEex_Label("CBaldurChitin::m_pObjectGame"))
 	local kit = EEex_GetActorKit(actorID)
 	local class = EEex_GetActorClass(actorID)
-	local result = EEex_Malloc(0x4)
+	local result = EEex_Malloc(0x4, 83)
 	-- TODO: Use Pattern
 	EEex_Call(0x5F7A60, {kit, class, result}, m_pObjectGame, 0x0)
 	local luaString = EEex_ReadString(EEex_ReadDword(result))
@@ -3382,7 +3386,7 @@ function EEex_SetActorScriptInternal(share, resref, scriptLevel)
 
 	local resrefMem = EEex_WriteStringAuto(resref)
 
-	local CAIScript = EEex_Malloc(0x24)
+	local CAIScript = EEex_Malloc(0x24, 84)
 	EEex_Call(EEex_Label("CAIScript::CAIScript"), {
 		0, -- playerscript
 		EEex_ReadDword(resrefMem + 0x4), -- 2/2 of resref
@@ -3887,7 +3891,7 @@ end
 function EEex_GetActorRequiredDirection(actorID, targetX, targetY)
 	if not EEex_IsSprite(actorID) then return -1 end
 	local share = EEex_GetActorShare(actorID)
-	local targetPoint = EEex_Malloc(0x8)
+	local targetPoint = EEex_Malloc(0x8, 85)
 	EEex_WriteDword(targetPoint + 0x0, targetX)
 	EEex_WriteDword(targetPoint + 0x4, targetY)
 	local result = EEex_Call(EEex_Label("CGameSprite::GetDirection"), {targetPoint}, share, 0x0)
@@ -3956,7 +3960,7 @@ end
 -- Directly applies an effect to an actor based on the args table.
 function EEex_ApplyEffectToActor(actorID, args)
 
-	local Item_effect_st = EEex_Malloc(0x30)
+	local Item_effect_st = EEex_Malloc(0x30, 86)
 
 	local argOrError = function(argKey)
 		local arg = args[argKey]
@@ -3979,7 +3983,7 @@ function EEex_ApplyEffectToActor(actorID, args)
 	local writeResrefArg = function(address, argKey)
 		local resref = args[argKey]
 		if resref then
-			local stringMem = EEex_Malloc(#resref + 1)
+			local stringMem = EEex_Malloc(#resref + 1, 87)
 			EEex_WriteDword(stringMem + 0x0, 0x0)
 			EEex_WriteDword(stringMem + 0x4, 0x0)
 			EEex_WriteString(stringMem, resref:upper())
@@ -4016,13 +4020,13 @@ function EEex_ApplyEffectToActor(actorID, args)
 
 	local sourceTarget = argOrDefault("source_target", -0x1)
 
-	local target = EEex_Malloc(0x8)
+	local target = EEex_Malloc(0x8, 88)
 	EEex_WriteDword(target + 0x0, argOrDefault("target_x", -0x1))
 	EEex_WriteDword(target + 0x4, argOrDefault("target_y", -0x1))
 
 	local sourceID = argOrDefault("source_id", -0x1)
 
-	local source = EEex_Malloc(0x8)
+	local source = EEex_Malloc(0x8, 89)
 	EEex_WriteDword(source + 0x0, argOrDefault("source_x", -0x1))
 	EEex_WriteDword(source + 0x4, argOrDefault("source_y", -0x1))
 
@@ -4184,7 +4188,7 @@ end
 ----------------------
 
 function EEex_LearnWizardSpell(actorID, level, resref)
-	local resrefAddress = EEex_Malloc(0xC)
+	local resrefAddress = EEex_Malloc(0xC, 90)
 	EEex_WriteString(resrefAddress, resref)
 	EEex_Call(EEex_Label("CGameSprite::AddKnownSpellMage"), {level, resrefAddress}, EEex_GetActorShare(actorID), 0x0)
 	EEex_Free(resrefAddress)
@@ -4193,7 +4197,7 @@ end
 function EEex_LearnClericSpell(actorID, level, resref)
 	local actorDataAddress = EEex_GetActorShare(actorID)
 	local spellLevelListPointer = actorDataAddress + (level * 8 - level + 0x1A1) * 4
-	local resrefAddress = EEex_Malloc(0xC)
+	local resrefAddress = EEex_Malloc(0xC, 91)
 	EEex_WriteString(resrefAddress, resref)
 	EEex_Call(EEex_Label("CGameSprite::AddKnownSpell"),
 		{0x0, spellLevelListPointer, level, resrefAddress}, actorDataAddress, 0x0)
@@ -4203,7 +4207,7 @@ end
 function EEex_LearnInnateSpell(actorID, resref)
 	local actorDataAddress = EEex_GetActorShare(actorID)
 	local spellLevelListPointer = actorDataAddress + 0x844
-	local resrefAddress = EEex_Malloc(0xC)
+	local resrefAddress = EEex_Malloc(0xC, 92)
 	EEex_WriteString(resrefAddress, resref)
 	EEex_Call(EEex_Label("CGameSprite::AddKnownSpell"),
 		{0x2, spellLevelListPointer, 0x0, resrefAddress}, actorDataAddress, 0x0)
@@ -4212,7 +4216,7 @@ end
 
 function EEex_UnlearnWizardSpell(actorID, level, resref)
 	local actorDataAddress = EEex_GetActorShare(actorID)
-	local resrefAddress = EEex_Malloc(0xC)
+	local resrefAddress = EEex_Malloc(0xC, 93)
 	EEex_WriteString(resrefAddress, resref)
 	EEex_Call(EEex_Label("CGameSprite::RemoveKnownSpellMage"), {level, resrefAddress}, actorDataAddress, 0x0)
 	EEex_Free(resrefAddress)
@@ -4220,7 +4224,7 @@ end
 
 function EEex_UnlearnClericSpell(actorID, level, resref)
 	local actorDataAddress = EEex_GetActorShare(actorID)
-	local resrefAddress = EEex_Malloc(0xC)
+	local resrefAddress = EEex_Malloc(0xC, 94)
 	EEex_WriteString(resrefAddress, resref)
 	EEex_Call(EEex_Label("CGameSprite::RemoveKnownSpellPriest"), {level, resrefAddress}, actorDataAddress, 0x0)
 	EEex_Free(resrefAddress)
@@ -4229,7 +4233,7 @@ end
 function EEex_UnlearnInnateSpell(actorID, resref)
 	local actorDataAddress = EEex_GetActorShare(actorID)
 	local spellLevelListPointer = actorDataAddress + 0x844
-	local resrefAddress = EEex_Malloc(0xC)
+	local resrefAddress = EEex_Malloc(0xC, 95)
 	EEex_WriteString(resrefAddress, resref)
 	EEex_Call(EEex_Label("CGameSprite::RemoveKnownSpell"), {spellLevelListPointer, resrefAddress}, actorDataAddress, 0x0)
 	EEex_Free(resrefAddress)
@@ -4295,7 +4299,7 @@ function EEex_MemorizeWizardSpell(actorID, level, resref)
 	eax = eax + 0x1D2
 	eax = esi + eax * 0x4
 
-	local spellLevelListPointer = EEex_Malloc(0x14)
+	local spellLevelListPointer = EEex_Malloc(0x14, 96)
 	EEex_WriteDword(spellLevelListPointer, spellLevelListPointer + 0x8)
 	EEex_WriteDword(spellLevelListPointer + 0x4, spellLevelListPointer - 0x8)
 	EEex_WriteString(spellLevelListPointer + 0x8, resref)
@@ -4332,7 +4336,7 @@ function EEex_MemorizeClericSpell(actorID, level, resref)
 	eax = eax + 0x1A1
 	eax = esi + eax * 0x4
 
-	local spellLevelListPointer = EEex_Malloc(0x14)
+	local spellLevelListPointer = EEex_Malloc(0x14, 97)
 	EEex_WriteDword(spellLevelListPointer, spellLevelListPointer + 0x8)
 	EEex_WriteDword(spellLevelListPointer + 0x4, spellLevelListPointer - 0x8)
 	EEex_WriteString(spellLevelListPointer + 0x8, resref)
@@ -4357,7 +4361,7 @@ function EEex_MemorizeInnateSpell(actorID, resref)
 	eax = ecx + eax * 0x4
 	local currentlyMemorizedPointer = eax
 
-	local spellLevelListPointer = EEex_Malloc(0x14)
+	local spellLevelListPointer = EEex_Malloc(0x14, 98)
 	EEex_WriteDword(spellLevelListPointer, spellLevelListPointer + 0x8)
 	EEex_WriteDword(spellLevelListPointer + 0x4, spellLevelListPointer - 0x8)
 	EEex_WriteString(spellLevelListPointer + 0x8, resref)
@@ -5554,7 +5558,7 @@ end
 	EEex_EnableCodeProtection()
 
 	local debugHookName = "EEex_ReadDwordDebug"
-	local debugHookAddress = EEex_Malloc(#debugHookName + 1)
+	local debugHookAddress = EEex_Malloc(#debugHookName + 1, 99)
 	EEex_WriteString(debugHookAddress, debugHookName)
 
 	-- Reads a dword at the given address. What more is there to say.
@@ -5631,6 +5635,70 @@ end
 		!ret 
 	]]})
 
+	EEex_WriteAssemblyFunction("EEex_Memset", {[[
+
+		!push_state
+
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte 00
+		!push_byte 03
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		!call >_memset
+		!add_esp_byte 0C
+
+		!mov_eax #00
+		!pop_state
+		!ret
+
+	]]})
+
+	-- Reads a string from the given address until a NULL is encountered.
+	-- NOTE: Certain game structures, (most commonly resrefs), don't
+	-- necessarily end in a NULL. Regarding resrefs, if one uses all
+	-- 8 characters of alloted space, no NULL will be written. To read
+	-- this properly, please use EEex_ReadLString with maxLength set to 8.
+	-- In cases where the string is guaranteed to have a terminating NULL,
+	-- use this function.
+
+	-- SIGNATURE:
+	-- string result = EEex_ReadString(number address)
+	EEex_WriteAssemblyFunction("EEex_ReadString", {[[
+		!push_state
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+		!push_[ebp+byte] 08
+		!call >_lua_pushstring
+		!add_esp_byte 08
+		!mov_eax #01
+		!pop_state
+		!ret
+	]]})
+
 	EEex_WriteAssemblyFunction("EEex_FloatToLong", {[[
 
 		!push_state
@@ -5671,33 +5739,6 @@ end
 		83 C4 0C B8 01 00 00 00 5F 5E 5A 59 5B 5D C3"
 	})
 	--]]
-
-	-- Reads a string from the given address until a NULL is encountered.
-	-- NOTE: Certain game structures, (most commonly resrefs), don't
-	-- necessarily end in a NULL. Regarding resrefs, if one uses all
-	-- 8 characters of alloted space, no NULL will be written. To read
-	-- this properly, please use EEex_ReadLString with maxLength set to 8.
-	-- In cases where the string is guaranteed to have a terminating NULL,
-	-- use this function.
-
-	-- SIGNATURE:
-	-- string result = EEex_ReadString(number address)
-	EEex_WriteAssemblyFunction("EEex_ReadString", {[[
-		!push_state
-		!push_byte 00
-		!push_byte 01
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-		!push_[ebp+byte] 08
-		!call >_lua_pushstring
-		!add_esp_byte 08
-		!mov_eax #01
-		!pop_state
-		!ret
-	]]})
 
 	-- This is much longer than EEex_ReadString because it had to use new behavior.
 	-- Reads until NULL is encountered, OR until it reaches the given length.
@@ -5805,43 +5846,6 @@ end
 		!add_esp_byte 0C
 
 		!mov_eax #01
-		!pop_state
-		!ret
-
-	]]})
-
-	EEex_WriteAssemblyFunction("EEex_Memset", {[[
-
-		!push_state
-
-		!push_byte 00
-		!push_byte 02
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-
-		!push_byte 00
-		!push_byte 03
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-
-		!push_byte 00
-		!push_byte 01
-		!push_[ebp+byte] 08
-		!call >_lua_tonumberx
-		!add_esp_byte 0C
-		!call >__ftol2_sse
-		!push_eax
-
-		!call >_memset
-		!add_esp_byte 0C
-
-		!mov_eax #00
 		!pop_state
 		!ret
 
@@ -6019,7 +6023,7 @@ end
 	EEex_DisableCodeProtection()
 
 	local newVersionString = "(EEex) v%d.%d.%d.%d"
-	local newVersionStringAddress = EEex_Malloc(#newVersionString + 1)
+	local newVersionStringAddress = EEex_Malloc(#newVersionString + 1, 100)
 	EEex_WriteString(newVersionStringAddress, newVersionString)
 	EEex_WriteAssembly(EEex_Label("CChitin::GetVersionString()_versionStringPush"), {{newVersionStringAddress, 4}})
 
@@ -6037,8 +6041,13 @@ end
 		--  Engine Hooks  --
 		--------------------
 
-		Infinity_DoFile("EEex_Gen") -- General Code
 		Infinity_DoFile("EEex_Men") -- Menu Hooks
+
+		if EEex_LeakDetectionMode then
+			Infinity_DoFile("EEexL") -- Leak Detection
+		end
+
+		Infinity_DoFile("EEex_Gen") -- General Code
 		Infinity_DoFile("EEex_Lua") -- Lua Hooks
 		Infinity_DoFile("EEex_Cre") -- Creature Structure Expansion
 		Infinity_DoFile("EEex_Act") -- New Actions (EEex_Lua)

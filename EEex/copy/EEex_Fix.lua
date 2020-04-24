@@ -9,11 +9,13 @@ function EEex_InstallFixes()
 
 	local triggersObjectSelectorFix = EEex_WriteAssemblyAuto({[[
 
-		!add_esp_byte 4
+		!add_esp_byte 04
+		!push_ebx
 
+		!push_dword #65 ; callerID ;
 		!push_byte 30
 		!call >_malloc
-		!add_esp_byte 4
+		!add_esp_byte 8
 		!mov_ebx_eax
 
 		!push_byte 00
@@ -33,8 +35,14 @@ function EEex_InstallFixes()
 		!mov_esi_[esi]
 		!push_ebx
 		!call >CAITrigger::OfType
+		!push_eax
 
-		!test_[edi+byte]_byte 1C 01
+		!push_ebx
+		!call >_SDL_free
+		!add_esp_byte 04
+
+		!pop_eax
+		!pop_ebx
 		!jmp_dword >CAICondition::TriggerHolds()_FixResume
 
 	]]})

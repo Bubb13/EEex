@@ -14,7 +14,7 @@ end
 function EEex_InstallTooltipHook()
 
 	local hookName = "EEex_IsActorTooltipDisabled"
-	local hookNameAddress = EEex_Malloc(#hookName + 1)
+	local hookNameAddress = EEex_Malloc(#hookName + 1, 36)
 	EEex_WriteString(hookNameAddress, hookName)
 
 	local tooltipHookAddress = EEex_Label("TooltipHook")
