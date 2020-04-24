@@ -46,7 +46,7 @@ end
 function EEex_InstallActionbarHook()
 
 	local hookName = "EEex_HookActionbar"
-	local hookNameAddress = EEex_Malloc(#hookName + 1)
+	local hookNameAddress = EEex_Malloc(#hookName + 1, 10)
 	EEex_WriteString(hookNameAddress, hookName)
 
 	local hookAddress = EEex_WriteAssemblyAuto({[[
@@ -100,7 +100,7 @@ function EEex_InstallActionbarHook()
 		!jmp_dword >CInfButtonArray::SetState()_AfterUpdate
 	]]})
 
-	local hookData = EEex_Malloc(0xC)
+	local hookData = EEex_Malloc(0xC, 11)
 	local fixSpecial = EEex_WriteAssemblyAuto({[[
 
 		!mov_eax_[ebp+byte] 04

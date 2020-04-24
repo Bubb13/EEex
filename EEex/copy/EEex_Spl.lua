@@ -105,7 +105,7 @@ function EEex_InstallSplHook()
 
 	local writeOpcode214CastHook = function(hookName, address)
 
-		local opcode214CastHookNameAddress = EEex_Malloc(#hookName + 1)
+		local opcode214CastHookNameAddress = EEex_Malloc(#hookName + 1, 35)
 		EEex_WriteString(opcode214CastHookNameAddress, hookName)
 
 		local opcode214CastJumpDest = address + EEex_ReadDword(address + 0x1) + 0x5

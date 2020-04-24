@@ -72,11 +72,11 @@ function EEex_InstallNewTriggers()
 	---------------------
 
 	local luaTriggerActorName = "EEex_LuaTriggerActorID"
-	local luaTriggerActorAddress = EEex_Malloc(#luaTriggerActorName + 1)
+	local luaTriggerActorAddress = EEex_Malloc(#luaTriggerActorName + 1, 37)
 	EEex_WriteString(luaTriggerActorAddress, luaTriggerActorName)
 
 	local luaTriggerReturnName = "EEex_LuaTrigger"
-	local luaTriggerReturnAddress = EEex_Malloc(#luaTriggerReturnName + 1)
+	local luaTriggerReturnAddress = EEex_Malloc(#luaTriggerReturnName + 1, 38)
 	EEex_WriteString(luaTriggerReturnAddress, luaTriggerReturnName)
 
 	local EEex_LuaTrigger = {[[

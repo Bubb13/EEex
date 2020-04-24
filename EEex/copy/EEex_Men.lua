@@ -15,6 +15,19 @@ function EEex_DestroyInjectedTemplate(menuName, templateName, instanceId)
 	EEex_TemplateMenuOverride = 0
 end
 
+-- TODO: This probably belongs in another file
+EEex_InitGameListeners = {}
+
+function EEex_AddInitGameListener(listener)
+	table.insert(EEex_InitGameListeners, listener)
+end
+
+function EEex_InitGameHook()
+	for i, listener in ipairs(EEex_InitGameListeners) do
+		listener()
+	end
+end
+
 EEex_UIMenuLoadListeners = {}
 
 -- Given listener function is called after initial UI.MENU load an when an F5 UI reload is executed.
@@ -70,7 +83,7 @@ function EEex_InstallMenuHooks()
 	EEex_DisableCodeProtection()
 
 	local hookName = "EEex_ResetHook"
-	local hookNameAddress = EEex_Malloc(#hookName + 1)
+	local hookNameAddress = EEex_Malloc(#hookName + 1, 27)
 	EEex_WriteString(hookNameAddress, hookName)
 
 	local hookReset = EEex_WriteAssemblyAuto({[[
@@ -100,7 +113,7 @@ function EEex_InstallMenuHooks()
 	EEex_WriteAssembly(refreshMenu + 0x24, {{hookReset, 4, 4}})
 
 	local hookInitialLoadName = "EEex_UIMenuLoadHook"
-	local hookInitialLoadNameAddress = EEex_Malloc(#hookInitialLoadName + 1)
+	local hookInitialLoadNameAddress = EEex_Malloc(#hookInitialLoadName + 1, 28)
 	EEex_WriteString(hookInitialLoadNameAddress, hookInitialLoadName)
 
 	local hookInitialLoad = EEex_WriteAssemblyAuto({[[
@@ -126,7 +139,7 @@ function EEex_InstallMenuHooks()
 	EEex_WriteAssembly(EEex_Label("InitialPostUIMenuLoadHook"), {{hookInitialLoad, 4, 4}})
 
 	local templateHookName = "EEex_TemplateMenuOverride"
-	local templateHookNameAddress = EEex_Malloc(#templateHookName + 1)
+	local templateHookNameAddress = EEex_Malloc(#templateHookName + 1, 29)
 	EEex_WriteString(templateHookNameAddress, templateHookName)
 
 	local templateMenuHook = EEex_WriteAssemblyAuto({[[
@@ -242,6 +255,32 @@ function EEex_InstallMenuHooks()
 
 	]]})
 	
+	-----------------------
+	-- EEex_InitGameHook --
+	-----------------------
+
+	EEex_HookAfterCall(EEex_Label("CBaldurChitin::Init()_After"), {[[
+
+		!push_all_registers
+
+		!push_dword ]], {EEex_WriteStringAuto("EEex_InitGameHook"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!pop_all_registers
+
+	]]})
+
 	EEex_EnableCodeProtection()
 end
 EEex_InstallMenuHooks()

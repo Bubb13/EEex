@@ -51,7 +51,7 @@ function EEex_KeyReleased(key)
 end
 
 function EEex_GetKeyFromName(name)
-	local nameMem = EEex_Malloc(#name + 1)
+	local nameMem = EEex_Malloc(#name + 1, 23)
 	EEex_WriteString(nameMem, name)
 	local code = EEex_Call(EEex_Label("SDL_GetKeyFromName"), {nameMem}, nil, 0x4)
 	EEex_Free(nameMem)
@@ -73,11 +73,11 @@ end
 function EEex_InstallKeyHook()
 
 	local keyPressedHookName = "EEex_KeyPressed"
-	local keyPressedHookNameAddress = EEex_Malloc(#keyPressedHookName + 1)
+	local keyPressedHookNameAddress = EEex_Malloc(#keyPressedHookName + 1, 25)
 	EEex_WriteString(keyPressedHookNameAddress, keyPressedHookName)
 
 	local keyReleasedHookName = "EEex_KeyReleased"
-	local keyReleasedHookNameAddress = EEex_Malloc(#keyReleasedHookName + 1)
+	local keyReleasedHookNameAddress = EEex_Malloc(#keyReleasedHookName + 1, 26)
 	EEex_WriteString(keyReleasedHookNameAddress, keyReleasedHookName)
 
 	local hookAddress = EEex_WriteAssemblyAuto({[[

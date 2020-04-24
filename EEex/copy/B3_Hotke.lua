@@ -130,7 +130,7 @@ function B3Hotkey_AttemptToSelectCharacter(portraitNum, dontUnselect)
 
 		else
 
-			local actorAddressPtr = EEex_Malloc(0x4)
+			local actorAddressPtr = EEex_Malloc(0x4, 0)
 			local shareResult = EEex_Call(EEex_Label("CGameObjectArray::GetShare"), {actorAddressPtr, actorID}, m_pObjectGame, 0x8)
 
 			if shareResult ~= 0x0 then

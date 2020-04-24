@@ -6,7 +6,7 @@ function B3Portr_InstallPortraitHooks()
 	EEex_DisableCodeProtection()
 
 	local checkVariable = "B3Portr_SuppressActionIcons"
-	local checkVariableAddress = EEex_Malloc(#checkVariable + 1)
+	local checkVariableAddress = EEex_Malloc(#checkVariable + 1, 1)
 	EEex_WriteString(checkVariableAddress, checkVariable)
 
 	local defaultSwitchAddress = EEex_Label("RenderPortraitIconSwitch")

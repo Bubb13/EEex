@@ -272,7 +272,7 @@ end)
 function EEex_InstallActionHook()
 	
 	local hookName = "EEex_HookAction"
-	local hookNameAddress = EEex_Malloc(#hookName + 1)
+	local hookNameAddress = EEex_Malloc(#hookName + 1, 9)
 	EEex_WriteString(hookNameAddress, hookName)
 
 	local hookAddress = EEex_WriteAssemblyAuto({[[

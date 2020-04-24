@@ -16,7 +16,7 @@ end
 function EEex_InstallBardThievingHook()
 
 	local hookName = "EEex_HookBardThieving"
-	local hookNameAddress = EEex_Malloc(#hookName + 1)
+	local hookNameAddress = EEex_Malloc(#hookName + 1, 12)
 	EEex_WriteString(hookNameAddress, hookName)
 
 	local hookAddress = EEex_WriteAssemblyAuto({[[
