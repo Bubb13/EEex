@@ -99,6 +99,7 @@ New stats:
 - Stat 629: Adds an additional saving throw penalty to the character's necromancy spells, stacking with stat 619.
 - Stat 630: Adds an additional saving throw penalty to the character's alteration spells, stacking with stat 619.
 - Stat 631: Adds an additional saving throw penalty to the character's generalist spells, stacking with stat 619.
+- Stat 654: Modifies the level of the character's spells, for purposes of bypassing Globes of Invulnerability and similar protections.
 - Stat 658: Applies a spell on any creature summoned by the character, with the summoner as the source. 
  The spell is specified by the resource field of the opcode 401 effect. Setting certain savingthrow bits
  on the opcode 401 effect adds conditions:
@@ -171,15 +172,22 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 	local savingthrow = EEex_ReadDword(effectData + 0x3C)
 	local special = EEex_ReadDword(effectData + 0x44)
 	local restype = EEex_ReadDword(effectData + 0x8C)
-	
-	if EEex_IsSprite(sourceID) and opcode ~= 402 then
+	local power = EEex_ReadDword(effectData + 0x14)
+	if power >= 1 then
+		power = power + EEex_GetActorStat(sourceID, 654)
+		if power < 1 then
+			power = 1
+		end
+		EEex_WriteDword(effectData + 0x14, power)
+	end
+	if opcode ~= 402 then
 		local bypassMirrorImageStat = EEex_GetActorStat(sourceID, 613)
 		if bypassMirrorImageStat == 1 or (bypassMirrorImageStat == 2 and (restype == 0 or restype == 2)) or (bypassMirrorImageStat == 3 and restype == 1) then
 			savingthrow = bit32.bor(savingthrow, 0x1000000)
 			EEex_WriteDword(effectData + 0x3C, savingthrow)
 		end
 	end
-	if restype == 1 and EEex_IsSprite(sourceID) then
+	if restype == 1 then
 		if opcode == 17 then
 			local healingMultiplier = EEex_GetActorStat(sourceID, 620)
 			EEex_WriteDword(effectData + 0x18, parameter1 + math.floor(parameter1 * healingMultiplier / 100))
