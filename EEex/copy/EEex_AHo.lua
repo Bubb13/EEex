@@ -111,7 +111,7 @@ function EEex_HookAction(actionData)
 			if opcode == 401 and parameter1 > 0 and stat == 999 then
 				local func_name = EEex_ReadLString(eData + 0x30, 8)
 				if EEex_HookActionOpcodeFunctions[func_name] ~= nil then
-					EEex_HookActionOpcodeFunctions[func_name](eData - 0x4, actionData, actionData - 0x2F8)
+					EEex_HookActionOpcodeFunctions[func_name](eData + 0x4, actionData, actionData - 0x2F8)
 				end
 			end
 		end)
