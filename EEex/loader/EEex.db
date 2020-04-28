@@ -297,6 +297,14 @@ PatAdj=31
 VerBytes=83C4188BC65E5DC3
 VerAdj=41
 
+[CChitin::OnResizeWindow]
+PatBytes=558BEC83EC14538B9980010000894DEC85DB
+PatAdj=0
+
+[CChitin::OnResizeWindow()_ScaleHook]
+PatBytes=8B5DEC8B8380010000FF701C
+PatAdj=-5
+
 [CChitin::TIMER_UPDATES_PER_SECOND]
 PatBytes=5F5E83F80A720583F85A760AC705
 PatAdj=14
@@ -1117,6 +1125,21 @@ PatAdj=0
 [CVariableHash::SetName]
 PatBytes=558BEC6A20FF750851
 PatAdj=0
+
+
+;---------------------------
+; CVidMode
+;---------------------------
+
+[CVidMode::SCREENHEIGHT]
+PatBytes=0FB7450E0D000C0000894508
+PatAdj=-4
+Type=1
+
+[CVidMode::SCREENWIDTH]
+PatBytes=D96D0E8D45F4508D45F0
+PatAdj=-4
+Type=1
 
 
 ;---------------------------
