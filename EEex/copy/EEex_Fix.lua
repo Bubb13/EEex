@@ -37,6 +37,9 @@ function EEex_InstallFixes()
 		!call >CAITrigger::OfType
 		!push_eax
 
+		!mov_ecx_ebx
+		!call >CAITrigger::~CAITrigger
+
 		!push_ebx
 		!call >_SDL_free
 		!add_esp_byte 04

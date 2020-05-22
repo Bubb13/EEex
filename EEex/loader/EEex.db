@@ -263,6 +263,10 @@ PatAdj=0
 PatBytes=558BEC568B7508578BF9668B066689078D4F08
 PatAdj=0
 
+[CAITrigger::~CAITrigger]
+PatBytes=CC568BF18D4E2C
+PatAdj=1
+
 
 ;---------------------------
 ; CBaldurChitin
@@ -579,6 +583,10 @@ PatAdj=-9
 [CGameSprite::AddEffect()_FixPause]
 PatBytes=8D8EA833000057E8
 PatAdj=30
+
+[CGameSprite::AddEffect()_PreventNoSave_Hook]
+PatBytes=8D86C1350000508D86C03500005056
+PatAdj=20
 
 [CGameSprite::AddKnownSpell]
 PatBytes=8D4DC0538B5D0856578B7D10897D988945BC

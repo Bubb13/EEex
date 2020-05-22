@@ -957,6 +957,8 @@ function EEex_InstallOpcodeChanges()
 	local checkAddScreenHookNameAddress = EEex_Malloc(#checkAddScreenHookName + 1, 32)
 	EEex_WriteString(checkAddScreenHookNameAddress, checkAddScreenHookName)
 
+	local effectBlocked = EEex_Malloc(0x4)
+
 	local checkAddScreenHook = EEex_WriteAssemblyAuto({[[
 
 		!push_all_registers
@@ -1007,18 +1009,31 @@ function EEex_InstallOpcodeChanges()
 
 		!jz_dword >resume_normally
 
+		!mov_[dword]_dword ]], {effectBlocked, 4}, [[ #1
 		!pop_esi
 		!pop_ebx
 		!jmp_dword >CGameEffect::CheckAdd()_screen_hook_immunity
 
 		@resume_normally
 
+		!mov_[dword]_dword ]], {effectBlocked, 4}, [[ #0
 		!cmp_eax_[ebx+byte] 34
 		!jz_dword ]], {checkAddScreenHookDest, 4, 4}, [[
 		!jmp_dword ]], {checkAddScreenHookAddress + 9, 4, 4},
 
 	})
 	EEex_WriteAssembly(checkAddScreenHookAddress, {"!jmp_dword", {checkAddScreenHook, 4, 4}, "!nop !nop !nop !nop"})
+
+	EEex_HookRestore(EEex_Label("CGameSprite::AddEffect()_PreventNoSave_Hook"), 0, 5, {[[
+
+		!cmp_[dword]_byte ]], {effectBlocked, 4}, [[ 0
+		!jz_dword >return
+
+		; If this effect was blocked, force noSave parameter to false.
+		  This prevents a screened effect from bypassing EEex's override in some hardcoded circumstances ;
+		!mov_[ebp+byte]_dword 10 #0
+
+	]]})
 
 	local screenListOffset = EEex_RegisterComplexListStat("EEex_ScreenEffectsList", {
 
