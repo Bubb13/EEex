@@ -3752,6 +3752,44 @@ function EEex_GetImageMasterID(actorID)
 	end
 end
 
+-- Manually returns the total of the dice rolls from a damage or healing effect.
+-- Values for luckMode:
+-- 0: Luck won't affect die rolls.
+-- 1: Weapon damage: Source's luck and minimum damage stat are added to each die roll.
+-- 2: Spell damage: Target's luck is subtracted from each die roll.
+-- 3: Healing: Target's luck is added to each die roll.
+function EEex_RollEffectDice(targetID, sourceID, dicenumber, dicesize, luckMode)
+	if dicenumber == 0 or dicesize == 0 then return 0 end
+	local total = 0
+	local sourceLuck = EEex_GetActorStat(sourceID, 32)
+	local sourceWeaponLuck = EEex_GetActorStat(sourceID, 145)
+	local sourceSpellMinimum = EEex_GetActorStat(sourceID, 621)
+	local targetLuck = EEex_GetActorStat(targetID, 32)
+	for i = 1, dicenumber, 1 do
+		local roll = math.random(dicesize)
+		if luckMode == 1 then
+			roll = roll + sourceLuck + sourceWeaponLuck
+		elseif luckMode == 2 then
+			roll = roll - targetLuck
+			if roll <= sourceSpellMinimum then
+				roll = sourceSpellMinimum + 1
+			end
+		elseif luckMode == 3 then
+			roll = roll + targetLuck
+			if roll <= sourceSpellMinimum then
+				roll = sourceSpellMinimum + 1
+			end
+		end
+		if roll > dicesize then
+			roll = dicesize
+		elseif roll < 1 then
+			roll = 1
+		end
+		total = total + roll
+	end
+	return total
+end
+
 function EEex_GetActorSpellState(actorID, splstateID)
 	if not EEex_IsSprite(actorID) then return false end
 	return EEex_Call(EEex_Label("CDerivedStats::GetSpellState"), {splstateID},
@@ -4146,6 +4184,7 @@ end)
 -- It will print the opcode number of each effect on the actor.
 -- This looks through spell effects, item equipped effects, and permanent effects.
 function EEex_IterateActorEffects(actorID, func)
+	if not EEex_IsSprite(actorID, true) then return end
 	local esi = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x33AC)
 	while esi ~= 0x0 do
 		local eData = EEex_ReadDword(esi + 0x8) - 0x4
@@ -4501,8 +4540,12 @@ Bit 19: If set, the damage is treated as the base damage of a fist weapon, so it
 If more than one of bits 17, 18, and 19 are set, opcode 73 damage bonuses are not applied multiple times. Also, if at least one
  of those three bits are set, the minimum damage of each die will be increased based on the source character's Luck and opcode 250 bonuses.
  If none of those three bits are set, the maximum damage of each die is decreased based on the target character's Luck bonuses.
-
-special - It's the same as special on the damage opcode, except the "Save for half" bit is not available.
+Bit 26: If set, there is a Save vs. Spell against the damage (set this bit instead of bit 0 if you're using "Save for half")
+Bit 27: If set, there is a Save vs. Breath against the damage (set this bit instead of bit 1 if you're using "Save for half")
+Bit 28: If set, there is a Save vs. Death against the damage (set this bit instead of bit 2 if you're using "Save for half")
+Bit 29: If set, there is a Save vs. Wand against the damage (set this bit instead of bit 3 if you're using "Save for half")
+Bit 30: If set, there is a Save vs. Polymorph against the damage (set this bit instead of bit 4 if you're using "Save for half")
+special - It's the same as special on the damage opcode.
 --]]
 ex_proficiency_damage = {[0] = 0, [1] = 0, [2] = 2, [3] = 3, [4] = 4, [5] = 5}
 ex_strength_damage = {[0] = -20, [1] = -4, [2] = -2, [3] = -1, [4] = -1, [5] = -1, [6] = 0, [7] = 0, [8] = 0, [9] = 0, [10] = 0, [11] = 0, [12] = 0, [13] = 0, [14] = 0, [15] = 0, [16] = 1, [17] = 1, [18] = 2, [19] = 7, [20] = 8, [21] = 9, [22] = 10, [23] = 11, [24] = 12, [25] = 14}
@@ -4514,12 +4557,28 @@ function EXDAMAGE(effectData, creatureData)
 	local dicenumber = EEex_ReadByte(effectData + 0x1A, 0x0)
 	local proficiency = EEex_ReadByte(effectData + 0x1B, 0x0)
 	local parameter2 = EEex_ReadDword(effectData + 0x1C)
-	local savingthrow = bit32.band(EEex_ReadDword(effectData + 0x3C), 0xFFFFFFE0)
-	local special = bit32.band(EEex_ReadDword(effectData + 0x44), 0xFFFFFEFF)
+	local savingthrow = EEex_ReadDword(effectData + 0x3C)
+	local special = EEex_ReadDword(effectData + 0x44)
+	local restype = EEex_ReadDword(effectData + 0x8C)
 	local parent_resource = EEex_ReadLString(effectData + 0x90, 8)
 	local casterlvl = EEex_ReadDword(effectData + 0xC4)
 	if proficiency > 0 and ex_proficiency_damage[EEex_GetActorStat(sourceID, proficiency)] ~= nil then
 		damage = damage + ex_proficiency_damage[EEex_GetActorStat(sourceID, proficiency)]
+	end
+	if bit32.band(savingthrow, 0x4000000) > 0 then
+		savingthrow = bit32.band(savingthrow, 0x1)
+	end
+	if bit32.band(savingthrow, 0x8000000) > 0 then
+		savingthrow = bit32.band(savingthrow, 0x2)
+	end
+	if bit32.band(savingthrow, 0x10000000) > 0 then
+		savingthrow = bit32.band(savingthrow, 0x4)
+	end
+	if bit32.band(savingthrow, 0x20000000) > 0 then
+		savingthrow = bit32.band(savingthrow, 0x8)
+	end
+	if bit32.band(savingthrow, 0x40000000) > 0 then
+		savingthrow = bit32.band(savingthrow, 0x10)
 	end
 	if bit32.band(savingthrow, 0x10000) > 0 then
 		local strength = EEex_GetActorStat(sourceID, 36)
@@ -4556,14 +4615,16 @@ function EXDAMAGE(effectData, creatureData)
 	end
 	local luck = 0
 	if bit32.band(savingthrow, 0x20000) > 0 or bit32.band(savingthrow, 0x40000) > 0 or bit32.band(savingthrow, 0x80000) > 0 then
+		damage = damage + EEex_RollEffectDice(targetID, sourceID, dicenumber, dicesize, 1)
 		damage = damage + EEex_GetActorStat(sourceID, 50)
-		luck = EEex_GetActorStat(sourceID, 32) + EEex_GetActorStat(sourceID, 145)
+		restype = 0
 		parent_resource = ""
+
 	else
-		if EEex_GetActorStat(targetID, 32) ~= 0 then
-			luck = 0 - EEex_GetActorStat(targetID, 32)
-		end
+		restype = 1
+		damage = damage + EEex_RollEffectDice(targetID, sourceID, dicenumber, dicesize, 2)
 	end
+--[[
 	if dicesize > 0 then
 		for i = 1, dicenumber, 1 do
 			local currentRoll = math.random(dicesize)
@@ -4575,6 +4636,7 @@ function EXDAMAGE(effectData, creatureData)
 			damage = damage + currentRoll
 		end
 	end
+--]]
 	EEex_ApplyEffectToActor(targetID, {
 ["opcode"] = 12,
 ["target"] = 2,
@@ -4583,6 +4645,7 @@ function EXDAMAGE(effectData, creatureData)
 ["parameter2"] = parameter2,
 ["savingthrow"] = savingthrow,
 ["special"] = special,
+["restype"] = restype,
 ["parent_resource"] = parent_resource,
 ["source_target"] = targetID,
 ["source_id"] = sourceID

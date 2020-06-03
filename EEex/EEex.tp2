@@ -65,7 +65,7 @@ This spell will change the target's actions. Whenever the creature would attack 
 
 	COPY_EXISTING ~exampl4.spl~ ~override~
 		SAY NAME1 ~Passwall~
-		SAY UNIDENTIFIED_DESC ~This spell shows how you can use action hooks. Try adding it as a spell to a mage or bard in the party with this command:
+		SAY UNIDENTIFIED_DESC ~This spell shows how you can use the EXMODSMP function. Try adding it as a spell to a mage or bard in the party with this command:
 
 C:Eval('AddSpecialAbility(\"EXAMPL4\")',0)
 
@@ -172,6 +172,18 @@ Weight: 3~
 C:CreateItem('EXSTA621')
 
 With this amulet equipped, your spells will deal maximum damage.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta655.itm~ ~override~
+		SAY NAME2 ~Amulet of Greater Dispelling~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 655. Create it with:
+
+C:CreateItem('EXSTA655')
+
+With this amulet equipped, you cast Dispel Magic as if 20 levels higher for purposes of the dispel check.
 
 STATISTICS:
 
