@@ -263,6 +263,10 @@ PatAdj=0
 PatBytes=558BEC568B7508578BF9668B066689078D4F08
 PatAdj=0
 
+[CAITrigger::~CAITrigger]
+PatBytes=CC568BF18D4E2C
+PatAdj=1
+
 
 ;---------------------------
 ; CBaldurChitin
@@ -296,6 +300,14 @@ PatBytes=568B75088906FF35
 PatAdj=31
 VerBytes=83C4188BC65E5DC3
 VerAdj=41
+
+[CChitin::OnResizeWindow]
+PatBytes=558BEC83EC14538B9980010000894DEC85DB
+PatAdj=0
+
+[CChitin::OnResizeWindow()_ScaleHook]
+PatBytes=8B5DEC8B8380010000FF701C
+PatAdj=-5
 
 [CChitin::TIMER_UPDATES_PER_SECOND]
 PatBytes=5F5E83F80A720583F85A760AC705
@@ -571,6 +583,10 @@ PatAdj=-9
 [CGameSprite::AddEffect()_FixPause]
 PatBytes=8D8EA833000057E8
 PatAdj=30
+
+[CGameSprite::AddEffect()_PreventNoSave_Hook]
+PatBytes=8D86C1350000508D86C03500005056
+PatAdj=20
 
 [CGameSprite::AddKnownSpell]
 PatBytes=8D4DC0538B5D0856578B7D10897D988945BC
@@ -1120,6 +1136,21 @@ PatAdj=0
 
 
 ;---------------------------
+; CVidMode
+;---------------------------
+
+[CVidMode::SCREENHEIGHT]
+PatBytes=0FB7450E0D000C0000894508
+PatAdj=-4
+Type=1
+
+[CVidMode::SCREENWIDTH]
+PatBytes=D96D0E8D45F4508D45F0
+PatAdj=-4
+Type=1
+
+
+;---------------------------
 ; CVisualEffect
 ;---------------------------
 
@@ -1248,6 +1279,10 @@ PatAdj=31
 [HookStatsTempSet2]
 PatBytes=6639B7700B00007F0C39B7083500000F849F1A00008D9F300B0000C787E834000000000000538D8F54140000E8
 PatAdj=45
+
+[Infinity_OnPortraitLClick()_GlobalFixHook]
+PatBytes=DB4034DD5DF4DD45F4DD1C2456
+PatAdj=24
 
 [InitialPostUIMenuLoadHook]
 PatBytes=8D45C4C745CC08040000

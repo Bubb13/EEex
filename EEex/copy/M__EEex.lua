@@ -314,6 +314,13 @@ end
 -- Random Utility --
 --------------------
 
+function EEex_Once(variable, func)
+	if not _G[variable] then
+		_G[variable] = true
+		func()
+	end
+end
+
 -- Flattens given table so that any nested tables are merged.
 -- Example: {"Hello", {"World"}} becomes {"Hello", "World"}.
 function EEex_ConcatTables(tables)
@@ -1149,6 +1156,21 @@ function EEex_WriteAssemblyFunction(functionName, assembly)
 	return functionAddress
 end
 
+function EEex_HookBeforeCall(address, assembly)
+	EEex_WriteAssembly(address, {"!jmp_dword", {EEex_WriteAssemblyAuto(
+		EEex_ConcatTables({
+			assembly,
+			{
+				"!call", {address + EEex_ReadDword(address + 0x1) + 0x5, 4, 4},
+			},
+			{[[
+				@return
+				!jmp_dword ]], {address + 0x5, 4, 4},
+			},
+		})
+	), 4, 4}})
+end
+
 -- Convenience function that, when given an address to the start of a standard x86asm call,
 -- inserts the given assembly definition in such a way that it runs after the call has taken place.
 -- Automatically inserts a valid jmp instruction, (@return label), that resumes normal execution.
@@ -1158,6 +1180,18 @@ function EEex_HookAfterCall(address, assembly)
 			{
 				"!call", {address + EEex_ReadDword(address + 0x1) + 0x5, 4, 4},
 			},
+			assembly,
+			{[[
+				@return
+				!jmp_dword ]], {address + 0x5, 4, 4},
+			},
+		})
+	), 4, 4}})
+end
+
+function EEex_HookReplaceDest(address, assembly)
+	EEex_WriteAssembly(address, {"!jmp_dword", {EEex_WriteAssemblyAuto(
+		EEex_ConcatTables({
 			assembly,
 			{[[
 				@return
@@ -1240,6 +1274,43 @@ function EEex_HookJump(address, restoreSize, assembly)
 	}))
 	
 	EEex_WriteAssembly(address, {"!jmp_dword", {hookCode, 4, 4}})
+end
+
+function EEex_HookRestore(address, restoreDelay, restoreSize, assembly)
+
+	local storeBytes = function(startAddress, size)
+		local bytes = {}
+		local limit = startAddress + size - 1
+		for i = startAddress, limit, 1 do
+			table.insert(bytes, {EEex_ReadByte(i, 0), 1})
+		end
+		return bytes
+	end
+
+	local afterInstruction = address + restoreDelay + restoreSize
+	local restoreBytes = storeBytes(address + restoreDelay, restoreSize)
+
+	local nops = {}
+	local limit = restoreDelay + restoreSize - 5
+	for i = 1, limit, 1 do
+		table.insert(nops, {0x90, 1})
+	end
+
+	local hookCode = EEex_WriteAssemblyAuto(EEex_ConcatTables({
+		assembly,
+		"@return",
+		restoreBytes,
+		{[[
+			!jmp_dword ]], {afterInstruction, 4, 4},
+		},
+	}))
+	
+	EEex_WriteAssembly(address, EEex_ConcatTables({
+		{
+			"!jmp_dword", {hookCode, 4, 4}
+		},
+		nops,
+	}))
 end
 
 function EEex_WriteOpcode(opcodeFunctions)

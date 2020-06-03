@@ -37,6 +37,9 @@ function EEex_InstallFixes()
 		!call >CAITrigger::OfType
 		!push_eax
 
+		!mov_ecx_ebx
+		!call >CAITrigger::~CAITrigger
+
 		!push_ebx
 		!call >_SDL_free
 		!add_esp_byte 04
@@ -75,6 +78,27 @@ function EEex_InstallFixes()
 		!jmp_dword ]], {fixPauseAddress + 0x6, 4, 4},
 	})
 	EEex_WriteAssembly(fixPauseAddress, {"!jmp_dword", {fixPause, 4, 4}, "!nop"})
+
+	-------------------------------------------------------------------------------------------------------------
+	-- Infinity_OnPortraitLClick() should internally set currentID, (NOT id), before calling updateAttrTable() --
+	-------------------------------------------------------------------------------------------------------------
+
+	EEex_HookAfterCall(EEex_Label("Infinity_OnPortraitLClick()_GlobalFixHook"), {[[
+
+		!mov_ecx_[ebp+byte] FC
+		!push_[ecx+byte] 34
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_dword ]], {EEex_WriteStringAuto("currentID"), 4}, [[
+		!push_[dword] *_g_lua
+		!call >_lua_setglobal
+		!add_esp_byte 08
+	]]})
 
 	EEex_EnableCodeProtection()
 end
