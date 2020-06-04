@@ -3296,6 +3296,7 @@ function EEex_ForceLocalVariableMarshal(actorID, variableName)
 		["parameter1"] = EEex_ReadDword(CVariable + 0x28),
 		["parameter4"] = EEex_FloatToLong(CVariable + 0x2C),
 		["timing"] = 9,
+		["savingthrow"] = 0x10000,
 		["resource"] = EEex_ReadLString(CVariable + 0x34, 8),
 		["special"] = 1,
 		["vvcresource"] = stringLength > 8 and EEex_ReadLString(CVariable + 0x3C, 8) or "",
@@ -4562,6 +4563,45 @@ function EXDAMAGE(effectData, creatureData)
 	local restype = EEex_ReadDword(effectData + 0x8C)
 	local parent_resource = EEex_ReadLString(effectData + 0x90, 8)
 	local casterlvl = EEex_ReadDword(effectData + 0xC4)
+	if bit32.band(savingthrow, 0x40000) > 0 then
+		local itemData = EEex_DemandResData(parent_resource, "ITM")
+		if itemData > 1000 then
+			local itemType = EEex_ReadWord(itemData + 0x1C, 0x0)
+			
+			if itemType == 5 or itemType == 14 or itemType == 31 then
+				local found_it = false
+				EEex_IterateActorEffects(sourceID, function(eData)
+					local the_timing = EEex_ReadDword(eData + 0x24)
+					local the_sourceslot = EEex_ReadDword(eData + 0xA4)
+					if the_timing == 2 and the_sourceslot >= 35 and the_sourceslot <= 38 and found_it == false then
+						found_it = true
+						local launcherData = EEex_DemandResData(EEex_ReadLString(eData + 0x94, 8), "ITM")
+						if launcherData > 1000 then
+							local launcherType = EEex_ReadWord(launcherData + 0x1C, 0x0)
+							if (itemType == 5 and launcherType == 15) or (itemType == 14 and launcherType == 18) or (itemType == 31 and launcherType == 27) then
+								proficiency = EEex_ReadByte(launcherData + 0x31, 0x0)
+								damage = damage + EEex_ReadSignedWord(launcherData + 0x8C, 0x0)
+							end
+						end
+					end
+				end)
+			end
+		end
+		if proficiency == 0 then
+			if itemType == 5 then
+				if EEex_GetActorStat(sourceID, 104) > EEex_GetActorStat(sourceID, 105) then
+					proficiency = 104
+				else
+					proficiency = 105
+				end
+			elseif itemType == 14 then
+				proficiency = 107
+			elseif itemType == 31 then
+				proficiency = 103
+			end
+		end
+		damage = damage + EEex_GetActorStat(sourceID, 168)
+	end
 	if proficiency > 0 and ex_proficiency_damage[EEex_GetActorStat(sourceID, proficiency)] ~= nil then
 		damage = damage + ex_proficiency_damage[EEex_GetActorStat(sourceID, proficiency)]
 	end
@@ -4974,6 +5014,229 @@ function EXMODSMP(effectData, creatureData)
 				EEex_WriteByte(bitmapData + i, currentA * 16 + currentB)
 				i = i + 1
 			end
+		end
+	end
+end
+
+--[[
+The EXSPLATK function performs a spell attack roll against the target. If the attack hits, it casts a spell on the target.
+
+parameter1 - Modifies the attack roll; when parameter1 is higher, the attack is more accurate.
+
+parameter2 - Specifies a stat that also modifies the attack roll (parameter2 should be equal to 0 (no stat), 36 (Strength),
+ 38 (Intelligence), 39 (Wisdom), 40 (Dexterity), 41 (Constitution), or 42 (Charisma)). If parameter2 is equal to 36, it uses
+ STRMOD.2DA to determine the attack bonus; for any other stat, it uses DEXMOD.2DA.
+
+savingthrow - This function uses several extra bits on this parameter:
+ Bit 16: If set, the attack roll ignores the target's base armor class (treating it as if it were 10)
+ Bit 17: If set, your bonus THAC0 with melee weapons is added to the roll.
+ Bit 18: If set, your bonus THAC0 with missile weapons is added to the roll, and the target's
+  AC vs. missiles is subtracted from it.
+ Bit 19: If set, your bonus THAC0 with fist weapons is added to the roll.
+ Bit 20: If set, you are treated as having the base THAC0 of a fighter the same level as your caster level.
+ Bit 21: If set, on a critical hit, the spell will be cast twice on the target.
+ Bit 22: If set, feedback will be given on the attack roll.
+
+resource3 - Resref of spell to cast if the attack hits. If this effect is not being called from an EFF file, the resref
+ is instead set to the resref of the spell that called this function with a "D" added at the end.
+ 
+--]]
+ex_dexterity_thac0 = {[0] = -20, [1] = -6, [2] = -4, [3] = -3, [4] = -2, [5] = -1, [6] = 0, [7] = 0, [8] = 0, [9] = 0, [10] = 0, [11] = 0, [12] = 0, [13] = 0, [14] = 0, [15] = 0, [16] = 1, [17] = 2, [18] = 2, [19] = 3, [20] = 3, [21] = 4, [22] = 4, [23] = 4, [24] = 5, [25] = 5}
+ex_strength_thac0 = {[0] = -20, [1] = -5, [2] = -3, [3] = -3, [4] = -2, [5] = -2, [6] = -1, [7] = -1, [8] = 0, [9] = 0, [10] = 0, [11] = 0, [12] = 0, [13] = 0, [14] = 0, [15] = 0, [16] = 0, [17] = 1, [18] = 1, [19] = 3, [20] = 3, [21] = 4, [22] = 4, [23] = 5, [24] = 6, [25] = 7}
+function EXSPLATK(effectData, creatureData)
+	local sourceID = EEex_ReadDword(effectData + 0x10C)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local savingthrow = EEex_ReadDword(effectData + 0x3C)
+	local casterlvl = EEex_ReadDword(effectData + 0xC4)
+	local parent_resource = EEex_ReadLString(effectData + 0x90, 8)
+	local spellType = 4
+	local spellData = EEex_DemandResData(parent_resource, "SPL")
+	if spellData > 1000 then
+		spellType = EEex_ReadWord(spellData + 0x1C, 0x0)
+	end
+	local roll = math.random(20)
+	local baseTHAC0 = EEex_GetActorStat(sourceID, 7)
+	local bonusTHAC0 = EEex_ReadDword(effectData + 0x18) + EEex_GetActorStat(sourceID, 32) + EEex_GetActorStat(sourceID, 610)
+	if bit32.band(savingthrow, 0x20000) > 0 then
+		bonusTHAC0 = bonusTHAC0 + EEex_GetActorStat(sourceID, 166)
+	end
+	if bit32.band(savingthrow, 0x40000) > 0 then
+		bonusTHAC0 = bonusTHAC0 + EEex_GetActorStat(sourceID, 72)
+	end
+	if bit32.band(savingthrow, 0x80000) > 0 then
+		bonusTHAC0 = bonusTHAC0 + EEex_GetActorStat(sourceID, 170)
+	end
+	if bit32.band(savingthrow, 0x100000) > 0 then
+		baseTHAC0 = 21 - EEex_GetActorCasterLevel(sourceID, spellType)
+	end
+	local attackStat = EEex_ReadDword(effectData + 0x1C)
+	if attackStat > 0 then
+		local attackStatValue = EEex_GetActorStat(sourceID, attackStat)
+		if attackStatValue < 0 then
+			attackStatValue = 0
+		elseif attackStatValue > 25 then
+			attackStatValue = 25
+		end
+		if attackStat == 36 then
+			bonusTHAC0 = bonusTHAC0 + ex_strength_thac0[attackStatValue]
+			if attackStatValue == 18 then
+				local exStrength = EEex_GetActorStat(sourceID, 37)
+				if exStrength >= 51 then
+					bonusTHAC0 = bonusTHAC0 + 1
+				end
+				if exStrength >= 100 then
+					bonusTHAC0 = bonusTHAC0 + 1
+				end
+			end
+		else
+			bonusTHAC0 = bonusTHAC0 + ex_dexterity_thac0[attackStatValue]
+		end
+	end
+	local criticalMissThreshold = 1
+	local criticalHitThreshold = 20
+	EEex_IterateActorEffects(sourceID, function(eData)
+		local theopcode = EEex_ReadDword(eData + 0x10)
+		local theparameter1 = EEex_ReadDword(eData + 0x1C)
+		local theparameter2 = EEex_ReadDword(eData + 0x20)
+		local thespecial = EEex_ReadDword(eData + 0x48)
+		if theopcode == 54 and bit32.band(savingthrow, 0x100000) > 0 then
+			if theparameter2 == 0 then
+				baseTHAC0 = baseTHAC0 - theparameter1
+			elseif theparameter2 == 1 then
+				baseTHAC0 = theparameter1
+			elseif theparameter2 == 2 then
+				baseTHAC0 = math.floor(baseTHAC0 * theparameter1 / 100)
+			end
+		elseif theopcode == 278 and theparameter2 == 0 then
+			bonusTHAC0 = bonusTHAC0 + theparameter1
+		elseif theopcode == 301 and theparameter2 == 0 and (thespecial == 0 or thespecial == 3 or (thespecial == 1 and bit32.band(savingthrow, 0x20000) > 0) or (thespecial == 2 and bit32.band(savingthrow, 0x40000) > 0)) then
+			criticalHitThreshold = criticalHitThreshold - theparameter1
+		elseif theopcode == 362 and theparameter2 == 0 and (thespecial == 0 or thespecial == 3 or (thespecial == 1 and bit32.band(savingthrow, 0x20000) > 0) or (thespecial == 2 and bit32.band(savingthrow, 0x40000) > 0)) then
+			criticalMissThreshold = criticalMissThreshold + theparameter1
+		end
+	end)
+	local targetAC = EEex_GetActorStat(targetID, 2)
+	if bit32.band(savingthrow, 0x10000) > 0 then
+		local baseAC = EEex_ReadSignedWord(creatureData + 0x45C, 0x0)
+		EEex_IterateActorEffects(targetID, function(eData)
+			local theopcode = EEex_ReadDword(eData + 0x10)
+			local theparameter1 = EEex_ReadDword(eData + 0x1C)
+			local theparameter2 = EEex_ReadDword(eData + 0x20)
+			if theopcode == 0 and theparameter1 < baseAC and theparameter2 == 0x10 then
+				baseAC = theparameter1
+			end
+		end)
+		targetAC = targetAC + 10 - baseAC
+	end
+	bonusTHAC0 = bonusTHAC0 - EEex_GetActorStat(targetID, 611)
+	if bit32.band(savingthrow, 0x40000) > 0 then
+		bonusTHAC0 = bonusTHAC0 + EEex_GetActorStat(targetID, 4)
+	end
+	local attackFeedback = ex_spell_attack_feedback_string_1 .. roll
+	if bonusTHAC0 >= 0 then
+		attackFeedback = attackFeedback .. " + " .. bonusTHAC0 .. " = " .. (roll + bonusTHAC0) .. " : "
+	else
+		attackFeedback = attackFeedback .. " - " .. (bonusTHAC0 * -1) .. " = " .. (roll + bonusTHAC0) .. " : "
+	end
+	local hitType = 1
+	if roll >= criticalHitThreshold then
+		local criticalHitAverted = false
+		EEex_IterateActorEffects(targetID, function(eData)
+			local thetiming = EEex_ReadDword(eData + 0x24)
+			
+			if thetiming == 2 and not criticalHitAverted then
+				local itemData = EEex_DemandResData(EEex_ReadLString(eData + 0x94, 8), "ITM")
+				if itemData > 1000 then
+					local itemType = EEex_ReadWord(itemData + 0x1C, 0x0)
+					local criticalHitBit = (bit32.band(EEex_ReadDword(itemData + 0x18), 0x2000000) > 0)
+					if itemType == 7 or itemType == 72 then
+						if not criticalHitBit then
+							criticalHitAverted = true
+						end
+					else
+						if criticalHitBit then
+							criticalHitAverted = true
+						end
+					end
+				end
+			end
+		end)
+		if criticalHitAverted then
+			hitType = 2
+			attackFeedback = attackFeedback .. ex_spell_attack_feedback_string_2
+			EEex_ApplyEffectToActor(sourceID, {
+["opcode"] = 139,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = 20696,
+["source_id"] = sourceID
+})
+		else
+			hitType = 3
+			attackFeedback = attackFeedback .. ex_spell_attack_feedback_string_4
+		end
+	elseif roll <= criticalMissThreshold then
+		hitType = 0
+		attackFeedback = attackFeedback .. ex_spell_attack_feedback_string_5
+	elseif baseTHAC0 - bonusTHAC0 - roll <= targetAC then
+		hitType = 2
+		attackFeedback = attackFeedback .. ex_spell_attack_feedback_string_2
+	else
+		attackFeedback = attackFeedback .. ex_spell_attack_feedback_string_3
+	end
+	if bit32.band(savingthrow, 0x400000) > 0 then
+		Infinity_SetToken("EX_SPLATK", attackFeedback)
+		EEex_ApplyEffectToActor(sourceID, {
+["opcode"] = 139,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = ex_spell_attack_feedback_strref,
+["source_id"] = sourceID
+})
+	end
+	local targetX = EEex_ReadDword(creatureData + 0x8)
+	local targetY = EEex_ReadDword(creatureData + 0xC)
+	local sourceX = targetX
+	local sourceY = targetY
+	if hitType >= 2 then
+		local spellRES = EEex_ReadLString(effectData + 0x74, 8)
+		if spellRES == "" then
+			spellRES = parent_resource .. "D"
+		end
+		if EEex_IsSprite(sourceID, true) then
+			local sourceData = EEex_GetActorShare(sourceID)
+			sourceX = EEex_ReadDword(sourceData + 0x8)
+			sourceY = EEex_ReadDword(sourceData + 0xC)
+		end
+		EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = casterlvl,
+["parameter2"] = 1,
+["casterlvl"] = casterlvl,
+["resource"] = spellRES,
+["source_x"] = sourceX,
+["source_y"] = sourceY,
+["target_x"] = targetX,
+["target_y"] = targetY,
+["source_id"] = sourceID
+})
+		if hitType == 3 and bit32.band(savingthrow, 0x200000) > 0 then
+			EEex_ApplyEffectToActor(targetID, {
+["opcode"] = 146,
+["target"] = 2,
+["timing"] = 1,
+["parameter1"] = casterlvl,
+["parameter2"] = 1,
+["casterlvl"] = casterlvl,
+["resource"] = spellRES,
+["source_x"] = sourceX,
+["source_y"] = sourceY,
+["target_x"] = targetX,
+["target_y"] = targetY,
+["source_id"] = sourceID
+})
 		end
 	end
 end

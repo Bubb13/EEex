@@ -24,6 +24,12 @@ ex_damage_absorption_feedback_string_2 = " damage"
 ex_damage_absorption_feedback_string_3 = " from "
 ex_damage_absorption_feedback_string_4 = ", healing "
 ex_damage_absorption_feedback_string_5 = " Hit Points"
+ex_spell_attack_feedback_strref = 0
+ex_spell_attack_feedback_string_1 = "Spell Attack Roll "
+ex_spell_attack_feedback_string_2 = "Hit"
+ex_spell_attack_feedback_string_3 = "Miss"
+ex_spell_attack_feedback_string_4 = "Critical Hit"
+ex_spell_attack_feedback_string_5 = "Critical Miss"
 
 ex_damage_types = {
 [0] = {22, 87, ex_crushing_damage_strref},

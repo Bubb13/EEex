@@ -7,7 +7,7 @@ end
 -- that running this logic in Lua is too slow, it can be rewritten
 -- in assembly.
 function EEex_HookCheckAddScreen(effectData, creatureData)
-
+	if EEex_ReadDword(effectData + 0xC) == 187 and bit32.band(EEex_ReadDword(effectData + 0x3C), 0x10000) > 0 then return false end
 	for func_name, func in pairs(EEex_ScreenEffectsGlobalFunctions) do
 		if func(effectData, creatureData) then
 			return true
@@ -36,6 +36,8 @@ function EEex_HookCheckAddScreen(effectData, creatureData)
 end
 --[[
 New stats:
+- Stat 610: Modifies THAC0 with spell attacks (used in the EXSPLATK function)
+- Stat 611: Modifies AC against spell attacks (used in the EXSPLATK function)
 - Stat 612: Sets flags on the Special parameter of damage dealt by the character. If you'd like it to set bit 10,
   set Stat 612 to 0x400. Setting certain savingthrow bits on the opcode 401 effect adds conditions:
  			Bit 8: Flags are unset rather than set.
@@ -329,12 +331,14 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 		end
 		if restype == 0 and parent_resource == "" then
 			parameter1 = parameter1 + EEex_RollEffectDice(targetID, sourceID, dicenumber, dicesize, 1)
+			EEex_WriteDword(effectData + 0x18, parameter1)
 			dicenumber = 0
 			EEex_WriteDword(effectData + 0x34, dicenumber)
 			dicesize = 0
 			EEex_WriteDword(effectData + 0x38, dicesize)
 		elseif restype == 1 then
 			parameter1 = parameter1 + EEex_RollEffectDice(targetID, sourceID, dicenumber, dicesize, 2)
+			EEex_WriteDword(effectData + 0x18, parameter1)
 			dicenumber = 0
 			EEex_WriteDword(effectData + 0x34, dicenumber)
 			dicesize = 0

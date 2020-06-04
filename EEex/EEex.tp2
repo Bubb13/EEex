@@ -221,6 +221,7 @@ Weight: 3~
 	OUTER_SET ex_modify_spell_memory_strref_2 = RESOLVE_STR_REF(~Lost spell: <EX_SPNAME>~)
 	OUTER_SET ex_damage_reduction_feedback_strref = RESOLVE_STR_REF(~<EX_DAMRED>~)
 	OUTER_SET ex_damage_absorption_feedback_strref = RESOLVE_STR_REF(~<EX_DAMABS>~)
+	OUTER_SET ex_spell_attack_feedback_strref = RESOLVE_STR_REF(~<EX_SPLATK>~)
 
 	COPY_EXISTING ~m__exstr.lua~ ~override~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_modify_spell_memory_strref_1 *= *0~ ~ex_modify_spell_memory_strref_1 = %ex_modify_spell_memory_strref_1%~
@@ -240,6 +241,7 @@ Weight: 3~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_magiccold_damage_strref *= *0~ ~ex_magiccold_damage_strref = %ex_magiccold_damage_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_damage_reduction_feedback_strref *= *0~ ~ex_damage_reduction_feedback_strref = %ex_damage_reduction_feedback_strref%~
 		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_damage_absorption_feedback_strref *= *0~ ~ex_damage_absorption_feedback_strref = %ex_damage_absorption_feedback_strref%~
+		REPLACE_TEXTUALLY CASE_INSENSITIVE ~ex_spell_attack_feedback_strref *= *0~ ~ex_spell_attack_feedback_strref = %ex_spell_attack_feedback_strref%~
 
 BEGIN ~Make it possible to add new thieving skills to the game (only install if you're going to install a mod that adds new thieving skills)~ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 	INCLUDE ~EEex/components/ExtendedSkills.tpa~
