@@ -73,6 +73,16 @@ C:Eval('AddSpecialAbility(\"EXAMPL4\")',0)
 
 Target a point next to a wall with this spell, and it will allow characters to move through and see through the wall.~
 
+	COPY_EXISTING ~exampl5.spl~ ~override~
+		SAY NAME1 ~Spell Attack Roll Example~
+		SAY UNIDENTIFIED_DESC ~This spell shows how you can use the EXSPLATK function. Try adding it as a spell to a mage or bard in the party with this command:
+
+C:Eval('AddSpecialAbility(\"EXAMPL5\")',0)
+
+(This will let the character in the 1st portrait slot learn this spell as a 1st-level wizard spell.)
+
+This Magic Missile spell requires a spell attack roll to hit the target. Regular THAC0 bonuses make it more accurate, but THAC0 bonuses of equipped weapons or from proficiencies don't apply. However, the attack roll ignores the target's armor, and it is increased by the caster's Intelligence.~
+
 	COPY_EXISTING ~exflameb.itm~ ~override~
 		SAY NAME2 ~Real Sword of Flame~
 		SAY IDENTIFIED_DESC ~This sword is an example of how you can use the EXDAMAGE function. Create it with:
@@ -183,7 +193,7 @@ Weight: 3~
 
 C:CreateItem('EXSTA655')
 
-With this amulet equipped, you cast Dispel Magic as if 20 levels higher for purposes of the dispel check.
+With this amulet equipped, you cast Dispel Magic as if 10 levels higher for purposes of the dispel check.
 
 STATISTICS:
 
@@ -196,6 +206,18 @@ Weight: 3~
 C:CreateItem('EXSTA658')
 
 With this amulet equipped, you will automatically cast Chaotic Commands on any creature you summon.
+
+STATISTICS:
+
+Weight: 3~
+
+	COPY_EXISTING ~exsta659.itm~ ~override~
+		SAY NAME2 ~Amulet of Detect Magic~
+		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 659. Create it with:
+
+C:CreateItem('EXSTA659')
+
+For this amulet to function, you must set the "B3_EfMen" option in EEex_INI.lua to true, and set the variable B3EffectMenu_Stat_Required to true in B3_EfMen.lua to true. Then, as long as the amulet is equipped, you may see the spell effects currently on a character (e.g. Protection from Magical Weapons) by hovering the cursor over them and pressing Left Shift.
 
 STATISTICS:
 

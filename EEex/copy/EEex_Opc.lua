@@ -108,6 +108,9 @@ New stats:
  The spell is specified by the resource field of the opcode 401 effect. Setting certain savingthrow bits
  on the opcode 401 effect adds conditions:
             Bit 20: The spell will be cast on the summoner instead, with the summoned creature as the source.
+- Stat 659: If this stat is set to 1 on a PC, then hovering the cursor over a creature and holding Left Shift
+ lets you see what spell effects they have on (e.g. Protection from Magical Weapons). This only functions if
+ the module B3_EfMen is enabled and the variable B3EffectMenu_Stat_Required is set to true.
 --]]
 EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 --	Infinity_DisplayString("Opcode " .. EEex_ReadDword(effectData + 0xC) .. " on " .. EEex_GetActorName(EEex_ReadDword(creatureData + 0x34)))

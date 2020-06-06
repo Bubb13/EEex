@@ -2579,6 +2579,7 @@ function EEex_GetSpellName(resrefLocation)
 end
 
 function EEex_ProcessKnownClericSpells(actorID, func)
+	if not EEex_IsSprite(actorID, true) then return end
 	local eax = nil
 	local ebx = EEex_GetActorShare(actorID) + 0x690
 	local ecx = nil
@@ -2667,6 +2668,7 @@ function EEex_ProcessKnownClericSpells(actorID, func)
 end
 
 function EEex_ProcessKnownWizardSpells(actorID, func)
+	if not EEex_IsSprite(actorID, true) then return end
 	local eax = nil
 	local ebx = EEex_GetActorShare(actorID) + 0x754
 	local ecx = nil
@@ -2755,6 +2757,7 @@ function EEex_ProcessKnownWizardSpells(actorID, func)
 end
 
 function EEex_ProcessKnownInnateSpells(actorID, func)
+	if not EEex_IsSprite(actorID, true) then return end
 	local eax = nil
 	local ebx = EEex_GetActorShare(actorID) + 0x850
 	local ecx = nil
@@ -2843,6 +2846,7 @@ function EEex_ProcessKnownInnateSpells(actorID, func)
 end
 
 function EEex_ProcessClericMemorization(actorID, func)
+	if not EEex_IsSprite(actorID, true) then return end
 	local info = {}
 	local infoIndex = nil
 	local maxLevel = 0x7
@@ -2889,6 +2893,7 @@ function EEex_ProcessClericMemorization(actorID, func)
 end
 
 function EEex_ProcessWizardMemorization(actorID, func)
+	if not EEex_IsSprite(actorID, true) then return end
 	local info = {}
 	local infoIndex = nil
 	local maxLevel = 0x9
@@ -2939,6 +2944,7 @@ function EEex_ProcessWizardMemorization(actorID, func)
 end
 
 function EEex_ProcessInnateMemorization(actorID, func)
+	if not EEex_IsSprite(actorID, true) then return end
 	local resrefLocation = nil
 	local currentAddress = EEex_ReadDword(EEex_GetActorShare(actorID) + 0xA68)
 
@@ -2957,6 +2963,7 @@ function EEex_GetMemorizedClericSpells(actorID)
 	for i = 1, 7, 1 do
 		table.insert(toReturn, {})
 	end
+	if not EEex_IsSprite(actorID, true) then return toReturn end
 	EEex_ProcessClericMemorization(actorID, function(level, resrefLocation)
 		if EEex_IsSpellValid(resrefLocation) then
 			local memorizedSpell = {}
@@ -2978,6 +2985,7 @@ function EEex_GetMemorizedWizardSpells(actorID)
 	for i = 1, 9, 1 do
 		table.insert(toReturn, {})
 	end
+	if not EEex_IsSprite(actorID, true) then return toReturn end
 	EEex_ProcessWizardMemorization(actorID, function(level, resrefLocation)
 		if EEex_IsSpellValid(resrefLocation) then
 			local memorizedSpell = {}
@@ -2997,6 +3005,7 @@ end
 function EEex_GetMemorizedInnateSpells(actorID)
 	local toReturn = {}
 	table.insert(toReturn, {})
+	if not EEex_IsSprite(actorID, true) then return toReturn end
 	EEex_ProcessInnateMemorization(actorID, function(level, resrefLocation)
 		if EEex_IsSpellValid(resrefLocation) then
 			local memorizedSpell = {}
@@ -3018,6 +3027,7 @@ function EEex_GetKnownClericSpells(actorID)
 	for i = 1, 7, 1 do
 		table.insert(toReturn, {})
 	end
+	if not EEex_IsSprite(actorID, true) then return toReturn end
 	EEex_ProcessKnownClericSpells(actorID,
 		function(resrefLocation)
 			local level = EEex_ReadWord(resrefLocation + 0x8, 0x0) + 1
@@ -3038,6 +3048,7 @@ function EEex_GetKnownWizardSpells(actorID)
 	for i = 1, 9, 1 do
 		table.insert(toReturn, {})
 	end
+	if not EEex_IsSprite(actorID, true) then return toReturn end
 	EEex_ProcessKnownWizardSpells(actorID,
 		function(resrefLocation)
 			local level = EEex_ReadWord(resrefLocation + 0x8, 0x0) + 1
@@ -3056,6 +3067,7 @@ end
 function EEex_GetKnownInnateSpells(actorID)
 	local toReturn = {}
 	table.insert(toReturn, {})
+	if not EEex_IsSprite(actorID, true) then return toReturn end
 	EEex_ProcessKnownInnateSpells(actorID,
 		function(resrefLocation)
 			local level = EEex_ReadWord(resrefLocation + 0x8, 0x0) + 1
@@ -3279,6 +3291,7 @@ end
 function EEex_ForceLocalVariableMarshal(actorID, variableName)
 
 	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return end
 	local localVariables = EEex_ReadDword(share + 0x3758)
 
 	local CVariable = EEex_FetchCVariable(localVariables, variableName)
@@ -3460,7 +3473,7 @@ function EEex_SetActorScript(actorID, resref, scriptLevel)
 end
 
 function EEex_SetActorScriptInternal(share, resref, scriptLevel)
-
+	if share <= 0 then return end
 	local resrefMem = EEex_WriteStringAuto(resref)
 
 	local CAIScript = EEex_Malloc(0x24, 84)
@@ -3477,35 +3490,42 @@ function EEex_SetActorScriptInternal(share, resref, scriptLevel)
 end
 
 function EEex_GetActorAlignment(actorID)
+	if not EEex_IsSprite(actorID, true) then return 0 end
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x30, 0x3)
 end
 
 function EEex_GetActorAllegiance(actorID)
+	if not EEex_IsSprite(actorID, true) then return 255 end
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x24, 0x0)
 end
 
 function EEex_GetActorClass(actorID)
+	if not EEex_IsSprite(actorID, true) then return 255 end
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x24, 0x3)
 end
 
 function EEex_GetActorGender(actorID)
+	if not EEex_IsSprite(actorID, true) then return 0 end
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x30, 0x2)
 end
 
 function EEex_GetActorGeneral(actorID)
+	if not EEex_IsSprite(actorID, true) then return 0 end
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x24, 0x1)
 end
 
 function EEex_GetActorRace(actorID)
+	if not EEex_IsSprite(actorID, true) then return 255 end
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x24, 0x2)
 end
 
 function EEex_GetActorSpecific(actorID)
+	if not EEex_IsSprite(actorID, true) then return 0 end
 	return EEex_ReadByte(EEex_GetActorShare(actorID) + 0x30, 0x1)
 end
 
 function EEex_GetActorKit(actorID)
-	if not EEex_IsSprite(actorID) then return 0 end
+	if not EEex_IsSprite(actorID, true) then return 0 end
 	return EEex_Call(EEex_Label("CGameSprite::GetKit"), {}, EEex_GetActorShare(actorID), 0x0)
 end
 
@@ -3514,6 +3534,7 @@ end
 -- Return value of 1: the actors are neutral (green and blue, blue and red)
 -- Return value of 2: the actors are enemies (green and red)
 function EEex_CompareActorAllegiances(actorID1, actorID2)
+	if not EEex_IsSprite(actorID1, true) or not EEex_IsSprite(actorID2, true) then return 2 end
 	local ea1 = EEex_GetActorAllegiance(actorID1)
 	local ea2 = EEex_GetActorAllegiance(actorID2)
 	local eaGroup1 = 2
@@ -3573,8 +3594,11 @@ end
 -- If the game was just loaded, sometimes the actor doesn't know what
 --  area they're in yet, so it'll return "" in that case.
 function EEex_GetActorAreaRes(actorID)
-	if EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14) > 0 then
-		return EEex_ReadLString(EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14), 0x8)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return "" end
+	local address = EEex_ReadDword(share + 0x14)
+	if address > 0 then
+		return EEex_ReadLString(address, 0x8)
 	else
 		return ""
 	end
@@ -3585,7 +3609,11 @@ end
 -- If the game was just loaded, sometimes it will return 0 for both coordinates
 --  because the actor doesn't have a pointer to the area yet.
 function EEex_GetActorAreaSize(actorID)
-	local address = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then
+		return 0, 0
+	end
+	local address = EEex_ReadDword(share + 0x14)
 	if address > 0 then
 		local width = EEex_ReadWord(address + 0x4BC, 0x0) * 64
 		local height = EEex_ReadWord(address + 0x4C0, 0x0) * 64
@@ -3596,6 +3624,7 @@ function EEex_GetActorAreaSize(actorID)
 end
 
 function EEex_GetActorEffectResrefs(actorID)
+	if not EEex_IsSprite(actorID, true) then return {} end
 	local uniqueList = {}
 	local resref = nil
 
@@ -3633,6 +3662,7 @@ end
 
 function EEex_GetActorLocal(actorID, localName)
 	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0 end
 	local localVariables = EEex_ReadDword(share + 0x3758)
 	return EEex_FetchVariable(localVariables, localName)
 end
@@ -3643,12 +3673,16 @@ end
 -- script action was executed by the given actor.
 function EEex_SetActorLocal(actorID, localName, value)
 	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return end
 	local localVariables = EEex_ReadDword(share + 0x3758)
 	return EEex_SetVariable(localVariables, localName, value)
 end
 
 function EEex_GetActorLocation(actorID)
 	local dataAddress = EEex_GetActorShare(actorID)
+	if dataAddress <= 0 then
+		return 0, 0
+	end
 	local x = EEex_ReadDword(dataAddress + 0x8)
 	local y = EEex_ReadDword(dataAddress + 0xC)
 	return x, y
@@ -3656,6 +3690,7 @@ end
 
 function EEex_GetActorModalTimer(actorID)
 	local actorData = EEex_GetActorShare(actorID)
+	if actorData <= 0 then return 0 end
 	local idRemainder = actorID % 0x64
 	local modalTimer = EEex_ReadDword(actorData + 0x2C4)
 	local timerRemainder = modalTimer % 0x64
@@ -3668,57 +3703,66 @@ end
 
 -- Returns the actor's current modal state, (as defined in MODAL.IDS; stored at offset 0x28 of the global-creature structure).
 function EEex_GetActorModalState(actorID)
+	if not EEex_IsSprite(actorID, true) then return 0 end
 	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x295D, 0x0)
 end
 
 -- Returns the actor's dialogue resref as a string, (defined at offset 0x2CC of the .CRE,
 -- or optionally overriden by the actor structure at offset 0x48).
 function EEex_GetActorDialogue(actorID)
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x35A8, 8)
 end
 
 -- Returns the actor's override script resref as a string, (defined at offset 0x248 of the .CRE,
 -- or optionally overriden by the actor structure at offset 0x50).
 function EEex_GetActorOverrideScript(actorID)
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x65C, 8)
 end
 
 -- Returns the actor's specifics script resref as a string, (defined at offset 0x78 of the actor structure).
 function EEex_GetActorSpecificsScript(actorID)
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x2A24, 8)
 end
 
 -- Returns the actor's class script, (defined at offset 0x250 of the .CRE,
 -- or optionally overriden by the actor structure at offset 0x60).
 function EEex_GetActorClassScript(actorID)
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x664, 8)
 end
 
 -- Returns the actor's race script resref as a string, (defined at offset 0x258 of the .CRE,
 -- or optionally overriden by the actor structure at offset 0x68).
 function EEex_GetActorRaceScript(actorID)
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x66C, 8)
 end
 
 -- Returns the actor's general script resref as a string, (defined at offset 0x260 of the .CRE,
 -- or optionally overriden by the actor structure at offset 0x58).
 function EEex_GetActorGeneralScript(actorID)
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x674, 8)
 end
 
 -- Returns the actor's default script resref as a string, (defined at offset 0x268 of the .CRE,
 -- or optionally overriden by the actor structure at offset 0x70).
 function EEex_GetActorDefaultScript(actorID)
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadLString(EEex_GetActorShare(actorID) + 0x67C, 8)
 end
 
 function EEex_GetActorName(actorID)
-	if not EEex_IsSprite(actorID) then return "" end
+	if not EEex_IsSprite(actorID, true) then return "" end
 	return EEex_ReadString(EEex_ReadDword(EEex_Call(EEex_Label("CGameSprite::GetName"), {0x0}, EEex_GetActorShare(actorID), 0x0)))
 end
 
 function EEex_GetActorScriptName(actorID)
 	local dataAddress = EEex_GetActorShare(actorID)
+	if dataAddress <= 0 then return "" end
 	return EEex_ReadString(EEex_ReadDword(EEex_Call(EEex_ReadDword(EEex_ReadDword(dataAddress) + 0x10), {}, dataAddress, 0x0)))
 end
 
@@ -3727,6 +3771,7 @@ end
 --  Image or Simulacrum, this will return 0.
 -- Also, this will return 0 if the creature had already been summoned before the save was loaded.
 function EEex_GetSummonerID(actorID)
+	if not EEex_IsSprite(actorID, true) then return 0 end
 	local summonerID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x130)
 	if summonerID == -1 then
 		return 0
@@ -3738,6 +3783,7 @@ end
 -- If the actor is an image created by Mislead, Project Image or Simulacrum, this returns the actor ID
 --  of the image's master. Otherwise, it returns 0.
 function EEex_GetImageMasterID(actorID)
+	if not EEex_IsSprite(actorID, true) then return 0 end
 -- This first read will get the master ID even if the image doesn't have a Puppet ID effect.
 -- However, that field gets reset to -1 on a reload, so the function also checks a second field.
 	local masterID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x39F4)
@@ -3798,6 +3844,7 @@ function EEex_GetActorSpellState(actorID, splstateID)
 end
 
 function EEex_GetActorSpellTimer(actorID)
+	if not EEex_IsSprite(actorID) then return 0 end
 	return EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3870)
 end
 
@@ -3807,17 +3854,19 @@ function EEex_GetActorStat(actorID, statID)
 	return EEex_Call(EEex_Label("EEex_AccessStat"), {statID}, share, 0x0)
 end
 
--- Returns true if the actor has the specified state, based on the numbers in STATE.IDS.
+-- Returns true if the actor has at least one of the specified states, based on the numbers in STATE.IDS.
 -- For example, if the state parameter is set to 0x8000, it will return true if the actor
 --  is hasted or improved hasted, because STATE_HASTE is state 0x8000 in STATE.IDS.
 function EEex_HasState(actorID, state)
-	if not EEex_IsSprite(actorID) then return false end
-	return (bit32.band(EEex_ReadDword(EEex_GetActorShare(actorID) + 0xB30), state) == state)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return false end
+	local stateBits = bit32.bor(EEex_ReadDword(share + 0x434), EEex_ReadDword(share + 0xB30))
+	return (bit32.band(stateBits, state) > 0)
 end
 
 -- Returns true if the actor is immune to the specified opcode.
 function EEex_IsImmuneToOpcode(actorID, opcode)
-	if not EEex_IsSprite(actorID) then return false end
+	if not EEex_IsSprite(actorID, true) then return false end
 	local found_it = false
 	EEex_IterateActorEffects(actorID, function(eData)
 		if found_it == false then
@@ -3835,7 +3884,7 @@ end
 -- If includeSpellDeflection is true, it will also return true if the actor has a Spell Deflection,
 --  Spell Turning or Spell Trap effect for the specified spell level.
 function EEex_IsImmuneToSpellLevel(actorID, level, includeSpellDeflection)
-	if not EEex_IsSprite(actorID) then return false end
+	if not EEex_IsSprite(actorID, true) then return false end
 	local found_it = false
 	EEex_IterateActorEffects(actorID, function(eData)
 		if found_it == false then
@@ -3855,7 +3904,9 @@ function EEex_IsImmuneToSpellLevel(actorID, level, includeSpellDeflection)
 end
 
 function EEex_GetActorCastTimer(actorID)
-	local timerValue = EEex_ReadSignedWord(EEex_GetActorShare(actorID) + 0x3360, 0)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0 end
+	local timerValue = EEex_ReadSignedWord(share + 0x3360, 0)
 	if timerValue >= 0 then
 		return 100 - timerValue
 	else
@@ -3866,7 +3917,9 @@ end
 -- Returns true if the given actor is in combat.
 -- If includeDeadZone is set to true, the time period will be extended to until the battle music fully fades out.
 function EEex_IsActorInCombat(actorID, includeDeadZone)
-	local area = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x14)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return false end
+	local area = EEex_ReadDword(share + 0x14)
 	local songCounter = EEex_ReadDword(area + 0xAA0)
 	local damageCounter = EEex_ReadDword(area + 0xAA4)
 	local songCompare = 0
@@ -3882,7 +3935,9 @@ end
 --  is doing nothing, targeting a point, or targeting a container, door, or trap),
 --   then it will return 0.
 function EEex_GetActorTargetID(actorID)
-	local targetID = EEex_ReadDword(EEex_GetActorShare(actorID) + 0x3564)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0 end
+	local targetID = EEex_ReadDword(share + 0x3564)
 	if targetID ~= -0x1 then
 		return targetID
 	else
@@ -3892,6 +3947,7 @@ end
 
 function EEex_GetActorTargetPoint(actorID)
 	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0, 0 end
 	return EEex_ReadDword(share + 0x3568), EEex_ReadDword(share + 0x356C)
 end
 
@@ -3900,7 +3956,9 @@ end
 --  because MoveToPoint() is action 23 in ACTION.IDS.
 -- If the actor isn't doing anything, it will return 0.
 function EEex_GetActorCurrentAction(actorID)
-	return EEex_ReadWord(EEex_GetActorShare(actorID) + 0x2F8, 0x0)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0 end
+	return EEex_ReadWord(share + 0x2F8, 0x0)
 end
 
 EEex_SpellIDSType = {[1] = "SPPR", [2] = "SPWI", [3] = "SPIN", [4] = "SPCL"}
@@ -3928,16 +3986,20 @@ end
 
 -- Returns the actor's current HP, (defined at offset 0x24 of the .CRE).
 function EEex_GetActorCurrentHP(actorID)
-	return EEex_ReadSignedWord(EEex_GetActorShare(actorID) + 0x438, 0x0)
+	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0 end
+	return EEex_ReadSignedWord(share + 0x438, 0x0)
 end
 
 function EEex_GetActorCurrentDest(actorID)
 	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0, 0 end
 	return EEex_ReadDword(share + 0x3404), EEex_ReadDword(share + 0x3408)
 end
 
 function EEex_GetActorPosDest(actorID)
 	local share = EEex_GetActorShare(actorID)
+	if share <= 0 then return 0, 0 end
 	return EEex_ReadDword(share + 0x31D4), EEex_ReadDword(share + 0x31D8)
 end
 

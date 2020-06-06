@@ -3,6 +3,7 @@
 -- Options --
 -------------
 
+B3EffectMenu_Stat_Required = false
 B3EffectMenu_Key = EEex_GetKeyFromName("Left Shift")
 B3EffectMenu_RowCount = 4
 
@@ -173,7 +174,7 @@ function B3EffectMenu_Menu_Tick()
 	end
 
 	local actorIDCursor = EEex_GetActorIDCursor()
-	if EEex_IsKeyDown(B3EffectMenu_Key) and EEex_IsSprite(actorIDCursor) then
+	if EEex_IsKeyDown(B3EffectMenu_Key) and EEex_IsSprite(actorIDCursor) and not EEex_HasState(actorIDCursor, 0x200000) and (not B3EffectMenu_Stat_Required or EEex_GetActorStat(EEex_GetActorIDCharacter(0), 659) > 0 or EEex_GetActorStat(EEex_GetActorIDCharacter(1), 659) > 0 or EEex_GetActorStat(EEex_GetActorIDCharacter(2), 659) > 0 or EEex_GetActorStat(EEex_GetActorIDCharacter(3), 659) > 0 or EEex_GetActorStat(EEex_GetActorIDCharacter(4), 659) > 0 or EEex_GetActorStat(EEex_GetActorIDCharacter(5), 659) > 0) then
 		if actorIDCursor ~= B3EffectMenu_CurrentActorID then
 			B3EffectMenu_CurrentActorID = actorIDCursor
 			B3EffectMenu_LaunchInfo()
