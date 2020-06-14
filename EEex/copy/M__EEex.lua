@@ -1313,6 +1313,43 @@ function EEex_HookRestore(address, restoreDelay, restoreSize, assembly)
 	}))
 end
 
+function EEex_HookAfterRestore(address, restoreDelay, restoreSize, assembly)
+
+	local storeBytes = function(startAddress, size)
+		local bytes = {}
+		local limit = startAddress + size - 1
+		for i = startAddress, limit, 1 do
+			table.insert(bytes, {EEex_ReadByte(i, 0), 1})
+		end
+		return bytes
+	end
+
+	local afterInstruction = address + restoreDelay + restoreSize
+	local restoreBytes = storeBytes(address + restoreDelay, restoreSize)
+
+	local nops = {}
+	local limit = restoreDelay + restoreSize - 5
+	for i = 1, limit, 1 do
+		table.insert(nops, {0x90, 1})
+	end
+
+	local hookCode = EEex_WriteAssemblyAuto(EEex_ConcatTables({
+		restoreBytes,
+		assembly,
+		{[[
+			@return
+			!jmp_dword ]], {afterInstruction, 4, 4},
+		},
+	}))
+
+	EEex_WriteAssembly(address, EEex_ConcatTables({
+		{
+			"!jmp_dword", {hookCode, 4, 4}
+		},
+		nops,
+	}))
+end
+
 function EEex_WriteOpcode(opcodeFunctions)
 
 	--[[
@@ -6524,6 +6561,7 @@ end
 		Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
 		Infinity_DoFile("EEex_Ren") -- Render Hook
 		Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
+		Infinity_DoFile("EEex_Pro") -- Projectile Hooks
 		Infinity_DoFile("EEex_Fix") -- Engine Related Bug Fixes
 		Infinity_DoFile("EEex_Spl")
 		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things

@@ -88,7 +88,7 @@ New stats:
  then add 1 to it. If you want the character to deal fire damage with their weapons, set stat 617 to 9.
 - Stat 619: Adds an additional saving throw penalty to the character's spells. For example, if stat 619 is
  set to 2, all the character's spells are made at an additional -2 penalty.
-- Stat 620: Increases the healing from the character's healing spells by a percentage. If stat 620 is set 
+- Stat 620: Increases the healing from the character's healing spells by a percentage. If stat 620 is set
  to 100, healing spells cast by the character will heal twice as many hit points.
 - Stat 621: Increases the minimum damage (per die) of the character's spells. If stat 621 is set to 20,
  the character will deal maximum damage with their spells.
@@ -104,7 +104,7 @@ New stats:
 - Stat 654: Modifies the level of the character's spells, for purposes of bypassing Globes of Invulnerability and similar protections.
 - Stat 655: Modifies the character's level on outgoing Dispel Magic checks, making Dispel Magic harder to resist when cast BY the character.
 - Stat 656: Modifies the character's level on incoming Dispel Magic checks, making Dispel Magic easier to resist when cast ON the character.
-- Stat 658: Applies a spell on any creature summoned by the character, with the summoner as the source. 
+- Stat 658: Applies a spell on any creature summoned by the character, with the summoner as the source.
  The spell is specified by the resource field of the opcode 401 effect. Setting certain savingthrow bits
  on the opcode 401 effect adds conditions:
             Bit 20: The spell will be cast on the summoner instead, with the summoned creature as the source.
@@ -120,7 +120,7 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 	local opcode = EEex_ReadDword(effectData + 0xC)
 	local timing = EEex_ReadDword(effectData + 0x20)
 	if bit32.band(internal_flags, 0x2000000) > 0 or opcode == 187 or timing == 2 then return false end
-	
+
 	local targetID = EEex_ReadDword(creatureData + 0x34)
 	local sourceID = EEex_ReadDword(effectData + 0x10C)
 --[[
@@ -134,7 +134,7 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 				constantID = EEex_ReadDword(protagonistData + 0x614) + 2
 				EEex_WriteDword(protagonistData + 0x614, constantID)
 				EEex_WriteDword(sourceData + 0x610, constantID)
-				
+
 				EEex_ApplyEffectToActor(sourceID, {
 ["opcode"] = 402,
 ["target"] = 2,
@@ -209,7 +209,7 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 	end
 	if opcode == 58 then
 		local dispelType = EEex_ReadWord(effectData + 0x1C, 0x0)
-		
+
 		if dispelType == 1 then
 			dispelType = 2
 			EEex_WriteWord(effectData + 0x1C, dispelType)
@@ -249,8 +249,8 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 		local damage_method = EEex_ReadWord(effectData + 0x1C, 0x0)
 		if damage_method ~= 0 then return false end
 		local damage_type = EEex_ReadWord(effectData + 0x1E, 0x0)
-	
-		
+
+
 		local new_damage_type = EEex_GetActorStat(sourceID, 617)
 		if new_damage_type ~= 0 and restype == 0 and parent_resource == "" then
 			damage_type = new_damage_type - 1
@@ -347,7 +347,7 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 			dicesize = 0
 			EEex_WriteDword(effectData + 0x38, dicesize)
 		end
-	
+
 		if EEex_Modules["ME_DAMAB"] then
 			return EEex_DamageAbsorption(effectData, creatureData)
 		else
@@ -1379,6 +1379,68 @@ function EEex_InstallOpcodeChanges()
 		]]},
 	})
 
+	-----------------------------------------
+	-- New Opcode #408 (ProjectileMutator) --
+	-----------------------------------------
+
+	local projectileMutatorOffset = EEex_RegisterComplexListStat("EEex_ProjectileMutatorList", {
+
+		["construct"] = function(address)
+			EEex_WriteDword(address + 0x4, EEex_ReadDword(EEex_Label("_afxPchNil")))
+		end,
+
+		["destruct"] = function(address)
+			EEex_Call(EEex_Label("CString::~CString"), {}, address + 0x4, 0x0)
+		end,
+
+		["copy"] = function(source, dest)
+			EEex_WriteDword(dest + 0x0, EEex_ReadDword(source + 0x0))
+			EEex_Call(EEex_Label("CString::CString(CString_const_&)"), {source + 0x4}, dest + 0x4, 0x0)
+		end,
+
+		["size"] = 0x8,
+
+	})
+
+	local EEex_ProjectileMutator = EEex_WriteOpcode({
+
+		["ApplyEffect"] = {[[
+
+			!build_stack_frame
+			!sub_esp_byte 04
+			!push_registers
+
+			!mov_esi_ecx
+			!mov_ebx_[ebp+byte] 08 ; CGameSprite ;
+
+			!push_dword #66 ; callerID ;
+			!push_byte 08
+			!call >_malloc
+			!add_esp_byte 08
+			!mov_edi_eax
+
+			!mov_[edi]_esi ; Element Offset 0x0 ;
+
+			!lea_eax_[ebp+byte] FC
+			!push_eax
+			!lea_ecx_[esi+byte] 2C
+			!call >CResRef::GetResRefStr
+			!mov_eax_[eax]
+			!mov_[edi+byte]_eax 04 ; Element Offset 0x4 ;
+
+			!push_edi
+			!mov_ecx_[ebx+dword] #3B18
+			!lea_ecx_[ecx+dword] ]], {projectileMutatorOffset, 4}, [[
+			!call >CPtrList::AddTail
+
+			@ret
+			!mov_eax #1
+			!restore_stack_frame
+			!ret_word 04 00
+
+		]]},
+	})
+
 	-----------------------------
 	-- Opcode Definitions Hook --
 	-----------------------------
@@ -1428,9 +1490,15 @@ function EEex_InstallOpcodeChanges()
 
 		@407
 		!cmp_eax_dword #197
-		!jne_dword >fail
+		!jne_dword >408
 
 		]], EEex_OnRemove, [[
+
+		@408
+		!cmp_eax_dword #198
+		!jne_dword >fail
+
+		]], EEex_ProjectileMutator, [[
 
 		@fail
 		!jmp_dword >CGameEffect::DecodeEffect()_default_label
