@@ -83,6 +83,49 @@ C:Eval('AddSpecialAbility(\"EXAMPL5\")',0)
 
 This Magic Missile spell requires a spell attack roll to hit the target. Regular THAC0 bonuses make it more accurate, but THAC0 bonuses of equipped weapons or from proficiencies don't apply. However, the attack roll ignores the target's armor, and it is increased by the caster's Intelligence.~
 
+	COPY_EXISTING ~exampl6.spl~ ~override~
+		SAY NAME1 ~Widen Spell~
+		SAY UNIDENTIFIED_DESC ~This metamagic shows how you can use the EXMODAOE function. Try adding it as an innate ability to a mage in the party with this command:
+
+C:Eval('AddSpecialAbility(\"EXAMPL6\")',0)
+
+(This will let the character in the 1st portrait slot learn this spell as an innate ability.)
+
+After you use this ability, the next spell you cast within 2 rounds will have double the radius of its area of effect.~
+
+	COPY_EXISTING ~exampl6.itm~ ~override~
+		SAY NAME2 ~Staff of Widening~
+		SAY IDENTIFIED_DESC ~This staff is an example of how you can use the EXMODAOE function. Create it with:
+
+C:CreateItem('EXAMPL6')
+
+STATISTICS:
+
+Equipped abilities:
+- Increases the area of effect of spells by 100%
+
+THAC0: +1
+Damage: 1d6+1 (crushing)
+Speed Factor: 3
+Proficiency Type: Quarterstaff
+Type: Two-handed
+Requires:
+ 5 Strength
+
+Weight: 4~
+
+	COPY_EXISTING ~excharge.itm~ ~override~
+		SAY NAME2 ~Magical Electrifier~
+		SAY IDENTIFIED_DESC ~This item is an example of how you can use the EXCHARGE function. Create it with:
+
+C:CreateItem('EXCHARGE',20,0,0)
+
+STATISTICS:
+
+Using this item restores 5 charges to the item in your first quick item slot, up to the item's maximum number of charges. It can't increase the quantity of an item, only its charges.
+
+Weight: 1~
+
 	COPY_EXISTING ~exflameb.itm~ ~override~
 		SAY NAME2 ~Real Sword of Flame~
 		SAY IDENTIFIED_DESC ~This sword is an example of how you can use the EXDAMAGE function. Create it with:

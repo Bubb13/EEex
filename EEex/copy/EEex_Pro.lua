@@ -101,7 +101,7 @@ function EEex_OnAddEffectToProjectile(CProjectile, CGameAIBase, ebp)
 		local func = _G[functionName].effectMutator
 
 		if func then
-			blockEffect = func(originatingEffectData, CGameAIBase, CGameEffect)
+			blockEffect = func(originatingEffectData, CGameAIBase, CProjectile, CGameEffect)
 			if blockEffect then return true end
 		end
 	end)
