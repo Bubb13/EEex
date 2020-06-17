@@ -810,6 +810,10 @@ PatAdj=-11
 PatBytes=8BBC81600800008D504F
 PatAdj=-11
 
+[CGameSprite::UpdateAOE()_DecodeProjectile]
+PatBytes=83C4088BF05B
+PatAdj=-5
+
 [CGameSprite::UpdateAOE()_Opcode214FixHook]
 PatBytes=8B46068D4DF48945E88B460A8945EC
 PatAdj=-5
@@ -1013,13 +1017,208 @@ PatAdj=16
 PatBytes=558BEC8B55080FB74148
 PatAdj=0
 
+[CProjectile::CProjectile()_CProjectile_VFTable]
+PatBytes=6A0A8D4F5C
+PatAdj=7
+Type=1
+
 [CProjectile::DecodeProjectile]
 PatBytes=558BEC81ECE8030000
 PatAdj=0
 
+[CProjectile::DecodeProjectile()_CProjectileAmbiant_VFTable]
+PatBytes=8D856CFFFFFF508D8EF4000000
+PatAdj=-13
+Type=1
+
+[CProjectile::DecodeProjectile()_CProjectileInstant_VFTable]
+PatBytes=E92C1D000068A0020000
+PatAdj=-11
+Type=1
+
 [CProjectile::DecodeProjectile()_PostConstruction]
 PatBytes=8D4DDC4866894648
 PatAdj=46
+
+
+;---------------------------
+; CProjectileArea
+;---------------------------
+
+[CProjectileArea::CProjectileArea()_CProjectileArea_VFTable]
+PatBytes=6AFF6A006A006A006A006A006A008D8EB8020000
+PatAdj=-9
+Type=1
+
+
+;---------------------------
+; CProjectileBAM
+;---------------------------
+
+[CProjectileBAM::CProjectileBAM()_CProjectileBAM_VFTable]
+PatBytes=8D9E64010000
+PatAdj=-4
+Type=1
+
+
+;---------------------------
+; CProjectileColorSpray
+;---------------------------
+
+[CProjectileColorSpray::CProjectileColorSpray()_CProjectileColorSpray_VFTable]
+PatBytes=B880000000C7868801000000000000
+PatAdj=-9
+Type=1
+
+
+;---------------------------
+; CProjectileConeOfCold
+;---------------------------
+
+[CProjectileConeOfCold::CProjectileConeOfCold()_CProjectileConeOfCold_VFTable]
+PatBytes=B805000000C7878801000000000000
+PatAdj=-55
+Type=1
+
+
+;---------------------------
+; CProjectileFall
+;---------------------------
+
+[CProjectileFall::CProjectileFall()_CProjectileFall_VFTable]
+PatBytes=6AFF6A006A006A006A006A006A006A008D8EAC020000
+PatAdj=24
+Type=1
+
+
+;---------------------------
+; CProjectileFireHands
+;---------------------------
+
+[CProjectileFireHands::CProjectileFireHands()_CProjectileFireHands_VFTable]
+PatBytes=B880000000C7878801000000000000
+PatAdj=-55
+Type=1
+
+
+;---------------------------
+; CProjectileLightningBoltGround
+;---------------------------
+
+[CProjectileLightningBoltGround::CProjectileLightningBoltGround()_CProjectileLightningBoltGround_VFTable]
+PatBytes=C7869C020000FFFFFFFF5EC3
+PatAdj=-6
+Type=1
+
+
+;---------------------------
+; CProjectileLightningBounce
+;---------------------------
+
+[CProjectileLightningBounce::CProjectileLightningBounce()_CProjectileLightningBounce_VFTable]
+PatBytes=838ED8000000088D8EF4000000
+PatAdj=-19
+Type=1
+
+
+;---------------------------
+; CProjectileLightningStorm
+;---------------------------
+
+[CProjectileLightningStorm::CProjectileLightningStorm()_CProjectileLightningStorm_VFTable]
+PatBytes=6A168BCE
+PatAdj=16
+Type=1
+
+
+;---------------------------
+; CProjectileMulti
+;---------------------------
+
+[CProjectileMulti::CProjectileMulti()_CProjectileMulti_VFTable]
+PatBytes=6A0A8D8B9C020000
+PatAdj=10
+Type=1
+
+
+;---------------------------
+; CProjectileMushroom
+;---------------------------
+
+[CProjectileMushroom::CProjectileMushroom()_CProjectileMushroom_VFTable]
+PatBytes=8B4DFCB801000000668987A4010000
+PatAdj=-115
+Type=1
+
+
+;---------------------------
+; CProjectileNewScorcher
+;---------------------------
+
+[CProjectileNewScorcher::CProjectileNewScorcher()_CProjectileNewScorcher_VFTable]
+PatBytes=C786B00300003C000000
+PatAdj=-24
+Type=1
+
+
+;---------------------------
+; CProjectileScorcher
+;---------------------------
+
+[CProjectileScorcher::CProjectileScorcher()_CProjectileScorcher_VFTable]
+PatBytes=B805000000C7868801000000000000668986A40100008D8EF4000000
+PatAdj=-9
+Type=1
+
+
+;---------------------------
+; CProjectileSegment
+;---------------------------
+
+[CProjectileSegment::CProjectileSegment()_CProjectileSegment_VFTable]
+PatBytes=8B5514B805000000
+PatAdj=21
+Type=1
+
+
+;---------------------------
+; CProjectileSkyStrike
+;---------------------------
+
+[CProjectileSkyStrike::CProjectileSkyStrike()_CProjectileSkyStrike_VFTable]
+PatBytes=8B450C53568B7508578BF98945F0
+PatAdj=27
+Type=1
+
+
+;---------------------------
+; CProjectileSkyStrikeBAM
+;---------------------------
+
+[CProjectileSkyStrikeBAM::CProjectileSkyStrikeBAM()_CProjectileSkyStrikeBAM_VFTable]
+PatBytes=668BC16603C96603C166898630010000
+PatAdj=-13
+Type=1
+
+
+;---------------------------
+; CProjectileSpellHit
+;---------------------------
+
+[CProjectileSpellHit::CProjectileSpellHit()_CProjectileSpellHit_VFTable]
+PatBytes=8B4510578BF98945EC
+PatAdj=22
+Type=1
+
+
+;---------------------------
+; CProjectileTravelDoor
+;---------------------------
+
+[CProjectileTravelDoor::CProjectileTravelDoor()_CProjectileTravelDoor_VFTable]
+PatBytes=8B4510578BF98945F0
+PatAdj=22
+Type=1
 
 
 ;---------------------------
