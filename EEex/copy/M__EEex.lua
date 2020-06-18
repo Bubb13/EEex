@@ -6822,6 +6822,7 @@ EXMODAOE = {
 		Infinity_DoFile("EEex_Fix") -- Engine Related Bug Fixes
 		Infinity_DoFile("EEex_Spl")
 		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things
+		Infinity_DoFile("EEex_Msc")
 
 		--------------
 		--  Modules --

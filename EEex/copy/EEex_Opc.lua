@@ -512,7 +512,7 @@ function EEex_InstallOpcodeChanges()
 		!push_eax
 		!lea_eax_[ebp+byte] FC
 		!push_eax
-		!call >CResRef::operator_equ
+		!call >CResRef::operator_equ(CString)
 		!lea_ecx_[ebp+byte] F4
 		!call >CString::~CString
 		!lea_ecx_[ebp+byte] F8
