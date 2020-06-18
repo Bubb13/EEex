@@ -1,3 +1,34 @@
+EEex_TypeMutatorGlobalFunctions = {}
+
+function EEex_AddTypeMutatorGlobal(func_name, func)
+	EEex_TypeMutatorGlobalFunctions[func_name] = func
+end
+
+EEex_ProjectileMutatorGlobalFunctions = {}
+
+function EEex_AddProjectileMutatorGlobal(func_name, func)
+	EEex_ProjectileMutatorGlobalFunctions[func_name] = func
+end
+--[[
+The EXLINEFR function lets you change the delay between hits for a specific projectile that uses the
+ "Lined up AoE" feature (e.g. Agannazar's Scorcher). Normally these projectiles hit once every half round;
+ now you could make it so one of these projectiles hits every second, or only once for the whole duration.
+ To use, set bit 16 of the "Behavior" flags of the projectile, and set the "Color speed" to the new delay
+ between hits in ticks. If you set "Color speed" to 15, it will hit once per second (per 15 ticks). If you
+ set "Color speed" to 100 or more, it will only hit once.
+--]]
+EEex_AddProjectileMutatorGlobal("EXLINEFR", function(source, creatureData, projectileData)
+	if EEex_IsProjectileOfType(projectileData, EEex_ProjectileType.CProjectileNewScorcher) and bit32.band(EEex_ReadDword(projectileData + 0x120), 0x10000) > 0 then
+		local effectRepeatTime = EEex_ReadWord(projectileData + 0x140, 0x0)
+		EEex_WriteDword(projectileData + 0x3B0, effectRepeatTime)
+	end
+end)
+
+EEex_EffectMutatorGlobalFunctions = {}
+
+function EEex_AddEffectMutatorGlobal(func_name, func)
+	EEex_EffectMutatorGlobalFunctions[func_name] = func
+end
 
 EEex_ProjectileHookSource = {
 	["SPELL"] = 0,
@@ -134,6 +165,14 @@ function EEex_OnDecodeProjectile(ebp)
 	local projectileType = EEex_ReadWord(ebp + 0x8, 0)
 	local mutatorList = EEex_AccessComplexStat(actorID, "EEex_ProjectileMutatorList")
 
+	for func_name, func in pairs(EEex_TypeMutatorGlobalFunctions) do
+		local newType = func(source, CGameAIBase, projectileType)
+		if newType then
+			EEex_WriteWord(ebp + 0x8, newType)
+			return true
+		end
+	end
+
 	EEex_IterateCPtrList(mutatorList, function(mutatorElement)
 
 		local originatingEffectData = EEex_ReadDword(mutatorElement + 0x0)
@@ -165,6 +204,11 @@ function EEex_OnPostProjectileCreation(CProjectile, ebp)
 
 	local mutatorList = EEex_AccessComplexStat(actorID, "EEex_ProjectileMutatorList")
 
+	for func_name, func in pairs(EEex_ProjectileMutatorGlobalFunctions) do
+		local blockFurtherMutations = func(source, CGameAIBase, CProjectile)
+		if blockFurtherMutations then return true end
+	end
+
 	EEex_IterateCPtrList(mutatorList, function(mutatorElement)
 
 		local originatingEffectData = EEex_ReadDword(mutatorElement + 0x0)
@@ -191,6 +235,11 @@ function EEex_OnAddEffectToProjectile(CProjectile, CGameAIBase, ebp)
 	local CGameEffect = EEex_ReadDword(ebp + 0x8)
 	local mutatorList = EEex_AccessComplexStat(actorID, "EEex_ProjectileMutatorList")
 	local blockEffect = false
+
+	for func_name, func in pairs(EEex_EffectMutatorGlobalFunctions) do
+		blockEffect = func(source, CGameAIBase, CProjectile, CGameEffect)
+		if blockEffect then return true end
+	end
 
 	EEex_IterateCPtrList(mutatorList, function(mutatorElement)
 
