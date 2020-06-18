@@ -146,6 +146,17 @@ Requires:
 
 Weight: 4~
 
+	ADD_PROJECTILE ~override/exlinefr.pro~
+
+	COPY_EXISTING ~exlinefr.spl~ ~override~
+		LPF ALTER_SPELL_HEADER INT_VAR projectile=exlinefr END
+		SAY NAME1 ~One-Hit Agannazar's Scorcher~
+		SAY UNIDENTIFIED_DESC ~This spell uses a version of the Agannazar's Scorcher projectile, which only hits once, rather than hitting again half a round later. Try adding it as a spell to a mage or bard in the party with this command:
+
+C:Eval('AddSpecialAbility(\"EXLINEFR\")',0)
+
+(This will let the character in the 1st portrait slot learn this spell as a 2nd-level wizard spell.)~
+
 	COPY_EXISTING ~exsta612.itm~ ~override~
 		SAY NAME2 ~Amulet of Not Waking Sleepers~
 		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 612. Create it with:
