@@ -4398,6 +4398,89 @@ function EEex_AlterActorEffect(actorID, match_table, set_table, multi_match)
 	end
 end
 
+-- Returns the resref of the item the actor has in the specified inventory slot (from SLOTS.IDS).
+function EEex_GetActorItemRes(actorID, slot)
+	if not EEex_IsSprite(actorID, true) then return "" end
+	local share = EEex_GetActorShare(actorID)
+	local invItemData = EEex_ReadDword(share + 0xA80 + slot * 4)
+	if invItemData > 0 then
+		return EEex_ReadLString(invItemData + 0x8, 8)
+	else
+		return ""
+	end
+end
+
+-- Returns the remaining charges of an ability of the item the actor has in the specified inventory slot (from SLOTS.IDS).
+--  The ability parameter should be 1, 2 or 3 depending on which ability header you want to check.
+function EEex_GetActorItemCharges(actorID, slot, ability)
+	if not EEex_IsSprite(actorID, true) then return 0 end
+	local share = EEex_GetActorShare(actorID)
+	if ability < 1 then
+		ability = 1
+	elseif ability > 3 then
+		ability = 3
+	end
+	local invItemData = EEex_ReadDword(share + 0xA80 + slot * 4)
+	if invItemData > 0 then
+		return EEex_ReadWord(invItemData + 0x12 + ability * 2, 0x0)
+	else
+		return 0
+	end
+end
+
+-- Sets the remaining charges of an ability of the item the actor has in the specified inventory slot (from SLOTS.IDS).
+--  The ability parameter should be 1, 2 or 3 depending on which ability header you want to check.
+--  The charges parameter should be non-zero.
+function EEex_SetActorItemCharges(actorID, slot, ability, charges)
+	if not EEex_IsSprite(actorID, true) then return end
+	local share = EEex_GetActorShare(actorID)
+	if ability < 1 then
+		ability = 1
+	elseif ability > 3 then
+		ability = 3
+	end
+	local invItemData = EEex_ReadDword(share + 0xA80 + slot * 4)
+	if invItemData > 0 then
+		EEex_WriteWord(invItemData + 0x12 + ability * 2, charges)
+	end
+end
+
+-- Looks through the items in the actor's inventory, calling a function for each one.
+--  If equippedItemsOnly is set to true, it will only call the function for items the actor
+--  has equipped. The first parameter of the called function is the slot number of the item (from SLOTS.IDS).
+--  The second parameter returns data on the inventory item. Here's how you can use it:
+--[[
+	EEex_ReadLString(invItemData + 0x8, 8) -- Gets the resref of the item.
+	EEex_ReadWord(invItemData + 0x14, 0x0) -- Gets the number of charges on the item's first ability.
+	EEex_ReadWord(invItemData + 0x16, 0x0) -- Gets the number of charges on the item's second ability.
+	EEex_ReadWord(invItemData + 0x18, 0x0) -- Gets the number of charges on the item's third ability.
+	EEex_ReadDword(invItemData + 0x1C) -- Gets the item's flags (from INVITEM.IDS)
+--]]
+function EEex_IterateActorItems(actorID, equippedItemsOnly, func)
+	if not EEex_IsSprite(actorID, true) then return end
+	local share = EEex_GetActorShare(actorID)
+	local equippedWeaponSlot = EEex_ReadByte(share + 0xB1C, 0x0)
+	local equippedWeaponAbility = EEex_ReadWord(share + 0xB1E, 0x0)
+	local hasShieldEquipped = (EEex_ReadDword(share + 0xAA4) > 0)
+	if hasShieldEquipped and equippedItemsOnly then
+		local invWeaponData = EEex_ReadDword(share + 0xA80 + equippedWeaponSlot * 4)
+		if invWeaponData > 0 then
+			local itemData = EEex_DemandResData(EEex_ReadLString(invWeaponData + 0x8, 8), "ITM")
+			if itemData > 0 then
+				if bit32.band(EEex_ReadDword(itemData + 0x18), 0x2) > 0 or EEex_ReadByte(itemData + 0x72 + equippedWeaponAbility * 0x38) ~= 1 then
+					hasShieldEquipped = false
+				end
+			end
+		end
+	end
+	for i = 0, 38, 1 do
+		local invItemData = EEex_ReadDword(share + 0xA80 + i * 4)
+		if invItemData > 0 and (equippedItemsOnly == false or i < 9 or (i == 9 and hasShieldEquipped) or i == equippedWeaponSlot) then
+			func(i, invItemData)
+		end
+	end
+end
+
 ----------------------
 --  Spell Learning  --
 ----------------------
@@ -4612,6 +4695,131 @@ end
 ---------------------------------------------------------
 --  Functions you can use with opcode 402 (Invoke Lua) --
 ---------------------------------------------------------
+
+--[[
+To use the EXCHARGE function, create an opcode 402 effect in an item or spell, set the resource to EXCHARGE (all capitals),
+ set the timing to instant, limited and the duration to 0, and choose parameters.
+For an example of this function in use, look at EXCHARGE.ITM.
+
+The EXCHARGE function modifies the number of charges on an item (or the quantity of the item) in the character's inventory.
+ It cannot reduce the number of charges on an item to 0 or less.
+
+parameter1 - Determines how many charges to add.
+
+parameter2 - 
+If 0, parameter1 charges are added.
+If 1, the number of charges is set to parameter1.
+If 2, the number of charges is multiplied by parameter1 then divided by 100 (percentage multiplier).
+
+savingthrow - This function uses several extra bits on this parameter:
+Bit 16: If set, it will not modify the quantity of an item like a potion; it will only work with items like wands that have charges.
+Bit 17: If set, it will not modify the charges of an item; it will only modify the quantity of stackable items like potions.
+Bit 18: If set, it can increase the charges/quantity beyond the normal maximum for the item.
+
+special - Determines which item slot to recharge (from SLOTS.IDS).
+Note: Some of the slot names in SLOTS.IDS are misleading:
+15 SLOT_MISC0 is the first quick item slot.
+16 SLOT_MISC1 is the second quick item slot.
+17 SLOT_MISC2 is the third quick item slot.
+34 SLOT_MISC19 is the conjured weapon slot.
+
+If bit 20 of an item's header flags (the flags that include stuff like Add Strength Bonus) is set, the function will not modify
+ the charges of that ability of the item.
+--]]
+function EXCHARGE(effectData, creatureData)
+	local targetID = EEex_ReadDword(creatureData + 0x34)
+	local parameter1 = EEex_ReadDword(effectData + 0x18)
+	local parameter2 = EEex_ReadDword(effectData + 0x1C)
+	local savingthrow = EEex_ReadDword(effectData + 0x3C)
+	local doNotModifyQuantity = (bit32.band(savingthrow, 0x10000) > 0)
+	local doNotModifyCharges = (bit32.band(savingthrow, 0x20000) > 0)
+	local goOverMaximum = (bit32.band(savingthrow, 0x40000) > 0)
+	local special = EEex_ReadDword(effectData + 0x44)
+	local invItemData = EEex_ReadDword(creatureData + 0xA80 + special * 4)
+	if invItemData > 0 then
+		local charges1 = EEex_ReadWord(invItemData + 0x14, 0x0)
+		local charges2 = EEex_ReadWord(invItemData + 0x16, 0x0)
+		local charges3 = EEex_ReadWord(invItemData + 0x18, 0x0)
+		local itemData = EEex_DemandResData(EEex_ReadLString(invItemData + 0x8, 8), "ITM")
+		if itemData > 0 then
+			local maxQuantity = EEex_ReadWord(itemData + 0x38, 0x0)
+			local numAbilities = EEex_ReadWord(itemData + 0x68, 0x0)
+			if numAbilities >= 1 then
+				local maxCharges1 = EEex_ReadWord(itemData + 0x94, 0x0)
+				if maxCharges1 > 0 and bit32.band(EEex_ReadDword(itemData + 0x98), 0x100000) == 0 and ((maxQuantity > 1 and doNotModifyQuantity == false) or (maxQuantity <= 1 and doNotModifyCharges == false)) then
+					if parameter2 == 0 then
+						charges1 = charges1 + parameter1
+					elseif parameter2 == 1 then
+						charges1 = parameter1
+					elseif parameter2 == 2 then
+						charges1 = math.floor(charges1 * parameter1 / 100)
+					end
+					if charges1 <= 0 then
+						charges1 = 1
+					elseif goOverMaximum == false then
+						if maxQuantity > 1 and charges1 > maxQuantity then
+							charges1 = maxQuantity
+						elseif maxQuantity <= 1 and charges1 > maxCharges1 then
+							charges1 = maxCharges1
+						end
+					elseif charges1 > 32767 then
+						charges1 = 32767
+					end
+					EEex_WriteWord(invItemData + 0x14, charges1)
+				end
+			end
+			if numAbilities >= 2 then
+				local maxCharges2 = EEex_ReadWord(itemData + 0xCC, 0x0)
+				if maxCharges2 > 0 and bit32.band(EEex_ReadDword(itemData + 0xD0), 0x100000) == 0 and ((maxQuantity > 1 and doNotModifyQuantity == false) or (maxQuantity <= 1 and doNotModifyCharges == false)) then
+					if parameter2 == 0 then
+						charges2 = charges2 + parameter1
+					elseif parameter2 == 1 then
+						charges2 = parameter1
+					elseif parameter2 == 2 then
+						charges2 = math.floor(charges2 * parameter1 / 100)
+					end
+					if charges2 <= 0 then
+						charges2 = 1
+					elseif goOverMaximum == false then
+						if maxQuantity > 1 and charges2 > maxQuantity then
+							charges2 = maxQuantity
+						elseif maxQuantity <= 1 and charges2 > maxCharges2 then
+							charges2 = maxCharges2
+						end
+					elseif charges2 > 32767 then
+						charges2 = 32767
+					end
+					EEex_WriteWord(invItemData + 0x14, charges2)
+				end
+			end
+			if numAbilities >= 3 then
+				local maxCharges3 = EEex_ReadWord(itemData + 0x104, 0x0)
+				if maxCharges3 > 0 and bit32.band(EEex_ReadDword(itemData + 0x108), 0x100000) == 0 and ((maxQuantity > 1 and doNotModifyQuantity == false) or (maxQuantity <= 1 and doNotModifyCharges == false)) then
+					if parameter2 == 0 then
+						charges3 = charges3 + parameter1
+					elseif parameter2 == 1 then
+						charges3 = parameter1
+					elseif parameter2 == 2 then
+						charges3 = math.floor(charges3 * parameter1 / 100)
+					end
+					if charges3 <= 0 then
+						charges3 = 1
+					elseif goOverMaximum == false then
+						if maxQuantity > 1 and charges3 > maxQuantity then
+							charges3 = maxQuantity
+						elseif maxQuantity <= 1 and charges3 > maxCharge3 then
+							charges3 = maxCharges3
+						end
+					elseif charges3 > 32767 then
+						charges3 = 32767
+					end
+					EEex_WriteWord(invItemData + 0x14, charges3)
+				end
+			end
+		end
+	end
+end
+
 --[[
 To use the EXDAMAGE function, create an opcode 402 effect in an item or spell, set the resource to EXDAMAGE (all capitals),
  set the timing to instant, limited and the duration to 0, and choose parameters.
@@ -5829,6 +6037,55 @@ function EXSPLDEF(originatingEffectData, effectData, creatureData)
 	previous_spells_turned["" .. targetID][spellRES] = time_applied
 	return false
 end
+
+-----------------------------------------------------------------
+--  Functions you can use with opcode 408 (Projectile Mutator) --
+-----------------------------------------------------------------
+--[[
+To use the EXMODAOE function, create an opcode 408 effect in a spell or item, set the resource to EXMODAOE (all capitals), and choose parameters.
+
+The EXMODAOE function increases the area of effect of your spells.
+
+parameter1 - The area of effect is increased by parameter1 percent (e.g. if parameter1 is 100, the area of effect
+ will be doubled).
+
+special - Determines the number of spells that will be affected (e.g. if special is 1, only the next spell you cast
+ will have its AoE modified; spells after that won't). If set to -1, there is no limit.
+--]]
+EXMODAOE = {
+    ["typeMutator"] = function(source, originatingEffectData, creatureData, projectileType)
+
+    end,
+    ["projectileMutator"] = function(source, originatingEffectData, creatureData, projectileData)
+    	local parameter1 = EEex_ReadDword(originatingEffectData + 0x18)
+    	local special = EEex_ReadDword(originatingEffectData + 0x44)
+    	if special ~= 0 and EEex_IsProjectileOfType(projectileData, EEex_ProjectileType.CProjectileArea) then
+			local trapSize = EEex_ReadWord(projectileData + 0x2A6, 0x0)
+			trapSize = trapSize + math.floor(trapSize * parameter1 / 100)
+			if trapSize < 0 then
+				trapSize = 0
+			elseif trapSize > 32767 then
+				trapSize = 32767
+			end
+			EEex_WriteWord(projectileData + 0x2A6, trapSize)
+			local explosionSize = EEex_ReadWord(projectileData + 0x2A4, 0x0)
+			explosionSize = explosionSize + math.floor(explosionSize * parameter1 / 100)
+			if explosionSize < 0 then
+				explosionSize = 0
+			elseif explosionSize > 32767 then
+				explosionSize = 32767
+			end
+			EEex_WriteWord(projectileData + 0x2A4, explosionSize)
+			if special > 0 and source ~= EEex_ProjectileHookSource.UPDATE_AOE then
+				special = special - 1
+				EEex_WriteDword(originatingEffectData + 0x44, special)
+			end
+		end
+	end,
+    ["effectMutator"] = function(source, originatingEffectData, creatureData, projectileData, effectData)
+
+    end,
+}
 
 -------------
 -- Startup --
