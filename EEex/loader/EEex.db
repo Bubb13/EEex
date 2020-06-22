@@ -276,6 +276,11 @@ PatAdj=1
 PatBytes=83C40885C0740FFF750C8BC8FF7508
 PatAdj=48
 
+[CBaldurChitin::m_pObjectCursor]
+PatBytes=5E5DC204000FB6866025000083C0F43DF30000007749
+PatAdj=-15
+Type=1
+
 [CBaldurChitin::m_pObjectGame]
 PatBytes=8B4E088B36518B88
 PatAdj=8
@@ -512,8 +517,21 @@ PatAdj=12
 
 
 ;---------------------------
+; CGameContainer
+;---------------------------
+
+[CGameContainer::AddEffect()_InvokeLuaHook]
+PatBytes=750A538BCF
+PatAdj=12
+
+
+;---------------------------
 ; CGameDoor
 ;---------------------------
+
+[CGameDoor::AddEffect()_InvokeLuaHook]
+PatBytes=3D110100007552837F1400
+PatAdj=0
 
 [CGameDoor::RemoveFromArea()_DeleteCall]
 PatBytes=84C075088B068BCE6A01FF105EC3
@@ -833,6 +851,31 @@ PatAdj=-25
 
 
 ;---------------------------
+; CGameTrigger
+;---------------------------
+
+[CGameTrigger::AddEffect()_InvokeLuaHook]
+PatBytes=8D85F4FEFFFFC1EA03505689560E
+PatAdj=920
+
+[CGameTrigger::IsOver()_TrapHook]
+PatBytes=80B86025000024
+PatAdj=0
+
+[CGameTrigger::OnActionButton()_TrapHook]
+PatBytes=3DF30000007785
+PatAdj=0
+
+[CGameTrigger::Render()_TrapHook]
+PatBytes=80BA6025000024
+PatAdj=0
+
+[CGameTrigger::SetCursor()_TrapHook]
+PatBytes=83C0F43DF30000007749
+PatAdj=0
+
+
+;---------------------------
 ; CInfButtonArray
 ;---------------------------
 
@@ -890,6 +933,15 @@ PatAdj=0
 
 
 ;---------------------------
+; CInfCursor
+;---------------------------
+
+[CInfCursor::SetCursor]
+PatBytes=5356578BB080010000
+PatAdj=-8
+
+
+;---------------------------
 ; CInfGame
 ;---------------------------
 
@@ -944,6 +996,10 @@ PatAdj=-13
 [CInfGame::UseMagicOnGround()_Opcode214FixHook]
 PatBytes=8D8504FEFFFF5068C0000000
 PatAdj=48
+
+[CInfGame::UseMagicOnObject]
+PatBytes=33C58945FC568BF18D4D84
+PatAdj=-14
 
 [CInfGame::UseMagicOnObject()_ItemTypeJump]
 PatBytes=0FBF87943500008D8DBCFEFFFF

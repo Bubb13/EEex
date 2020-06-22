@@ -6818,6 +6818,7 @@ EXMODAOE = {
 		Infinity_DoFile("EEex_Tip") -- isTooltipDisabled Hook
 		Infinity_DoFile("EEex_Ren") -- Render Hook
 		Infinity_DoFile("EEex_Opc") -- New Opcodes / Opcode Changes
+		Infinity_DoFile("EEex_Tra") -- Trap + Container + Door targeting/opcode expansion
 		Infinity_DoFile("EEex_Pro") -- Projectile Hooks
 		Infinity_DoFile("EEex_Fix") -- Engine Related Bug Fixes
 		Infinity_DoFile("EEex_Spl")
