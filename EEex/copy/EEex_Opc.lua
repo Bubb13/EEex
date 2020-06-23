@@ -512,7 +512,7 @@ function EEex_InstallOpcodeChanges()
 		!push_eax
 		!lea_eax_[ebp+byte] FC
 		!push_eax
-		!call >CResRef::operator_equ
+		!call >CResRef::operator_equ(CString)
 		!lea_ecx_[ebp+byte] F4
 		!call >CString::~CString
 		!lea_ecx_[ebp+byte] F8
@@ -926,57 +926,67 @@ function EEex_InstallOpcodeChanges()
 	-- New Opcode #402 (InvokeLua) --
 	---------------------------------
 
+	-- push effect
+	-- push object
+	EEex_WriteAssemblyAuto({[[
+
+		$EEex_InvokeLua
+
+		!build_stack_frame
+		!sub_esp_byte 0C
+		!push_all_registers
+
+		!mov_edi_[ebp+byte] 0C
+
+		; Copy resref field into null-terminated stack space ;
+		!mov_eax_[edi+byte] 2C
+		!mov_[ebp+byte]_eax F4
+		!mov_eax_[edi+byte] 30
+		!mov_[ebp+byte]_eax F8
+		!mov_byte:[ebp+byte]_byte FC 0
+
+		!lea_eax_[ebp+byte] F4
+		!push_eax
+		!push_[dword] *_g_lua
+		!call >_lua_getglobal
+		!add_esp_byte 08
+
+		!push_edi
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_[ebp+byte] 08
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[dword] *_g_lua
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 00
+		!push_byte 02
+		!push_[dword] *_g_lua
+		!call >_lua_pcallk
+		!add_esp_byte 18
+
+		!restore_stack_frame_all
+		!ret_word 08 00
+
+	]]})
+
 	local EEex_InvokeLua = EEex_WriteOpcode({
-
 		["ApplyEffect"] = {[[
-
-			!build_stack_frame
-			!sub_esp_byte 0C
-			!push_registers
-
-			!mov_esi_ecx
-
-			; Copy resref field into null-terminated stack space ;
-			!mov_eax_[esi+byte] 2C
-			!mov_[ebp+byte]_eax F4
-			!mov_eax_[esi+byte] 30
-			!mov_[ebp+byte]_eax F8
-			!mov_byte:[ebp+byte]_byte FC 0
-
-			!lea_eax_[ebp+byte] F4
-			!push_eax
-			!push_[dword] *_g_lua
-			!call >_lua_getglobal
-			!add_esp_byte 08
-
 			!push_esi
-			!fild_[esp]
-			!sub_esp_byte 04
-			!fstp_qword:[esp]
-			!push_[dword] *_g_lua
-			!call >_lua_pushnumber
-			!add_esp_byte 0C
-
-			!push_[ebp+byte] 08
-			!fild_[esp]
-			!sub_esp_byte 04
-			!fstp_qword:[esp]
-			!push_[dword] *_g_lua
-			!call >_lua_pushnumber
-			!add_esp_byte 0C
-
-			!push_byte 00
-			!push_byte 00
-			!push_byte 00
-			!push_byte 00
-			!push_byte 02
-			!push_[dword] *_g_lua
-			!call >_lua_pcallk
-			!add_esp_byte 18
-
-			@ret
+			!push_[esp+byte] 08
+			!call >EEex_InvokeLua
 			!mov_eax #1
-			!restore_stack_frame
 			!ret_word 04 00
 		]]},
 	})
