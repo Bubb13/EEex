@@ -3324,6 +3324,13 @@ function EEex_GetGameTick()
 	return m_gameTime
 end
 
+function EEex_AddMessage(CMessage, bForcePassThrough)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
+	local m_cMessageHandler = g_pBaldurChitin + EEex_Label("CBaldurChitin::m_cMessageHandler")
+	-- bForcePassThrough, message
+	EEex_Call(EEex_Label("CMessageHandler::AddMessage"), {bForcePassThrough and 1 or 0, CMessage}, m_cMessageHandler, 0x0)
+end
+
 -- Attaches a LOCALS storage opcode for the given variable.
 function EEex_ForceLocalVariableMarshal(actorID, variableName)
 
@@ -3503,6 +3510,175 @@ end
 ---------------------
 --  Actor Details  --
 ---------------------
+
+function EEex_IsTrapFlaggedNondetectable(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return bit32.band(EEex_ReadDword(share + 0x428), 0x8) == 0
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return bit32.band(EEex_ReadDword(share + 0x43C), 0x8) == 0
+	end
+	return false
+end
+
+function EEex_IsTrapActive(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D4, 0) == 1
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x478, 0) == 1
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x690, 0) == 1
+	end
+	return false
+end
+
+function EEex_IsTrapDetected(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D6, 0) == 1
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x47A, 0) == 1
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x692, 0) == 1
+	end
+	return false
+end
+
+function EEex_GetTrapDetectDifficulty(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D0, 0)
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x474, 0)
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x68C, 0)
+	end
+	return -1
+end
+
+function EEex_GetTrapDisarmDifficulty(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D2, 0)
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x476, 0)
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x68E, 0)
+	end
+	return -1
+end
+
+function EEex_DisarmTrap(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	local sendCMessageSetForceActionPick = function()
+
+		local CMessageSetForceActionPick = EEex_Malloc(0x10)
+		EEex_WriteDword(CMessageSetForceActionPick, EEex_Label("CMessageSetForceActionPick_VFTable")) -- vfptr
+		EEex_WriteDword(CMessageSetForceActionPick + 0x4, objectID) -- m_targetId
+		EEex_WriteDword(CMessageSetForceActionPick + 0x8, -1) -- m_sourceId
+
+		-- Not sure why the following is called "m_bOpenDoor", it actually passes 
+		-- its value along to the target CGameAIBase's "m_forceActionPick"
+		EEex_WriteByte(CMessageSetForceActionPick + 0xC, 1) -- m_bOpenDoor
+
+		EEex_AddMessage(CMessageSetForceActionPick)
+	end
+
+	local sendCMessageSetTrigger = function()
+		local CAITrigger = EEex_Malloc(0x30)
+		EEex_Call(EEex_Label("CAITrigger::CAITrigger"), {0, 0x56}, CAITrigger, 0x0) -- CAITrigger::DISARMED
+		local CMessageSetTrigger = EEex_Malloc(0x3C)
+		EEex_Call(EEex_Label("CMessageSetTrigger::CMessageSetTrigger"), {objectID, -1, CAITrigger}, CMessageSetTrigger, 0x0)
+		EEex_AddMessage(CMessageSetTrigger)
+	end
+
+	-- CGameDoor
+	if m_objectType == 0x21 then
+
+		sendCMessageSetForceActionPick()
+
+		local m_trapActivated = EEex_ReadWord(share + 0x4D4, 0) == 1
+		if not m_trapActivated then return end
+
+		sendCMessageSetTrigger()
+
+		EEex_WriteWord(share + 0x4D4, 0) -- m_trapActivated
+		EEex_Call(EEex_Label("CGameDoor::SetDrawPoly"), {0}, share, 0x0)
+
+		local CMessageDoorStatus = EEex_Malloc(0x18)
+		EEex_Call(EEex_Label("CMessageDoorStatus::CMessageDoorStatus"), {objectID, -1, share}, CMessageDoorStatus, 0x0)
+		EEex_AddMessage(CMessageDoorStatus)
+
+	-- CGameTrigger
+	elseif m_objectType == 0x41 then
+
+		sendCMessageSetForceActionPick()
+
+		local m_trapActivated = EEex_ReadWord(share + 0x478, 0) == 1
+		if not m_trapActivated then return end
+
+		local m_dwFlags = EEex_ReadDword(share + 0x43C)
+		if bit32.band(m_dwFlags, 0x900) ~= 0x0 then return end
+
+		sendCMessageSetTrigger()
+
+		EEex_WriteWord(share + 0x478, 0) -- m_trapActivated
+		EEex_Call(EEex_Label("CGameTrigger::SetDrawPoly"), {0}, share, 0x0)
+
+		local CMessageTriggerStatus = EEex_Malloc(0x14)
+		EEex_WriteDword(CMessageTriggerStatus, EEex_Label("CMessageTriggerStatus_VFTable")) -- vfptr
+		EEex_WriteDword(CMessageTriggerStatus + 0x4, objectID) -- m_targetId
+		EEex_WriteDword(CMessageTriggerStatus + 0x8, -1) -- m_sourceId
+		EEex_WriteDword(CMessageTriggerStatus + 0xC, EEex_ReadDword(share + 0x43C)) -- m_dwFlags
+		EEex_WriteWord(CMessageTriggerStatus + 0x10, EEex_ReadWord(share + 0x47A, 0)) -- m_trapDetected
+		EEex_WriteWord(CMessageTriggerStatus + 0x12, EEex_ReadWord(share + 0x478, 0)) -- m_trapActivated
+		EEex_AddMessage(CMessageTriggerStatus)
+
+	-- CGameContainer
+	elseif m_objectType == 0x11 then
+
+		sendCMessageSetForceActionPick()
+
+		local m_trapActivated = EEex_ReadWord(share + 0x690, 0) == 1
+		if not m_trapActivated then return end
+
+		sendCMessageSetTrigger()
+
+		EEex_Call(EEex_Label("CGameContainer::SetDrawPoly"), {0}, share, 0x0)
+		EEex_WriteWord(share + 0x690, 0) -- m_trapActivated
+		EEex_WriteWord(share + 0x692, 0) -- m_trapDetected
+
+		local CMessageContainerStatus = EEex_Malloc(0x14)
+		EEex_WriteDword(CMessageContainerStatus, EEex_Label("CMessageContainerStatus_VFTable")) -- vfptr
+		EEex_WriteDword(CMessageContainerStatus + 0x4, objectID) -- m_targetId
+		EEex_WriteDword(CMessageContainerStatus + 0x8, -1) -- m_sourceId
+		EEex_WriteDword(CMessageContainerStatus + 0xC, EEex_ReadDword(share + 0x688)) -- m_dwFlags
+		EEex_WriteWord(CMessageContainerStatus + 0x10, EEex_ReadWord(share + 0x692, 0)) -- m_trapDetected
+		EEex_WriteWord(CMessageContainerStatus + 0x12, EEex_ReadWord(share + 0x690, 0)) -- m_trapActivated
+		EEex_AddMessage(CMessageContainerStatus) 
+
+	end
+
+end
 
 -- Sets the given script for actorID; scriptLevel corresponds to SCRLEV.IDS
 function EEex_SetActorScript(actorID, resref, scriptLevel)
