@@ -157,6 +157,26 @@ C:Eval('AddSpecialAbility(\"EXLINEFR\")',0)
 
 (This will let the character in the 1st portrait slot learn this spell as a 2nd-level wizard spell.)~
 
+	COPY_EXISTING ~exmodpid.itm~ ~override~
+		SAY NAME2 ~New Gesen Bow~
+		SAY IDENTIFIED_DESC ~This version of the Gesen Bow is an example of how you can use the EXMODPID function. Create it with:
+
+C:CreateItem('EXMODPID')
+
+This Gesen Bow does require ammunition, but regardless of what arrows you use, it will always fire lightning bolt projectiles.
+
+STATISTICS:
+
+THAC0: +4
+Damage: +2, +1d8 electricity
+Speed Factor: 4
+Proficiency Type: Shortbow
+Type: One-handed
+Requires:
+ 3 Strength
+
+Weight: 2~
+
 	COPY_EXISTING ~exsta612.itm~ ~override~
 		SAY NAME2 ~Amulet of Not Waking Sleepers~
 		SAY IDENTIFIED_DESC ~This amulet is an example of the use of stat 612. Create it with:

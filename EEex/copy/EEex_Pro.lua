@@ -36,6 +36,16 @@ EEex_ProjectileHookSource = {
 	["FORCE_SPELL"] = 2,
 	["FORCE_SPELL_POINT"] = 3,
 	["UPDATE_AOE"] = 4,
+	["FORCE_SPELL_OPCODE"] = 5,
+	["FORCE_SPELL_POINT_OPCODE"] = 6,
+	["MAGIC_MISSILE_PROJECTILE"] = 7,
+	["EXPLOSION_PROJECTILE"] = 8,
+	["SECONDARY_PROJECTILE"] = 9,
+	["SPIRITUAL_WRATH_RAY"] = 10,
+	["RANGED_ATTACK_START"] = 11,
+	["RANGED_ATTACK"] = 12,
+	["USE_ITEM"] = 13,
+	["USE_ITEM_POINT"] = 14,
 }
 
 EEex_DecodeProjectileSources = {
@@ -44,6 +54,16 @@ EEex_DecodeProjectileSources = {
 	[EEex_Label("CGameAIBase::ForceSpell()_DecodeProjectile")      + 0x5] = EEex_ProjectileHookSource.FORCE_SPELL,
 	[EEex_Label("CGameAIBase::ForceSpellPoint()_DecodeProjectile") + 0x5] = EEex_ProjectileHookSource.FORCE_SPELL_POINT,
 	[EEex_Label("CGameSprite::UpdateAOE()_DecodeProjectile")       + 0x5] = EEex_ProjectileHookSource.UPDATE_AOE,
+	[5443518]                                                             = EEex_ProjectileHookSource.FORCE_SPELL_OPCODE,
+	[5446459]                                                             = EEex_ProjectileHookSource.FORCE_SPELL_POINT_OPCODE,
+	[6093776]                                                             = EEex_ProjectileHookSource.MAGIC_MISSILE_PROJECTILE,
+	[6109948]                                                             = EEex_ProjectileHookSource.EXPLOSION_PROJECTILE,
+	[6120658]                                                             = EEex_ProjectileHookSource.SECONDARY_PROJECTILE,
+	[6135853]                                                             = EEex_ProjectileHookSource.SPIRITUAL_WRATH_RAY,
+	[7518846]                                                             = EEex_ProjectileHookSource.RANGED_ATTACK_START,
+	[7520734]                                                             = EEex_ProjectileHookSource.RANGED_ATTACK,
+	[7529923]                                                             = EEex_ProjectileHookSource.USE_ITEM,
+	[7532527]                                                             = EEex_ProjectileHookSource.USE_ITEM_POINT,
 }
 
 EEex_AddEffectToProjectileSources = {
