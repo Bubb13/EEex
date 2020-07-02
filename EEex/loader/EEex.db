@@ -1861,6 +1861,10 @@ PatAdj=17
 PatBytes=8B8520FBFFFF894124
 PatAdj=40
 
+[_ReportCrash()_LuaTracebackHook]
+PatBytes=8D8564FDFFFF6A0050
+PatAdj=9
+
 [__ftol2_sse]
 PatBytes=742D558BEC83EC0883E4F8DD1C24F20F2C0424C9C3
 PatAdj=-7

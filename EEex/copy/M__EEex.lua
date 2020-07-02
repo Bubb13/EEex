@@ -7000,6 +7000,7 @@ EXMODAOE = {
 		Infinity_DoFile("EEex_Spl")
 		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things
 		Infinity_DoFile("EEex_Msc")
+		Infinity_DoFile("EEex_Cra")
 
 		--------------
 		--  Modules --
