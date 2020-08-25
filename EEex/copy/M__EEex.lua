@@ -342,6 +342,10 @@ function EEex_GetDistance(x1, y1, x2, y2)
 	return math.floor((((x1 - x2) ^ 2) + ((y1 - y2) ^ 2)) ^ .5) 
 end
 
+function EEex_GetDistanceIsometric(x1, y1, x2, y2)
+	return math.floor(((x1 - x2) ^ 2 + (4/3 * (y1 - y2)) ^ 2) ^ .5)
+end
+
 -- Rounds the given number upwards to the nearest multiple.
 function EEex_RoundUp(numToRound, multiple)
 	if multiple == 0 then
@@ -2139,7 +2143,7 @@ function EEex_IterateActorIDs(m_gameArea, func)
 		local share = EEex_GetActorShare(areaListID)
 		local objectType = EEex_ReadByte(share + 0x4, 0)
 		if objectType == 0x31 then
-			func(areaListID)
+			if func(areaListID) then break end
 		end
 		areaList = EEex_ReadDword(areaList)
 	end
@@ -2163,6 +2167,12 @@ function EEex_GetActorIDArea(actorID)
 		table.insert(ids, areaActorID)
 	end)
 	return ids
+end
+
+function EEex_IterateActorIDArea(actorID, func)
+	local actorShare = EEex_GetActorShare(actorID)
+	local m_pArea = EEex_ReadDword(actorShare + 0x14)
+	EEex_IterateActorIDs(m_pArea, func)
 end
 
 function EEex_GetActorIDPortrait(slot)
@@ -2196,6 +2206,48 @@ end
 -----------------------
 --  Script Compiler  --
 -----------------------
+
+EEex_CompiledCAIConditions = {}
+EEex_CompiledAIResponses = {}
+EEex_CompiledCAIObjectTypes = {}
+
+function EEex_GetUniqueCallerID(levelMod)
+	local info = debug.getinfo(2 + (levelMod or 0), "Sl")
+	local onceID = info.source.."_"..info.currentline
+	return onceID
+end
+
+function EEex_Trigger(actorID, triggersString)
+	local CAICondition = EEex_CompiledCAIConditions[triggersString]
+	if not CAICondition then
+		-- TODO: Free CAIScriptFile sometime later?
+		local CAIScriptFile = EEex_ParseTriggersString(triggersString)
+		CAICondition = EEex_ReadDword(CAIScriptFile + 0x10)
+		EEex_CompiledCAIConditions[triggersString] = CAICondition
+	end
+	local share = EEex_GetActorShare(actorID)
+	return EEex_Call(EEex_Label("CAICondition::Hold"), {share, share + 0x2A4}, CAICondition, 0x0) == 1
+end
+
+function EEex_Action(actorID, actionString)
+	local CAIResponse = EEex_CompiledAIResponses[actionString]
+	if not CAIResponse then
+		-- TODO: Free CAIScriptFile sometime later?
+		local CAIScriptFile = EEex_ParseActionsString(actionString)
+		CAIResponse = EEex_ReadDword(CAIScriptFile + 0x14)
+		EEex_CompiledAIResponses[actionString] = CAIResponse
+	end
+	EEex_Call(EEex_Label("CGameAIBase::InsertResponse"), {1, 0, CAIResponse}, EEex_GetActorShare(actorID), 0x0)
+end
+
+function EEex_Object(actorID, objectString)
+	local CAIObjectType = EEex_CompiledCAIObjectTypes[objectString]
+	if not CAIObjectType then
+		CAIObjectType = EEex_ParseObjectString(objectString)
+		EEex_CompiledCAIObjectTypes[objectString] = CAIObjectType
+	end
+	return EEex_EvalObjectAsActor(CAIObjectType, actorID)
+end
 
 function EEex_FetchBCS(resref)
 	local CAIScript = EEex_Malloc(0x24, 58)
@@ -4866,6 +4918,135 @@ function EEex_UnmemorizeInnateSpell(actorID, index)
 	local edi = actorDataAddress + 0x8A0
 	EEex_WriteDword(edi, EEex_ReadDword(edi) - 1)
 	::_0::
+end
+
+-----------------------------
+-- Actor scripting wrapper --
+-----------------------------
+
+EEex_ActorWrapper = {}
+EEex_ActorWrapper.__index = EEex_ActorWrapper
+
+function EEex_WrapActor(actorID)
+	return EEex_ActorWrapper:new(actorID)
+end
+
+for _, pair in ipairs({
+	{ EEex_Action,                            "action"                            },
+	{ EEex_AlterActorEffect,                  "alterEffect"                       },
+	{ EEex_ApplyEffectToActor,                "applyEffect"                       },
+	{ EEex_DisarmTrap,                        "disarmTrap"                        },
+	{ EEex_GetActorAlignment,                 "getAlignment"                      },
+	{ EEex_GetActorAllegiance,                "getAllegiance"                     },
+	{ EEex_GetActorAnimation,                 "getAnimation"                      },
+	{ EEex_GetActorAreaRes,                   "getAreaResref"                     },
+	{ EEex_GetActorAreaSize,                  "getAreaSize"                       },
+	{ EEex_GetActorBaseCharisma,              "getBaseCharisma"                   },
+	{ EEex_GetActorBaseConstitution,          "getBaseConsitution"                },
+	{ EEex_GetActorBaseDexterity,             "getBaseDexterity"                  },
+	{ EEex_GetActorBaseIntelligence,          "getBaseIntelligence"               },
+	{ EEex_GetActorBaseStrength,              "getBaseStrength"                   },
+	{ EEex_GetActorBaseWisdom,                "getBaseWisdom"                     },
+	{ EEex_GetActorCasterLevel,               "getCasterLevel"                    },
+	{ EEex_GetActorCastTimer,                 "getCastTimer"                      },
+	{ EEex_GetActorClass,                     "getClass"                          },
+	{ EEex_GetActorClassScript,               "getClassScript"                    },
+	{ EEex_GetActorCurrentAction,             "getCurrentAction"                  },
+	{ EEex_GetActorCurrentDest,               "getCurrentDest"                    },
+	{ EEex_GetActorCurrentHP,                 "getCurrentHP"                      },
+	{ EEex_GetActorDefaultScript,             "getDefaultScript"                  },
+	{ EEex_GetActorDialogue,                  "getDialogue"                       },
+	{ EEex_GetActorDirection,                 "getDirection"                      },
+	{ EEex_GetActorEffectResrefs,             "getEffectResrefs"                  },
+	{ EEex_GetActorGender,                    "getGender"                         },
+	{ EEex_GetActorGeneral,                   "getGeneral"                        },
+	{ EEex_GetActorGeneralScript,             "getGeneralScript"                  },
+	{ EEex_GetActorItemCharges,               "getItemCharges"                    },
+	{ EEex_GetActorItemRes,                   "getItemResref"                     },
+	{ EEex_GetActorKit,                       "getKit"                            },
+	{ EEex_GetActorLocal,                     "getLocal"                          },
+	{ EEex_GetActorLocation,                  "getLocation"                       },
+	{ EEex_GetActorModalState,                "getModalState"                     },
+	{ EEex_GetActorModalTimer,                "getModalTimer"                     },
+	{ EEex_GetActorMovementRate,              "getMovementRate"                   },
+	{ EEex_GetActorName,                      "getName"                           },
+	{ EEex_GetActorOverrideScript,            "getOverrideScript"                 },
+	{ EEex_GetActorPosDest,                   "getPosDest"                        },
+	{ EEex_GetActorRace,                      "getRace"                           },
+	{ EEex_GetActorRaceScript,                "getRaceScript"                     },
+	{ EEex_GetActorRequiredDirection,         "getRequiredDirection"              },
+	{ EEex_GetActorScriptName,                "getScriptName"                     },
+	{ EEex_GetActorSpecific,                  "getSpecific"                       },
+	{ EEex_GetActorSpecificsScript,           "getSpecificsScript"                },
+	{ EEex_GetActorSpellRES,                  "getSpellRES"                       },
+	{ EEex_GetActorSpellState,                "getSpellState"                     },
+	{ EEex_GetActorSpellTimer,                "getSpellTimer"                     },
+	{ EEex_GetActorStat,                      "getStat"                           },
+	{ EEex_GetActorTargetID,                  "getTargetID"                       },
+	{ EEex_GetActorTargetPoint,               "getTargetPoint"                    },
+	{ EEex_GetImageMasterID,                  "getImageMasterID"                  },
+	{ EEex_GetMaximumMemorizableClericSpells, "getMaximumMemorizableClericSpells" },
+	{ EEex_GetMaximumMemorizableInnateSpells, "getMaximumMemorizableInnateSpells" },
+	{ EEex_GetMaximumMemorizableWizardSpells, "getMaximumMemorizableWizardSpells" },
+	{ EEex_GetSummonerID,                     "getSummonerID"                     },
+	{ EEex_GetTrapDetectDifficulty,           "getTrapDetectDifficulty"           },
+	{ EEex_GetTrapDisarmDifficulty,           "getTrapDisarmDifficulty"           },
+	{ EEex_HasState,                          "hasState"                          },
+	{ EEex_IsActorInCombat,                   "isInCombat"                        },
+	{ EEex_IsImmuneToOpcode,                  "isImmuneToOpcode"                  },
+	{ EEex_IsImmuneToSpellLevel,              "isImmuneToSpellLevel"              },
+	{ EEex_IsSprite,                          "isSprite"                          },
+	{ EEex_IsTrapActive,                      "isTrapActive"                      },
+	{ EEex_IsTrapDetected,                    "isTrapDetected"                    },
+	{ EEex_IsTrapFlaggedNondetectable,        "isTrapFlaggedNondetectable"        },
+	{ EEex_IterateActorEffects,               "iterateEffects"                    },
+	{ EEex_IterateActorItems,                 "iterateItems"                      },
+	{ EEex_LearnClericSpell,                  "learnClericSpell"                  },
+	{ EEex_LearnInnateSpell,                  "learnInnateSpell"                  },
+	{ EEex_LearnWizardSpell,                  "learnWizardSpell"                  },
+	{ EEex_MemorizeClericSpell,               "memorizeClericSpell"               },
+	{ EEex_MemorizeInnateSpell,               "memorizeInnateSpell"               },
+	{ EEex_MemorizeWizardSpell,               "memorizeWizardSpell"               },
+	{ EEex_Object,                            "object"                            },
+	{ EEex_SetActorItemCharges,               "setItemCharges"                    },
+	{ EEex_SetActorLocal,                     "setLocal"                          },
+	{ EEex_SetActorScript,                    "setScript"                         },
+	{ EEex_Trigger,                           "trigger"                           },
+	{ EEex_UnlearnClericSpell,                "unlearnClericSpell"                },
+	{ EEex_UnlearnInnateSpell,                "unlearnInnateSpell"                },
+	{ EEex_UnlearnWizardSpell,                "unlearnWizardSpell"                },
+	{ EEex_UnmemorizeClericSpell,             "unmemorizeClericSpell"             },
+	{ EEex_UnmemorizeInnateSpell,             "unmemorizeInnateSpell"             },
+	{ EEex_UnmemorizeWizardSpell,             "unmemorizeWizardSpell"             },
+}) do
+	EEex_ActorWrapper[pair[2]] = function(self, ...)
+		self:checkValid()
+		return pair[1](self.id, ...)
+	end
+end
+
+function EEex_ActorWrapper:checkValid()
+	if self.share == 0x0 then EEex_Error("[EEex_ActorWrapper] Invalid actor!") end
+end
+
+function EEex_ActorWrapper:getID()
+	return self.id
+end
+
+function EEex_ActorWrapper:getData()
+	return EEex_ObjectData[self.id]
+end
+
+function EEex_ActorWrapper:init(actorID)
+	self.id = actorID
+	self.share = EEex_GetActorShare(actorID)
+end
+
+function EEex_ActorWrapper:new(actorID)
+	local o = {}
+	setmetatable(o, self)
+	o:init(actorID)
+	return o
 end
 
 ---------------------------------------------------------
