@@ -433,6 +433,79 @@ function EEex_InstallNewActions()
 
 	}
 
+	EEex_WriteAssemblyFunction("EEex_MatchObjectLua", {[[
+
+		!build_stack_frame
+		!sub_esp_byte 04
+		!push_registers
+
+		; --- chunk --- ;
+		!push_byte 00
+		!push_byte 02
+		!push_[ebp+byte] 08
+		!call >_lua_tolstring
+		!add_esp_byte 0C
+		!push_eax
+
+		; --- nNearest --- ;
+		!push_byte 00
+		!push_byte 03
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		; --- range --- ;
+		!push_byte 00
+		!push_byte 04
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		; --- flags --- ;
+		!push_byte 00
+		!push_byte 05
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+		!push_eax
+
+		; --- actorID --- ;
+		!push_byte 00
+		!push_byte 01
+		!push_[ebp+byte] 08
+		!call >_lua_tonumberx
+		!add_esp_byte 0C
+		!call >__ftol2_sse
+
+		!lea_ecx_[ebp+byte] FC
+		!push_ecx
+		!push_eax
+		!call >CGameObjectArray::GetShare
+		!add_esp_byte 08
+
+		!mov_ecx_[ebp+byte] FC
+		!call >EEex_MatchObject
+
+		; Push result ;
+		!push_eax
+		!fild_[esp]
+		!sub_esp_byte 04
+		!fstp_qword:[esp]
+		!push_[ebp+byte] 08
+		!call >_lua_pushnumber
+		!add_esp_byte 0C
+
+		!mov_eax #1
+		!restore_stack_frame
+		!ret
+
+	]]})
+
 	---------------------------------------
 	-- EEex_SetTarget(S:Name*,O:Target*) --
 	---------------------------------------

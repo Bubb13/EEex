@@ -342,6 +342,10 @@ function EEex_GetDistance(x1, y1, x2, y2)
 	return math.floor((((x1 - x2) ^ 2) + ((y1 - y2) ^ 2)) ^ .5) 
 end
 
+function EEex_GetDistanceIsometric(x1, y1, x2, y2)
+	return math.floor(((x1 - x2) ^ 2 + (4/3 * (y1 - y2)) ^ 2) ^ .5)
+end
+
 -- Rounds the given number upwards to the nearest multiple.
 function EEex_RoundUp(numToRound, multiple)
 	if multiple == 0 then
@@ -2139,7 +2143,7 @@ function EEex_IterateActorIDs(m_gameArea, func)
 		local share = EEex_GetActorShare(areaListID)
 		local objectType = EEex_ReadByte(share + 0x4, 0)
 		if objectType == 0x31 then
-			func(areaListID)
+			if func(areaListID) then break end
 		end
 		areaList = EEex_ReadDword(areaList)
 	end
@@ -2163,6 +2167,12 @@ function EEex_GetActorIDArea(actorID)
 		table.insert(ids, areaActorID)
 	end)
 	return ids
+end
+
+function EEex_IterateActorIDArea(actorID, func)
+	local actorShare = EEex_GetActorShare(actorID)
+	local m_pArea = EEex_ReadDword(actorShare + 0x14)
+	EEex_IterateActorIDs(m_pArea, func)
 end
 
 function EEex_GetActorIDPortrait(slot)
@@ -2196,6 +2206,48 @@ end
 -----------------------
 --  Script Compiler  --
 -----------------------
+
+EEex_CompiledCAIConditions = {}
+EEex_CompiledAIResponses = {}
+EEex_CompiledCAIObjectTypes = {}
+
+function EEex_GetUniqueCallerID(levelMod)
+	local info = debug.getinfo(2 + (levelMod or 0), "Sl")
+	local onceID = info.source.."_"..info.currentline
+	return onceID
+end
+
+function EEex_Trigger(actorID, triggersString)
+	local CAICondition = EEex_CompiledCAIConditions[triggersString]
+	if not CAICondition then
+		-- TODO: Free CAIScriptFile sometime later?
+		local CAIScriptFile = EEex_ParseTriggersString(triggersString)
+		CAICondition = EEex_ReadDword(CAIScriptFile + 0x10)
+		EEex_CompiledCAIConditions[triggersString] = CAICondition
+	end
+	local share = EEex_GetActorShare(actorID)
+	return EEex_Call(EEex_Label("CAICondition::Hold"), {share, share + 0x2A4}, CAICondition, 0x0) == 1
+end
+
+function EEex_Action(actorID, actionString)
+	local CAIResponse = EEex_CompiledAIResponses[actionString]
+	if not CAIResponse then
+		-- TODO: Free CAIScriptFile sometime later?
+		local CAIScriptFile = EEex_ParseActionsString(actionString)
+		CAIResponse = EEex_ReadDword(CAIScriptFile + 0x14)
+		EEex_CompiledAIResponses[actionString] = CAIResponse
+	end
+	EEex_Call(EEex_Label("CGameAIBase::InsertResponse"), {1, 0, CAIResponse}, EEex_GetActorShare(actorID), 0x0)
+end
+
+function EEex_Object(actorID, objectString)
+	local CAIObjectType = EEex_CompiledCAIObjectTypes[objectString]
+	if not CAIObjectType then
+		CAIObjectType = EEex_ParseObjectString(objectString)
+		EEex_CompiledCAIObjectTypes[objectString] = CAIObjectType
+	end
+	return EEex_EvalObjectAsActor(CAIObjectType, actorID)
+end
 
 function EEex_FetchBCS(resref)
 	local CAIScript = EEex_Malloc(0x24, 58)
@@ -3324,6 +3376,13 @@ function EEex_GetGameTick()
 	return m_gameTime
 end
 
+function EEex_AddMessage(CMessage, bForcePassThrough)
+	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin")) -- (CBaldurChitin)
+	local m_cMessageHandler = g_pBaldurChitin + EEex_Label("CBaldurChitin::m_cMessageHandler")
+	-- bForcePassThrough, message
+	EEex_Call(EEex_Label("CMessageHandler::AddMessage"), {bForcePassThrough and 1 or 0, CMessage}, m_cMessageHandler, 0x0)
+end
+
 -- Attaches a LOCALS storage opcode for the given variable.
 function EEex_ForceLocalVariableMarshal(actorID, variableName)
 
@@ -3503,6 +3562,175 @@ end
 ---------------------
 --  Actor Details  --
 ---------------------
+
+function EEex_IsTrapFlaggedNondetectable(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return bit32.band(EEex_ReadDword(share + 0x428), 0x8) == 0
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return bit32.band(EEex_ReadDword(share + 0x43C), 0x8) == 0
+	end
+	return false
+end
+
+function EEex_IsTrapActive(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D4, 0) == 1
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x478, 0) == 1
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x690, 0) == 1
+	end
+	return false
+end
+
+function EEex_IsTrapDetected(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D6, 0) == 1
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x47A, 0) == 1
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x692, 0) == 1
+	end
+	return false
+end
+
+function EEex_GetTrapDetectDifficulty(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D0, 0)
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x474, 0)
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x68C, 0)
+	end
+	return -1
+end
+
+function EEex_GetTrapDisarmDifficulty(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	if m_objectType == 0x21 then -- CGameDoor
+		return EEex_ReadWord(share + 0x4D2, 0)
+	elseif m_objectType == 0x41 then -- CGameTrigger
+		return EEex_ReadWord(share + 0x476, 0)
+	elseif m_objectType == 0x11 then -- CGameContainer
+		return EEex_ReadWord(share + 0x68E, 0)
+	end
+	return -1
+end
+
+function EEex_DisarmTrap(objectID)
+
+	local share = EEex_GetActorShare(objectID)
+	local m_objectType = EEex_ReadByte(share + 0x4, 0)
+
+	local sendCMessageSetForceActionPick = function()
+
+		local CMessageSetForceActionPick = EEex_Malloc(0x10)
+		EEex_WriteDword(CMessageSetForceActionPick, EEex_Label("CMessageSetForceActionPick_VFTable")) -- vfptr
+		EEex_WriteDword(CMessageSetForceActionPick + 0x4, objectID) -- m_targetId
+		EEex_WriteDword(CMessageSetForceActionPick + 0x8, -1) -- m_sourceId
+
+		-- Not sure why the following is called "m_bOpenDoor", it actually passes 
+		-- its value along to the target CGameAIBase's "m_forceActionPick"
+		EEex_WriteByte(CMessageSetForceActionPick + 0xC, 1) -- m_bOpenDoor
+
+		EEex_AddMessage(CMessageSetForceActionPick)
+	end
+
+	local sendCMessageSetTrigger = function()
+		local CAITrigger = EEex_Malloc(0x30)
+		EEex_Call(EEex_Label("CAITrigger::CAITrigger"), {0, 0x56}, CAITrigger, 0x0) -- CAITrigger::DISARMED
+		local CMessageSetTrigger = EEex_Malloc(0x3C)
+		EEex_Call(EEex_Label("CMessageSetTrigger::CMessageSetTrigger"), {objectID, -1, CAITrigger}, CMessageSetTrigger, 0x0)
+		EEex_AddMessage(CMessageSetTrigger)
+	end
+
+	-- CGameDoor
+	if m_objectType == 0x21 then
+
+		sendCMessageSetForceActionPick()
+
+		local m_trapActivated = EEex_ReadWord(share + 0x4D4, 0) == 1
+		if not m_trapActivated then return end
+
+		sendCMessageSetTrigger()
+
+		EEex_WriteWord(share + 0x4D4, 0) -- m_trapActivated
+		EEex_Call(EEex_Label("CGameDoor::SetDrawPoly"), {0}, share, 0x0)
+
+		local CMessageDoorStatus = EEex_Malloc(0x18)
+		EEex_Call(EEex_Label("CMessageDoorStatus::CMessageDoorStatus"), {objectID, -1, share}, CMessageDoorStatus, 0x0)
+		EEex_AddMessage(CMessageDoorStatus)
+
+	-- CGameTrigger
+	elseif m_objectType == 0x41 then
+
+		sendCMessageSetForceActionPick()
+
+		local m_trapActivated = EEex_ReadWord(share + 0x478, 0) == 1
+		if not m_trapActivated then return end
+
+		local m_dwFlags = EEex_ReadDword(share + 0x43C)
+		if bit32.band(m_dwFlags, 0x900) ~= 0x0 then return end
+
+		sendCMessageSetTrigger()
+
+		EEex_WriteWord(share + 0x478, 0) -- m_trapActivated
+		EEex_Call(EEex_Label("CGameTrigger::SetDrawPoly"), {0}, share, 0x0)
+
+		local CMessageTriggerStatus = EEex_Malloc(0x14)
+		EEex_WriteDword(CMessageTriggerStatus, EEex_Label("CMessageTriggerStatus_VFTable")) -- vfptr
+		EEex_WriteDword(CMessageTriggerStatus + 0x4, objectID) -- m_targetId
+		EEex_WriteDword(CMessageTriggerStatus + 0x8, -1) -- m_sourceId
+		EEex_WriteDword(CMessageTriggerStatus + 0xC, EEex_ReadDword(share + 0x43C)) -- m_dwFlags
+		EEex_WriteWord(CMessageTriggerStatus + 0x10, EEex_ReadWord(share + 0x47A, 0)) -- m_trapDetected
+		EEex_WriteWord(CMessageTriggerStatus + 0x12, EEex_ReadWord(share + 0x478, 0)) -- m_trapActivated
+		EEex_AddMessage(CMessageTriggerStatus)
+
+	-- CGameContainer
+	elseif m_objectType == 0x11 then
+
+		sendCMessageSetForceActionPick()
+
+		local m_trapActivated = EEex_ReadWord(share + 0x690, 0) == 1
+		if not m_trapActivated then return end
+
+		sendCMessageSetTrigger()
+
+		EEex_Call(EEex_Label("CGameContainer::SetDrawPoly"), {0}, share, 0x0)
+		EEex_WriteWord(share + 0x690, 0) -- m_trapActivated
+		EEex_WriteWord(share + 0x692, 0) -- m_trapDetected
+
+		local CMessageContainerStatus = EEex_Malloc(0x14)
+		EEex_WriteDword(CMessageContainerStatus, EEex_Label("CMessageContainerStatus_VFTable")) -- vfptr
+		EEex_WriteDword(CMessageContainerStatus + 0x4, objectID) -- m_targetId
+		EEex_WriteDword(CMessageContainerStatus + 0x8, -1) -- m_sourceId
+		EEex_WriteDword(CMessageContainerStatus + 0xC, EEex_ReadDword(share + 0x688)) -- m_dwFlags
+		EEex_WriteWord(CMessageContainerStatus + 0x10, EEex_ReadWord(share + 0x692, 0)) -- m_trapDetected
+		EEex_WriteWord(CMessageContainerStatus + 0x12, EEex_ReadWord(share + 0x690, 0)) -- m_trapActivated
+		EEex_AddMessage(CMessageContainerStatus) 
+
+	end
+
+end
 
 -- Sets the given script for actorID; scriptLevel corresponds to SCRLEV.IDS
 function EEex_SetActorScript(actorID, resref, scriptLevel)
@@ -4690,6 +4918,135 @@ function EEex_UnmemorizeInnateSpell(actorID, index)
 	local edi = actorDataAddress + 0x8A0
 	EEex_WriteDword(edi, EEex_ReadDword(edi) - 1)
 	::_0::
+end
+
+-----------------------------
+-- Actor scripting wrapper --
+-----------------------------
+
+EEex_ActorWrapper = {}
+EEex_ActorWrapper.__index = EEex_ActorWrapper
+
+function EEex_WrapActor(actorID)
+	return EEex_ActorWrapper:new(actorID)
+end
+
+for _, pair in ipairs({
+	{ EEex_Action,                            "action"                            },
+	{ EEex_AlterActorEffect,                  "alterEffect"                       },
+	{ EEex_ApplyEffectToActor,                "applyEffect"                       },
+	{ EEex_DisarmTrap,                        "disarmTrap"                        },
+	{ EEex_GetActorAlignment,                 "getAlignment"                      },
+	{ EEex_GetActorAllegiance,                "getAllegiance"                     },
+	{ EEex_GetActorAnimation,                 "getAnimation"                      },
+	{ EEex_GetActorAreaRes,                   "getAreaResref"                     },
+	{ EEex_GetActorAreaSize,                  "getAreaSize"                       },
+	{ EEex_GetActorBaseCharisma,              "getBaseCharisma"                   },
+	{ EEex_GetActorBaseConstitution,          "getBaseConsitution"                },
+	{ EEex_GetActorBaseDexterity,             "getBaseDexterity"                  },
+	{ EEex_GetActorBaseIntelligence,          "getBaseIntelligence"               },
+	{ EEex_GetActorBaseStrength,              "getBaseStrength"                   },
+	{ EEex_GetActorBaseWisdom,                "getBaseWisdom"                     },
+	{ EEex_GetActorCasterLevel,               "getCasterLevel"                    },
+	{ EEex_GetActorCastTimer,                 "getCastTimer"                      },
+	{ EEex_GetActorClass,                     "getClass"                          },
+	{ EEex_GetActorClassScript,               "getClassScript"                    },
+	{ EEex_GetActorCurrentAction,             "getCurrentAction"                  },
+	{ EEex_GetActorCurrentDest,               "getCurrentDest"                    },
+	{ EEex_GetActorCurrentHP,                 "getCurrentHP"                      },
+	{ EEex_GetActorDefaultScript,             "getDefaultScript"                  },
+	{ EEex_GetActorDialogue,                  "getDialogue"                       },
+	{ EEex_GetActorDirection,                 "getDirection"                      },
+	{ EEex_GetActorEffectResrefs,             "getEffectResrefs"                  },
+	{ EEex_GetActorGender,                    "getGender"                         },
+	{ EEex_GetActorGeneral,                   "getGeneral"                        },
+	{ EEex_GetActorGeneralScript,             "getGeneralScript"                  },
+	{ EEex_GetActorItemCharges,               "getItemCharges"                    },
+	{ EEex_GetActorItemRes,                   "getItemResref"                     },
+	{ EEex_GetActorKit,                       "getKit"                            },
+	{ EEex_GetActorLocal,                     "getLocal"                          },
+	{ EEex_GetActorLocation,                  "getLocation"                       },
+	{ EEex_GetActorModalState,                "getModalState"                     },
+	{ EEex_GetActorModalTimer,                "getModalTimer"                     },
+	{ EEex_GetActorMovementRate,              "getMovementRate"                   },
+	{ EEex_GetActorName,                      "getName"                           },
+	{ EEex_GetActorOverrideScript,            "getOverrideScript"                 },
+	{ EEex_GetActorPosDest,                   "getPosDest"                        },
+	{ EEex_GetActorRace,                      "getRace"                           },
+	{ EEex_GetActorRaceScript,                "getRaceScript"                     },
+	{ EEex_GetActorRequiredDirection,         "getRequiredDirection"              },
+	{ EEex_GetActorScriptName,                "getScriptName"                     },
+	{ EEex_GetActorSpecific,                  "getSpecific"                       },
+	{ EEex_GetActorSpecificsScript,           "getSpecificsScript"                },
+	{ EEex_GetActorSpellRES,                  "getSpellRES"                       },
+	{ EEex_GetActorSpellState,                "getSpellState"                     },
+	{ EEex_GetActorSpellTimer,                "getSpellTimer"                     },
+	{ EEex_GetActorStat,                      "getStat"                           },
+	{ EEex_GetActorTargetID,                  "getTargetID"                       },
+	{ EEex_GetActorTargetPoint,               "getTargetPoint"                    },
+	{ EEex_GetImageMasterID,                  "getImageMasterID"                  },
+	{ EEex_GetMaximumMemorizableClericSpells, "getMaximumMemorizableClericSpells" },
+	{ EEex_GetMaximumMemorizableInnateSpells, "getMaximumMemorizableInnateSpells" },
+	{ EEex_GetMaximumMemorizableWizardSpells, "getMaximumMemorizableWizardSpells" },
+	{ EEex_GetSummonerID,                     "getSummonerID"                     },
+	{ EEex_GetTrapDetectDifficulty,           "getTrapDetectDifficulty"           },
+	{ EEex_GetTrapDisarmDifficulty,           "getTrapDisarmDifficulty"           },
+	{ EEex_HasState,                          "hasState"                          },
+	{ EEex_IsActorInCombat,                   "isInCombat"                        },
+	{ EEex_IsImmuneToOpcode,                  "isImmuneToOpcode"                  },
+	{ EEex_IsImmuneToSpellLevel,              "isImmuneToSpellLevel"              },
+	{ EEex_IsSprite,                          "isSprite"                          },
+	{ EEex_IsTrapActive,                      "isTrapActive"                      },
+	{ EEex_IsTrapDetected,                    "isTrapDetected"                    },
+	{ EEex_IsTrapFlaggedNondetectable,        "isTrapFlaggedNondetectable"        },
+	{ EEex_IterateActorEffects,               "iterateEffects"                    },
+	{ EEex_IterateActorItems,                 "iterateItems"                      },
+	{ EEex_LearnClericSpell,                  "learnClericSpell"                  },
+	{ EEex_LearnInnateSpell,                  "learnInnateSpell"                  },
+	{ EEex_LearnWizardSpell,                  "learnWizardSpell"                  },
+	{ EEex_MemorizeClericSpell,               "memorizeClericSpell"               },
+	{ EEex_MemorizeInnateSpell,               "memorizeInnateSpell"               },
+	{ EEex_MemorizeWizardSpell,               "memorizeWizardSpell"               },
+	{ EEex_Object,                            "object"                            },
+	{ EEex_SetActorItemCharges,               "setItemCharges"                    },
+	{ EEex_SetActorLocal,                     "setLocal"                          },
+	{ EEex_SetActorScript,                    "setScript"                         },
+	{ EEex_Trigger,                           "trigger"                           },
+	{ EEex_UnlearnClericSpell,                "unlearnClericSpell"                },
+	{ EEex_UnlearnInnateSpell,                "unlearnInnateSpell"                },
+	{ EEex_UnlearnWizardSpell,                "unlearnWizardSpell"                },
+	{ EEex_UnmemorizeClericSpell,             "unmemorizeClericSpell"             },
+	{ EEex_UnmemorizeInnateSpell,             "unmemorizeInnateSpell"             },
+	{ EEex_UnmemorizeWizardSpell,             "unmemorizeWizardSpell"             },
+}) do
+	EEex_ActorWrapper[pair[2]] = function(self, ...)
+		self:checkValid()
+		return pair[1](self.id, ...)
+	end
+end
+
+function EEex_ActorWrapper:checkValid()
+	if self.share == 0x0 then EEex_Error("[EEex_ActorWrapper] Invalid actor!") end
+end
+
+function EEex_ActorWrapper:getID()
+	return self.id
+end
+
+function EEex_ActorWrapper:getData()
+	return EEex_ObjectData[self.id]
+end
+
+function EEex_ActorWrapper:init(actorID)
+	self.id = actorID
+	self.share = EEex_GetActorShare(actorID)
+end
+
+function EEex_ActorWrapper:new(actorID)
+	local o = {}
+	setmetatable(o, self)
+	o:init(actorID)
+	return o
 end
 
 ---------------------------------------------------------
@@ -6855,6 +7212,7 @@ EXMODPID = {
 		Infinity_DoFile("EEex_Spl")
 		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things
 		Infinity_DoFile("EEex_Msc")
+		Infinity_DoFile("EEex_Cra")
 
 		--------------
 		--  Modules --

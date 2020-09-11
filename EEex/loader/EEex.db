@@ -276,6 +276,11 @@ PatAdj=1
 PatBytes=83C40885C0740FFF750C8BC8FF7508
 PatAdj=48
 
+[CBaldurChitin::m_cMessageHandler]
+PatBytes=FF7134FF7634518BC8
+PatAdj=29
+Type=1
+
 [CBaldurChitin::m_pObjectCursor]
 PatBytes=5E5DC204000FB6866025000083C0F43DF30000007749
 PatAdj=-15
@@ -524,6 +529,10 @@ PatAdj=12
 PatBytes=750A538BCF
 PatAdj=12
 
+[CGameContainer::SetDrawPoly]
+PatBytes=558BEC568BF157668B7D08663BBECC060000
+PatAdj=0
+
 
 ;---------------------------
 ; CGameDoor
@@ -533,9 +542,21 @@ PatAdj=12
 PatBytes=3D110100007552837F1400
 PatAdj=0
 
+[CGameDoor::IsOver()_TrapHook]
+PatBytes=750D5F33C0
+PatAdj=0
+
 [CGameDoor::RemoveFromArea()_DeleteCall]
 PatBytes=84C075088B068BCE6A01FF105EC3
 PatAdj=-4
+
+[CGameDoor::Render()_TrapHook]
+PatBytes=75BB6683BFEC04000000
+PatAdj=0
+
+[CGameDoor::SetDrawPoly]
+PatBytes=558BEC568BF157668B7D08663BBEEC040000
+PatAdj=0
 
 
 ;---------------------------
@@ -874,6 +895,10 @@ PatAdj=0
 PatBytes=83C0F43DF30000007749
 PatAdj=0
 
+[CGameTrigger::SetDrawPoly]
+PatBytes=558BEC568BF157668B7D08663BBE8C040000
+PatAdj=0
+
 
 ;---------------------------
 ; CInfButtonArray
@@ -1040,11 +1065,29 @@ PatAdj=0
 
 
 ;---------------------------
+; CMessageDoorStatus
+;---------------------------
+
+[CMessageDoorStatus::CMessageDoorStatus]
+PatBytes=558BEC8B450C8B5508894108
+PatAdj=0
+
+
+;---------------------------
 ; CMessageHandler
 ;---------------------------
 
 [CMessageHandler::AddMessage]
 PatBytes=558BEC568B7508578BF98BCE8B06
+PatAdj=0
+
+
+;---------------------------
+; CMessageSetTrigger
+;---------------------------
+
+[CMessageSetTrigger::CMessageSetTrigger]
+PatBytes=558BEC8B450C538BD956576A00
 PatAdj=0
 
 
@@ -1483,6 +1526,21 @@ PatAdj=-11
 PatBytes=2BF18B450C8B008945108B40F889450803C6
 PatAdj=-39
 
+[CMessageContainerStatus_VFTable]
+PatBytes=83C404894598
+PatAdj=50
+Type=1
+
+[CMessageSetForceActionPick_VFTable]
+PatBytes=74298B038BCB8B4004FFD0
+PatAdj=71
+Type=1
+
+[CMessageTriggerStatus_VFTable]
+PatBytes=83C40489459085C07441
+PatAdj=58
+Type=1
+
 [CompareCResByTypeThenName]
 PatBytes=558BEC8B45088B088B450C8B10
 PatAdj=0
@@ -1802,6 +1860,10 @@ PatAdj=17
 [WildSurgeSkipSwirlSend]
 PatBytes=8B8520FBFFFF894124
 PatAdj=40
+
+[_ReportCrash()_LuaTracebackHook]
+PatBytes=8D8564FDFFFF6A0050
+PatAdj=9
 
 [__ftol2_sse]
 PatBytes=742D558BEC83EC0883E4F8DD1C24F20F2C0424C9C3

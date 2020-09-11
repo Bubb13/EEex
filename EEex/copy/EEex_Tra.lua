@@ -86,6 +86,9 @@
 		!call >EEex_InvokeLua
 	]]})
 
+	EEex_WriteAssembly(EEex_Label("CGameDoor::IsOver()_TrapHook"), {"!jmp_byte"})
+	EEex_WriteAssembly(EEex_Label("CGameDoor::Render()_TrapHook"), {"!jmp_byte"})
+
 	EEex_HookAfterRestore(EEex_Label("CGameDoor::AddEffect()_InvokeLuaHook"), 0, 5, {[[
 		!je_dword >return
 		!cmp_eax_dword #192
