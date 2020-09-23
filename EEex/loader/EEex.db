@@ -438,9 +438,17 @@ PatAdj=0
 PatBytes=83BDC4FEFFFF00740AC785C4FEFFFF00000000
 PatAdj=0
 
+[CGameAIBase::FireSpell()_DecodeProjectile]
+PatBytes=83C4088BC8898D64FFFFFF
+PatAdj=-5
+
 [CGameAIBase::FireSpellPoint]
 PatBytes=8945FC8B450853568B75188BD98945F08B450C578945A48B45146A0C895DB88945B08975AC
 PatAdj=-16
+
+[CGameAIBase::FireSpellPoint()_DecodeProjectile]
+PatBytes=83C4088945B885F6
+PatAdj=-5
 
 [CGameAIBase::ForceSpell()_CProjectile::AddEffect()]
 PatBytes=8B8D64FFFFFF834F580257
@@ -833,6 +841,14 @@ PatAdj=-113
 PatBytes=89863034000033C933C0894D84
 PatAdj=-5
 
+[CGameSprite::Swing()_DecodeProjectile]
+PatBytes=83C4088986303400008B8648370000
+PatAdj=-5
+
+[CGameSprite::Swing()_DecodeProjectile_2]
+PatBytes=8B9D54FFFFFF83C408
+PatAdj=-5
+
 [CGameSprite::Unmarshal()_ProcessEffectList_Hook]
 PatBytes=8D831C0400008DB3300B0000508BCE
 PatAdj=47
@@ -859,6 +875,14 @@ PatAdj=-5
 
 [CGameSprite::UpdateAOE()_Opcode214FixHook]
 PatBytes=8B46068D4DF48945E88B460A8945EC
+PatAdj=-5
+
+[CGameSprite::UseItem()_DecodeProjectile]
+PatBytes=89863034000033C933C0894DA8
+PatAdj=-5
+
+[CGameSprite::UseItemPoint()_DecodeProjectile]
+PatBytes=89863034000033C98B45A8
 PatAdj=-5
 
 [CGameSprite::`vftable']
@@ -1153,6 +1177,18 @@ PatBytes=6AFF6A006A006A006A006A006A008D8EB8020000
 PatAdj=-9
 Type=1
 
+[CProjectileArea::CreateSecondary()_DecodeProjectile]
+PatBytes=668B86A802000066400FB7C050
+PatAdj=13
+
+[CProjectileArea::Explode()_DecodeProjectile]
+PatBytes=8BD883C40885DB0F84DB000000
+PatAdj=-5
+
+[CProjectileArea::RayAreaEffect()_DecodeProjectile]
+PatBytes=894DE00FB7C06A0050
+PatAdj=9
+
 
 ;---------------------------
 ; CProjectileBAM
@@ -1242,6 +1278,10 @@ Type=1
 PatBytes=6A0A8D8B9C020000
 PatAdj=10
 Type=1
+
+[CProjectileMulti::CProjectileMulti()_DecodeProjectile]
+PatBytes=83C4088BF885F6
+PatAdj=-5
 
 
 ;---------------------------

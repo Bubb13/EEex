@@ -6414,6 +6414,7 @@ EXMODAOE = {
 
     end,
     ["projectileMutator"] = function(source, originatingEffectData, creatureData, projectileData)
+		if source >= 11 then return end
     	local parameter1 = EEex_ReadDword(originatingEffectData + 0x18)
     	local special = EEex_ReadDword(originatingEffectData + 0x44)
     	if special ~= 0 and EEex_IsProjectileOfType(projectileData, EEex_ProjectileType.CProjectileArea) then
@@ -6438,6 +6439,36 @@ EXMODAOE = {
 				EEex_WriteDword(originatingEffectData + 0x44, special)
 			end
 		end
+	end,
+    ["effectMutator"] = function(source, originatingEffectData, creatureData, projectileData, effectData)
+
+    end,
+}
+
+--[[
+To use the EXMODPID function, create an opcode 408 effect in a spell or item, set the resource to EXMODPID (all capitals), and choose parameters.
+
+The EXMODPID function changes the projectile released by your spells, ranged weapons and/or items.
+
+parameter2 - The ID of the projectile to change it to (from PROJECTL.IDS, as with opcode 83).
+
+savingthrow - This function uses several extra bits on this parameter:
+Bit 16: If set, the function will not change the projectile of your spells.
+Bit 17: If set, the function will not change the projectile of your ranged attacks.
+Bit 18: If set, the function will not change the projectile of your items (e.g. wands).
+Bit 20: If set, the function will change the projectile even the original projectile was "None".
+--]]
+EXMODPID = {
+    ["typeMutator"] = function(source, originatingEffectData, creatureData, projectileType)
+    	local savingthrow = EEex_ReadDword(originatingEffectData + 0x3C)
+    	if projectileType <= 1 and bit32.band(savingthrow, 0x100000) == 0 then return end
+    	if (bit32.band(savingthrow, 0x10000) == 0 and source <= 6) or (bit32.band(savingthrow, 0x20000) == 0 and (source == 11 or source == 12)) or (bit32.band(savingthrow, 0x40000) == 0 and (source == 13 or source == 14)) then
+			local parameter2 = EEex_ReadDword(originatingEffectData + 0x1C) + 1
+			return parameter2
+		end
+    end,
+    ["projectileMutator"] = function(source, originatingEffectData, creatureData, projectileData)
+
 	end,
     ["effectMutator"] = function(source, originatingEffectData, creatureData, projectileData, effectData)
 
