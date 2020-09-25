@@ -1798,6 +1798,10 @@ function EEex_DemandResData(resref, extension)
 	end
 end
 
+function EEex_GetGameData()
+	return EEex_ReadDword(EEex_ReadDword(EEex_Label("g_pBaldurChitin")) + EEex_Label("CBaldurChitin::m_pObjectGame"))
+end
+
 ---------------------
 --  Input Details  --
 ---------------------
@@ -2137,13 +2141,16 @@ function EEex_IterateAreas(func)
 end
 
 function EEex_IterateActorIDs(m_gameArea, func)
+	if m_gameArea <= 0x0 then return end
 	local areaList = EEex_ReadDword(m_gameArea + 0x8E4)
 	while areaList ~= 0x0 do
 		local areaListID = EEex_ReadDword(areaList + 0x8)
 		local share = EEex_GetActorShare(areaListID)
-		local objectType = EEex_ReadByte(share + 0x4, 0)
-		if objectType == 0x31 then
-			if func(areaListID) then break end
+		if share > 0 then
+			local objectType = EEex_ReadByte(share + 0x4, 0)
+			if objectType == 0x31 then
+				func(areaListID)
+			end
 		end
 		areaList = EEex_ReadDword(areaList)
 	end
@@ -2178,6 +2185,15 @@ end
 function EEex_GetActorIDPortrait(slot)
 	return EEex_Call(EEex_Label("CInfGame::GetCharacterId"), {slot},
 		EEex_ReadDword(EEex_ReadDword(EEex_Label("g_pBaldurChitin")) + EEex_Label("CBaldurChitin::m_pObjectGame")), 0x0)
+end
+
+function EEex_GetActorIDCharacter(slot)
+	if slot >= 0 and slot <= 5 then
+		local m_pObjectGame = EEex_GetGameData()
+		return EEex_ReadDword(m_pObjectGame + 0x3DD8 + slot * 0x4)
+	else
+		return 0x0
+	end
 end
 
 function EEex_GetActorIDSelected()
@@ -2633,14 +2649,29 @@ end
 -- will print:
 --  3
 -- because offset 0x34 in the SPL file is the spell's level.
--- Warning: this will crash if the spell is not in the game.
+-- Warning: this will return 0 if the spell is not in the game.
 function EEex_GetSpellData(resref)
-	local CRes = EEex_DemandCRes(resref, "SPL")
-	if CRes ~= 0x0 then
-		return EEex_ReadDword(CRes + 0x40)
-	else
-		return 0x0
+	return EEex_DemandResData(resref, "SPL")
+end
+
+function EEex_GetSpellLevel(resref, checkEffectPower)
+	local spellLevel = 0
+	local spellData = EEex_DemandResData(resref, "SPL")
+	if spellData > 0 then
+		spellLevel = EEex_ReadDword(spellData + 0x34)
+		if checkEffectPower then
+			local effectOffset = EEex_ReadDword(spellData + 0x6A)
+			local numGlobalEffects = EEex_ReadSignedWord(spellData + 0x70, 0x0)
+			local firstHeaderNumEffects = EEex_ReadSignedWord(spellData + 0x90, 0x0)
+			for i = effectOffset + numGlobalEffects * 0x30, effectOffset + (numGlobalEffects + firstHeaderNumEffects - 1) * 0x30, 0x30 do
+				local power = EEex_ReadSignedByte(i + 0x3, 0x0)
+				if power > spellLevel then
+					spellLevel = power
+				end
+			end
+		end
 	end
+	return spellLevel
 end
 
 function EEex_IsSpellValid(resrefLocation)
@@ -3811,7 +3842,7 @@ function EEex_CompareActorAllegiances(actorID1, actorID2)
 	end
 	if ea2 >= 2 and ea2 <= 30 then
 		eaGroup2 = 1
-	elseif ea1 >= 200 then
+	elseif ea2 >= 200 then
 		eaGroup2 = 3
 	end
 	return math.abs(eaGroup1 - eaGroup2)
@@ -5469,6 +5500,11 @@ function EXMODMEM(effectData, creatureData)
 									schools_found[spellSchool] = true
 								end
 								if subtractSpells then
+									for quickspelli = 0, 2, 1 do
+										if resref == EEex_ReadLString(creatureData + 0x2792 + quickspelli * 0x34, 8) then
+											EEex_WriteWord(creatureData + 0x2788 + quickspelli * 0x34, EEex_ReadSignedWord(creatureData + 0x2788 + quickspelli * 0x34, 0x0) - 1)
+										end
+									end
 									EEex_WriteWord(resrefLocation + 0x8, bit32.band(flags, 0xFFFE))
 --[[
 									if printFeedback then
@@ -5484,6 +5520,11 @@ function EXMODMEM(effectData, creatureData)
 									end
 --]]
 								else
+									for quickspelli = 0, 2, 1 do
+										if resref == EEex_ReadLString(creatureData + 0x2792 + quickspelli * 0x34, 8) then
+											EEex_WriteWord(creatureData + 0x2788 + quickspelli * 0x34, EEex_ReadSignedWord(creatureData + 0x2788 + quickspelli * 0x34, 0x0) + 1)
+										end
+									end
 									EEex_WriteWord(resrefLocation + 0x8, bit32.bor(flags, 0x1))
 --[[
 									if printFeedback then
@@ -5536,6 +5577,11 @@ function EXMODMEM(effectData, creatureData)
 									schools_found[spellSchool] = true
 								end
 								if subtractSpells then
+									for quickspelli = 0, 2, 1 do
+										if resref == EEex_ReadLString(creatureData + 0x2792 + quickspelli * 0x34, 8) then
+											EEex_WriteWord(creatureData + 0x2788 + quickspelli * 0x34, EEex_ReadSignedWord(creatureData + 0x2788 + quickspelli * 0x34, 0x0) - 1)
+										end
+									end
 									EEex_WriteWord(resrefLocation + 0x8, bit32.band(flags, 0xFFFE))
 --[[
 									if printFeedback then
@@ -5551,6 +5597,11 @@ function EXMODMEM(effectData, creatureData)
 									end
 --]]
 								else
+									for quickspelli = 0, 2, 1 do
+										if resref == EEex_ReadLString(creatureData + 0x2792 + quickspelli * 0x34, 8) then
+											EEex_WriteWord(creatureData + 0x2788 + quickspelli * 0x34, EEex_ReadSignedWord(creatureData + 0x2788 + quickspelli * 0x34, 0x0) + 1)
+										end
+									end
 									EEex_WriteWord(resrefLocation + 0x8, bit32.bor(flags, 0x1))
 --[[
 									if printFeedback then
@@ -5631,12 +5682,14 @@ function EXMODSMP(effectData, creatureData)
 	local targetY = EEex_ReadDword(effectData + 0x88)
 	local areaRes = EEex_GetActorAreaRes(targetID)
 	if areaRes == "" then return end
-	local areaX, areaY = EEex_GetActorAreaSize(targetID)
 	local bitmapData = EEex_DemandResData(areaRes .. "SR", "BMP")
 	local fileSize = EEex_ReadDword(bitmapData + 0x2)
 	local dataOffset = EEex_ReadDword(bitmapData + 0xA)
 	local bitmapX = EEex_ReadDword(bitmapData + 0x12)
 	local bitmapY = EEex_ReadDword(bitmapData + 0x16)
+	local padding = math.floor(bitmapX / 2) % 4
+	local areaX = bitmapX * 16
+	local areaY = bitmapY * 12
 	local pixelSizeX = 16
 	local pixelSizeY = 12
 	local current = 0
@@ -5678,6 +5731,7 @@ function EXMODSMP(effectData, creatureData)
 				EEex_WriteByte(bitmapData + i, currentA * 16 + currentB)
 				i = i + 1
 			end
+			i = i + padding
 		end
 	end
 end
@@ -6410,10 +6464,10 @@ special - Determines the number of spells that will be affected (e.g. if special
  will have its AoE modified; spells after that won't). If set to -1, there is no limit.
 --]]
 EXMODAOE = {
-    ["typeMutator"] = function(source, originatingEffectData, creatureData, projectileType)
+    ["typeMutator"] = function(source, originatingEffectData, creatureData, projectileType, sourceRES)
 
     end,
-    ["projectileMutator"] = function(source, originatingEffectData, creatureData, projectileData)
+    ["projectileMutator"] = function(source, originatingEffectData, creatureData, projectileData, sourceRES)
 		if source >= 11 then return end
     	local parameter1 = EEex_ReadDword(originatingEffectData + 0x18)
     	local special = EEex_ReadDword(originatingEffectData + 0x44)
@@ -6459,7 +6513,7 @@ Bit 18: If set, the function will not change the projectile of your items (e.g. 
 Bit 20: If set, the function will change the projectile even the original projectile was "None".
 --]]
 EXMODPID = {
-    ["typeMutator"] = function(source, originatingEffectData, creatureData, projectileType)
+    ["typeMutator"] = function(source, originatingEffectData, creatureData, projectileType, sourceRES)
     	local savingthrow = EEex_ReadDword(originatingEffectData + 0x3C)
     	if projectileType <= 1 and bit32.band(savingthrow, 0x100000) == 0 then return end
     	if (bit32.band(savingthrow, 0x10000) == 0 and source <= 6) or (bit32.band(savingthrow, 0x20000) == 0 and (source == 11 or source == 12)) or (bit32.band(savingthrow, 0x40000) == 0 and (source == 13 or source == 14)) then
@@ -6467,7 +6521,7 @@ EXMODPID = {
 			return parameter2
 		end
     end,
-    ["projectileMutator"] = function(source, originatingEffectData, creatureData, projectileData)
+    ["projectileMutator"] = function(source, originatingEffectData, creatureData, projectileData, sourceRES)
 
 	end,
     ["effectMutator"] = function(source, originatingEffectData, creatureData, projectileData, effectData)
@@ -7212,7 +7266,7 @@ EXMODPID = {
 		Infinity_DoFile("EEex_Spl")
 		--Infinity_DoFile("EEex_Pau") -- Auto-Pause Related Things
 		Infinity_DoFile("EEex_Msc")
-		Infinity_DoFile("EEex_Cra")
+		--Infinity_DoFile("EEex_Cra") -- Ironically, this can crash the game when run, so it should be disabled for now. 
 
 		--------------
 		--  Modules --

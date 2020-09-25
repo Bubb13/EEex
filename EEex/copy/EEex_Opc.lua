@@ -252,7 +252,7 @@ EEex_AddScreenEffectsGlobal("EXEFFMOD", function(effectData, creatureData)
 
 
 		local new_damage_type = EEex_GetActorStat(sourceID, 617)
-		if new_damage_type ~= 0 and restype == 0 and parent_resource == "" then
+		if new_damage_type ~= 0 and restype == 0 and parent_resource == "EEEX_DAM" then
 			damage_type = new_damage_type - 1
 			EEex_WriteWord(effectData + 0x1E, damage_type)
 		end

@@ -17,7 +17,7 @@ The EXLINEFR function lets you change the delay between hits for a specific proj
  between hits in ticks. If you set "Color speed" to 15, it will hit once per second (per 15 ticks). If you
  set "Color speed" to 100 or more, it will only hit once.
 --]]
-EEex_AddProjectileMutatorGlobal("EXLINEFR", function(source, creatureData, projectileData)
+EEex_AddProjectileMutatorGlobal("EXLINEFR", function(source, creatureData, projectileData, sourceRES)
 	if EEex_IsProjectileOfType(projectileData, EEex_ProjectileType.CProjectileNewScorcher) and bit32.band(EEex_ReadDword(projectileData + 0x120), 0x10000) > 0 then
 		local effectRepeatTime = EEex_ReadWord(projectileData + 0x140, 0x0)
 		EEex_WriteDword(projectileData + 0x3B0, effectRepeatTime)
@@ -183,10 +183,24 @@ function EEex_OnDecodeProjectile(ebp)
 	if not EEex_IsSprite(actorID, true) then return end
 
 	local projectileType = EEex_ReadWord(ebp + 0x8, 0)
+	local sourceRES = ""
+	if source == 0 then
+		sourceRES = EEex_ReadLString(ebp + 0xEC, 8)
+	elseif source == 1 then
+		sourceRES = EEex_ReadLString(ebp + 0x4C, 8)
+	elseif source == 2 then
+		sourceRES = EEex_ReadLString(ebp + 0x64, 8)
+	elseif source == 3 then
+		sourceRES = EEex_ReadLString(ebp + 0x60, 8)
+	elseif source == 4 then
+		sourceRES = EEex_ReadLString(ebp + 0x30, 8)
+	elseif source == 5 then
+		sourceRES = EEex_ReadLString(ebp + 0x7C, 8)
+	end
 	local mutatorList = EEex_AccessComplexStat(actorID, "EEex_ProjectileMutatorList")
 
 	for func_name, func in pairs(EEex_TypeMutatorGlobalFunctions) do
-		local newType = func(source, CGameAIBase, projectileType)
+		local newType = func(source, CGameAIBase, projectileType, sourceRES)
 		if newType then
 			EEex_WriteWord(ebp + 0x8, newType)
 			return true
@@ -201,7 +215,7 @@ function EEex_OnDecodeProjectile(ebp)
 
 		if func then
 
-			local newType = func(source, originatingEffectData, CGameAIBase, projectileType)
+			local newType = func(source, originatingEffectData, CGameAIBase, projectileType, sourceRES)
 			if newType then
 				EEex_WriteWord(ebp + 0x8, newType)
 				return true
@@ -221,11 +235,23 @@ function EEex_OnPostProjectileCreation(CProjectile, ebp)
 
 	local actorID = EEex_GetActorIDShare(CGameAIBase)
 	if not EEex_IsSprite(actorID, true) then return end
-
+	local sourceRES = ""
+	if source == 0 then
+		sourceRES = EEex_ReadLString(ebp + 0xEC, 8)
+	elseif source == 1 then
+		sourceRES = EEex_ReadLString(ebp + 0x4C, 8)
+	elseif source == 2 then
+		sourceRES = EEex_ReadLString(ebp + 0x64, 8)
+	elseif source == 3 then
+		sourceRES = EEex_ReadLString(ebp + 0x60, 8)
+	elseif source == 4 then
+		sourceRES = EEex_ReadLString(ebp + 0x30, 8)
+	elseif source == 5 then
+		sourceRES = EEex_ReadLString(ebp + 0x7C, 8)
+	end
 	local mutatorList = EEex_AccessComplexStat(actorID, "EEex_ProjectileMutatorList")
-
 	for func_name, func in pairs(EEex_ProjectileMutatorGlobalFunctions) do
-		local blockFurtherMutations = func(source, CGameAIBase, CProjectile)
+		local blockFurtherMutations = func(source, CGameAIBase, CProjectile, sourceRES)
 		if blockFurtherMutations then return true end
 	end
 
@@ -236,7 +262,7 @@ function EEex_OnPostProjectileCreation(CProjectile, ebp)
 		local func = _G[functionName].projectileMutator
 
 		if func then
-			local blockFurtherMutations = func(source, originatingEffectData, CGameAIBase, CProjectile)
+			local blockFurtherMutations = func(source, originatingEffectData, CGameAIBase, CProjectile, sourceRES)
 			if blockFurtherMutations then return true end
 		end
 	end)
@@ -246,13 +272,14 @@ end
 function EEex_OnAddEffectToProjectile(CProjectile, CGameAIBase, ebp)
 
 	local source = EEex_AddEffectToProjectileSources[EEex_ReadDword(ebp + 0x4)]
-	if not source then return false end
-	if CGameAIBase == 0x0 then return false end
-
-	local actorID = EEex_GetActorIDShare(CGameAIBase)
-	if not EEex_IsSprite(actorID, true) then return false end
+--	if not source then return false end
+--	if CGameAIBase == 0x0 then return false end
 
 	local CGameEffect = EEex_ReadDword(ebp + 0x8)
+	local actorID = EEex_ReadDword(CGameEffect + 0x10C)
+	if not EEex_IsSprite(actorID, true) then return false end
+	CGameAIBase = EEex_GetActorShare(actorID)
+
 	local mutatorList = EEex_AccessComplexStat(actorID, "EEex_ProjectileMutatorList")
 	local blockEffect = false
 
