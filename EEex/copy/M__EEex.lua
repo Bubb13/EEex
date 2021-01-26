@@ -3530,7 +3530,7 @@ function EEex_2DALoad(_2DAResref)
 	EEex_WriteString(resrefAddress, _2DAResref)
 	local C2DArray = EEex_Malloc(0x20, 82)
 	EEex_Memset(C2DArray, 0x20, 0x0)
-	EEex_WriteDword(C2DArray + 0x18, EEex_Label("_afxPchNil"))
+	EEex_WriteDword(C2DArray + 0x18, EEex_ReadDword(EEex_Label("_afxPchNil")))
 	EEex_Call(EEex_Label("C2DArray::Load"), {resrefAddress}, C2DArray, 0x0)
 	EEex_Free(resrefAddress)
 	return C2DArray
