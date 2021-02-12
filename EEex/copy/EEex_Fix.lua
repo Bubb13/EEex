@@ -100,6 +100,42 @@ function EEex_InstallFixes()
 		!add_esp_byte 08
 	]]})
 
+	--------------------------------------------------------------------
+	-- Special abilities given by the engine should update quickslots --
+	--------------------------------------------------------------------
+
+	EEex_HookAfterRestore(EEex_Label("CGameSprite::AddSpecialAbility()_InnateMemorizationFlag"), 0, 5, {[[
+
+		!push_all_registers
+		!sub_esp_byte 14
+
+		!(word) !mov_[esp]_dword 01 00         ; m_itemType ;
+		!(word) !mov_[esp+byte]_dword 02 FF FF ; m_itemNum ;
+		!(word) !mov_[esp+byte]_dword 04 FF FF ; m_abilityNum ;
+
+		; m_res ;
+		!mov_esi_[ebp+byte] 08
+		!mov_eax_[esi]
+		!mov_[esp+byte]_eax 06
+		!mov_eax_[esi+byte] 04
+		!mov_[esp+byte]_eax 0A
+
+		!mov_byte:[esp+byte]_byte 0E FF    ; m_targetType ;
+		!mov_byte:[esp+byte]_byte 0F FF    ; m_targetCount ;
+		!mov_[esp+byte]_dword 10 #FFFFFFFF ; m_toolTip ;
+
+		!push_byte 00          ; removeSpellIfZero ;
+		!push_byte 00          ; remove ;
+		!push_byte 01          ; changeAmount ;
+		!lea_eax_[esp+byte] 0C
+		!push_eax              ; ab ;
+		!mov_ecx_edi
+		!call >CGameSprite::CheckQuickLists
+
+		!add_esp_byte 14
+		!pop_all_registers
+	]]})
+
 	EEex_EnableCodeProtection()
 end
 EEex_InstallFixes()
