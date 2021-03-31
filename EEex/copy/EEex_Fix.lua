@@ -108,10 +108,9 @@ function EEex_InstallFixes()
 
 		!push_all_registers
 		!sub_esp_byte 14
-
-		!(word) !mov_[esp]_dword 01 00         ; m_itemType ;
-		!(word) !mov_[esp+byte]_dword 02 FF FF ; m_itemNum ;
-		!(word) !mov_[esp+byte]_dword 04 FF FF ; m_abilityNum ;
+		!word_prefix !mov_[esp]_dword 01 00         ; m_itemType ;
+		!word_prefix !mov_[esp+byte]_dword 02 FF FF ; m_itemNum ;
+		!word_prefix !mov_[esp+byte]_dword 04 FF FF ; m_abilityNum ;
 
 		; m_res ;
 		!mov_esi_[ebp+byte] 08

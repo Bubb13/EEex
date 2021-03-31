@@ -59,7 +59,7 @@ function EEex_InstallSplHook()
 
 	local checkCastCounterReset = function(address)
 		local hook = EEex_WriteAssemblyAuto({[[
-			!(word) !cmp_[edi+dword]_byte #3590 06
+			!word_prefix !cmp_[edi+dword]_byte #3590 06
 			!je_dword ]], {address + 0x7, 4, 4}, [[
 			!mov_[edi+dword]_ax #3360
 			!jmp_dword ]], {address + 0x7, 4, 4}, [[
@@ -138,12 +138,12 @@ function EEex_InstallSplHook()
 	local writeOpcode214CastAOEHook = function(address, readOffsetFunc, jmpInstEnd)
 		local opcode214CastJumpDest = address + readOffsetFunc(address) + jmpInstEnd
 		local opcode214CastJumpHook = EEex_WriteAssemblyAuto({[[
-			!(word) !mov_eax_[esi]
-			!(word) !cmp_eax_byte 01
+			!word_prefix !mov_eax_[esi]
+			!word_prefix !cmp_eax_byte 01
 			!je_dword ]], {address + jmpInstEnd, 4, 4}, [[
-			!(word) !cmp_eax_byte 03
+			!word_prefix !cmp_eax_byte 03
 			!je_dword ]], {address + jmpInstEnd, 4, 4}, [[
-			!(word) !cmp_eax_byte 06
+			!word_prefix !cmp_eax_byte 06
 			!je_dword ]], {address + jmpInstEnd, 4, 4}, [[
 			!jmp_dword ]], {opcode214CastJumpDest, 4, 4},
 		})

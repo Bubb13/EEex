@@ -599,7 +599,7 @@ function EEex_InstallCreatureHooks()
 		; Redefine what I altered ;
 		!push_esi
 		!or_esi_byte FF
-		!(word) !test_eax_eax
+		!word_prefix !test_eax_eax
 
 		!jmp_dword ]], {objectsBeingCleanedHookAddress + 0x7, 4, 4},
 

@@ -81,7 +81,7 @@ function EEex_InstallNewActions()
 		!mov_[dword]_dword ]], {matchObjectOverrideRange, 4}, [[ #0
 		!mov_ecx #7FFFFFFF
 		@return
-		!jmp_dword, ]], {matchObjectRangeHookDest, 4, 4},
+		!jmp_dword ]], {matchObjectRangeHookDest, 4, 4},
 	})
 	EEex_WriteAssembly(matchObjectRangeHookJmp, {"!jmp_dword", {matchObjectRangeHook, 4, 4}, "!nop !nop !nop !nop"})
 
@@ -94,7 +94,7 @@ function EEex_InstallNewActions()
 
 		!mov_esi_[ebp+byte] 08
 
-		!push_[dword], ]], {matchObjectString, 4}, [[
+		!push_[dword] ]], {matchObjectString, 4}, [[
 		!push_[dword] *_g_lua
 		; TODO: Cache Lua chunks ;
 		!call >_luaL_loadstring
@@ -174,7 +174,7 @@ function EEex_InstallNewActions()
 		!call >CAIObjectType::OfType
 
 		@return
-		!jmp_dword, ]], {matchObjectOfType1Call + 0x5, 4, 4},
+		!jmp_dword ]], {matchObjectOfType1Call + 0x5, 4, 4},
 
 	})
 	EEex_WriteAssembly(matchObjectOfType1Call, {"!jmp_dword", {matchObjectOfType1Hook, 4, 4}})
@@ -206,7 +206,7 @@ function EEex_InstallNewActions()
 		!call >CAIObjectType::OfType
 
 		@return
-		!jmp_dword, ]], {matchObjectOfType2Call + 0x5, 4, 4},
+		!jmp_dword ]], {matchObjectOfType2Call + 0x5, 4, 4},
 
 	})
 	EEex_WriteAssembly(matchObjectOfType2Call, {"!jmp_dword", {matchObjectOfType2Hook, 4, 4}})
@@ -616,7 +616,7 @@ function EEex_InstallNewActions()
 		!mov_eax_[edi]
 		!call_[eax+dword] #80
 
-		!(word) !mov_[ebx]_dword 00 00
+		!word_prefix !mov_[ebx]_dword 00 00
 
 		@continue
 		!mov_esi_[esi]
@@ -635,7 +635,7 @@ function EEex_InstallNewActions()
 	-- Action Definitions Hook --
 	-----------------------------
 
-	local hookAddress = EEex_WriteAssemblyAuto(EEex_ConcatTables({[[
+	local hookAddress = EEex_WriteAssemblyAuto(EEex_FlattenTable({[[
 
 		!cmp_eax_dword #1D8
 		!jne_dword >473

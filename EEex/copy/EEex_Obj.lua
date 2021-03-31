@@ -102,7 +102,7 @@ function EEex_InstallNewObjects()
 	local overrideTargetNameJumpDest = overrideTargetNameJump + EEex_ReadDword(overrideTargetNameJump + 0x2) + 0x6
 	local overrideTargetName = EEex_WriteAssemblyAuto({[[
 		!je_dword ]], {overrideTargetNameJumpDest, 4, 4}, [[
-		!cmp_[ebx+byte]_byte 0C 75
+		!cmp_byte:[ebx+byte]_byte 0C 75
 		!je_dword ]], {overrideTargetNameJumpDest, 4, 4}, [[
 		!jmp_dword ]], {overrideTargetNameJump + 0x6, 4, 4},
 	})
@@ -177,7 +177,7 @@ function EEex_InstallNewObjects()
 	-- New Objects Switch --
 	------------------------
 
-	local newObjectsAddress = EEex_WriteAssemblyAuto(EEex_ConcatTables({[[
+	local newObjectsAddress = EEex_WriteAssemblyAuto(EEex_FlattenTable({[[
 
 		!cmp_eax_byte 72
 		!jne_dword >73

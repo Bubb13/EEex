@@ -243,7 +243,7 @@ function EEex_InstallNewTriggers()
 	-- New Triggers Switch --
 	-------------------------
 
-	local newTriggersAddress = EEex_WriteAssemblyAuto(EEex_ConcatTables({[[
+	local newTriggersAddress = EEex_WriteAssemblyAuto(EEex_FlattenTable({[[
 
 		!cmp_eax_dword #103
 		!je_dword >EEex_HasDispellableEffect

@@ -1455,7 +1455,7 @@ function EEex_InstallOpcodeChanges()
 	-- Opcode Definitions Hook --
 	-----------------------------
 
-	local opcodesHook = EEex_WriteAssemblyAuto(EEex_ConcatTables({[[
+	local opcodesHook = EEex_WriteAssemblyAuto(EEex_FlattenTable({[[
 
 		!cmp_eax_dword #190
 		!jne_dword >401
