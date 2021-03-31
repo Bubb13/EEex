@@ -48,12 +48,20 @@ VerAdj=24
 ; C2DArray
 ;---------------------------
 
+[C2DArray::GetAt(CPoint*)]
+PatBytes=558BEC8B550856570FBF791C
+PatAdj=0
+
 [C2DArray::GetAt(CString*_CString*)]
 PatBytes=558BEC515657FF75088BF18D4DFC
 PatAdj=0
 
 [C2DArray::Load]
 PatBytes=558BEC83EC2C538BD95657895DE88B430C85C0
+PatAdj=0
+
+[C2DArray::~C2DArray]
+PatBytes=558BEC5153568BF1578B460C
 PatAdj=0
 
 
@@ -1573,6 +1581,11 @@ PatAdj=-11
 [(CString)_operator+]
 PatBytes=2BF18B450C8B008945108B40F889450803C6
 PatAdj=-39
+
+[CGameButtonList_VFTable]
+PatBytes=897D8C538D4DD4
+PatAdj=-6
+Type=1
 
 [CMessageContainerStatus_VFTable]
 PatBytes=83C404894598

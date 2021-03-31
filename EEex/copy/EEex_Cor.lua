@@ -18,6 +18,41 @@ EEex_MinimalStartup = false
 -- arbitrarily, it uses a lot of resources and can't be sustained for long.
 EEex_LeakDetectionMode = false
 
+--------------------------------
+-- Memory Manager Definitions --
+--------------------------------
+
+EEex_MemoryManagerStructMeta["C2DArray"] = {
+	["constructors"] = {
+		["#default"] = function(manager, startPtr)
+			EEex_Memset(startPtr, 0x20, 0)
+			EEex_WriteDword(startPtr + 0x18, EEex_ReadDword(EEex_Label("_afxPchNil")))
+		end,
+	},
+	["destructor"] = {["address"] = EEex_Label("C2DArray::~C2DArray")},
+	["size"] = 0x20,
+}
+
+EEex_MemoryManagerStructMeta["CString"] = {
+	["constructors"] = {
+		["fromArg"] = function(manager, startPtr, textArgName)
+			EEex_Call(EEex_Label("CString::CString(char_const_*)"), {manager:getAddress(textArgName)}, startPtr, 0x0)
+		end,
+	},
+	["destructor"] = {["address"] = EEex_Label("CString::~CString")},
+	["size"] = 0x4,
+}
+
+EEex_MemoryManagerStructMeta["CPoint"] = {
+	["constructors"] = {
+		["fromCoords"] = function(manager, startPtr, x, y)
+			EEex_WriteDword(startPtr, x)
+			EEex_WriteDword(startPtr + 0x4, y)
+		end,
+	},
+	["size"] = 0x8,
+}
+
 -----------
 -- State --
 -----------
@@ -107,6 +142,10 @@ end
 
 function EEex_GetDistanceIsometric(x1, y1, x2, y2)
 	return math.floor(((x1 - x2) ^ 2 + (4/3 * (y1 - y2)) ^ 2) ^ .5)
+end
+
+function EEex_AddTail(CPtrList, ptr)
+	EEex_Call(EEex_Label("CPtrList::AddTail"), {ptr}, CPtrList, 0x0)
 end
 
 -- Frees the memory allocated by the given CPtrList pointer.
@@ -1950,6 +1989,38 @@ function EEex_PlayerCastResrefNoDec(resref)
 	EEex_SetActionbarState(EEex_GetLastActionbarState())
 end
 
+function EEex_ConstructButtonData(resref, spellData, spellAbility, itemType)
+	local CButtonData = EEex_Malloc(0x34)
+	EEex_Call(EEex_Label("CButtonData::CButtonData"), {}, CButtonData, 0x0)
+	local nameStrref = EEex_ReadDword(spellData + 0x8)
+	EEex_WriteLString(CButtonData, EEex_ReadLString(spellAbility + 0x4, 8), 8) -- m_icon
+	EEex_WriteDword(CButtonData + 0x8, nameStrref) -- m_name
+	EEex_WriteWord(CButtonData + 0x18, 1) -- count
+	EEex_WriteWord(CButtonData + 0x1C, itemType) -- m_abilityId.m_itemType
+	EEex_WriteLString(CButtonData + 0x22, resref, 8) -- m_abilityId.m_res
+	EEex_WriteByte(CButtonData + 0x2A, EEex_ReadByte(spellAbility + 0xC, 0)) -- m_abilityId.m_targetType
+	EEex_WriteByte(CButtonData + 0x2B, EEex_ReadByte(spellAbility + 0xD, 0)) -- m_abilityId.m_targetCount
+	EEex_WriteDword(CButtonData + 0x2C, nameStrref) -- m_abilityId.m_toolTip
+	EEex_WriteByte(CButtonData + 0x30, 0) -- m_abilityId.m_bDisabled
+	return CButtonData
+end
+
+function EEex_GetClearInternalList(m_CGameSprite)
+	local internalList = EEex_ReadDword(m_CGameSprite + 0x3790)
+	if internalList ~= 0x0 then
+		EEex_IterateCPtrList(internalList, function(CButtonData)
+			EEex_Free(CButtonData)
+		end)
+		EEex_Call(EEex_Label("CObList::RemoveAll"), {}, internalList, 0x0)
+	else
+		internalList = EEex_Malloc(0x20)
+		EEex_Call(EEex_Label("CObList::CObList"), {10}, internalList, 0x0)
+		EEex_WriteDword(internalList, EEex_Label("CGameButtonList_VFTable"))
+		EEex_WriteDword(m_CGameSprite + 0x3790, internalList)
+	end
+	return internalList
+end
+
 ----------------
 -- Game State --
 ----------------
@@ -2110,26 +2181,154 @@ function EEex_SetAreaGlobal(areaResref, globalName, value)
 	end
 end
 
+function EEex_2DAFindColumnIndex(C2DArray, y, toSearchFor)
+	local sizeX, sizeY = EEex_2DAGetDimensions(C2DArray)
+	local pArray = EEex_ReadDword(C2DArray + 0x14) + sizeX * y * 0x4
+	for i = 0, sizeX - 1 do
+		if EEex_ReadString(EEex_ReadDword(pArray)) == toSearchFor then
+			return i
+		end
+		pArray = pArray + 0x4
+	end
+	return -1
+end
+
+function EEex_2DAFindColumnLabel(C2DArray, toSearchFor)
+	local sizeX = EEex_ReadWord(C2DArray + 0x1C, 0)
+	local pNamesX = EEex_ReadDword(C2DArray + 0xC)
+	for i = 0, sizeX - 1 do
+		if EEex_ReadString(EEex_ReadDword(pNamesX)) == toSearchFor then
+			return i
+		end
+		pNamesX = pNamesX + 0x4
+	end
+	return -1
+end
+
+function EEex_2DAFindRowIndex(C2DArray, x, toSearchFor)
+	local sizeX, sizeY = EEex_2DAGetDimensions(C2DArray)
+	local pArray = EEex_ReadDword(C2DArray + 0x14) + x * 0x4
+	local lineAdvance = sizeX * 0x4
+	for i = 0, sizeY - 1 do
+		if EEex_ReadString(EEex_ReadDword(pArray)) == toSearchFor then
+			return i
+		end
+		pArray = pArray + lineAdvance
+	end
+	return -1
+end
+
+function EEex_2DAFindRowLabel(C2DArray, toSearchFor)
+	local sizeY = EEex_ReadWord(C2DArray + 0x1E, 0)
+	local pNamesY = EEex_ReadDword(C2DArray + 0x10)
+	for i = 0, sizeY - 1 do
+		if EEex_ReadString(EEex_ReadDword(pNamesY)) == toSearchFor then
+			return i
+		end
+		pNamesY = pNamesY + 0x4
+	end
+	return -1
+end
+
+function EEex_2DAFree(C2DArray)
+	EEex_Call(EEex_Label("C2DArray::~C2DArray"), {}, C2DArray, 0x0)
+	EEex_Free(C2DArray)
+end
+
+function EEex_2DAGetAtPoint(C2DArray, x, y)
+	local toReturn
+	EEex_RunWithStackManager({
+		{ ["name"] = "point", ["struct"] = "CPoint", ["constructor"] = {["variant"] = "fromCoords", ["luaArgs"] = {x, y} }}, },
+		function(manager)
+			local foundCString = EEex_Call(EEex_Label("C2DArray::GetAt(CPoint*)"), {manager:getAddress("point")}, C2DArray, 0x0)
+			toReturn = EEex_ReadString(EEex_ReadDword(foundCString))
+		end)
+	return toReturn
+end
+
+function EEex_2DAGetAtStrings(C2DArray, columnString, rowString)
+	local toReturn
+	EEex_RunWithStackManager({
+		{ ["name"] = "columnString",  ["struct"] = "string",  ["constructor"] = {                         ["luaArgs"] = {columnString}   }},
+		{ ["name"] = "CColumnString", ["struct"] = "CString", ["constructor"] = {["variant"] = "fromArg", ["luaArgs"] = {"columnString"} }},
+		{ ["name"] = "rowString",     ["struct"] = "string",  ["constructor"] = {                         ["luaArgs"] = {rowString}      }},
+		{ ["name"] = "CRowString",    ["struct"] = "CString", ["constructor"] = {["variant"] = "fromArg", ["luaArgs"] = {"rowString"}    }}, },
+		function(manager)
+			local foundCString = EEex_Call(EEex_Label("C2DArray::GetAt(CString*_CString*)"), {
+				manager:getAddress("CRowString"), 
+				manager:getAddress("CColumnString")
+			}, C2DArray, 0x0)
+			toReturn = EEex_ReadString(EEex_ReadDword(foundCString))
+		end)
+	return toReturn
+end
+
+function EEex_2DAGetColumnLabel(C2DArray, n)
+	local sizeX = EEex_ReadWord(C2DArray + 0x1C, 0)
+	if n >= sizeX then return "" end
+	return EEex_ReadString(EEex_ReadDword(EEex_ReadDword(C2DArray + 0xC) + n * 0x4))
+end
+
+function EEex_2DAGetDefault(C2DArray)
+	return EEex_ReadString(EEex_ReadDword(C2DArray + 0x18))
+end
+
+function EEex_2DAGetDimensions(C2DArray)
+	return EEex_ReadWord(C2DArray + 0x1C, 0), EEex_ReadWord(C2DArray + 0x1E, 0)
+end
+
+function EEex_2DAGetRowLabel(C2DArray, n)
+	local sizeY = EEex_ReadWord(C2DArray + 0x1E, 0)
+	if n >= sizeY then return "" end
+	return EEex_ReadString(EEex_ReadDword(EEex_ReadDword(C2DArray + 0x10) + n * 0x4))
+end
+
 function EEex_2DALoad(_2DAResref)
-	local resrefAddress = EEex_Malloc(#_2DAResref + 1, 81)
-	EEex_WriteString(resrefAddress, _2DAResref)
-	local C2DArray = EEex_Malloc(0x20, 82)
-	EEex_Memset(C2DArray, 0x20, 0x0)
-	EEex_WriteDword(C2DArray + 0x18, EEex_ReadDword(EEex_Label("_afxPchNil")))
-	EEex_Call(EEex_Label("C2DArray::Load"), {resrefAddress}, C2DArray, 0x0)
-	EEex_Free(resrefAddress)
+	local C2DArray
+	EEex_RunWithStackManager({
+		{ ["name"] = "resref", ["struct"] = "string", ["constructor"] = {["luaArgs"] = {_2DAResref} }}, },
+		function(stackManager)
+			C2DArray = EEex_NewMemoryManager({{["name"] = "array", ["struct"] = "C2DArray"}}):getAddress("array")
+			EEex_Call(EEex_Label("C2DArray::Load"), {stackManager:getAddress("resref")}, C2DArray, 0x0)
+		end)
 	return C2DArray
 end
 
--- TODO: Memory leak?
-function EEex_2DAGetAtStrings(C2DArray, columnString, rowString)
-	local columnCString = EEex_ConstructCString(columnString)
-	local rowCString = EEex_ConstructCString(rowString)
-	local foundCString = EEex_Call(EEex_Label("C2DArray::GetAt(CString*_CString*)"),
-		{rowCString, columnCString}, C2DArray, 0x0)
-	EEex_Call(EEex_Label("CString::~CString"), {}, rowCString, 0x0)
-	return EEex_ReadString(EEex_ReadDword(foundCString))
+EEex_2DAWrapper = {}
+EEex_2DAWrapper.__index = EEex_2DAWrapper
+
+function EEex_Wrap2DA(resref)
+	return EEex_2DAWrapper:new(resref)
 end
+
+for _, pair in ipairs({
+	{ EEex_2DAFindColumnIndex, "findColumnIndex" },
+	{ EEex_2DAFindColumnLabel, "findColumnLabel" },
+	{ EEex_2DAFindRowIndex,    "findRowIndex"    },
+	{ EEex_2DAFindRowLabel,    "findRowLabel"    },
+	{ EEex_2DAFree,            "free"            },
+	{ EEex_2DAGetAtPoint,      "getAtPoint"      },
+	{ EEex_2DAGetAtStrings,    "getAtStrings"    },
+	{ EEex_2DAGetColumnLabel,  "getColumnLabel"  },
+	{ EEex_2DAGetDefault,      "getDefault"      },
+	{ EEex_2DAGetDimensions,   "getDimensions"   },
+	{ EEex_2DAGetRowLabel,     "getRowLabel"     },
+}) do
+	EEex_2DAWrapper[pair[2]] = function(self, ...)
+		return pair[1](self.address, ...)
+	end
+end
+
+function EEex_2DAWrapper:new(resref)
+	local o = {}
+	setmetatable(o, self)
+	self.address = EEex_2DALoad(resref)
+	return o
+end
+
+---------------------
+--  Actor Details  --
+---------------------
 
 function EEex_GetActorClassString(actorID)
 	local g_pBaldurChitin = EEex_ReadDword(EEex_Label("g_pBaldurChitin"))
@@ -2143,10 +2342,6 @@ function EEex_GetActorClassString(actorID)
 	EEex_Call(EEex_Label("CString::~CString"), {}, result, 0x0)
 	return luaString
 end
-
----------------------
---  Actor Details  --
----------------------
 
 function EEex_IsTrapFlaggedNondetectable(objectID)
 

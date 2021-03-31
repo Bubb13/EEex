@@ -17,18 +17,18 @@ EEex_MemoryManagerStructMeta = {
 
 	["string"] = {
 		["constructors"] = {
-			["#default"] = function(startPtr, luaString)
+			["#default"] = function(manager, startPtr, luaString)
 				EEex_WriteString(startPtr, luaString)
 			end,
 		},
-		["size"] = function(luaString)
+		["size"] = function(manager, luaString)
 			return #luaString + 1
 		end,
 	},
 
 	["uninitialized"] = {
 		["constructors"] = {},
-		["size"] = function(luaSize)
+		["size"] = function(manager, luaSize)
 			return luaSize
 		end,
 	},
@@ -65,7 +65,7 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 		structEntry.structMeta = structMeta
 
 		if sizeType == "function" then
-			currentOffset = currentOffset + size(table.unpack(getConstructor(structEntry).luaArgs or {}))
+			currentOffset = currentOffset + size(self, table.unpack(getConstructor(structEntry).luaArgs or {}))
 		elseif sizeType == "number" then
 			currentOffset = currentOffset + size
 		else
@@ -91,7 +91,7 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 			local constructorType = type(constructor)
 
 			if constructorType == "function" then
-				constructor(address, table.unpack(entryConstructor.luaArgs or {}))
+				constructor(self, address, table.unpack(entryConstructor.luaArgs or {}))
 			elseif constructorType == "table" then
 				local args = entryConstructor.args or {}
 				local argsToUse = {}
@@ -941,7 +941,7 @@ function EEex_SanitizeAssembly(assembly)
 				end
 			end
 		else
-			B3Dump("assembly", assembly)
+			EEex_Dump("assembly", assembly)
 			EEex_Error("Arg with illegal data-type in assembly declaration: \""..tostring(arg).."\" at index "..i)
 		end
 	end
