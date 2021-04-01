@@ -2182,18 +2182,18 @@ function EEex_SetAreaGlobal(areaResref, globalName, value)
 end
 
 function EEex_2DAFindColumnIndex(C2DArray, y, toSearchFor)
-	local sizeX, sizeY = EEex_2DAGetDimensions(C2DArray)
-	local pArray = EEex_ReadDword(C2DArray + 0x14) + sizeX * y * 0x4
-	for i = 0, sizeX - 1 do
-		if EEex_ReadString(EEex_ReadDword(pArray)) == toSearchFor then
-			return i
+	local toReturn = -1
+	EEex_2DAIterateRowIndex(C2DArray, y, function(i, val)
+		if val == toSearchFor then
+			toReturn = i
+			return true
 		end
-		pArray = pArray + 0x4
-	end
-	return -1
+	end)
+	return toReturn
 end
 
 function EEex_2DAFindColumnLabel(C2DArray, toSearchFor)
+	toSearchFor = toSearchFor:upper()
 	local sizeX = EEex_ReadWord(C2DArray + 0x1C, 0)
 	local pNamesX = EEex_ReadDword(C2DArray + 0xC)
 	for i = 0, sizeX - 1 do
@@ -2206,19 +2206,18 @@ function EEex_2DAFindColumnLabel(C2DArray, toSearchFor)
 end
 
 function EEex_2DAFindRowIndex(C2DArray, x, toSearchFor)
-	local sizeX, sizeY = EEex_2DAGetDimensions(C2DArray)
-	local pArray = EEex_ReadDword(C2DArray + 0x14) + x * 0x4
-	local lineAdvance = sizeX * 0x4
-	for i = 0, sizeY - 1 do
-		if EEex_ReadString(EEex_ReadDword(pArray)) == toSearchFor then
-			return i
+	local toReturn = -1
+	EEex_2DAIterateColumnIndex(C2DArray, x, function(i, val)
+		if val == toSearchFor then
+			toReturn = i
+			return true
 		end
-		pArray = pArray + lineAdvance
-	end
-	return -1
+	end)
+	return toReturn
 end
 
 function EEex_2DAFindRowLabel(C2DArray, toSearchFor)
+	toSearchFor = toSearchFor:upper()
 	local sizeY = EEex_ReadWord(C2DArray + 0x1E, 0)
 	local pNamesY = EEex_ReadDword(C2DArray + 0x10)
 	for i = 0, sizeY - 1 do
@@ -2265,7 +2264,7 @@ end
 
 function EEex_2DAGetColumnLabel(C2DArray, n)
 	local sizeX = EEex_ReadWord(C2DArray + 0x1C, 0)
-	if n >= sizeX then return "" end
+	if n < 0 or n >= sizeX then return "" end
 	return EEex_ReadString(EEex_ReadDword(EEex_ReadDword(C2DArray + 0xC) + n * 0x4))
 end
 
@@ -2279,8 +2278,37 @@ end
 
 function EEex_2DAGetRowLabel(C2DArray, n)
 	local sizeY = EEex_ReadWord(C2DArray + 0x1E, 0)
-	if n >= sizeY then return "" end
+	if n < 0 or n >= sizeY then return "" end
 	return EEex_ReadString(EEex_ReadDword(EEex_ReadDword(C2DArray + 0x10) + n * 0x4))
+end
+
+function EEex_2DAIterateColumnIndex(C2DArray, x, func)
+	local sizeX, sizeY = EEex_2DAGetDimensions(C2DArray)
+	if x < 0 or x >= sizeX then return end
+	local pArray = EEex_ReadDword(C2DArray + 0x14) + x * 0x4
+	local lineAdvance = sizeX * 0x4
+	for i = 0, sizeY - 1 do
+		if func(i, EEex_ReadString(EEex_ReadDword(pArray))) then break end
+		pArray = pArray + lineAdvance
+	end
+end
+
+function EEex_2DAIterateColumnLabel(C2DArray, columnLabel, func)
+	EEex_2DAIterateColumnIndex(C2DArray, EEex_2DAFindColumnLabel(C2DArray, columnLabel), func)
+end
+
+function EEex_2DAIterateRowIndex(C2DArray, y, func)
+	local sizeX, sizeY = EEex_2DAGetDimensions(C2DArray)
+	if y < 0 or y >= sizeY then return end
+	local pArray = EEex_ReadDword(C2DArray + 0x14) + sizeX * y * 0x4
+	for i = 0, sizeX - 2 do
+		if func(i, EEex_ReadString(EEex_ReadDword(pArray))) then break end
+		pArray = pArray + 0x4
+	end
+end
+
+function EEex_2DAIterateRowLabel(C2DArray, rowLabel, func)
+	EEex_2DAIterateRowIndex(C2DArray, EEex_2DAFindRowLabel(C2DArray, rowLabel), func)
 end
 
 function EEex_2DALoad(_2DAResref)
@@ -2302,17 +2330,21 @@ function EEex_Wrap2DA(resref)
 end
 
 for _, pair in ipairs({
-	{ EEex_2DAFindColumnIndex, "findColumnIndex" },
-	{ EEex_2DAFindColumnLabel, "findColumnLabel" },
-	{ EEex_2DAFindRowIndex,    "findRowIndex"    },
-	{ EEex_2DAFindRowLabel,    "findRowLabel"    },
-	{ EEex_2DAFree,            "free"            },
-	{ EEex_2DAGetAtPoint,      "getAtPoint"      },
-	{ EEex_2DAGetAtStrings,    "getAtStrings"    },
-	{ EEex_2DAGetColumnLabel,  "getColumnLabel"  },
-	{ EEex_2DAGetDefault,      "getDefault"      },
-	{ EEex_2DAGetDimensions,   "getDimensions"   },
-	{ EEex_2DAGetRowLabel,     "getRowLabel"     },
+	{ EEex_2DAFindColumnIndex,    "findColumnIndex"    },
+	{ EEex_2DAFindColumnLabel,    "findColumnLabel"    },
+	{ EEex_2DAFindRowIndex,       "findRowIndex"       },
+	{ EEex_2DAFindRowLabel,       "findRowLabel"       },
+	{ EEex_2DAFree,               "free"               },
+	{ EEex_2DAGetAtPoint,         "getAtPoint"         },
+	{ EEex_2DAGetAtStrings,       "getAtStrings"       },
+	{ EEex_2DAGetColumnLabel,     "getColumnLabel"     },
+	{ EEex_2DAGetDefault,         "getDefault"         },
+	{ EEex_2DAGetDimensions,      "getDimensions"      },
+	{ EEex_2DAGetRowLabel,        "getRowLabel"        },
+	{ EEex_2DAIterateColumnIndex, "iterateColumnIndex" },
+	{ EEex_2DAIterateColumnLabel, "iterateColumnLabel" },
+	{ EEex_2DAIterateRowIndex,    "iterateRowIndex"    },
+	{ EEex_2DAIterateRowLabel,    "iterateRowLabel"    },
 }) do
 	EEex_2DAWrapper[pair[2]] = function(self, ...)
 		return pair[1](self.address, ...)
