@@ -1,0 +1,371 @@
+
+;------------------------------------
+;-- Pre-Main-Thread-Resume Patches --
+;------------------------------------
+
+[PleaseDontBreakMyConsole1]
+Pattern=40554883EC30488D6C2430
+Operations=ADD 43, DISABLE_CODE_PROTECTION, WRITE BYTES B80100000090, ENABLE_CODE_PROTECTION
+
+[PleaseDontBreakMyConsole2]
+Pattern=7552488BCB
+Operations=DISABLE_CODE_PROTECTION, WRITE BYTES EB, ENABLE_CODE_PROTECTION
+
+;--------------------------
+;-- Bound Engine Globals --
+;--------------------------
+
+[numMenus]
+Pattern=41B800700000
+Operations=ADD 59, PUSH, READ DWORD, ADD, ADD 4
+
+[menus]
+Pattern=41B800700000
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[menuStack]
+Pattern=85C00F8E01010000
+Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
+
+[nextStackMenuIdx]
+Pattern=7E03FFC8
+Operations=ADD -6, PUSH, READ DWORD, ADD, ADD 4
+
+[menuSrc]
+Pattern=3D020400000F8556010000
+Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
+
+[menuLength]
+Pattern=3D020400000F8556010000
+Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
+
+[resources]
+Pattern=488D14FF
+Operations=ADD 25, PUSH, READ DWORD, ADD, ADD 4
+
+[capture]
+Pattern=756633C0
+Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
+
+;----------------------------
+;-- Bound Engine Functions --
+;----------------------------
+
+[CGameObjectArray::GetShare]
+Pattern=48C7020000000083F9FF
+
+[CGameSprite::GetKitMask]
+Pattern=84C87476
+Operations=ADD -39
+
+[findMenu]
+Pattern=4881ECA800000048894C2448
+
+[saveMenuStack]
+Pattern=85C00F8E01010000
+Operations=ADD -31
+
+[uiLoadMenu]
+Pattern=4883EC60BA7C000000
+Operations=ADD -8
+
+[restoreMenuStack]
+Pattern=0F84D701000048899C24B0000000
+Operations=ADD -57
+
+[bsearch]
+Pattern=488978204155
+Operations=ADD -15
+
+[CompareCResByTypeThenName]
+Pattern=488B09488B12
+
+[CRes::Construct]
+Pattern=66C741500000488901
+Operations=ADD -7
+
+[CRes::Destruct]
+Pattern=74034C8B30
+Operations=ADD 10, PUSH, READ DWORD, ADD, ADD 4
+
+[SDL_GetKeyFromName]
+Pattern=488BD94885C90F84F2000000
+Operations=ADD -10
+
+[CInfButtonArray::SetState]
+Pattern=4889442430448BFA
+Operations=ADD -38
+
+[CGameSprite::GetQuickButtons]
+Pattern=48895C242055565741544156488D6C24C9
+
+[CInfButtonArray::SetQuickSlot]
+Pattern=48896C24104889742418574881ECE0000000
+
+[CGameSprite::ReadySpell]
+Pattern=5657488D6C2480
+Operations=ADD -6
+
+[CGameSprite::ReadyOffInternalList]
+Pattern=48894570488BF9410FB6D8
+Operations=ADD -33
+
+[CObList::RemoveHead]
+Pattern=574883EC20488B4108
+Operations=ADD -10
+
+[CObList::Destruct]
+Pattern=488901488BD9897918
+Operations=ADD -19
+
+[CInfGame::SetState]
+Pattern=4489814C400000
+Operations=ADD -9
+
+[CInfGame::SetIconIndex]
+Pattern=889138400000
+Operations=ADD -21
+
+[CGameSprite::GetInternalButtonList]
+Pattern=4056415641574883EC50
+
+[CRes::Demand]
+Pattern=488BD94885C9743F
+Operations=ADD -6
+
+;-----------
+;-- Hooks --
+;-----------
+
+[Hook-CInfButtonArray::SetState()-SaveArg]
+Pattern=498D8EF8200000
+Operations=ADD -11
+
+[Data-CInfButtonArray::SetState()-IndirectJumpTable]
+Pattern=41C786B01F0000640000004533FF
+Operations=ADD 332
+
+[Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()]
+Pattern=41C786B01F0000640000004533FF
+Operations=ADD 154
+
+[Hook-uiRefreshMenu()-saveMenuStack()]
+Pattern=48C7C7FFFFFFFF6690
+Operations=ADD -235
+
+[Hook-uiRefreshMenu()-restoreMenuStack()]
+Pattern=85FF0F8E94000000
+Operations=ADD 223
+
+[Hook-dimmInit()-uiLoadMenu()]
+Pattern=4D85F6746D
+Operations=ADD 20
+
+[Hook-Infinity_InstanceAnimation()-TemplateMenuOverride]
+Pattern=488BD0488BC8
+Operations=ADD 182
+
+[Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
+Pattern=0F848D000000488B4808
+Operations=ADD 17
+
+[Hook-saveMenus()-CheckItemSave]
+Pattern=498B1E4885DB0F8482000000
+Operations=ADD 25
+
+[Hook-SDL_main()-CBaldurChitin::Init()]
+Pattern=4885C0740D4C8BC3
+Operations=ADD 28
+
+[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1]
+Pattern=4889451F488BF9
+Operations=ADD 11
+
+[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2]
+Pattern=0F85B3F2FFFF
+Operations=ADD -7
+
+[Hook-SDL_main()-CLUAConsole::LuaInit()]
+Pattern=C7804010000001000000
+Operations=ADD 10
+
+;------------------------------------------
+;-- Functions Referenced by Lua Bindings --
+;------------------------------------------
+
+[Hardcoded_lua_tonumberx]
+Pattern=80F9047554
+Operations=ADD -40
+
+[Hardcoded_tolua_constant]
+Pattern=40534883EC300F29742420
+
+[Hardcoded_lua_tocfunction]
+Pattern=83F9167508
+Operations=ADD -12
+
+[Hardcoded_lua_pushlstring]
+Pattern=488B5310488B742438
+Operations=ADD -83
+
+[Hardcoded_lua_getmetatable]
+Pattern=7411498B4218
+Operations=ADD -28
+
+[Hardcoded_lua_setmetatable]
+Pattern=4C8B4B104C8BD0
+Operations=ADD -14
+
+[Hardcoded_tolua_getmetatable]
+Pattern=BAD8B9F0FF488BCB4883C420
+Operations=ADD -38
+
+[Hardcoded_lua_newuserdata]
+Pattern=488BFA488B4918
+Operations=ADD -13
+
+[Hardcoded_lua_rawget]
+Pattern=488B53104883EA10488B08
+Operations=ADD -14
+
+[Hardcoded_lua_touserdata]
+Pattern=83F9027418
+Operations=ADD -15
+
+[Hardcoded_lua_type]
+Pattern=4883EC28E8????????488D0D????????483BC1740B
+
+[Hardcoded_tolua_beginmodule]
+Pattern=488BD94885D27417
+Operations=ADD -6
+
+[Hardcoded_tolua_cclass]
+Pattern=41574881EC38010000
+Operations=ADD -11
+
+[Hardcoded_tolua_endmodule]
+Pattern=41B8AD030000
+Operations=ADD -11897, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_error]
+Pattern=803A23
+Operations=ADD -15
+
+[Hardcoded_tolua_isnumber]
+Pattern=443BC07C0E
+Operations=ADD -43
+
+[Hardcoded_tolua_isstring]
+Pattern=443BC07C3E
+Operations=ADD -43
+
+[Hardcoded_tolua_isusertype]
+Pattern=48895C240848896C24104889742418574883EC20498BE88BF2
+
+[Hardcoded_lua_isuserdata]
+Pattern=83F947
+Operations=ADD -12
+
+[Hardcoded_tolua_module]
+Pattern=4889742410574883EC20418BF0488BFA
+Operations=ADD -5
+
+[Hardcoded_tolua_open]
+Pattern=83F8010F84D7030000
+Operations=ADD -61
+
+[Hardcoded_tolua_pushnumber]
+Pattern=488B4110F20F1108
+
+[Hardcoded_tolua_pushstring]
+Pattern=41B14C488D542458
+Operations=ADD 39, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_tonumber]
+Pattern=0F297424208BDA
+Operations=ADD -10
+
+[Hardcoded_tolua_tostring]
+Pattern=488BC3488B5C2430488B7424384883C4205FC34533C0
+Operations=ADD -43
+
+[Hardcoded_tolua_tousertype]
+Pattern=488BC3488B5C2430488B7424384883C4205FC38BD7
+Operations=ADD -43
+
+[Hardcoded_tolua_usertype]
+Pattern=488BFA89442420
+Operations=ADD -37
+
+[Hardcoded_tolua_variable]
+Pattern=488BF2498BF9
+Operations=ADD -20
+
+[Hardcoded_tolua_function]
+Pattern=BAFDFFFFFF488BCF488B5C2430
+Operations=ADD -35
+
+[Hardcoded_tolua_toboolean]
+Pattern=4889742410574883EC20418BD88BFA
+Operations=ADD -5
+
+[Hardcoded_tolua_pushboolean]
+Pattern=4C8B411033C0
+
+[Hardcoded_tolua_isboolean]
+Pattern=443BC07C43
+Operations=ADD -43
+
+[Hardcoded_luaL_loadstring]
+Pattern=48894424404889542430
+Operations=ADD -14
+
+[Hardcoded_lua_pushlightuserdata]
+Pattern=488910C7400802000000
+Operations=ADD -4
+
+[Hardcoded_lua_pushboolean]
+Pattern=4C8B411033C0
+
+[Hardcoded_lua_next]
+Pattern=4C8B4310488BCB4983E810
+Operations=ADD -14
+
+[Hardcoded_lua_insert]
+Pattern=498B53104C8BD0
+Operations=ADD -12
+
+[mapsuper]
+Pattern=574883EC20488BFA498BF0
+Operations=ADD -10
+
+[mapinheritance]
+Pattern=498BD8488BF94C8BC2
+Operations=ADD -10
+
+[Hardcoded_lua_iscfunction]
+Pattern=83F916740C
+Operations=ADD -12
+
+[module_newindex_event]
+Pattern=83F8057566
+Operations=ADD -47
+
+[class_newindex_event]
+Pattern=83F8070F85B3010000
+Operations=ADD -19
+
+[Hardcoded_lua_callk]
+Pattern=48895C2408574883EC204C8B5110
+
+[Hardcoded_lua_settable]
+Pattern=48834310E04883C420
+Operations=ADD -37
+
+[Hardcoded_lua_isnumber]
+Pattern=83F9037428
+Operations=ADD -12
+
+[Hardcoded_lua_remove]
+Pattern=498B4A104883C010
+Operations=ADD -12

@@ -1,9 +1,0 @@
-menu
-{
-	name "B3Time_Menu"
-	ignoreEsc
-	button
-	{
-		enabled "B3Time_Tick()"
-	}
-}

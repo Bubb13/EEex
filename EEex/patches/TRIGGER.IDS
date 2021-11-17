@@ -1,5 +1,0 @@
-0x410d EEex_HasDispellableEffect(O:Object*)
-0x410e EEex_LuaTrigger(S:Function*)
-0x410f EEex_IsImmuneToOpcode(O:Object*,I:Opcode*)
-0x4110 EEex_MatchObject(S:Function*)
-0x4110 EEex_MatchObjectEx(S:Function*,I:nNearest,I:range*,I:Flags*EEEX_MAT)
