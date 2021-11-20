@@ -31,6 +31,7 @@ EEex_DoFile("EEex_Menu_Patch")
 EEex_DoFile("EEex_Resource")
 
 EEex_DoFile("EEex_Sprite")
+EEex_DoFile("EEex_Sprite_Patch")
 
 EEex_DoFile("EEex_Utility")
 
@@ -38,3 +39,10 @@ EEex_Menu_AddLuaBindingsInitializedListener(function()
 	EEex_DoFile("EEex_UserTypeLuaFunc")
 	EEex_DoFile("EEex_UserDataGlobals")
 end)
+
+EEex_DoFile("EEex_Modules")
+for moduleName, enabled in pairs(EEex_Modules) do
+	if enabled then
+		EEex_DoFile(moduleName)
+	end
+end

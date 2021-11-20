@@ -1,0 +1,59 @@
+
+-----------------------
+-- B3EffectMenu_Menu --
+-----------------------
+
+menu
+{
+	name "B3EffectMenu_Menu"
+	ignoreesc
+
+	label
+	{
+		enabled "B3EffectMenu_Menu_Tick()"
+		area 0 0 2147483647 2147483647
+	}
+
+	label
+	{
+		area 0 0 220 160
+		name "B3EffectMenu_Menu_Background"
+		enabled "B3EffectMenu_Menu_Enabled"
+		rectangle 5
+		rectangle opacity 750
+	}
+	
+	list
+	{
+		column 
+		{ 
+			width 20
+			label
+			{
+				area 0 0 32 32
+				bam lua "B3EffectMenu_Menu_List_Table[rowNumber].bam"
+			}
+		}
+		column 
+		{ 
+			width 70
+			label
+			{
+				area 0 0 147 30
+				text lua "B3EffectMenu_Menu_List_Table[rowNumber].text"
+				text align left center
+				text useFontZoom 0
+			}
+		}
+
+		area 10 10 210 140
+		name "B3EffectMenu_Menu_List"
+		enabled "B3EffectMenu_Menu_Enabled"
+		table "B3EffectMenu_Menu_List_Table"
+		var "B3EffectMenu_Menu_List_SelectedRow"
+		scrollbar "GUISCRC"
+		scrollbar clunkyScroll 35
+		rowheight 35
+		hidehighlight
+	}
+}

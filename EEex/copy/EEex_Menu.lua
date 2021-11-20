@@ -3,11 +3,89 @@
 -- General Functions --
 -----------------------
 
+function EEex_Menu_TranslateXYFromGame(gameX, gameY)
+
+	local game = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame
+	local curArea = game.m_gameAreas:get(game.m_visibleArea)
+	local infinity = curArea.m_cInfinity
+
+	local viewPort = infinity.rViewPort
+	local viewportX = infinity.nNewX - viewPort.left
+	local viewportY = infinity.nNewY - viewPort.top
+
+	local realX = gameX - viewportX
+	local realY = gameY - viewportY
+
+	local screenWidth, screenHeight = Infinity_GetScreenSize()
+	local uiX = math.floor(screenWidth * (realX / viewPort.right) + 0.5)
+	local uiY = math.floor(screenHeight * (realY / viewPort.bottom) + 0.5)
+	return uiX, uiY
+end
+
+function EEex_Menu_GetMousePos()
+	local cMousePosition = EEex_EngineGlobal_CBaldurChitin.cMousePosition
+	return cMousePosition.x, cMousePosition.y
+end
+
+function EEex_Menu_IsCursorWithinRect(x, y, width, height)
+	local mouseX, mouseY = EEex_Menu_GetMousePos()
+	return mouseX >= x and mouseX <= (x + width)
+	   and mouseY >= y and mouseY <= (y + height)
+end
+
+-- Returns the given menu's x, y, w, and h components - or nil if passed invalid menuName.
+function EEex_Menu_GetArea(menuName)
+
+	local menu = EEex_Menu_Find(menuName)
+	if not menu then return end
+
+	local screenW, screenH = Infinity_GetScreenSize()
+
+	local ha = menu.ha
+	local va = menu.va
+
+	local w = menu.width
+	local h = menu.height
+
+	local returnX = 0
+	local returnY = 0
+
+	-- right
+	if ha == 1 then
+		returnX = screenW - w
+	-- center
+	elseif ha == 2 then
+		-- The negative case is nonsensical, but that's how the assembly works.
+		local windowW = screenW >= 0 and screenW or screenW + 1
+		local menuW = w >= 0 and w or w + 1
+		returnX = windowW / 2 - menuW / 2
+	end
+
+	-- bottom
+	if va == 1 then
+		returnY = screenH - h
+	-- center
+	elseif va == 2 then
+		local windowH = screenH >= 0 and screenH or screenH + 1
+		local menuH = h >= 0 and h or h + 1
+		returnY = windowH / 2 - menuH / 2
+	end
+
+	local offsetX, offsetY = Infinity_GetOffset(menuName)
+	return returnX + offsetX, returnY + offsetY, w, h
+end
+
+function EEex_Menu_IsCursorWithin(menuName, menuItemName)
+	local menuX, menuY, menuW, menuH = EEex_Menu_GetArea(menuName)
+	local itemX, itemY, itemWidth, itemHeight = Infinity_GetArea(menuItemName)
+	return EEex_Menu_IsCursorWithinRect(menuX + itemX, menuY + itemY, itemWidth, itemHeight)
+end
+
 function EEex_Menu_Find(menuName, panel, state)
 	return EngineGlobals.findMenu(menuName, panel or 0, state or 0)
 end
 
-function EEex_Menu_GetItemFunction(funcRefPtr, func)
+function EEex_Menu_GetItemFunction(funcRefPtr)
 	local regIndex = funcRefPtr:getValue()
 	return regIndex ~= 0 and EEex_GetLuaRegistryIndex(regIndex) or nil
 end

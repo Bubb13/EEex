@@ -1,14 +1,14 @@
 
 function EEex_GameObject_Get(objectID)
 
-	local CGameObject
+	local object
 	EEex_RunWithStack(EEex_PointerSize, function(mem)
 		ptr = EEex_PtrToUD(mem, "Pointer<CGameObject>")
 		CGameObjectArray.GetShare(objectID, ptr)
-		CGameObject = ptr.reference
+		object = ptr.reference
 	end)
 
-	if not CGameObject then return nil end
+	if not object then return nil end
 
 	local usertype = ({
 		[CGameObjectType.NONE]          = nil,
@@ -26,9 +26,9 @@ function EEex_GameObject_Get(objectID)
 		[CGameObjectType.AREA_AI]       = "CGameAIArea",
 		[CGameObjectType.FIREBALL]      = "CGameFireball3d",
 		[CGameObjectType.GAME_AI]       = "CGameAIGame",
-	})[CGameObject.m_objectType]
+	})[object.m_objectType]
 
-	return usertype and EEex_CastUD(CGameObject, usertype) or CGameObject
+	return usertype and EEex_CastUD(object, usertype) or object
 end
 
 function EEex_GameObject_GetSelectedID()
@@ -38,7 +38,6 @@ function EEex_GameObject_GetSelectedID()
 end
 
 function EEex_GameObject_GetSelected()
-	local debug = EEex_GameObject_GetSelectedID()
 	return EEex_GameObject_Get(EEex_GameObject_GetSelectedID())
 end
 
@@ -50,6 +49,12 @@ function EEex_GameObject_GetAllSelectedIDs()
 		node = node.pNext
 	end
 	return toReturn
+end
+
+function EEex_GameObject_GetUnderCursor()
+	local game = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame
+	local curArea = game.m_gameAreas:get(game.m_visibleArea)
+	return EEex_GameObject_Get(curArea.m_iPicked)
 end
 
 function EEex_GameObject_IsSprite(object, allowDead)

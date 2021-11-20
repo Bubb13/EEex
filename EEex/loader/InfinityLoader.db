@@ -196,6 +196,10 @@ Operations=ADD -7
 Pattern=C7804010000001000000
 Operations=ADD 10
 
+[Hook-CGameSprite::SetCursor()-SetCharacterToolTip()]
+Pattern=80BF38400000FF
+Operations=ADD 63
+
 ;------------------------------------------
 ;-- Functions Referenced by Lua Bindings --
 ;------------------------------------------

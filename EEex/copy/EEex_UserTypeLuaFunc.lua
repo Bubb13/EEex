@@ -8,3 +8,4 @@ CGameObject.getClass = EEex_GameObject_GetClass
 CGameSprite.getActiveStats = EEex_Sprite_GetActiveStats
 
 Spell_Header_st.getAbility = EEex_Resource_GetSpellAbility
+Spell_Header_st.getAbilityForLevel = EEex_Resource_GetSpellAbilityForLevel

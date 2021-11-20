@@ -20,3 +20,11 @@ EEex_DerivedStats_DisabledButtonType = {
 function EEex_Sprite_GetActiveStats(sprite)
 	return sprite.m_bAllowEffectListCall and sprite.m_derivedStats or sprite.m_tempStats
 end
+
+-----------
+-- Hooks --
+-----------
+
+function EEex_Sprite_Hook_CheckSuppressTooltip()
+	return true
+end

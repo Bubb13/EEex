@@ -136,3 +136,22 @@ function EEex_Resource_GetSpellAbility(spellHeader, abilityIndex)
 	if spellHeader.abilityCount <= abilityIndex then return end
 	return EEex_PtrToUD(EEex_UDToPtr(spellHeader) + spellHeader.abilityOffset + Spell_ability_st.sizeof * abilityIndex, "Spell_ability_st")
 end
+
+function EEex_Resource_GetSpellAbilityForLevel(spellHeader, casterLevel)
+
+	local abilitiesCount = spellHeader.abilityCount
+	if abilitiesCount == 0 then return end
+	local currentAbilityAddress = EEex_UDToPtr(spellHeader) + spellHeader.abilityOffset
+
+	local foundAbility = nil
+	for i = 1, abilitiesCount, 1 do
+		local ability = EEex_PtrToUD(currentAbilityAddress, "Spell_ability_st")
+		if casterLevel >= ability.minCasterLevel then
+			foundAbility = ability
+		else
+			break
+		end
+		currentAbilityAddress = currentAbilityAddress + Spell_ability_st.sizeof
+	end
+	return foundAbility
+end
