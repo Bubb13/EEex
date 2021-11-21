@@ -26,5 +26,5 @@ end
 -----------
 
 function EEex_Sprite_Hook_CheckSuppressTooltip()
-	return true
+	return false
 end
