@@ -200,6 +200,9 @@ Operations=ADD 10
 Pattern=80BF38400000FF
 Operations=ADD 63
 
+[Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving]
+Pattern=488B88901000007402
+
 ;------------------------------------------
 ;-- Functions Referenced by Lua Bindings --
 ;------------------------------------------

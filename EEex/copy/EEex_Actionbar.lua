@@ -86,3 +86,7 @@ function EEex_Actionbar_Hook_StateUpdating(config, state)
 		func(config, state)
 	end
 end
+
+function EEex_Actionbar_Hook_HasFullThieving(sprite)
+	return sprite:getClass() ~= 5
+end

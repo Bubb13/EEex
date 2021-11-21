@@ -195,6 +195,40 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 	})
 end
 
+function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+
+	local storeBytes = function(startAddress, size)
+		if size <= 0 then return {} end
+		local bytes = {".DB "}
+		for i = startAddress, startAddress + size - 1 do
+			table.insert(bytes, EEex_ReadU8(i))
+			table.insert(bytes, ", ")
+		end
+		if size > 0 then
+			table.remove(bytes)
+			table.insert(bytes, "#ENDL")
+		end
+		return bytes
+	end
+
+	local restoreBytes = storeBytes(address + restoreDelay, restoreSize)
+	local returnAddress = address + returnDelay
+
+	local hookCode = EEex_JITNear(EEex_FlattenTable({
+		restoreBytes,
+		assemblyT,
+		{[[
+			return:
+			jmp ]], returnAddress, [[ #ENDL
+		]]},
+	}))
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookCode, [[ #ENDL
+		#REPEAT(#$1,nop #ENDL) ]], {returnDelay - 5}
+	})
+end
+
 function EEex_HookBetweenRestore(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, assemblyT)
 
 	local storeBytes = function(startAddress, size)
@@ -256,14 +290,28 @@ function EEex_GenLuaCall(funcName, meta)
 	local localArgsTop = 32 + numShadowCallArgBytes
 	local luaCallArgsTop = localArgsTop + numShadowLocalBytes
 
-	pushNumberTemplate = function(argI)
-		return {[[
-			mov rdx, qword ptr ss:[rsp+#$1] ]], {luaCallArgsTop + argI * 8}, [[ ; n
-			mov rcx, rbx                                                        ; L
-			#ALIGN
-			call #L(Hardcoded_lua_pushinteger)
-			#ALIGN_END
-		]]}
+	local argsUserType = {}
+
+	pushArgTemplate = function(argI)
+		local userType = argsUserType[argI + 1]
+		if userType == "" then
+			return {[[
+				mov rdx, qword ptr ss:[rsp+#$1] ]], {luaCallArgsTop + argI * 8}, [[ ; n
+				mov rcx, rbx                                                        ; L
+				#ALIGN
+				call #L(Hardcoded_lua_pushinteger)
+				#ALIGN_END
+			]]}
+		else
+			return {[[
+				mov r8, ]], EEex_WriteStringAuto(userType), [[                      ; type
+				mov rdx, qword ptr ss:[rsp+#$1] ]], {luaCallArgsTop + argI * 8}, [[ ; value
+				mov rcx, rbx                                                        ; L
+				#ALIGN
+				call #L(Hardcoded_tolua_pushusertype)
+				#ALIGN_END
+			]]}
+		end
 	end
 
 	local returnBooleanTemplate = {[[
@@ -295,7 +343,9 @@ function EEex_GenLuaCall(funcName, meta)
 		if not args then return toReturn end
 
 		for i = numArgs, 1, -1 do
-			toReturn[insertionIndex] = args[i](luaCallArgsTop + (i - 1) * 8)
+			local argT, argUT = args[i](luaCallArgsTop + (i - 1) * 8)
+			toReturn[insertionIndex] = argT
+			argsUserType[insertionIndex] = argUT or ""
 			insertionIndex = insertionIndex + 1
 		end
 
@@ -418,7 +468,7 @@ function EEex_GenLuaCall(funcName, meta)
 		if not args then return toReturn end
 
 		for i = 0, numArgs - 1 do
-			toReturn[insertionIndex] = pushNumberTemplate(i)
+			toReturn[insertionIndex] = pushArgTemplate(i)
 			insertionIndex = insertionIndex + 1
 		end
 
@@ -810,7 +860,7 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 
 	-- #L
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#L(%b())", function(match)
-		return EEex_Label(match.groups[1]:sub(2, -2))
+		return EEex_AssemblyToHex(EEex_Label(match.groups[1]:sub(2, -2)))
 	end)
 
 	--#REPEAT
