@@ -19,6 +19,39 @@ function EEex_Actionbar_RestoreLastState()
 	EEex_Actionbar_SetState(EEex_Actionbar_GetLastState())
 end
 
+EEex_Actionbar_ButtonType = {
+	["BARD_SONG"] = 2,
+	["CAST_SPELL"] = 3,
+	["FIND_TRAPS"] = 4,
+	["TALK"] = 5,
+	["GUARD"] = 7,
+	["ATTACK"] = 8,
+	["SPECIAL_ABILITIES"] = 10,
+	["STEALTH"] = 11,
+	["THIEVING"] = 12,
+	["TURN_UNDEAD"] = 13,
+	["USE_ITEM"] = 14,
+	["STOP"] = 15,
+	["QUICK_ITEM_1"] = 21,
+	["QUICK_ITEM_2"] = 22,
+	["QUICK_ITEM_3"] = 23,
+	["QUICK_SPELL_1"] = 24,
+	["QUICK_SPELL_2"] = 25,
+	["QUICK_SPELL_3"] = 26,
+	["QUICK_WEAPON_1"] = 27,
+	["QUICK_WEAPON_2"] = 28,
+	["QUICK_WEAPON_3"] = 29,
+	["QUICK_WEAPON_4"] = 30,
+	["NONE"] = 100,
+}
+
+function EEex_Actionbar_SetButton(buttonIndex, buttonType)
+	if buttonIndex < 0 or buttonIndex > 11 then
+		EEex_Error("buttonIndex out of bounds")
+	end
+	EEex_Actionbar_GetArray().m_buttonTypes:set(buttonIndex, buttonType)
+end
+
 ---------------
 -- Listeners --
 ---------------
