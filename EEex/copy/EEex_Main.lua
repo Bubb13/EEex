@@ -6,14 +6,9 @@
 EEex_DoFile("EEex_Assembly")
 
 EEex_LoadLuaBindings("LuaBindings-v2.6.6.0", function()
-	EEex_Patterns = EEex_GetPatternMap()
+	EEex_GlobalAssemblyLabels = EEex_GetPatternMap()
 	EEex_DoFile("EEex_LuaBindings_Patch")
 end)
-
-for k, v in pairs(EEex_Patterns) do
-	--print(k.." => "..EEex_ToHex(v))
-	EEex_DefineAssemblyLabel(k, v)
-end
 
 EEex_DoFile("EEex_Assembly_Patch")
 

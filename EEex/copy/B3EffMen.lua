@@ -3,7 +3,6 @@
 -- Options --
 -------------
 
-B3EffectMenu_Stat_Required = false
 B3EffectMenu_Key = EEex_Key_GetFromName("Left Shift")
 B3EffectMenu_RowCount = 4
 

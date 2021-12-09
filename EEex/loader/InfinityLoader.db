@@ -137,6 +137,10 @@ Operations=ADD -6
 ;-- Hooks --
 ;-----------
 
+[Data-CGameEffect::vftable]
+Pattern=4889442428488BD9418BF1
+Operations=ADD 29, PUSH, READ DWORD, ADD, ADD 4
+
 [Hook-CInfButtonArray::SetState()-SaveArg]
 Pattern=498D8EF8200000
 Operations=ADD -11
@@ -242,6 +246,9 @@ Operations=ADD -13
 Pattern=488B53104883EA10488B08
 Operations=ADD -14
 
+[Hardcoded_lua_rawgeti]
+Pattern=4883EC28458BD0
+
 [Hardcoded_lua_touserdata]
 Pattern=83F9027418
 Operations=ADD -15
@@ -284,7 +291,7 @@ Operations=ADD -12
 Pattern=4889742410574883EC20418BF0488BFA
 Operations=ADD -5
 
-[Hardcoded_tolua_open]
+[tolua_open]
 Pattern=83F8010F84D7030000
 Operations=ADD -61
 
@@ -361,14 +368,6 @@ Operations=ADD -10
 Pattern=83F916740C
 Operations=ADD -12
 
-[module_newindex_event]
-Pattern=83F8057566
-Operations=ADD -47
-
-[class_newindex_event]
-Pattern=83F8070F85B3010000
-Operations=ADD -19
-
 [Hardcoded_lua_callk]
 Pattern=48895C2408574883EC204C8B5110
 
@@ -383,3 +382,54 @@ Operations=ADD -12
 [Hardcoded_lua_remove]
 Pattern=498B4A104883C010
 Operations=ADD -12
+
+[Hardcoded_lua_gettable]
+Pattern=4D8BC84883C428
+Operations=ADD -26
+
+[Hardcoded_lua_rawseti]
+Pattern=4883EC20458BD0
+Operations=ADD -6
+
+[module_newindex_event]
+Pattern=83F8057566
+Operations=ADD -47
+
+[class_newindex_event]
+Pattern=83F8070F85B3010000
+Operations=ADD -19
+
+[module_index_event]
+Pattern=83F8057561
+Operations=ADD -47
+
+[class_index_event]
+Pattern=0F85B3020000
+Operations=ADD -22
+
+[tolua_cclass]
+Pattern=41574881EC38010000
+Operations=ADD -11
+
+[Hardcoded_tolua_newmetatable]
+Pattern=4883EC20488BFA488BD94C8BC2
+Operations=ADD -6
+
+[Hardcoded_tolua_bnd_type]
+Pattern=7429BAFFFFFFFF
+Operations=ADD 362, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_bnd_takeownership]
+Pattern=48896C24104889742418574883EC2033F6
+
+[Hardcoded_tolua_bnd_releaseownership]
+Pattern=488BF98D5301
+Operations=ADD -12
+
+[Hardcoded_tolua_bnd_cast]
+Pattern=488BCB488BF0418D5002
+Operations=ADD -33
+
+[Hardcoded_tolua_bnd_release]
+Pattern=488BF84885C00F8487000000
+Operations=ADD -25
