@@ -133,9 +133,40 @@ Pattern=4056415641574883EC50
 Pattern=488BD94885C9743F
 Operations=ADD -6
 
+;----------------------
+;-- Engine Functions --
+;----------------------
+
+[operator_new]
+Pattern=488BD9EB0F
+Operations=ADD -6
+
+[CGameEffect::Construct]
+Pattern=4889442428488BD9418BF1
+Operations=ADD -23
+
+[CGameEffect::CopyFromBase]
+Pattern=488BF2488BF94C8BC2
+Operations=ADD -30
+
+[CGameEffect::GetItemEffect]
+Pattern=488BF9B930000000
+Operations=ADD -10
+
 ;-----------
 ;-- Hooks --
 ;-----------
+
+[Hook-CGameEffect::DecodeEffect()-DefaultJmp]
+Pattern=5741564883EC4033DB
+Operations=ADD 38
+
+[Hook-CGameEffect::DecodeEffect()-Fail]
+Pattern=488BD84C8B7C2460
+Operations=ADD 3
+
+[Hook-CGameEffect::DecodeEffect()-Success]
+Pattern=488BD84C8B7C2460
 
 [Data-CGameEffect::vftable]
 Pattern=4889442428488BD9418BF1

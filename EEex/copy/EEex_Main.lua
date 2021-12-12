@@ -23,6 +23,9 @@ EEex_DoFile("EEex_Key_Patch")
 EEex_DoFile("EEex_Menu")
 EEex_DoFile("EEex_Menu_Patch")
 
+EEex_DoFile("EEex_Opcode")
+EEex_DoFile("EEex_Opcode_Patch")
+
 EEex_DoFile("EEex_Resource")
 
 EEex_DoFile("EEex_Sprite")

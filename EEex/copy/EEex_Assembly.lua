@@ -78,6 +78,63 @@ function EEex_DistanceToMultiple(numToRound, multiple)
 	return multiple - remainder
 end
 
+EEex_WriteType = {
+	["BYTE"]    = 0,
+	["8"]       = 0,
+	["WORD"]    = 1,
+	["16"]      = 1,
+	["DWORD"]   = 2,
+	["32"]      = 2,
+	["QWORD"]   = 3,
+	["64"]      = 3,
+	["POINTER"] = 4,
+	["PTR"]     = 4,
+	["RESREF"]  = 5,
+	["JIT"]     = 6,
+}
+
+EEex_WriteFailType = {
+	["ERROR"]   = 0,
+	["DEFAULT"] = 1,
+	["NOTHING"] = 2,
+}
+
+function EEex_WriteArgs(address, args, writeDefs)
+	writeTypeFunc = {
+		[EEex_WriteType.BYTE]    = EEex_Write8,
+		[EEex_WriteType.WORD]    = EEex_Write16,
+		[EEex_WriteType.DWORD]   = EEex_Write32,
+		[EEex_WriteType.QWORD]   = EEex_Write64,
+		[EEex_WriteType.POINTER] = EEex_WritePtr,
+		[EEex_WriteType.RESREF]  = function(address, arg) EEex_WriteLString(address, arg, 8) end,
+		[EEex_WriteType.JIT]     = function(address, arg)
+			local ptr = arg
+			if type(ptr) == "table" then
+				ptr = EEex_JITNear(arg)
+			end
+			EEex_WritePtr(address, ptr)
+		end,
+	}
+	for _, writeDef in ipairs(writeDefs) do
+		local argKey = writeDef[1]
+		local arg = args[argKey]
+		local skipWrite = false
+		if not arg then
+			local failType = writeDef[4]
+			if failType == EEex_WriteFailType.DEFAULT then
+				arg = writeDef[5]
+			elseif failType == EEex_WriteFailType.ERROR then
+				EEex_Error(argKey.." must be defined!")
+			else
+				skipWrite = true
+			end
+		end
+		if not skipWrite then
+			writeTypeFunc[writeDef[3]](address + writeDef[2], arg)
+		end
+	end
+end
+
 ------------------------------
 -- General Assembly Writing --
 ------------------------------
@@ -102,6 +159,20 @@ end
 -- Hooking --
 -------------
 
+function EEex_StoreBytesAssembly(startAddress, size)
+	if size <= 0 then return {} end
+	local bytes = {".DB "}
+	for i = startAddress, startAddress + size - 1 do
+		table.insert(bytes, EEex_ReadU8(i))
+		table.insert(bytes, ", ")
+	end
+	if size > 0 then
+		table.remove(bytes)
+		table.insert(bytes, "#ENDL")
+	end
+	return bytes
+end
+
 function EEex_HookRelativeBranch(address, assemblyT)
 	local opcode = EEex_ReadU8(address)
 	if opcode ~= 0xE8 and opcode ~= 0xE9 then EEex_Error("Not disp32 relative: "..EEex_ToHex(opcode)) end
@@ -114,19 +185,6 @@ function EEex_HookRelativeBranch(address, assemblyT)
 end
 
 function EEex_HookJump(address, restoreSize, assemblyT)
-
-	local storeBytes = function(startAddress, size)
-		local bytes = {".DB "}
-		for i = startAddress, startAddress + size - 1 do
-			table.insert(bytes, EEex_ReadU8(i))
-			table.insert(bytes, ", ")
-		end
-		if size > 0 then
-			table.remove(bytes)
-			table.insert(bytes, "#ENDL")
-		end
-		return bytes
-	end
 
 	local byteToDwordJmp = {
 		[0x70] = "jo",
@@ -170,7 +228,7 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 
 	local afterInstruction = address + instructionSize
 	local jmpFailDest = afterInstruction + restoreSize
-	local restoreBytes = storeBytes(afterInstruction, restoreSize)
+	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
 	local jmpDest = afterInstruction + offset
 
 	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
@@ -195,23 +253,71 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 	})
 end
 
-function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+function EEex_HookJumpAutoFail(address, restoreSize, assemblyT)
 
-	local storeBytes = function(startAddress, size)
-		if size <= 0 then return {} end
-		local bytes = {".DB "}
-		for i = startAddress, startAddress + size - 1 do
-			table.insert(bytes, EEex_ReadU8(i))
-			table.insert(bytes, ", ")
-		end
-		if size > 0 then
-			table.remove(bytes)
-			table.insert(bytes, "#ENDL")
-		end
-		return bytes
+	local byteToDwordJmp = {
+		[0x70] = "jo",
+		[0x71] = "jno",
+		[0x72] = "jb",
+		[0x73] = "jae",
+		[0x74] = "je",
+		[0x75] = "jne",
+		[0x76] = "jbe",
+		[0x77] = "ja",
+		[0x78] = "js",
+		[0x79] = "jns",
+		[0x7A] = "jp",
+		[0x7B] = "jnp",
+		[0x7C] = "jl",
+		[0x7D] = "jge",
+		[0x7E] = "jle",
+		[0x7F] = "jg",
+		[0xEB] = "jmp",
+	}
+
+	local instructionByte = EEex_ReadU8(address)
+	local instructionSize = nil
+	local offset = nil
+
+	local switchBytes = byteToDwordJmp[instructionByte]
+	if switchBytes then
+		instructionSize = 2
+		offset = EEex_Read8(address + 1)
+	elseif instructionByte == 0xE9 then
+		instructionSize = 5
+		offset = EEex_Read32(address + 1)
+	else
+		instructionSize = 6
+		offset = EEex_Read32(address + 2)
 	end
 
-	local restoreBytes = storeBytes(address + restoreDelay, restoreSize)
+	local afterInstruction = address + instructionSize
+	local jmpFailDest = afterInstruction + restoreSize
+	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
+	local jmpDest = afterInstruction + offset
+
+	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+
+	local hookCode = EEex_JITNear(EEex_FlattenTable({
+		assemblyT,
+		{[[
+			jmp_fail: 
+		]]},
+		restoreBytes,
+		{[[
+			jmp ]], jmpFailDest, [[ #ENDL
+		]]},
+	}))
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookCode, [[ #ENDL
+		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionSize}
+	})
+end
+
+function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+
+	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
 	local returnAddress = address + returnDelay
 
 	local hookCode = EEex_JITNear(EEex_FlattenTable({
@@ -231,22 +337,8 @@ end
 
 function EEex_HookBetweenRestore(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, assemblyT)
 
-	local storeBytes = function(startAddress, size)
-		if size <= 0 then return {} end
-		local bytes = {".DB "}
-		for i = startAddress, startAddress + size - 1 do
-			table.insert(bytes, EEex_ReadU8(i))
-			table.insert(bytes, ", ")
-		end
-		if size > 0 then
-			table.remove(bytes)
-			table.insert(bytes, "#ENDL")
-		end
-		return bytes
-	end
-
-	local restoreBytes1 = storeBytes(address + restoreDelay1, restoreSize1)
-	local restoreBytes2 = storeBytes(address + restoreDelay2, restoreSize2)
+	local restoreBytes1 = EEex_StoreBytesAssembly(address + restoreDelay1, restoreSize1)
+	local restoreBytes2 = EEex_StoreBytesAssembly(address + restoreDelay2, restoreSize2)
 	local returnAddress = address + returnDelay
 
 	local hookCode = EEex_JITNear(EEex_FlattenTable({
@@ -379,7 +471,7 @@ function EEex_GenLuaCall(funcName, meta)
 		if funcName then
 			if meta then
 				if meta.functionChunk then EEex_Error("[EEex_GenLuaCall] funcName and meta.functionChunk are exclusive") end
-				if meta.pushFunction then EEex_Error("[EEex_GenLuaCall] funcName and meta.pushFunction are exclusive") end
+				if meta.functionSrc then EEex_Error("[EEex_GenLuaCall] funcName and meta.functionSrc are exclusive") end
 			end
 			return {[[
 				mov rdx, ]], EEex_WriteStringAuto(funcName), [[ ; name
@@ -391,7 +483,7 @@ function EEex_GenLuaCall(funcName, meta)
 		elseif meta then
 			if meta.functionChunk then
 				if numArgs > 0 then EEex_Error("[EEex_GenLuaCall] Lua chunks can't be passed arguments") end
-				if meta.pushFunction then EEex_Error("[EEex_GenLuaCall] meta.functionChunk and meta.pushFunction are exclusive") end
+				if meta.functionSrc then EEex_Error("[EEex_GenLuaCall] meta.functionChunk and meta.functionSrc are exclusive") end
 				return EEex_FlattenTable({
 					meta.functionChunk,
 					{[[
@@ -449,13 +541,13 @@ function EEex_GenLuaCall(funcName, meta)
 						EEex_GenLuaCall_loadstring_no_error:
 					]]},
 				})
-			elseif meta.pushFunction then
-				if meta.functionChunk then EEex_Error("[EEex_GenLuaCall] meta.pushFunction and meta.functionChunk are exclusive") end
-				return meta.pushFunction
+			elseif meta.functionSrc then
+				if meta.functionChunk then EEex_Error("[EEex_GenLuaCall] meta.functionSrc and meta.functionChunk are exclusive") end
+				return meta.functionSrc
 			end
 		end
 
-		EEex_Error("[EEex_GenLuaCall] meta.functionChunk or meta.pushFunction must be defined when funcName = nil")
+		EEex_Error("[EEex_GenLuaCall] meta.functionChunk or meta.functionSrc must be defined when funcName = nil")
 	end
 
 	local genArgPushes2 = function()
