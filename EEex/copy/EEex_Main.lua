@@ -44,3 +44,5 @@ for moduleName, enabled in pairs(EEex_Modules) do
 		EEex_DoFile(moduleName)
 	end
 end
+
+EEex_Active = true
