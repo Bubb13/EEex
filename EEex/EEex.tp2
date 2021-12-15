@@ -3,12 +3,7 @@ AUTHOR ~Bubb~
 VERSION 0.9.3
 
 BEGIN ~EEex~
-REQUIRE_PREDICATE (
-	   (GAME_IS ~bgee~)
-	OR (GAME_IS ~bg2ee~)
-	OR (GAME_IS ~eet~)
-	OR (GAME_IS ~iwdee~)
-) ~Game not supported.~
+REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) ~Game not supported.~
 
-	COPY ~EEex\loader~ ~.~ IF_EXISTS
-	COPY ~EEex\copy~ ~override~ IF_EXISTS
+	COPY ~EEex/loader~ ~.~ IF_EXISTS
+	COPY ~EEex/copy~ ~override~ IF_EXISTS
