@@ -253,7 +253,7 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 	})
 end
 
-function EEex_HookJumpAutoFail(address, restoreSize, assemblyT)
+function EEex_HookJumpAuto(address, restoreSize, assemblyT, bAutoSuccess)
 
 	local byteToDwordJmp = {
 		[0x70] = "jo",
@@ -301,6 +301,9 @@ function EEex_HookJumpAutoFail(address, restoreSize, assemblyT)
 	local hookCode = EEex_JITNear(EEex_FlattenTable({
 		assemblyT,
 		{[[
+			#IF ]], bAutoSuccess, [[ {
+				jmp #L(jmp_success)
+			}
 			jmp_fail: 
 		]]},
 		restoreBytes,
@@ -313,6 +316,14 @@ function EEex_HookJumpAutoFail(address, restoreSize, assemblyT)
 		jmp short ]], hookCode, [[ #ENDL
 		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionSize}
 	})
+end
+
+function EEex_HookJumpAutoFail(address, restoreSize, assemblyT)
+	EEex_HookJumpAuto(address, restoreSize, assemblyT, false)
+end
+
+function EEex_HookJumpAutoSucceed(address, restoreSize, assemblyT)
+	EEex_HookJumpAuto(address, restoreSize, assemblyT, true)
 end
 
 function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)

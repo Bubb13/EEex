@@ -31,6 +31,9 @@ EEex_DoFile("EEex_Resource")
 EEex_DoFile("EEex_Sprite")
 EEex_DoFile("EEex_Sprite_Patch")
 
+EEex_DoFile("EEex_Trigger")
+EEex_DoFile("EEex_Trigger_Patch")
+
 EEex_DoFile("EEex_Utility")
 
 EEex_Menu_AddLuaBindingsInitializedListener(function()

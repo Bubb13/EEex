@@ -5,5 +5,19 @@ VERSION 0.9.3
 BEGIN ~EEex~
 REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) ~Game not supported.~
 
+	ACTION_FOR_EACH file IN TRIGGER BEGIN
+		COPY ~EEex\patch\%file%.IDS~ ~EEex\patch~
+			COUNT_2DA_ROWS 2 rows
+			FOR (i = 0; i <= rows; ++i) BEGIN
+				READ_2DA_ENTRY i 0 2 "col1"
+				READ_2DA_ENTRY i 1 2 "col2"
+				DEFINE_ASSOCIATIVE_ARRAY EEex_append_array BEGIN ~%file%~ , ~%col1%~ , ~%col2%~ => ~~ END
+			END
+		BUT_ONLY
+	END
+	ACTION_PHP_EACH EEex_append_array AS data => ~~ BEGIN
+		APPEND ~%data%.IDS~ ~%data_1% %data_2%~ UNLESS ~^%data_1% ~
+	END
+
 	COPY ~EEex/loader~ ~.~ IF_EXISTS
 	COPY ~EEex/copy~ ~override~ IF_EXISTS

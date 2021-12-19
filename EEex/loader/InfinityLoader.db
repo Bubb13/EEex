@@ -157,6 +157,10 @@ Operations=ADD -10
 ;-- Hooks --
 ;-----------
 
+[Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp]
+Pattern=0FBF8550030000
+Operations=ADD 17
+
 [Hook-CGameEffect::DecodeEffect()-DefaultJmp]
 Pattern=5741564883EC4033DB
 Operations=ADD 38

@@ -57,6 +57,12 @@ function EEex_GameObject_GetUnderCursor()
 	return EEex_GameObject_Get(curArea.m_iPicked)
 end
 
+function EEex_GameObject_GetUnderCursorID()
+	local game = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame
+	local curArea = game.m_gameAreas:get(game.m_visibleArea)
+	return curArea.m_iPicked
+end
+
 function EEex_GameObject_IsSprite(object, allowDead)
 	if object and object.m_objectType == CGameObjectType.SPRITE then
 		return allowDead or EEex_BAnd(object.m_baseStats.m_generalState, 0xFC0) == 0
