@@ -26,6 +26,20 @@ function EEex_Utility_DumpMetatables(obj)
 	end
 end
 
+function EEex_Utility_Eval(src, chunk)
+	local func, err = load(chunk, nil, "t")
+	if func then
+		local success, val = xpcall(func, debug.traceback)
+		if success then
+			return true, val
+		end
+		print(string.format("[%s] Runtime error: %s", src, val))
+	else
+		print(string.format("[%s] Compile error: %s", src, err))
+	end
+	return false
+end
+
 ---------------
 -- EEex_Dump --
 ---------------

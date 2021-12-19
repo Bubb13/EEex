@@ -12,6 +12,9 @@ end)
 
 EEex_DoFile("EEex_Assembly_Patch")
 
+EEex_DoFile("EEex_Action")
+EEex_DoFile("EEex_Action_Patch")
+
 EEex_DoFile("EEex_Actionbar")
 EEex_DoFile("EEex_Actionbar_Patch")
 

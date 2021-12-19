@@ -1016,10 +1016,11 @@ function EEex_PreprocessAssembly(assemblyT)
 		(Please forgive the following code)
 		#STACK_MOD((-\d+)[1])
 		(#MAKE_SHADOW_SPACE((\d+)[3?]))[2]
-		(#DESTROY_SHADOW_SPACE)[4]
-		(#ALIGN_END)[5]
-		(#ALIGN((\d+)[7?]))[6]
-		(#SHADOW_SPACE_BOTTOM((\d+)[9?]))[8]
+		(#DESTROY_SHADOW_SPACE(KEEP_ENTRY)[5?])[4]
+		(#ALIGN_END)[6]
+		(#ALIGN((\d+)[8?]))[7]
+		(#SHADOW_SPACE_BOTTOM((\d+)[10?]))[9]
+		(#RESUME_SHADOW_ENTRY)[11]
 	--]]
 
 	local shadowSpaceStack = {}
@@ -1028,7 +1029,7 @@ function EEex_PreprocessAssembly(assemblyT)
 	local alignModStackTop = 0
 	local hintAccumulator = 0
 
-	toReturn = EEex_ReplaceRegex(toReturn, "(?:#STACK_MOD\\s*\\((-{0,1}\\d+)\\))|(#MAKE_SHADOW_SPACE(?:\\s*\\((\\d+)\\)){0,1})|(#DESTROY_SHADOW_SPACE)|(#ALIGN_END)|(#ALIGN(?:\\s*\\((\\d+)\\)){0,1})|(#SHADOW_SPACE_BOTTOM\\s*\\((-{0,1}.+)\\))", function(pos, endPos, str, groups)
+	toReturn = EEex_ReplaceRegex(toReturn, "(?:#STACK_MOD\\s*\\((-{0,1}\\d+)\\))|(#MAKE_SHADOW_SPACE(?:\\s*\\((\\d+)\\)){0,1})|(#DESTROY_SHADOW_SPACE(?:(?!\\(.*?\\))|(?:\\((KEEP_ENTRY)\\))))|(#ALIGN_END)|(#ALIGN(?:\\s*\\((\\d+)\\)){0,1})|(#SHADOW_SPACE_BOTTOM\\s*\\((-{0,1}.+)\\))|(#RESUME_SHADOW_ENTRY)", function(pos, endPos, str, groups)
 		if groups[1] then
 			--print("#STACK_MOD("..tonumber(groups[1])..")")
 			hintAccumulator = hintAccumulator + tonumber(groups[1])
@@ -1061,13 +1062,15 @@ function EEex_PreprocessAssembly(assemblyT)
 		elseif groups[4] then
 			--print("#DESTROY_SHADOW_SPACE")
 			local shadowEntry = shadowSpaceStack[shadowSpaceStackTop]
-			shadowSpaceStackTop = shadowSpaceStackTop - 1
+			if not groups[5] then
+				shadowSpaceStackTop = shadowSpaceStackTop - 1
+			end
 			hintAccumulator = hintAccumulator - shadowEntry.size
 			-- LEA maintains flags (as opposed to SUB), which allows us to test a register
 			-- and restore it before calling #DESTROY_SHADOW_SPACE and still use the result
 			-- for a branch.
 			return string.format("lea rsp, qword ptr ss:[rsp+%d]", shadowEntry.size)
-		elseif groups[5] then
+		elseif groups[6] then
 			--print("#ALIGN_END")
 			local alignEntry = alignModStack[alignModStackTop]
 			if alignEntry.madeShadow then shadowSpaceStackTop = shadowSpaceStackTop - 1 end
@@ -1075,8 +1078,8 @@ function EEex_PreprocessAssembly(assemblyT)
 			if alignEntry.popAmount > 0 then
 				return string.format("add rsp, %d #ENDL", tonumber(alignEntry.popAmount))
 			end
-		elseif groups[6] then
-			local pushedArgBytes = groups[7] and tonumber(groups[7]) or 0
+		elseif groups[7] then
+			local pushedArgBytes = groups[8] and tonumber(groups[8]) or 0
 			--print("#ALIGN("..pushedArgBytes..")")
 			local neededShadow = 0
 			if shadowSpaceStackTop == 0 or shadowSpaceStack[shadowSpaceStackTop].top ~= hintAccumulator then
@@ -1097,14 +1100,16 @@ function EEex_PreprocessAssembly(assemblyT)
 			if neededStack > 0 then
 				return string.format("sub rsp, %d #ENDL", neededStack)
 			end
-		elseif groups[8] then
+		elseif groups[9] then
 			--print("#SHADOW_SPACE_BOTTOM")
 			local adjust = 0
-			local adjustStr = groups[9]
+			local adjustStr = groups[10]
 			if adjustStr then
 				adjust = adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr)
 			end
 			return tostring(shadowSpaceStack[shadowSpaceStackTop].size + adjust)
+		elseif groups[11] then
+			hintAccumulator = hintAccumulator + shadowSpaceStack[shadowSpaceStackTop].size
 		end
 		return ""
 	end)

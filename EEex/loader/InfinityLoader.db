@@ -157,6 +157,14 @@ Operations=ADD -10
 ;-- Hooks --
 ;-----------
 
+[Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
+Pattern=488BCBFF17
+Operations=ADD 31
+
+[Hook-CGameAIBase::ExecuteAction()-NormalBranch]
+Pattern=6689B3BA040000
+Operations=ADD -5
+
 [Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp]
 Pattern=0FBF8550030000
 Operations=ADD 17
