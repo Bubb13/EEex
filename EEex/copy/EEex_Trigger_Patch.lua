@@ -18,6 +18,10 @@
 			},
 			["returnType"] = EEex_LuaCallReturnType.Boolean,
 		}), [[
+		jmp no_error
+		call_error:
+		xor eax, eax
+		no_error:
 		mov esi, eax
 		#DESTROY_SHADOW_SPACE
 	]]}))
