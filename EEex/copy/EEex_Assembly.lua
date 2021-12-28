@@ -448,7 +448,7 @@ function EEex_GenLuaCall(funcName, meta)
 		for i = numArgs, 1, -1 do
 			local argT, argUT = args[i](luaCallArgsTop + (i - 1) * 8)
 			toReturn[insertionIndex] = argT
-			argsUserType[insertionIndex] = argUT or ""
+			argsUserType[i] = argUT or ""
 			insertionIndex = insertionIndex + 1
 		end
 

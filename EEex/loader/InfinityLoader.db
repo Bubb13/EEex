@@ -15,6 +15,10 @@ Operations=DISABLE_CODE_PROTECTION, WRITE BYTES EB, ENABLE_CODE_PROTECTION
 ;-- Bound Engine Globals --
 ;--------------------------
 
+[CAIObjectType::NOONE]
+Pattern=E988040000
+Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
+
 [numMenus]
 Pattern=41B800700000
 Operations=ADD 59, PUSH, READ DWORD, ADD, ADD 4
@@ -50,6 +54,9 @@ Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
 ;----------------------------
 ;-- Bound Engine Functions --
 ;----------------------------
+
+[CAIObjectType::Set]
+Pattern=0FB64208884108
 
 [CGameObjectArray::GetShare]
 Pattern=48C7020000000083F9FF
@@ -156,6 +163,14 @@ Operations=ADD -10
 ;-----------
 ;-- Hooks --
 ;-----------
+
+[Hook-CAIObjectType::Decode()-DefaultJmp]
+Pattern=4885D20F84C6020000
+Operations=ADD 33
+
+[Hook-CAIObjectType::Decode()-NormalBranch]
+Pattern=488B55D749FFC7
+Operations=ADD 4
 
 [Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
 Pattern=488BCBFF17

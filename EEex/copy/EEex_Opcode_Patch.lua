@@ -26,8 +26,8 @@
 					#ALIGN_END
 				]]},
 				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rcx", {rspOffset}, "#ENDL"}, "CGameObject" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rdx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
 				},
 			}), [[
 

@@ -10,11 +10,11 @@
 			["args"] = {
 				function(rspOffset) return {[[
 					mov qword ptr ss:[rsp+#$1], r14
-				]], {rspOffset}}, "CAITrigger" end,
+				]], {rspOffset}}, "CGameAIBase" end,
 				function(rspOffset) return {[[
 					lea rax, qword ptr ss:[rbp+350h]
 					mov qword ptr ss:[rsp+#$1], rax
-				]], {rspOffset}}, "CGameAIBase" end,
+				]], {rspOffset}}, "CAITrigger" end,
 			},
 			["returnType"] = EEex_LuaCallReturnType.Boolean,
 		}), [[
