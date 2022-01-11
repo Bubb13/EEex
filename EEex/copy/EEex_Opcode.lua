@@ -86,7 +86,7 @@ function EEex_Opcode_GenDecode(args)
 		]]}
 	end
 
-	local vtblsize = CGameEffect_vtbl.sizeof
+	local vtblsize = _G["CGameEffect::vtbl"].sizeof
 	local newvtbl = EEex_Malloc(vtblsize)
 	EEex_Memcpy(newvtbl, EEex_Label("Data-CGameEffect::vftable"), vtblsize)
 

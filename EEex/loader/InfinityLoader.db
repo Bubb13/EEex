@@ -55,6 +55,10 @@ Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
 ;-- Bound Engine Functions --
 ;----------------------------
 
+[CGameEffect::DecodeEffect]
+Pattern=5741564883EC4033DB
+Operations=ADD -11
+
 [CAIObjectType::Set]
 Pattern=0FB64208884108
 

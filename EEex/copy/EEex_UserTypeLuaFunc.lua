@@ -4,6 +4,7 @@ uiVariant.setValue = EEex_Menu_SetItemVariant
 
 CGameObject.isSprite = EEex_GameObject_IsSprite
 CGameObject.getClass = EEex_GameObject_GetClass
+CGameObject.applyEffect = EEex_GameObject_ApplyEffect
 
 CGameSprite.getActiveStats = EEex_Sprite_GetActiveStats
 
