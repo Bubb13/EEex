@@ -186,6 +186,11 @@ function EEex_Menu_StoreTemplateInstance(menuName, templateName, instanceID, sto
 	end
 end
 
+function EEex_Menu_SetTemplateArea(menuName, templateName, instanceID, x, y, w, h)
+	EEex_Menu_StoreTemplateInstance(menuName, templateName, instanceID, "EEex_Menu_StoredTemplate")
+	Infinity_SetArea("EEex_Menu_StoredTemplate", x, y, w, h)
+end
+
 EEex_Menu_NativeMap = {}
 
 function EEex_Menu_IsNative(menuName)
@@ -237,8 +242,7 @@ function EEex_Menu_Hook_AfterLuaBindingsInitialized()
 	end
 end
 
-function EEex_Menu_Hook_CheckSaveMenuItem(uiItemPtr)
-	local uiItem = EEex_PtrToUD(uiItemPtr, "uiItem")
+function EEex_Menu_Hook_CheckSaveMenuItem(uiItem)
 	local menuName = uiItem.menu.name
 	return EEex_Menu_IsNative(menuName)
 end
