@@ -20,7 +20,7 @@ function EEex_Error(message)
 end
 
 function EEex_TracebackPrint(message, levelMod)
-	print(debug.traceback("["..EEex_GetMilliseconds().."] "..message, 2 + (levelMod or 0)))
+	print(debug.traceback(message, 2 + (levelMod or 0)))
 end
 
 function EEex_TracebackMessage(message, levelMod)
@@ -167,34 +167,7 @@ EEex_WriteUDArgs = EEex_WriteUserDataArgs
 -- Start Memory Interface --
 ----------------------------
 
-EEex_MemoryManagerStructMeta = {
-
-	["CPoint"] = {
-		["constructors"] = {
-			["fromXY"] = function(point, x, y)
-				point.x = x
-				point.y = y
-			end,
-		},
-	},
-
-	["string"] = {
-		["constructors"] = {
-			["#default"] = function(address, luaString)
-				EEex_WriteString(address, luaString)
-			end,
-		},
-		["size"] = function(luaString)
-			return #luaString + 1
-		end,
-	},
-
-	["uninitialized"] = {
-		["size"] = function(size)
-			return size
-		end,
-	},
-}
+EEex_MemoryManagerStructDefinitions = {}
 
 EEex_MemoryManager = {}
 EEex_MemoryManager.__index = EEex_MemoryManager
@@ -211,10 +184,11 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 
 	local getArgs = function(structEntry)
 		local args = (structEntry.constructor or {}).args
+		local argsType = type(args)
 		if argsType == "function" then
 			return args(self)
 		elseif argsType == "table" then
-			return unpack(args)
+			return table.unpack(args)
 		end
 	end
 
@@ -224,7 +198,7 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 	for _, structEntry in ipairs(structEntries) do
 
 		self.nameToEntry[structEntry.name] = structEntry
-		local structMeta = EEex_MemoryManagerStructMeta[structEntry.struct]
+		local structDefinition = EEex_MemoryManagerStructDefinitions[structEntry.struct]
 		local userType = _G[structEntry.struct]
 
 		local size
@@ -232,14 +206,14 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 			size = userType.sizeof
 			structEntry.userType = userType
 		else
-			if not structMeta then
+			if not structDefinition then
 				EEex_TracebackMessage("[EEex_MemoryManager] Struct meta must be defined for non-usertype: \""..structEntry.struct.."\"!")
 			end
-			size = structMeta.size
+			size = structDefinition.size
 		end
 
 		structEntry.offset = currentOffset
-		structEntry.structMeta = structMeta
+		structEntry.structDefinition = structDefinition
 
 		local sizeType = type(size)
 		if sizeType == "function" then
@@ -263,9 +237,19 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 				structEntry.userData = EEex_PtrToUD(structEntry.address, structEntry.struct)
 			end
 
-			local constructor = ((structEntry.structMeta or {}).constructors or {})[(structEntry.constructor or {}).variant or "#default"]
+			local constructor = ((structEntry.structDefinition or {}).constructors or {})[(structEntry.constructor or {}).variant or "#default"]
 			if type(constructor) == "function" then
 				constructor(structEntry.userData and structEntry.userData or structEntry.address, getArgs(structEntry))
+			elseif type(constructor) == "table" then
+				local constructorFunc = constructor.func
+				if type(constructorFunc) ~= "function" then
+					EEex_TracebackMessage("[EEex_MemoryManager] Invalid constructor.func type!")
+				end
+				if constructor.usesManager then
+					constructor(self, structEntry.userData and structEntry.userData or structEntry.address, getArgs(structEntry))
+				else
+					constructor(structEntry.userData and structEntry.userData or structEntry.address, getArgs(structEntry))
+				end
 			elseif constructor ~= nil then
 				EEex_TracebackMessage("[EEex_MemoryManager] Invalid constructor type!")
 			end
@@ -295,7 +279,7 @@ EEex_MemoryManager.getUD = EEex_MemoryManager.getUserData
 
 function EEex_MemoryManager:destruct()
 	for _, entry in pairs(self.nameToEntry) do
-		local destructor = (entry.structMeta or {}).destructor
+		local destructor = (entry.structDefinition or {}).destructor
 		if destructor then
 			if type(destructor) ~= "function" then
 				EEex_TracebackMessage("[EEex_MemoryManager] Invalid destructor type!")

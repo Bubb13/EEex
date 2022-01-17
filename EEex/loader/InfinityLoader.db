@@ -55,6 +55,27 @@ Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
 ;-- Bound Engine Functions --
 ;----------------------------
 
+[C2DArray::GetAtLabels]
+Pattern=48895C2410565741564883EC20
+
+[CString::ConstructFromChars]
+Pattern=488BF2488901488BF9
+Operations=ADD -17
+
+[CString::Destruct]
+Pattern=488B114883C2F4
+
+[C2DArray::Load]
+Pattern=488BEC4883EC50488B4110
+Operations=ADD -11
+
+[C2DArray::Construct]
+Pattern=488D542420488937
+Operations=ADD -51
+
+[C2DArray::Destruct]
+Pattern=40574883EC20488B4110
+
 [CGameEffect::DecodeEffect]
 Pattern=5741564883EC4033DB
 Operations=ADD -11

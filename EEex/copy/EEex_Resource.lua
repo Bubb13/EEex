@@ -104,7 +104,7 @@ function EEex_Resource_Fetch(resref, extension)
 		resObj.type = EEex_Resource_ExtToType(extension)
 
 		toReturn = EngineGlobals.bsearch(
-			resObj:getReference(),
+			resObj:getInternalReference(),
 			EngineGlobals.resources.m_pData,
 			EngineGlobals.resources.m_nSize,
 			EEex_PointerSize,
@@ -154,4 +154,136 @@ function EEex_Resource_GetSpellAbilityForLevel(spellHeader, casterLevel)
 		currentAbilityAddress = currentAbilityAddress + Spell_ability_st.sizeof
 	end
 	return foundAbility
+end
+
+---------
+-- 2DA --
+---------
+
+function EEex_Resource_Find2DAColumnIndex(array, y, toSearchFor)
+	toSearchFor = toSearchFor:upper()
+	local toReturn = -1
+	array:iterateRowIndex(y, function(i, val)
+		if val == toSearchFor then
+			toReturn = i
+			return true
+		end
+	end)
+	return toReturn
+end
+
+function EEex_Resource_Find2DAColumnLabel(array, toSearchFor)
+	toSearchFor = toSearchFor:upper()
+	local pNamesX = array.m_pNamesX
+	for i = 0, array.m_nSizeX - 1 do
+		if pNamesX:getReference(i).m_pchData:get() == toSearchFor then
+			return i
+		end
+	end
+	return -1
+end
+
+function EEex_Resource_Find2DARowIndex(array, x, toSearchFor)
+	toSearchFor = toSearchFor:upper()
+	local toReturn = -1
+	array:iterateColumnIndex(x, function(i, val)
+		if val == toSearchFor then
+			toReturn = i
+			return true
+		end
+	end)
+	return toReturn
+end
+
+function EEex_Resource_Find2DARowLabel(array, toSearchFor)
+	toSearchFor = toSearchFor:upper()
+	local pNamesY = array.m_pNamesY
+	for i = 0, array.m_nSizeY - 1 do
+		if pNamesY:getReference(i).m_pchData:get() == toSearchFor then
+			return i
+		end
+	end
+	return -1
+end
+
+function EEex_Resource_Free2DA(array)
+	array:Destruct()
+	EEex_FreeUD(array)
+end
+
+function EEex_Resource_Get2DAColumnLabel(array, n)
+	local sizeX = array.m_nSizeX
+	if n < 0 or n >= sizeX then return "" end
+	return array.m_pNamesX:getReference(n).m_pchData:get()
+end
+
+function EEex_Resource_Get2DADefault(array)
+	return array.m_default.m_pchData:get()
+end
+
+function EEex_Resource_Get2DADimensions(array)
+	return array.m_nSizeX, array.m_nSizeY
+end
+
+function EEex_Resource_Get2DARowLabel(array, n)
+	if n < 0 or n >= array.m_nSizeY then return "" end
+	return array.m_pNamesY:getReference(n).m_pchData:get()
+end
+
+function EEex_Resource_GetAt2DALabels(array, columnLabel, rowLabel)
+	local toReturn
+	EEex_RunWithStackManager({
+		{ ["name"] = "CColumnLabel", ["struct"] = "CString", ["constructor"] = {["args"] = {columnLabel} }},
+		{ ["name"] = "CRowLabel",    ["struct"] = "CString", ["constructor"] = {["args"] = {rowLabel}    }}, },
+		function(manager)
+			toReturn = array:GetAtLabels(manager:getUD("CColumnLabel"), manager:getUD("CRowLabel")).m_pchData:get()
+		end)
+	return toReturn
+end
+
+function EEex_Resource_GetAt2DAPoint(array, x, y)
+	local sizeX, sizeY = array:getDimensions()
+	if x < 0 or x >= sizeX or y < 0 or y >= sizeY then return array:getDefault() end
+	return array.m_pArray:getReference(x + y * sizeX).m_pchData:get()
+end
+
+function EEex_Resource_Iterate2DAColumnIndex(array, x, func)
+	local sizeX, sizeY = array:getDimensions()
+	if x < 0 or x >= sizeX then return end
+	local pArray = array.m_pArray
+	local curIndex = x
+	for i = 0, sizeY - 1 do
+		if func(i, pArray:getReference(curIndex).m_pchData:get()) then break end
+		curIndex = curIndex + sizeX
+	end
+end
+
+function EEex_Resource_Iterate2DAColumnLabel(array, columnLabel, func)
+	array:iterateColumnIndex(array:findColumnLabel(columnLabel), func)
+end
+
+function EEex_Resource_Iterate2DARowIndex(array, y, func)
+	local sizeX, sizeY = array:getDimensions()
+	if y < 0 or y >= sizeY then return end
+	local pArray = array.m_pArray
+	local curIndex = sizeX * y
+	for i = 0, sizeX - 2 do
+		if func(i, pArray:getReference(curIndex).m_pchData:get()) then break end
+		curIndex = curIndex + 1
+	end
+end
+
+function EEex_Resource_Iterate2DARowLabel(array, rowLabel, func)
+	array:iterateRowIndex(array:findRowLabel(rowLabel), func)
+end
+
+function EEex_Resource_Load2DA(resref)
+	local array = EEex_NewUD("C2DArray")
+	array:Construct()
+	EEex_RunWithStackManager({
+		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = {["args"] = {resref} }}, },
+		function(manager)
+			array:Load(manager:getUD("resref"))
+		end)
+	return array
 end
