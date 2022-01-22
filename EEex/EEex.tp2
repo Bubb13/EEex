@@ -28,7 +28,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3EffMen"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
-	IF_EXISTS
+	BUT_ONLY
 
 
 BEGIN ~Enable timer module - (visual indicators for modal actions, contingency spells, and spell/item cooldowns)~
@@ -36,4 +36,4 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3Timer"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
-	IF_EXISTS
+	BUT_ONLY
