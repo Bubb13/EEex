@@ -1,6 +1,6 @@
 BACKUP ~EEex/backup~
 AUTHOR ~Bubb~
-VERSION 0.9.3
+VERSION 0.9.4
 
 BEGIN ~EEex~
 REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) ~Game not supported.~
@@ -21,3 +21,19 @@ REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.
 
 	COPY ~EEex/loader~ ~.~ IF_EXISTS
 	COPY ~EEex/copy~ ~override~ IF_EXISTS
+
+
+BEGIN ~Enable effect menu module - (LShift-on-hover to view spells affecting creature)~
+REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+
+	COPY ~override/EEex_Modules.lua~ ~override~
+		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3EffMen"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
+	IF_EXISTS
+
+
+BEGIN ~Enable timer module - (visual indicators for modal actions, contingency spells, and spell/item cooldowns)~
+REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+
+	COPY ~override/EEex_Modules.lua~ ~override~
+		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3Timer"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
+	IF_EXISTS
