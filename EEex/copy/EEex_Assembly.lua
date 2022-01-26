@@ -163,6 +163,32 @@ end
 
 EEex_WriteUDArgs = EEex_WriteUserDataArgs
 
+EEex_UserDataAuxiliary = {}
+
+function EEex_GetUserDataAuxiliary(ud)
+	if type(ud) ~= "userdata" then
+		EEex_Error("ud is not a userdata object ("..type(ud)..")!")
+	end
+	local lud = EEex_UDToLightUD(ud)
+	local auxiliary = EEex_UserDataAuxiliary[lud]
+	if not auxiliary then
+		auxiliary = {}
+		EEex_UserDataAuxiliary[lud] = auxiliary
+	end
+	return auxiliary
+end
+
+EEex_GetUDAux = EEex_GetUserDataAuxiliary
+
+function EEex_DeleteUserDataAuxiliary(ud)
+	if type(ud) ~= "userdata" then
+		EEex_Error("ud is not a userdata object ("..type(ud)..")!")
+	end
+	EEex_UserDataAuxiliary[EEex_UDToLightUD(ud)] = nil
+end
+
+EEex_DeleteUDAux = EEex_DeleteUserDataAuxiliary
+
 ----------------------------
 -- Start Memory Interface --
 ----------------------------
@@ -358,52 +384,101 @@ function EEex_HookRelativeBranch(address, assemblyT)
 	EEex_JITAt(address, {"jmp short "..hookAddress})
 end
 
-function EEex_HookJump(address, restoreSize, assemblyT)
+function EEex_HookAfterCall(address, assemblyT)
+	local opcode = EEex_ReadU8(address)
+	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+	local afterCall = address + 5
+	EEex_DefineAssemblyLabel("return", afterCall)
+	local target = afterCall + EEex_Read32(address + 1)
+	local hookAddress = EEex_JITNear(EEex_FlattenTable({
+		{"call #$1 #ENDL", {target}},
+		assemblyT,
+		{"jmp #$1 #ENDL", {afterCall}},
+	}))
+	EEex_JITAt(address, {"jmp short "..hookAddress})
+end
 
-	local byteToDwordJmp = {
-		[0x70] = "jo",
-		[0x71] = "jno",
-		[0x72] = "jb",
-		[0x73] = "jae",
-		[0x74] = "je",
-		[0x75] = "jne",
-		[0x76] = "jbe",
-		[0x77] = "ja",
-		[0x78] = "js",
-		[0x79] = "jns",
-		[0x7A] = "jp",
-		[0x7B] = "jnp",
-		[0x7C] = "jl",
-		[0x7D] = "jge",
-		[0x7E] = "jle",
-		[0x7F] = "jg",
-		[0xEB] = "jmp",
-	}
+function EEex_GetJmpInfo(address)
 
-	local instructionByte = EEex_ReadU8(address)
-	local instructionBytes = {}
-	local instructionSize = nil
-	local offset = nil
+	local opcode = EEex_ReadU8(address)
+	local hadWordPrefix = false
+	local curAddress = address
 
-	local switchBytes = byteToDwordJmp[instructionByte]
-	if switchBytes then
-		instructionBytes = switchBytes
-		instructionSize = 2
-		offset = EEex_Read8(address + 1)
-	elseif instructionByte == 0xE9 then
-		instructionBytes = {instructionByte}
-		instructionSize = 5
-		offset = EEex_Read32(address + 1)
-	else
-		instructionBytes = {".DB ", instructionByte, ", ", EEex_ReadU8(address + 1)}
-		instructionSize = 6
-		offset = EEex_Read32(address + 2)
+	if opcode == 0x66 then
+		hadWordPrefix = true
+		curAddress = curAddress + 1
+		opcode = EEex_ReadU8(curAddress)
 	end
 
-	local afterInstruction = address + instructionSize
+	local entry
+	if opcode ~= 0x0F then
+		entry = ({
+			[0x70] = { "jo",     1                        },
+			[0x71] = { "jno",    1                        },
+			[0x72] = { "jb",     1                        },
+			[0x73] = { "jnb",    1                        },
+			[0x74] = { "jz",     1                        },
+			[0x75] = { "jnz",    1                        },
+			[0x76] = { "jbe",    1                        },
+			[0x77] = { "ja",     1                        },
+			[0x78] = { "js",     1                        },
+			[0x79] = { "jns",    1                        },
+			[0x7A] = { "jp",     1                        },
+			[0x7B] = { "jnp",    1                        },
+			[0x7C] = { "jl",     1                        },
+			[0x7D] = { "jnl",    1                        },
+			[0x7E] = { "jle",    1                        },
+			[0x7F] = { "jg",     1                        },
+			[0xE0] = { "loopnz", 1                        },
+			[0xE1] = { "loopz",  1                        },
+			[0xE2] = { "loop",   1                        },
+			[0xE3] = { "jcxz",   1                        },
+			[0xE8] = { "call",   hadWordPrefix and 2 or 4 },
+			[0xE9] = { "jmp",    hadWordPrefix and 2 or 4 },
+			[0xEB] = { "jmp",    1                        },
+		})[opcode]
+	else
+		curAddress = curAddress + 1
+		opcode = EEex_ReadU8(curAddress)
+		local length = hadWordPrefix and 2 or 4
+		entry = ({
+			[0x80] = { "jo",  length },
+			[0x81] = { "jno", length },
+			[0x82] = { "jb",  length },
+			[0x83] = { "jnb", length },
+			[0x84] = { "jz",  length },
+			[0x85] = { "jnz", length },
+			[0x86] = { "jbe", length },
+			[0x87] = { "ja",  length },
+			[0x88] = { "js",  length },
+			[0x89] = { "jns", length },
+			[0x8A] = { "jp",  length },
+			[0x8B] = { "jnp", length },
+			[0x8C] = { "jl",  length },
+			[0x8D] = { "jnl", length },
+			[0x8E] = { "jle", length },
+			[0x8F] = { "jg",  length },
+		})[opcode]
+	end
+
+	local readLen = entry[2]
+	local readFunc = ({
+		[1] = EEex_Read8,
+		[2] = EEex_Read16,
+		[4] = EEex_Read32,
+	})[readLen]
+
+	curAddress = curAddress + 1
+	local afterInst = curAddress + readLen
+	return entry[1], afterInst + readFunc(curAddress), afterInst - address, afterInst
+end
+
+function EEex_HookJump(address, restoreSize, assemblyT)
+
+	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
+
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
-	local jmpDest = afterInstruction + offset
 
 	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
 
@@ -412,7 +487,8 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 		{[[
 			jmp:
 		]]},
-		instructionBytes, {" ", jmpDest, [[ #ENDL
+		{
+			jmpMnemonic, " ", jmpDest, [[ #ENDL
 			jmp_fail: 
 		]]},
 		restoreBytes,
@@ -423,52 +499,73 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionSize}
+		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
+	})
+end
+
+function EEex_HookJumpOnFail(address, restoreSize, assemblyT)
+
+	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
+
+	local jmpFailDest = afterInstruction + restoreSize
+	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
+
+	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+
+	local hookCode = EEex_JITNear(EEex_FlattenTable({
+		{jmpMnemonic, " ", jmpDest, "#ENDL"},
+		assemblyT,
+		{[[
+			jmp_fail:
+		]]},
+		restoreBytes,
+		{[[
+			jmp ]], jmpFailDest, [[ #ENDL
+		]]},
+	}))
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookCode, [[ #ENDL
+		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
+	})
+end
+
+function EEex_HookJumpOnSuccess(address, restoreSize, assemblyT)
+
+	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
+
+	local jmpFailDest = afterInstruction + restoreSize
+	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
+
+	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+
+	local hookCode = EEex_JITNear(EEex_FlattenTable({
+		{jmpMnemonic, [[ jmp_succeeded
+			jmp_fail:
+		]]},
+		restoreBytes,
+		{[[
+			jmp ]], jmpFailDest, [[ #ENDL
+		]]},
+		{[[
+			jmp_succeeded:
+		]]},
+		assemblyT,
+		{"jmp ", jmpDest, "#ENDL"},
+	}))
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookCode, [[ #ENDL
+		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
 function EEex_HookJumpAuto(address, restoreSize, assemblyT, bAutoSuccess)
 
-	local byteToDwordJmp = {
-		[0x70] = "jo",
-		[0x71] = "jno",
-		[0x72] = "jb",
-		[0x73] = "jae",
-		[0x74] = "je",
-		[0x75] = "jne",
-		[0x76] = "jbe",
-		[0x77] = "ja",
-		[0x78] = "js",
-		[0x79] = "jns",
-		[0x7A] = "jp",
-		[0x7B] = "jnp",
-		[0x7C] = "jl",
-		[0x7D] = "jge",
-		[0x7E] = "jle",
-		[0x7F] = "jg",
-		[0xEB] = "jmp",
-	}
+	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
 
-	local instructionByte = EEex_ReadU8(address)
-	local instructionSize = nil
-	local offset = nil
-
-	local switchBytes = byteToDwordJmp[instructionByte]
-	if switchBytes then
-		instructionSize = 2
-		offset = EEex_Read8(address + 1)
-	elseif instructionByte == 0xE9 then
-		instructionSize = 5
-		offset = EEex_Read32(address + 1)
-	else
-		instructionSize = 6
-		offset = EEex_Read32(address + 2)
-	end
-
-	local afterInstruction = address + instructionSize
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
-	local jmpDest = afterInstruction + offset
 
 	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
 
@@ -488,7 +585,7 @@ function EEex_HookJumpAuto(address, restoreSize, assemblyT, bAutoSuccess)
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionSize}
+		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 

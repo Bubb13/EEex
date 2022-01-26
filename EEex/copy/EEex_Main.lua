@@ -27,13 +27,16 @@ EEex_DoFile("EEex_Menu_Patch")
 EEex_DoFile("EEex_Object")
 EEex_DoFile("EEex_Object_Patch")
 
-EEex_DoFile("EEex_Opcode")
-EEex_DoFile("EEex_Opcode_Patch")
-
 EEex_DoFile("EEex_Resource")
 
 EEex_DoFile("EEex_Sprite")
 EEex_DoFile("EEex_Sprite_Patch")
+
+EEex_DoFile("EEex_Stats")
+EEex_DoFile("EEex_Stats_Patch")
+
+EEex_DoFile("EEex_Opcode")
+EEex_DoFile("EEex_Opcode_Patch")
 
 EEex_DoFile("EEex_Trigger")
 EEex_DoFile("EEex_Trigger_Patch")

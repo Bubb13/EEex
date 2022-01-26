@@ -85,3 +85,11 @@ end
 function EEex_Sprite_Hook_CheckSuppressTooltip()
 	return false
 end
+
+function EEex_Sprite_Hook_OnConstruct(sprite)
+
+end
+
+function EEex_Sprite_Hook_OnDestruct(sprite)
+
+end

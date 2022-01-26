@@ -189,6 +189,57 @@ Operations=ADD -10
 ;-- Hooks --
 ;-----------
 
+[Hook-CGameEffect::CheckAdd()-ProbabilityFailed]
+Pattern=33C0488B8D20010000
+
+[Hook-CGameEffect::CheckAdd()-LastProbabilityJmp]
+Pattern=48898520010000488B85A0010000
+Operations=ADD 94
+
+[Hook-CDerivedStats::Construct()-FirstCall]
+Pattern=48894C24085741544155415641574883EC20488BF1
+Operations=ADD 28
+
+[Hook-CDerivedStats::operator_equ()-FirstCall]
+Pattern=48894424288B02
+Operations=ADD 641
+
+[Hook-CDerivedStats::operator_plus_equ()-FirstCall]
+Pattern=4883EC300FB74204
+Operations=ADD 75
+
+[Hook-CDerivedStats::Destruct()-FirstCall]
+Pattern=488981500C0000
+Operations=ADD 14
+
+[Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
+Pattern=4C8D8F800B0000
+Operations=ADD 31
+
+[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-1]
+Pattern=FFC63B770C
+Operations=ADD 62
+
+[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-2]
+Pattern=4C8D8B800B0000498BCD
+Operations=ADD 24
+
+[Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
+Pattern=488D8660050000660F1F440000
+Operations=ADD 37
+
+[Hook-CGameSprite::Construct1()-FirstCall]
+Pattern=4889442460488BF1
+Operations=ADD 8
+
+[Hook-CGameSprite::Construct2()-FirstCall]
+Pattern=488945FF33C0
+Operations=ADD 31
+
+[Hook-CGameSprite::Destruct()-FirstCall]
+Pattern=75DA4C8DB358490000
+Operations=ADD 12
+
 [Hook-CAIObjectType::Decode()-DefaultJmp]
 Pattern=4885D20F84C6020000
 Operations=ADD 33

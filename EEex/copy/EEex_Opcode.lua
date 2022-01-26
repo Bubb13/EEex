@@ -106,3 +106,33 @@ function EEex_Opcode_GenDecode(args)
 
 	return genDecode(writeConstructor(newvtbl))
 end
+
+-----------
+-- Hooks --
+-----------
+
+-- Return:
+--     false => Allow effect (other immunities can still block it)
+--     true  => Block effect
+function EEex_Opcode_Hook_OnCheckAdd(effect, sprite)
+
+	local foundImmunity = false
+	local statsAux = EEex_GetUDAux(sprite:getActiveStats())
+
+	for _, screenEffect in ipairs(statsAux["EEex_ScreenEffects"]) do
+		local immunityFunc = _G[screenEffect.m_res:get()]
+		if immunityFunc and immunityFunc(screenEffect, effect, sprite) then
+			foundImmunity = true
+			break
+		end
+	end
+
+	return foundImmunity
+end
+
+function EEex_Opcode_Hook_ApplyScreenEffects(effect, object)
+	if not object:isSprite(true) then return end
+	local sprite = EEex_CastUD(object, "CGameSprite")
+	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
+	table.insert(statsAux["EEex_ScreenEffects"], effect)
+end
