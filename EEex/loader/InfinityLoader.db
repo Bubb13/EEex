@@ -189,6 +189,10 @@ Operations=ADD -10
 ;-- Hooks --
 ;-----------
 
+[Hook-CGameSprite::AddEffect()-noSave-Override]
+Pattern=753585F6
+Operations=ADD 4
+
 [Hook-CGameEffect::CheckAdd()-ProbabilityFailed]
 Pattern=33C0488B8D20010000
 
