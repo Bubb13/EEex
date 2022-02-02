@@ -19,6 +19,13 @@ C2DArray.iterateColumnLabel = EEex_Resource_Iterate2DAColumnLabel
 C2DArray.iterateRowIndex = EEex_Resource_Iterate2DARowIndex
 C2DArray.iterateRowLabel = EEex_Resource_Iterate2DARowLabel
 
+CAIIdList.free = EEex_Resource_FreeIDS
+CAIIdList.getCount = EEex_Resource_GetIDSCount
+CAIIdList.getEntry = EEex_Resource_GetIDSEntry
+CAIIdList.getLine = EEex_Resource_GetIDSLine
+CAIIdList.getStart = EEex_Resource_GetIDSStart
+CAIIdList.hasID = EEex_Resource_IDSHasID
+
 CGameObject.applyEffect = EEex_GameObject_ApplyEffect
 CGameObject.getClass = EEex_GameObject_GetClass
 CGameObject.isSprite = EEex_GameObject_IsSprite

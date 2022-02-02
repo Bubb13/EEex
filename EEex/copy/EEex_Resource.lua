@@ -287,3 +287,47 @@ function EEex_Resource_Load2DA(resref)
 		end)
 	return array
 end
+
+---------
+-- IDS --
+---------
+
+function EEex_Resource_FreeIDS(ids)
+	ids:Destruct()
+	EEex_FreeUD(ids)
+end
+
+function EEex_Resource_GetIDSCount(ids)
+	return ids.m_nArray
+end
+
+function EEex_Resource_GetIDSEntry(ids, id)
+	return id < ids:getCount() and ids.m_pIdArray:get(id) or nil
+end
+
+function EEex_Resource_GetIDSLine(ids, id)
+	if id >= ids:getCount() then return nil end
+	local entry = ids.m_pIdArray:get(id)
+	return entry and entry.m_line.m_pchData:get() or nil
+end
+
+function EEex_Resource_GetIDSStart(ids, id)
+	if id >= ids:getCount() then return nil end
+	local entry = ids.m_pIdArray:get(id)
+	return entry and entry.m_start.m_pchData:get() or nil
+end
+
+function EEex_Resource_IDSHasID(ids, id)
+	return id < ids:getCount() and ids.m_pIdArray:get(id) ~= nil
+end
+
+function EEex_Resource_LoadIDS(resref)
+	local ids = EEex_NewUD("CAIIdList")
+	ids:Construct1()
+	EEex_RunWithStackManager({
+		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = {["args"] = {resref} }}, },
+		function(manager)
+			ids:LoadList2(manager:getUD("resref"), true)
+		end)
+	return ids
+end

@@ -55,6 +55,17 @@ Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
 ;-- Bound Engine Functions --
 ;----------------------------
 
+[CAIIdList::Destruct]
+Pattern=488B5928488BF1488901
+Operations=ADD -18
+
+[CAIIdList::LoadList2]
+Pattern=48895C24184889542410574883EC20
+
+[CAIIdList::Construct1]
+Pattern=4889442428488BF94883C110
+Operations=ADD -20
+
 [C2DArray::GetAtLabels]
 Pattern=48895C2410565741564883EC20
 
