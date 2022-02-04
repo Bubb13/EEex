@@ -111,6 +111,51 @@ end
 -- Hooks --
 -----------
 
+---------------------------------------
+-- New Opcode #401 (SetExtendedStat) --
+---------------------------------------
+
+function EEex_Opcode_Hook_ApplySetExtendedStat(effect, object)
+
+	if not object:isSprite(true) then return end
+	local sprite = EEex_CastUD(object, "CGameSprite")
+	local exStats = EEex_GetUDAux(sprite.m_derivedStats)["EEex_ExtendedStats"]
+
+	local param1 = effect.m_effectAmount
+	local modType = effect.m_dWFlags
+	local exStatID = effect.m_special
+
+	if not EEex_Stats_ExtendedInfo[exStatID] then
+		print("[EEex_SetExtendedStat - Opcode #401] Invalid extended stat id: "..exStatID)
+		return
+	end
+
+	local newVal
+
+	if modType == 0 then -- cumulative
+		newVal = exStats[exStatID] + param1
+	elseif modType == 1 then -- flat
+		newVal = param1
+	elseif modType == 2 then -- percentage
+		newVal = math.floor(exStats[exStatID] * math.floor(param1 / 100))
+	else
+		return
+	end
+
+	EEex_Stats_Private_SetExtended(exStats, exStatID, newVal)
+end
+
+-------------------------------------
+-- New Opcode #403 (ScreenEffects) --
+-------------------------------------
+
+function EEex_Opcode_Hook_ApplyScreenEffects(effect, object)
+	if not object:isSprite(true) then return end
+	local sprite = EEex_CastUD(object, "CGameSprite")
+	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
+	table.insert(statsAux["EEex_ScreenEffects"], effect)
+end
+
 -- Return:
 --     false => Allow effect (other immunities can still block it)
 --     true  => Block effect
@@ -128,11 +173,4 @@ function EEex_Opcode_Hook_OnCheckAdd(effect, sprite)
 	end
 
 	return foundImmunity
-end
-
-function EEex_Opcode_Hook_ApplyScreenEffects(effect, object)
-	if not object:isSprite(true) then return end
-	local sprite = EEex_CastUD(object, "CGameSprite")
-	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
-	table.insert(statsAux["EEex_ScreenEffects"], effect)
 end

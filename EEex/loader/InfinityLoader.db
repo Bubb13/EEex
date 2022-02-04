@@ -200,6 +200,10 @@ Operations=ADD -10
 ;-- Hooks --
 ;-----------
 
+[Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp]
+Pattern=3DC9000000
+Operations=ADD 5
+
 [Hook-CGameSprite::AddEffect()-noSave-Override]
 Pattern=753585F6
 Operations=ADD 4

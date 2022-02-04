@@ -112,6 +112,7 @@ function EEex_Menu_GetItemVariant(variant)
 		EEex_Error("Unhandled Type")
 	end
 end
+uiVariant.getValue = EEex_Menu_GetItemVariant
 
 function EEex_Menu_SetItemVariant(variantRefPtr, myVal)
 
@@ -147,6 +148,7 @@ function EEex_Menu_SetItemVariant(variantRefPtr, myVal)
 		EEex_Error("Bad Type")
 	end
 end
+uiVariant.setValue = EEex_Menu_SetItemVariant
 
 function EEex_Menu_LoadFile(resref)
 	EngineGlobals.saveMenuStack()
@@ -200,14 +202,6 @@ end
 ---------------
 -- Listeners --
 ---------------
-
-EEex_Menu_LuaBindingsInitializedListener = {}
-
--- Given listener function is called after the engine initializes its lua bindings, (C globals and functions).
--- Surprisingly, it does this well after it loads UI.MENU, making this listener required.
-function EEex_Menu_AddLuaBindingsInitializedListener(listener)
-	table.insert(EEex_Menu_LuaBindingsInitializedListener, listener)
-end
 
 EEex_Menu_MainFileLoadedListeners = {}
 

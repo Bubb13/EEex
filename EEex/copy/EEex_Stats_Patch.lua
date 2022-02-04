@@ -121,6 +121,30 @@
 		]]},
 	}))
 
+	--------------------------------------
+	-- EEex_Stats_Hook_OnGettingUnknown --
+	--------------------------------------
+
+	EEex_HookJumpOnSuccess(EEex_Label("Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp"), 0, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(48)
+			inc eax
+		]]},
+		EEex_GenLuaCall("EEex_Stats_Hook_OnGettingUnknown", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rcx #ENDL", {rspOffset}}, "CDerivedStats" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rax #ENDL", {rspOffset}} end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Number,
+		}),
+		{[[
+			call_error:
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	}))
+
 	EEex_EnableCodeProtection()
 
 end)()

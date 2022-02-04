@@ -136,6 +136,7 @@ function EEex_Resource_GetSpellAbility(spellHeader, abilityIndex)
 	if spellHeader.abilityCount <= abilityIndex then return end
 	return EEex_PtrToUD(EEex_UDToPtr(spellHeader) + spellHeader.abilityOffset + Spell_ability_st.sizeof * abilityIndex, "Spell_ability_st")
 end
+Spell_Header_st.getAbility = EEex_Resource_GetSpellAbility
 
 function EEex_Resource_GetSpellAbilityForLevel(spellHeader, casterLevel)
 
@@ -155,6 +156,7 @@ function EEex_Resource_GetSpellAbilityForLevel(spellHeader, casterLevel)
 	end
 	return foundAbility
 end
+Spell_Header_st.getAbilityForLevel = EEex_Resource_GetSpellAbilityForLevel
 
 ---------
 -- 2DA --
@@ -171,6 +173,7 @@ function EEex_Resource_Find2DAColumnIndex(array, y, toSearchFor)
 	end)
 	return toReturn
 end
+C2DArray.findColumnIndex = EEex_Resource_Find2DAColumnIndex
 
 function EEex_Resource_Find2DAColumnLabel(array, toSearchFor)
 	toSearchFor = toSearchFor:upper()
@@ -182,6 +185,7 @@ function EEex_Resource_Find2DAColumnLabel(array, toSearchFor)
 	end
 	return -1
 end
+C2DArray.findColumnLabel = EEex_Resource_Find2DAColumnLabel
 
 function EEex_Resource_Find2DARowIndex(array, x, toSearchFor)
 	toSearchFor = toSearchFor:upper()
@@ -194,6 +198,7 @@ function EEex_Resource_Find2DARowIndex(array, x, toSearchFor)
 	end)
 	return toReturn
 end
+C2DArray.findRowIndex = EEex_Resource_Find2DARowIndex
 
 function EEex_Resource_Find2DARowLabel(array, toSearchFor)
 	toSearchFor = toSearchFor:upper()
@@ -205,30 +210,36 @@ function EEex_Resource_Find2DARowLabel(array, toSearchFor)
 	end
 	return -1
 end
+C2DArray.findRowLabel = EEex_Resource_Find2DARowLabel
 
 function EEex_Resource_Free2DA(array)
 	array:Destruct()
 	EEex_FreeUD(array)
 end
+C2DArray.free = EEex_Resource_Free2DA
 
 function EEex_Resource_Get2DAColumnLabel(array, n)
 	local sizeX = array.m_nSizeX
 	if n < 0 or n >= sizeX then return "" end
 	return array.m_pNamesX:getReference(n).m_pchData:get()
 end
+C2DArray.getColumnLabel = EEex_Resource_Get2DAColumnLabel
 
 function EEex_Resource_Get2DADefault(array)
 	return array.m_default.m_pchData:get()
 end
+C2DArray.getDefault = EEex_Resource_Get2DADefault
 
 function EEex_Resource_Get2DADimensions(array)
 	return array.m_nSizeX, array.m_nSizeY
 end
+C2DArray.getDimensions = EEex_Resource_Get2DADimensions
 
 function EEex_Resource_Get2DARowLabel(array, n)
 	if n < 0 or n >= array.m_nSizeY then return "" end
 	return array.m_pNamesY:getReference(n).m_pchData:get()
 end
+C2DArray.getRowLabel = EEex_Resource_Get2DARowLabel
 
 function EEex_Resource_GetAt2DALabels(array, columnLabel, rowLabel)
 	local toReturn
@@ -240,12 +251,14 @@ function EEex_Resource_GetAt2DALabels(array, columnLabel, rowLabel)
 		end)
 	return toReturn
 end
+C2DArray.getAtLabels = EEex_Resource_GetAt2DALabels
 
 function EEex_Resource_GetAt2DAPoint(array, x, y)
 	local sizeX, sizeY = array:getDimensions()
 	if x < 0 or x >= sizeX or y < 0 or y >= sizeY then return array:getDefault() end
 	return array.m_pArray:getReference(x + y * sizeX).m_pchData:get()
 end
+C2DArray.getAtPoint = EEex_Resource_GetAt2DAPoint
 
 function EEex_Resource_Iterate2DAColumnIndex(array, x, func)
 	local sizeX, sizeY = array:getDimensions()
@@ -257,10 +270,12 @@ function EEex_Resource_Iterate2DAColumnIndex(array, x, func)
 		curIndex = curIndex + sizeX
 	end
 end
+C2DArray.iterateColumnIndex = EEex_Resource_Iterate2DAColumnIndex
 
 function EEex_Resource_Iterate2DAColumnLabel(array, columnLabel, func)
 	array:iterateColumnIndex(array:findColumnLabel(columnLabel), func)
 end
+C2DArray.iterateColumnLabel = EEex_Resource_Iterate2DAColumnLabel
 
 function EEex_Resource_Iterate2DARowIndex(array, y, func)
 	local sizeX, sizeY = array:getDimensions()
@@ -272,10 +287,12 @@ function EEex_Resource_Iterate2DARowIndex(array, y, func)
 		curIndex = curIndex + 1
 	end
 end
+C2DArray.iterateRowIndex = EEex_Resource_Iterate2DARowIndex
 
 function EEex_Resource_Iterate2DARowLabel(array, rowLabel, func)
 	array:iterateRowIndex(array:findRowLabel(rowLabel), func)
 end
+C2DArray.iterateRowLabel = EEex_Resource_Iterate2DARowLabel
 
 function EEex_Resource_Load2DA(resref)
 	local array = EEex_NewUD("C2DArray")
@@ -296,30 +313,36 @@ function EEex_Resource_FreeIDS(ids)
 	ids:Destruct()
 	EEex_FreeUD(ids)
 end
+CAIIdList.free = EEex_Resource_FreeIDS
 
 function EEex_Resource_GetIDSCount(ids)
 	return ids.m_nArray
 end
+CAIIdList.getCount = EEex_Resource_GetIDSCount
 
 function EEex_Resource_GetIDSEntry(ids, id)
 	return id < ids:getCount() and ids.m_pIdArray:get(id) or nil
 end
+CAIIdList.getEntry = EEex_Resource_GetIDSEntry
 
 function EEex_Resource_GetIDSLine(ids, id)
 	if id >= ids:getCount() then return nil end
 	local entry = ids.m_pIdArray:get(id)
 	return entry and entry.m_line.m_pchData:get() or nil
 end
+CAIIdList.getLine = EEex_Resource_GetIDSLine
 
 function EEex_Resource_GetIDSStart(ids, id)
 	if id >= ids:getCount() then return nil end
 	local entry = ids.m_pIdArray:get(id)
 	return entry and entry.m_start.m_pchData:get() or nil
 end
+CAIIdList.getStart = EEex_Resource_GetIDSStart
 
 function EEex_Resource_IDSHasID(ids, id)
 	return id < ids:getCount() and ids.m_pIdArray:get(id) ~= nil
 end
+CAIIdList.hasID = EEex_Resource_IDSHasID
 
 function EEex_Resource_LoadIDS(resref)
 	local ids = EEex_NewUD("CAIIdList")

@@ -77,6 +77,7 @@ function EEex_GameObject_IsSprite(object, allowDead)
 	end
 	return false
 end
+CGameObject.isSprite = EEex_GameObject_IsSprite
 
 function EEex_GameObject_IsSpriteID(objectID, allowDead)
 	return EEex_GameObject_IsSprite(EEex_GameObject_Get(objectID), allowDead)
@@ -85,6 +86,7 @@ end
 function EEex_GameObject_GetClass(object)
 	return object.m_typeAI.m_Class
 end
+CGameObject.getClass = EEex_GameObject_GetClass
 
 ------------------------------
 -- Game Object Manipulation --
@@ -158,3 +160,4 @@ function EEex_GameObject_ApplyEffect(object, args)
 
 	object:virtual_AddEffect(effect, args["effectList"] or 1, args["noSave"] or 0, args["immediateResolve"] or 1)
 end
+CGameObject.applyEffect = EEex_GameObject_ApplyEffect

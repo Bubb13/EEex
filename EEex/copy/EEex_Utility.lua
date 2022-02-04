@@ -15,17 +15,6 @@ function EEex_Utility_IterateCPtrList(list, func)
 	end
 end
 
-function EEex_Utility_DumpMetatables(obj)
-	local meta = obj
-	local i = 0
-	while true do
-		meta = getmetatable(meta)
-		if not meta then break end
-		B3Dump("meta["..i.."]", meta)
-		i = i + 1
-	end
-end
-
 function EEex_Utility_Eval(src, chunk)
 	local func, err = load(chunk, nil, "t")
 	if func then
@@ -38,6 +27,18 @@ function EEex_Utility_Eval(src, chunk)
 		print(string.format("[%s] Compile error: %s", src, err))
 	end
 	return false
+end
+
+function EEex_Utility_CallIfExists(func, ...)
+	if func then return func(...) end
+end
+
+function EEex_Utility_CallSuper(t, funcName, ...)
+	local mt = getmetatable(t)
+	if mt == nil then return end
+	local superFunc = mt[funcName]
+	if superFunc == nil then return end
+	return superFunc(...)
 end
 
 ---------------

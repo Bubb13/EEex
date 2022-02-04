@@ -3,6 +3,31 @@
 
 	EEex_DisableCodeProtection()
 
+	---------------------------------------
+	-- New Opcode #401 (SetExtendedStat) --
+	---------------------------------------
+
+	local EEex_SetExtendedStat = EEex_Opcode_GenDecode({
+
+		["ApplyEffect"] = EEex_FlattenTable({[[
+
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(48)
+
+			]], EEex_GenLuaCall("EEex_Opcode_Hook_ApplySetExtendedStat", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
+				},
+			}), [[
+
+			call_error:
+			#DESTROY_SHADOW_SPACE
+			mov rax, 1
+			ret
+		]]}),
+	})
+
 	---------------------------------
 	-- New Opcode #402 (InvokeLua) --
 	---------------------------------
@@ -38,9 +63,9 @@
 		]]}),
 	})
 
-	------------------------------
-	-- EEex_ScreenEffects (403) --
-	------------------------------
+	-------------------------------------
+	-- New Opcode #403 (ScreenEffects) --
+	-------------------------------------
 
 	local EEex_ScreenEffects = EEex_Opcode_GenDecode({
 
@@ -61,29 +86,6 @@
 			mov rax, 1
 			ret
 		]]}),
-	})
-
-	EEex_Stats_Register("EEex_ScreenEffects", {
-		["onConstruct"] = function(stats, aux)
-			aux["EEex_ScreenEffects"] = {}
-		end,
-		["onReload"] = function(stats, aux, sprite)
-			aux["EEex_ScreenEffects"] = {}
-		end,
-		["onEqu"] = function(stats, aux, otherStats, otherAux)
-			local t = {}
-			aux["EEex_ScreenEffects"] = t
-			for i, effect in ipairs(otherAux["EEex_ScreenEffects"]) do
-				t[i] = effect
-			end
-		end,
-		["onPlusEqu"] = function(stats, aux, otherStats, otherAux)
-			local insertI = #aux + 1
-			for _, effect in ipairs(otherAux["EEex_ScreenEffects"]) do
-				aux[insertI] = effect
-				insertI = insertI + 1
-			end
-		end,
 	})
 
 	local effectBlockedHack = EEex_Malloc(0x8)
@@ -122,11 +124,18 @@
 	-- Decode Switch --
 	-------------------
 
-	EEex_HookJumpAutoFail(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, EEex_FlattenTable({[[
+	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, EEex_FlattenTable({[[
+
+		mov qword ptr ss:[rsp+60h], r15 ; save non-volatile register
 
 		cmp eax, 367
 		jbe jmp_fail
 
+		cmp eax, 401
+		jne _402
+		]], EEex_SetExtendedStat, [[
+
+		_402:
 		cmp eax, 402
 		jne _403
 		]], EEex_InvokeLua, [[
