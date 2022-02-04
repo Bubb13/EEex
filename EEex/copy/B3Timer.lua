@@ -80,7 +80,7 @@ end
 
 function B3Timer_InitListeners()
 	EEex_Menu_AddMainFileLoadedListener(B3Timer_InstallBars)
-	EEex_Menu_AddLuaBindingsInitializedListener(B3Timer_PushMenuListener)
+	EEex_GameState_AddInitializedListener(B3Timer_PushMenuListener)
 	EEex_Menu_AddAfterMainFileReloadedListener(B3Timer_PushMenuListener)
 	EEex_Menu_AddBeforeMainFileReloadedListener(B3Timer_InitListeners)
 end

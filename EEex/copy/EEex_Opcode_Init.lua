@@ -52,7 +52,6 @@
 	end
 
 	for id = EEex_Stats_FirstExtendedStatID, statsIDS:getCount() - 1 do
-		local entry = statsIDS:getEntry(id)
 		if statsIDS:hasID(id) then
 			local name = statsIDS:getLine(id)
 			EEex_Stats_ExtendedInfo[id] = {

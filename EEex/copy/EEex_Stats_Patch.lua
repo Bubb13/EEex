@@ -139,7 +139,12 @@
 			["returnType"] = EEex_LuaCallReturnType.Number,
 		}),
 		{[[
+			jmp no_error
+
 			call_error:
+			xor rax, rax
+
+			no_error:
 			#DESTROY_SHADOW_SPACE
 			ret
 		]]},
