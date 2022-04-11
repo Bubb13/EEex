@@ -1,6 +1,6 @@
 BACKUP ~EEex/backup~
 AUTHOR ~Bubb~
-VERSION 0.9.4
+VERSION 0.9.5
 
 BEGIN ~EEex~
 REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) ~Game not supported.~
