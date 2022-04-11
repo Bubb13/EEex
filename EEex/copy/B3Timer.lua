@@ -113,7 +113,7 @@ function B3Timer_Menu_Tick()
 
 		if sprite then
 
-			local startX = -3
+			local portraitInstanceStartX = {}
 			local portraitInstanceCurX = {}
 
 			local updateTimerBar = function(templateName, condition)
@@ -124,8 +124,9 @@ function B3Timer_Menu_Tick()
 
 					local curX = portraitInstanceCurX[i]
 					if not curX then
-						if B3Timer_HugPortraits then startX = portraitArea.x - 3 end
+						local startX = (B3Timer_HugPortraits and portraitArea.x or 0) - 3
 						curX = startX
+						portraitInstanceStartX[i] = startX
 						portraitInstanceCurX[i] = curX
 					end
 
@@ -145,6 +146,7 @@ function B3Timer_Menu_Tick()
 			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerModal",       sprite:getModalState() ~= 0                             )
 
 			for i, backgroundEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_Background"]) do
+				local startX = portraitInstanceStartX[i]
 				local curX = portraitInstanceCurX[i]
 				if curX ~= startX then
 					backgroundEntry.enabled = true
