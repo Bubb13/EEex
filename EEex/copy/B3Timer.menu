@@ -18,6 +18,7 @@ menu
 		{
 			enabled "B3Timer_Menu_TEMPLATE_Background_Enabled()"
 			bam "B3TBACKG"
+			scaleToClip
 		}
 		name "B3Timer_Menu_TEMPLATE_Background"
 	}
@@ -28,6 +29,7 @@ menu
 		{
 			enabled "B3Timer_Menu_TEMPLATE_TimerModal_Enabled()"
 			bam "B3TMODAL"
+			scaleToClip
 			frame lua "B3Timer_Menu_TEMPLATE_TimerModal_Frame()"
 		}
 		name "B3Timer_Menu_TEMPLATE_TimerModal"
@@ -39,6 +41,7 @@ menu
 		{
 			enabled "B3Timer_Menu_TEMPLATE_TimerContingency_Enabled()"
 			bam "B3TCONTI"
+			scaleToClip
 			frame lua "B3Timer_Menu_TEMPLATE_TimerContingency_Frame()"
 		}
 		name "B3Timer_Menu_TEMPLATE_TimerContingency"
@@ -50,6 +53,7 @@ menu
 		{
 			enabled "B3Timer_Menu_TEMPLATE_TimerCast_Enabled()"
 			bam "B3TAURA"
+			scaleToClip
 			frame lua "B3Timer_Menu_TEMPLATE_TimerCast_Frame()"
 		}
 		name "B3Timer_Menu_TEMPLATE_TimerCast"

@@ -41,6 +41,13 @@ function EEex_Utility_CallSuper(t, funcName, ...)
 	return superFunc(...)
 end
 
+function EEex_Utility_GetOrCreate(t, key, default)
+	local v = t[key]
+	if v ~= nil then return v end
+	t[key] = default
+	return default
+end
+
 ---------------
 -- EEex_Dump --
 ---------------
@@ -70,7 +77,7 @@ function EEex_Dump(key, valueToDump, dumpFunction)
 			end)
 		return o
 	end
-	
+
 	local fillDumpLevel
 	fillDumpLevel = function(tableName, levelTable, levelToFill, levelTableKey)
 		local tableKey, tableValue = next(levelTable, levelTableKey)
@@ -135,7 +142,7 @@ function EEex_Dump(key, valueToDump, dumpFunction)
 			return levelToFill
 		end
 	end
-	
+
 	local printEntries
 	printEntries = function(entriesTable, indentLevel, indentStrings, previousState, levelTableKey)
 		local tableEntryKey, tableEntry = next(entriesTable, levelTableKey)

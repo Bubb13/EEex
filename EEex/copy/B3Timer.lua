@@ -1,4 +1,10 @@
 
+-------------
+-- Options --
+-------------
+
+B3Timer_HugPortraits = false
+
 -----------------------
 -- Template Handling --
 -----------------------
@@ -35,40 +41,39 @@ end
 
 B3Timer_TemplateInstancesByPortrait = {}
 
-function B3Timer_CreateInstanceForPortrait(menuName, templateName, x, y, w, h, portraitIndex)
+function B3Timer_CreateInstanceForPortrait(menuName, templateName, x, y, w, h, portraitItem)
 	local instanceEntry = B3Timer_CreateInstance(menuName, templateName, x, y, w, h)
-	instanceEntry.portraitIndex = portraitIndex
+	instanceEntry.portraitItem = portraitItem
+	instanceEntry.portraitEnabledFunc = EEex_Menu_GetItemFunction(portraitItem.reference_enabled)
+	instanceEntry.portraitIndex = EEex_Menu_GetItemVariant(portraitItem.button.portrait)
 	instanceEntry.enabled = false
-	local portraitEntry = B3Timer_TemplateInstancesByPortrait[portraitIndex]
-	if not portraitEntry then
-		portraitEntry = {}
-		B3Timer_TemplateInstancesByPortrait[portraitIndex] = portraitEntry
-	end
-	portraitEntry[templateName] = instanceEntry
+	local portraitEntry = EEex_Utility_GetOrCreate(B3Timer_TemplateInstancesByPortrait, instanceEntry.portraitIndex, {})
+	local instanceEntries = EEex_Utility_GetOrCreate(portraitEntry, templateName, {})
+	table.insert(instanceEntries, instanceEntry)
 end
 
 ---------------
--- Listeners -- 
+-- Listeners --
 ---------------
 
 B3Timer_InjectingMenu = "RIGHT_SIDEBAR"
 
 function B3Timer_InstallBars()
 
+	-- Dragonspear UI++
+	B3Timer_HugPortraits = B3Timer_HugPortraits or nameToItem["portrait1ButtonBig"] ~= nil
+
 	EEex_Menu_LoadFile("B3Timer")
 
-	local sidebar = EEex_Menu_Find(B3Timer_InjectingMenu)
-	local item = sidebar.items
-
+	local item = EEex_Menu_Find(B3Timer_InjectingMenu).items
 	while item do
 		local portrait = item.button.portrait
 		if portrait then
 			local area = item.area
-			local portraitIndex = EEex_Menu_GetItemVariant(portrait)
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background",       0, area.y - 1, 10, 92, portraitIndex)
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerModal",       0, area.y,     2,  90, portraitIndex)
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerContingency", 0, area.y,     2,  90, portraitIndex)
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerCast",        0, area.y,     2,  90, portraitIndex)
+			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background",       nil, nil, 10, nil, item)
+			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerModal",       nil, nil, 2,  nil, item)
+			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerContingency", nil, nil, 2,  nil, item)
+			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerCast",        nil, nil, 2,  nil, item)
 		end
 		item = item.next
 	end
@@ -108,36 +113,59 @@ function B3Timer_Menu_Tick()
 
 		if sprite then
 
-			local startX = -2
-			local curX = startX
+			local startX = -3
+			local portraitInstanceCurX = {}
 
-			local updateTimerBar = function(portraitEntry, templateName, condition, changeX)
-				local templateEntry = portraitEntry[templateName]
-				if condition then
-					templateEntry.enabled = true
-					curX = curX - (curX == startX and 1 or 3)
-					EEex_Menu_SetTemplateArea(B3Timer_InjectingMenu, templateName, templateEntry.id, curX, nil, nil, nil)
-				else
-					templateEntry.enabled = false
+			local updateTimerBar = function(templateName, condition)
+
+				for i, instanceEntry in ipairs(portraitEntry[templateName]) do
+
+					local portraitArea = instanceEntry.portraitItem.area
+
+					local curX = portraitInstanceCurX[i]
+					if not curX then
+						if B3Timer_HugPortraits then startX = portraitArea.x - 3 end
+						curX = startX
+						portraitInstanceCurX[i] = curX
+					end
+
+					local portraitEnabledFunc = instanceEntry.portraitEnabledFunc
+					if (not portraitEnabledFunc or portraitEnabledFunc()) and condition then
+						instanceEntry.enabled = true
+						portraitInstanceCurX[i] = curX - 3
+						EEex_Menu_SetTemplateArea(B3Timer_InjectingMenu, templateName, instanceEntry.id, curX, portraitArea.y, nil, portraitArea.h)
+					else
+						instanceEntry.enabled = false
+					end
 				end
 			end
 
-			updateTimerBar( portraitEntry, "B3Timer_Menu_TEMPLATE_TimerCast",        sprite:getCastTimerPercentage() > 0                     )
-			updateTimerBar( portraitEntry, "B3Timer_Menu_TEMPLATE_TimerContingency", sprite:getActiveStats().m_cContingencyList.m_nCount > 0 )
-			updateTimerBar( portraitEntry, "B3Timer_Menu_TEMPLATE_TimerModal",       sprite:getModalState() ~= 0                             )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerCast",        sprite:getCastTimerPercentage() > 0                     )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerContingency", sprite:getActiveStats().m_cContingencyList.m_nCount > 0 )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerModal",       sprite:getModalState() ~= 0                             )
 
-			local backgroundEntry = portraitEntry["B3Timer_Menu_TEMPLATE_Background"]
-			if curX ~= startX then
-				backgroundEntry.enabled = true
-				EEex_Menu_SetTemplateArea(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background", backgroundEntry.id, curX - 1, nil, startX - curX + 3, nil)
-			else
-				backgroundEntry.enabled = false
+			for i, backgroundEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_Background"]) do
+				local curX = portraitInstanceCurX[i]
+				if curX ~= startX then
+					backgroundEntry.enabled = true
+					local portraitArea = backgroundEntry.portraitItem.area
+					EEex_Menu_SetTemplateArea(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background", backgroundEntry.id, curX + 2, portraitArea.y, startX - curX + 1, portraitArea.h)
+				else
+					backgroundEntry.enabled = false
+				end
 			end
 		else
-			portraitEntry["B3Timer_Menu_TEMPLATE_Background"].enabled = false
-			portraitEntry["B3Timer_Menu_TEMPLATE_TimerModal"].enabled = false
-			portraitEntry["B3Timer_Menu_TEMPLATE_TimerContingency"].enabled = false
-			portraitEntry["B3Timer_Menu_TEMPLATE_TimerCast"].enabled = false
+			for _, templateName in ipairs({
+				"B3Timer_Menu_TEMPLATE_Background",
+				"B3Timer_Menu_TEMPLATE_TimerModal",
+				"B3Timer_Menu_TEMPLATE_TimerContingency",
+				"B3Timer_Menu_TEMPLATE_TimerCast"
+			})
+			do
+				for _, instanceEntry in ipairs(portraitEntry[templateName]) do
+					instanceEntry.enabled = false
+				end
+			end
 		end
 	end
 end
