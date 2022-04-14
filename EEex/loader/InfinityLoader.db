@@ -316,6 +316,7 @@ Operations=ADD 223
 
 [Hook-dimmInit()-uiLoadMenu()]
 ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [!ExeSwitch-Baldur.exe-Hook-dimmInit()-uiLoadMenu()]
 Pattern=74034C8B30
