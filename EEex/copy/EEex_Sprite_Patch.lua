@@ -46,7 +46,7 @@
 			EEex_GenLuaCall("EEex_Sprite_Hook_OnConstruct", {
 				["args"] = {
 					function(rspOffset) return {[[
-						mov qword ptr ss:[rsp+#$1], rsi
+						mov qword ptr ss:[rsp+#$(1)], rsi
 					]], {rspOffset}}, "CGameSprite" end,
 				},
 			}),
@@ -68,7 +68,7 @@
 		EEex_GenLuaCall("EEex_Sprite_Hook_OnDestruct", {
 			["args"] = {
 				function(rspOffset) return {[[
-					mov qword ptr ss:[rsp+#$1], rbx
+					mov qword ptr ss:[rsp+#$(1)], rbx
 				]], {rspOffset}}, "CGameSprite" end,
 			},
 		}),

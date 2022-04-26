@@ -12,17 +12,17 @@
 		]], EEex_GenLuaCall("EEex_Object_Hook_OnEvaluatingUnknown", {
 			["args"] = {
 				function(rspOffset) return {[[
-					mov qword ptr ss:[rsp+#$1], r13
+					mov qword ptr ss:[rsp+#$(1)], r13
 				]], {rspOffset}}, "CAIObjectType" end,
 				function(rspOffset) return {[[
-					mov qword ptr ss:[rsp+#$1], r12
+					mov qword ptr ss:[rsp+#$(1)], r12
 				]], {rspOffset}}, "CGameAIBase" end,
 				function(rspOffset) return {[[
-					mov qword ptr ss:[rsp+#$1], r15
+					mov qword ptr ss:[rsp+#$(1)], r15
 				]], {rspOffset}} end,
 				function(rspOffset) return {[[
 					lea rax, qword ptr ss:[rbp-11h]
-					mov qword ptr ss:[rsp+#$1], rax
+					mov qword ptr ss:[rsp+#$(1)], rax
 				]], {rspOffset}}, "CAIObjectType" end,
 			},
 			["returnType"] = EEex_LuaCallReturnType.Boolean,

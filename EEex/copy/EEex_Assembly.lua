@@ -384,6 +384,20 @@ function EEex_HookRelativeBranch(address, assemblyT)
 	EEex_JITAt(address, {"jmp short "..hookAddress})
 end
 
+function EEex_HookBeforeCall(address, assemblyT)
+	local opcode = EEex_ReadU8(address)
+	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+	local afterCall = address + 5
+	EEex_DefineAssemblyLabel("return", afterCall)
+	local target = afterCall + EEex_Read32(address + 1)
+	local hookAddress = EEex_JITNear(EEex_FlattenTable({
+		assemblyT,
+		{"call #$(1) #ENDL", {target}},
+		{"jmp #$(1) #ENDL", {afterCall}},
+	}))
+	EEex_JITAt(address, {"jmp short "..hookAddress})
+end
+
 function EEex_HookAfterCall(address, assemblyT)
 	local opcode = EEex_ReadU8(address)
 	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
@@ -391,9 +405,9 @@ function EEex_HookAfterCall(address, assemblyT)
 	EEex_DefineAssemblyLabel("return", afterCall)
 	local target = afterCall + EEex_Read32(address + 1)
 	local hookAddress = EEex_JITNear(EEex_FlattenTable({
-		{"call #$1 #ENDL", {target}},
+		{"call #$(1) #ENDL", {target}},
 		assemblyT,
-		{"jmp #$1 #ENDL", {afterCall}},
+		{"jmp #$(1) #ENDL", {afterCall}},
 	}))
 	EEex_JITAt(address, {"jmp short "..hookAddress})
 end
@@ -489,7 +503,7 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 		]]},
 		{
 			jmpMnemonic, " ", jmpDest, [[ #ENDL
-			jmp_fail: 
+			jmp_fail:
 		]]},
 		restoreBytes,
 		{[[
@@ -499,7 +513,7 @@ function EEex_HookJump(address, restoreSize, assemblyT)
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
+		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
@@ -526,7 +540,7 @@ function EEex_HookJumpOnFail(address, restoreSize, assemblyT)
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
+		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
@@ -556,7 +570,7 @@ function EEex_HookJumpOnSuccess(address, restoreSize, assemblyT)
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
+		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
@@ -575,7 +589,7 @@ function EEex_HookJumpAuto(address, restoreSize, assemblyT, bAutoSuccess)
 			#IF ]], bAutoSuccess, [[ {
 				jmp #L(jmp_success)
 			}
-			jmp_fail: 
+			jmp_fail:
 		]]},
 		restoreBytes,
 		{[[
@@ -585,7 +599,7 @@ function EEex_HookJumpAuto(address, restoreSize, assemblyT, bAutoSuccess)
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {restoreSize - 5 + instructionLength}
+		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
@@ -613,7 +627,7 @@ function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, 
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {returnDelay - 5}
+		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
 	})
 end
 
@@ -635,7 +649,7 @@ function EEex_HookBetweenRestore(address, restoreDelay1, restoreSize1, restoreDe
 
 	EEex_JITAt(address, {[[
 		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {returnDelay - 5}
+		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
 	})
 end
 
@@ -644,7 +658,7 @@ function EEex_HookNOPs(address, nopCount, assemblyStr)
 	local hookAddress = EEex_JITNear(assemblyStr)
 	EEex_JITAt(address, {[[
 		jmp short ]], hookAddress, [[ #ENDL
-		#REPEAT(#$1,nop #ENDL) ]], {nopCount}
+		#REPEAT(#$(1),nop #ENDL) ]], {nopCount}
 	})
 end
 
@@ -666,11 +680,13 @@ function EEex_GenLuaCall(funcName, meta)
 
 	local argsUserType = {}
 
+	local labelSuffix = (meta or {}).labelSuffix or ""
+
 	pushArgTemplate = function(argI)
 		local userType = argsUserType[argI + 1]
 		if userType == "" then
 			return {[[
-				mov rdx, qword ptr ss:[rsp+#$1] ]], {luaCallArgsTop + argI * 8}, [[ ; n
+				mov rdx, qword ptr ss:[rsp+#$(1)] ]], {luaCallArgsTop + argI * 8}, [[ ; n
 				mov rcx, rbx                                                        ; L
 				#ALIGN
 				call #L(Hardcoded_lua_pushinteger)
@@ -679,7 +695,7 @@ function EEex_GenLuaCall(funcName, meta)
 		else
 			return {[[
 				mov r8, ]], EEex_WriteStringAuto(userType), [[                      ; type
-				mov rdx, qword ptr ss:[rsp+#$1] ]], {luaCallArgsTop + argI * 8}, [[ ; value
+				mov rdx, qword ptr ss:[rsp+#$(1)] ]], {luaCallArgsTop + argI * 8}, [[ ; value
 				mov rcx, rbx                                                        ; L
 				#ALIGN
 				call #L(Hardcoded_tolua_pushusertype)
@@ -694,7 +710,7 @@ function EEex_GenLuaCall(funcName, meta)
 		#ALIGN
 		call #L(Hardcoded_lua_toboolean)
 		#ALIGN_END
-		mov qword ptr ss:[rsp+#$1], rax ]], {localArgsTop + 8}, [[ #ENDL
+		mov qword ptr ss:[rsp+#$(1)], rax ]], {localArgsTop + 8}, [[ #ENDL
 	]]}
 
 	local returnNumberTemplate = {[[
@@ -704,7 +720,7 @@ function EEex_GenLuaCall(funcName, meta)
 		#ALIGN
 		call #L(Hardcoded_lua_tointegerx)
 		#ALIGN_END
-		mov qword ptr ss:[rsp+#$1], rax ]], {localArgsTop + 8}, [[ #ENDL
+		mov qword ptr ss:[rsp+#$(1)], rax ]], {localArgsTop + 8}, [[ #ENDL
 	]]}
 
 	local genArgPushes1 = function()
@@ -775,7 +791,7 @@ function EEex_GenLuaCall(funcName, meta)
 						#ALIGN_END
 
 						test rax, rax
-						jz EEex_GenLuaCall_loadstring_no_error
+						jz EEex_GenLuaCall_loadstring_no_error#$(1) ]], {labelSuffix}, [[ #ENDL
 
 						#IF ]], errorFunc ~= nil, [[ {
 
@@ -796,14 +812,14 @@ function EEex_GenLuaCall(funcName, meta)
 							#ALIGN_END
 
 							test rax, rax
-							jnz EEex_GenLuaCall_error_in_error_handling
+							jnz EEex_GenLuaCall_error_in_error_handling#$(1) ]], {labelSuffix}, [[ #ENDL
 
 							mov rcx, rbx
 							#ALIGN
 							call #L(EEex_PrintPopLuaString)
 							#ALIGN_END
 
-							EEex_GenLuaCall_error_in_error_handling:
+							EEex_GenLuaCall_error_in_error_handling#$(1): ]], {labelSuffix}, [[ #ENDL
 							; Clear error function precursors off of Lua stack
 							mov rdx, ]], -errorFuncLuaStackPopAmount, [[ #ENDL
 							mov rcx, rbx
@@ -811,16 +827,16 @@ function EEex_GenLuaCall(funcName, meta)
 							call #L(Hardcoded_lua_settop)
 							#ALIGN_END
 
-							jmp EEex_GenLuaCall_call_error
+							jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 						}
 
 						#IF ]], errorFunc == nil, [[ {
 							mov rcx, rbx
 							call #L(EEex_PrintPopLuaString)
-							jmp EEex_GenLuaCall_call_error
+							jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 						}
 
-						EEex_GenLuaCall_loadstring_no_error:
+						EEex_GenLuaCall_loadstring_no_error#$(1): ]], {labelSuffix}, [[ #ENDL
 					]]},
 				})
 			elseif meta.functionSrc then
@@ -867,11 +883,11 @@ function EEex_GenLuaCall(funcName, meta)
 	local numRet = (meta or {}).returnType and 1 or 0
 	local toReturn = EEex_FlattenTable({
 		{[[
-			#MAKE_SHADOW_SPACE(#$1) ]], {numShadowExtraBytes}, [[
+			#MAKE_SHADOW_SPACE(#$(1)) ]], {numShadowExtraBytes}, [[
 		]]},
 		genArgPushes1(),
 		(meta or {}).luaState or {[[
-			mov qword ptr ss:[rsp+#$1], rbx ]], {localArgsTop}, [[ #ENDL
+			mov qword ptr ss:[rsp+#$(1)], rbx ]], {localArgsTop}, [[ #ENDL
 			mov rbx, #L(Hardcoded_InternalLuaState)
 		]]},
 		errorFunc or {},
@@ -897,21 +913,21 @@ function EEex_GenLuaCall(funcName, meta)
 			test rax, rax
 
 			#IF ]], errorFunc ~= nil, [[ {
-				jz short EEex_GenLuaCall_no_error
+				jz short EEex_GenLuaCall_no_error#$(1) ]], {labelSuffix}, [[ #ENDL
 				; Clear error function and its precursors off of Lua stack
 				mov rdx, ]], -(1 + errorFuncLuaStackPopAmount), [[ ; index
 				mov rcx, rbx                                       ; L
 				#ALIGN
 				call short #L(Hardcoded_lua_settop)
 				#ALIGN_END
-				jmp EEex_GenLuaCall_call_error
+				jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 			}
 
 			#IF ]], errorFunc == nil, [[ {
-				jnz EEex_GenLuaCall_call_error
+				jnz EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 			}
 
-			EEex_GenLuaCall_no_error:
+			EEex_GenLuaCall_no_error#$(1): ]], {labelSuffix}, [[ #ENDL
 		]]},
 		genReturnHandling(),
 		{[[
@@ -923,17 +939,17 @@ function EEex_GenLuaCall(funcName, meta)
 			#ALIGN_END
 
 			#IF ]], numRet > 0, [[ {
-				mov rax, qword ptr ss:[rsp+#$1] ]], {localArgsTop + 8}, [[ #ENDL
+				mov rax, qword ptr ss:[rsp+#$(1)] ]], {localArgsTop + 8}, [[ #ENDL
 			}
 
-			jmp EEex_GenLuaCall_resume
+			jmp EEex_GenLuaCall_resume#$(1) ]], {labelSuffix}, [[ #ENDL
 
-			EEex_GenLuaCall_call_error:
-			mov rbx, qword ptr ss:[rsp+#$1] ]], {localArgsTop}, [[ #ENDL
-			jmp call_error
+			EEex_GenLuaCall_call_error#$(1): ]], {labelSuffix}, [[ #ENDL
+			mov rbx, qword ptr ss:[rsp+#$(1)] ]], {localArgsTop}, [[ #ENDL
+			jmp call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 
-			EEex_GenLuaCall_resume:
-			mov rbx, qword ptr ss:[rsp+#$1] ]], {localArgsTop}, [[ #ENDL
+			EEex_GenLuaCall_resume#$(1): ]], {labelSuffix}, [[ #ENDL
+			mov rbx, qword ptr ss:[rsp+#$(1)] ]], {localArgsTop}, [[ #ENDL
 		]]},
 	})
 
@@ -1220,7 +1236,7 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 	end)
 
 	-- #$
-	assemblyStr = EEex_ReplacePattern(assemblyStr, "#%$(%d+)", function(match)
+	assemblyStr = EEex_ReplacePattern(assemblyStr, "#%$%((%d+)%)", function(match)
 		local argIndexStr = match.groups[1]
 		local argIndex = tonumber(argIndexStr)
 		if not argIndex then EEex_Error(string.format("#$ has invalid arg index: \"%s\"", argIndexStr)) end

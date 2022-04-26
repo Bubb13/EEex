@@ -11,7 +11,7 @@ function EEex_Opcode_GenDecode(args)
 			mov dword ptr ss:[rsp+28h], 0x0
 			mov qword ptr ss:[rsp+20h], rax
 			call #L(CGameEffect::Construct)
-			lea rax, qword ptr ds:[#$1] ]], {vftable}, [[ #ENDL
+			lea rax, qword ptr ds:[#$(1)] ]], {vftable}, [[ #ENDL
 			mov qword ptr ds:[rbx], rax
 			mov rax, rbx
 			add rsp, 40h
@@ -19,7 +19,7 @@ function EEex_Opcode_GenDecode(args)
 			ret
 		]]})
 	end
-	
+
 	local writeCopy = function(vftable)
 		return EEex_JITNear({[[
 			mov qword ptr ss:[rsp+8h], rbx
@@ -45,7 +45,7 @@ function EEex_Opcode_GenDecode(args)
 			mov qword ptr ss:[rsp+20h], rdx
 			mov rdx, rbp
 			call #L(CGameEffect::Construct)
-			lea rax, qword ptr ds:[#$1] ]], {vftable}, [[ #ENDL
+			lea rax, qword ptr ds:[#$(1)] ]], {vftable}, [[ #ENDL
 			mov qword ptr ds:[rbx], rax
 			jmp _2
 			_1:
@@ -71,7 +71,7 @@ function EEex_Opcode_GenDecode(args)
 
 	local genDecode = function(constructor)
 		return {[[
-			mov ecx, #$1 ]], {CGameEffect.sizeof}, [[ #ENDL
+			mov ecx, #$(1) ]], {CGameEffect.sizeof}, [[ #ENDL
 			call #L(operator_new)
 			mov rcx, rax                                     ; this
 			test rax, rax
@@ -81,7 +81,7 @@ function EEex_Opcode_GenDecode(args)
 			mov r9d, ebp                                     ; sourceID
 			mov r8, r14                                      ; source
 			mov rdx, rdi                                     ; effect
-			call #$1 ]], {constructor}, [[ #ENDL
+			call #$(1) ]], {constructor}, [[ #ENDL
 			jmp #L(Hook-CGameEffect::DecodeEffect()-Success)
 		]]}
 	end

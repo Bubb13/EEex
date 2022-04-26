@@ -19,66 +19,49 @@ Operations=DISABLE_CODE_PROTECTION, WRITE BYTES EB, ENABLE_CODE_PROTECTION
 Pattern=E988040000
 Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
 
-[numMenus]
-Pattern=41B800700000
-Operations=ADD 59, PUSH, READ DWORD, ADD, ADD 4
-
-[menus]
-Pattern=41B800700000
-Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
-
-[menuStack]
-Pattern=85C00F8E01010000
-Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
-
-[nextStackMenuIdx]
-Pattern=7E03FFC8
-Operations=ADD -6, PUSH, READ DWORD, ADD, ADD 4
-
-[menuSrc]
-Pattern=3D020400000F8556010000
-Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
-
-[menuLength]
-Pattern=3D020400000F8556010000
-Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
-
-[resources]
-Pattern=488B1CFB4885DB745B
-Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4, ADD -8
+[CGameObject::DEFAULT_TERRAIN_TABLE]
+Pattern=480FBFC085C0786A
+Operations=ADD 71, PUSH, READ DWORD, ADD, ADD 4
 
 [capture]
 Pattern=756633C0
 Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
 
+[g_pBaldurChitin]
+Pattern=48895C2430488B5E10
+Operations=ADD 30, PUSH, READ DWORD, ADD, ADD 4
+
+[menuLength]
+Pattern=3D020400000F8556010000
+Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
+
+[menuSrc]
+Pattern=3D020400000F8556010000
+Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
+
+[menuStack]
+Pattern=85C00F8E01010000
+Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
+
+[menus]
+Pattern=41B800700000
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[nextStackMenuIdx]
+Pattern=7E03FFC8
+Operations=ADD -6, PUSH, READ DWORD, ADD, ADD 4
+
+[numMenus]
+Pattern=41B800700000
+Operations=ADD 59, PUSH, READ DWORD, ADD, ADD 4
+
+[resources]
+Pattern=488B1CFB4885DB745B
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4, ADD -8
+
 ;----------------------------
 ;-- Bound Engine Functions --
 ;----------------------------
-
-[CAIIdList::Destruct]
-Pattern=488B5928488BF1488901
-Operations=ADD -18
-
-[CAIIdList::LoadList2]
-Pattern=48895C24184889542410574883EC20
-
-[CAIIdList::Construct1]
-Pattern=4889442428488BF94883C110
-Operations=ADD -20
-
-[C2DArray::GetAtLabels]
-Pattern=48895C2410565741564883EC20
-
-[CString::ConstructFromChars]
-Pattern=488BF2488901488BF9
-Operations=ADD -17
-
-[CString::Destruct]
-Pattern=488B114883C2F4
-
-[C2DArray::Load]
-Pattern=488BEC4883EC50488B4110
-Operations=ADD -11
 
 [C2DArray::Construct]
 Pattern=488D542420488937
@@ -87,22 +70,172 @@ Operations=ADD -51
 [C2DArray::Destruct]
 Pattern=40574883EC20488B4110
 
-[CGameEffect::DecodeEffect]
-Pattern=5741564883EC4033DB
+[C2DArray::GetAtLabels]
+Pattern=48895C2410565741564883EC20
+
+[C2DArray::Load]
+Pattern=488BEC4883EC50488B4110
 Operations=ADD -11
+
+[CAIAction::Construct1]
+Pattern=48897C242041564881ECF0000000
+Operations=ADD -10
+
+[CAIAction::Destruct]
+Pattern=E981450000
+Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
+
+[CAIGroup::AddToSearch]
+Pattern=488B59104885DB0F84DE000000
+Operations=ADD -6
+
+[CAIGroup::FollowLeader]
+Pattern=4889542410555657488BEC
+
+[CAIGroup::GetFacings]
+Pattern=5556574154415541574883EC30
+Operations=ADD -2
+
+[CAIGroup::GetOffsets]
+Pattern=48895C24086689542410
+
+[CAIGroup::GroupSetTarget1]
+Pattern=488954241055534155
+
+[CAIGroup::RemoveFromSearch]
+Pattern=4885DB0F84D6000000
+Operations=ADD -10
+
+[CAIIdList::Construct1]
+Pattern=4889442428488BF94883C110
+Operations=ADD -20
+
+[CAIIdList::Destruct]
+Pattern=488B5928488BF1488901
+Operations=ADD -18
+
+[CAIIdList::LoadList2]
+Pattern=48895C24184889542410574883EC20
 
 [CAIObjectType::Set]
 Pattern=0FB64208884108
 
+[CGameArea::AdjustTarget]
+Pattern=48895C240844884C2420
+
+[CGameArea::CheckWalkable]
+Pattern=4C894C24204C894424185556574154
+Operations=ADD -5
+
+[CGameEffect::DecodeEffect]
+Pattern=5741564883EC4033DB
+Operations=ADD -11
+
 [CGameObjectArray::GetShare]
 Pattern=48C7020000000083F9FF
+
+[CGameSprite::FeedBack]
+Pattern=48895C24105556574154415541564157488D6C24F9
+
+[CGameSprite::GetActiveStats]
+Pattern=488D81C81D0000C3
+Operations=ADD -16
+
+[CGameSprite::GetInternalButtonList]
+Pattern=4056415641574883EC50
 
 [CGameSprite::GetKitMask]
 Pattern=84C87476
 Operations=ADD -39
 
+[CGameSprite::GetQuickButtons]
+Pattern=48895C242055565741544156488D6C24C9
+
+[CGameSprite::PlaySound]
+Pattern=535741554156488D6C24D1
+Operations=ADD -2
+
+[CGameSprite::ReadyOffInternalList]
+Pattern=48894570488BF9410FB6D8
+Operations=ADD -33
+
+[CGameSprite::ReadySpell]
+Pattern=5657488D6C2480
+Operations=ADD -6
+
+[CInfButtonArray::SetQuickSlot]
+Pattern=48896C24104889742418574881ECE0000000
+
+[CInfButtonArray::SetState]
+Pattern=4889442430448BFA
+Operations=ADD -38
+
+[CInfGame::SetIconIndex]
+Pattern=889138400000
+Operations=ADD -21
+
+[CInfGame::SetState]
+Pattern=4489814C400000
+Operations=ADD -9
+
+[CObList::AddTail]
+Pattern=48895C2408574883EC20488BDA4533C0
+
+[CObList::Construct]
+Pattern=8D530A488D8EC04C0000
+Operations=ADD 11, PUSH, READ DWORD, ADD, ADD 4
+
+[CObList::Destruct]
+Pattern=44396C2468
+Operations=ADD 21, PUSH, READ DWORD, ADD, ADD 4
+
+[CObList::RemoveHead]
+Pattern=574883EC20488B4108
+Operations=ADD -10
+
+[CRes::Construct]
+Pattern=66C741500000488901
+Operations=ADD -7
+
+[CRes::Demand]
+Pattern=488BD94885C9743F
+Operations=ADD -6
+
+[CRes::Destruct]
+Pattern=4D39A708020000
+Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
+
+[CSearchBitmap::GetCost]
+Pattern=48895C242056574154415541564883EC30
+
+[CString::ConstructFromChars]
+Pattern=488BF2488901488BF9
+Operations=ADD -17
+
+[CString::Destruct]
+Pattern=488B114883C2F4
+
+[CompareCResByTypeThenName]
+Pattern=488B09488B12
+
+[SDL_GetKeyFromName]
+Pattern=488BD94885C90F84F2000000
+Operations=ADD -10
+
+[bsearch]
+Pattern=488978204155
+Operations=ADD -15
+
 [findMenu]
 Pattern=4881ECA800000048894C2448
+
+[rand]
+Pattern=694828FD430300
+Operations=ADD -9
+
+[restoreMenuStack]
+Pattern=0F84D701000048899C24B0000000
+Operations=ADD -57
 
 [saveMenuStack]
 Pattern=85C00F8E01010000
@@ -112,77 +245,9 @@ Operations=ADD -31
 Pattern=4883EC60BA7C000000
 Operations=ADD -8
 
-[restoreMenuStack]
-Pattern=0F84D701000048899C24B0000000
-Operations=ADD -57
-
-[bsearch]
-Pattern=488978204155
-Operations=ADD -15
-
-[CompareCResByTypeThenName]
-Pattern=488B09488B12
-
-[CRes::Construct]
-Pattern=66C741500000488901
-Operations=ADD -7
-
-[CRes::Destruct]
-Pattern=4D39A708020000
-Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
-
-[SDL_GetKeyFromName]
-Pattern=488BD94885C90F84F2000000
-Operations=ADD -10
-
-[CInfButtonArray::SetState]
-Pattern=4889442430448BFA
-Operations=ADD -38
-
-[CGameSprite::GetQuickButtons]
-Pattern=48895C242055565741544156488D6C24C9
-
-[CInfButtonArray::SetQuickSlot]
-Pattern=48896C24104889742418574881ECE0000000
-
-[CGameSprite::ReadySpell]
-Pattern=5657488D6C2480
-Operations=ADD -6
-
-[CGameSprite::ReadyOffInternalList]
-Pattern=48894570488BF9410FB6D8
-Operations=ADD -33
-
-[CObList::RemoveHead]
-Pattern=574883EC20488B4108
-Operations=ADD -10
-
-[CObList::Destruct]
-Pattern=44396C2468
-Operations=ADD 21, PUSH, READ DWORD, ADD, ADD 4
-
-[CInfGame::SetState]
-Pattern=4489814C400000
-Operations=ADD -9
-
-[CInfGame::SetIconIndex]
-Pattern=889138400000
-Operations=ADD -21
-
-[CGameSprite::GetInternalButtonList]
-Pattern=4056415641574883EC50
-
-[CRes::Demand]
-Pattern=488BD94885C9743F
-Operations=ADD -6
-
 ;----------------------
 ;-- Engine Functions --
 ;----------------------
-
-[operator_new]
-Pattern=488BD9EB0F
-Operations=ADD -6
 
 [CGameEffect::Construct]
 Pattern=4889442428488BD9418BF1
@@ -196,28 +261,57 @@ Operations=ADD -30
 Pattern=488BF9B930000000
 Operations=ADD -10
 
+[operator_new]
+Pattern=488BD9EB0F
+Operations=ADD -6
+
 ;-----------
 ;-- Hooks --
 ;-----------
 
-[Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp]
-Pattern=3DC9000000
-Operations=ADD 5
+[!ExeSwitch-Baldur.exe-Hook-dimmInit()-uiLoadMenu()]
+Pattern=74034C8B30
+Operations=ADD 34
 
-[Hook-CGameSprite::AddEffect()-noSave-Override]
-Pattern=753585F6
+[!ExeSwitch-icewind.exe-Hook-dimmInit()-uiLoadMenu()]
+Pattern=74034C8B30
+Operations=ADD 37
+
+[Data-CGameEffect::vftable]
+Pattern=4889442428488BD9418BF1
+Operations=ADD 29, PUSH, READ DWORD, ADD, ADD 4
+
+[Data-CInfButtonArray::SetState()-IndirectJumpTable]
+Pattern=41C786B01F0000640000004533FF
+Operations=ADD 332
+
+[Hook-CAIObjectType::Decode()-DefaultJmp]
+Pattern=4885D20F84C6020000
+Operations=ADD 33
+
+[Hook-CAIObjectType::Decode()-NormalBranch]
+Pattern=488B55D749FFC7
 Operations=ADD 4
 
-[Hook-CGameEffect::CheckAdd()-ProbabilityFailed]
-Pattern=33C0488B8D20010000
+[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1]
+Pattern=4889451F488BF9
+Operations=ADD 11
 
-[Hook-CGameEffect::CheckAdd()-LastProbabilityJmp]
-Pattern=48898520010000488B85A0010000
-Operations=ADD 94
+[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2]
+Pattern=0F85B3F2FFFF
+Operations=ADD -7
 
 [Hook-CDerivedStats::Construct()-FirstCall]
 Pattern=48894C24085741544155415641574883EC20488BF1
 Operations=ADD 28
+
+[Hook-CDerivedStats::Destruct()-FirstCall]
+Pattern=488981500C0000
+Operations=ADD 14
+
+[Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp]
+Pattern=3DC9000000
+Operations=ADD 5
 
 [Hook-CDerivedStats::operator_equ()-FirstCall]
 Pattern=48894424288B02
@@ -227,25 +321,39 @@ Operations=ADD 641
 Pattern=4883EC300FB74204
 Operations=ADD 75
 
-[Hook-CDerivedStats::Destruct()-FirstCall]
-Pattern=488981500C0000
-Operations=ADD 14
+[Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp]
+Pattern=0FBF8550030000
+Operations=ADD 17
 
-[Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
-Pattern=4C8D8F800B0000
+[Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
+Pattern=488BCBFF17
 Operations=ADD 31
 
-[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-1]
-Pattern=FFC63B770C
-Operations=ADD 62
+[Hook-CGameAIBase::ExecuteAction()-NormalBranch]
+Pattern=6689B3BA040000
+Operations=ADD -5
 
-[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-2]
-Pattern=4C8D8B800B0000498BCD
-Operations=ADD 24
+[Hook-CGameEffect::CheckAdd()-LastProbabilityJmp]
+Pattern=48898520010000488B85A0010000
+Operations=ADD 94
 
-[Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
-Pattern=488D8660050000660F1F440000
-Operations=ADD 37
+[Hook-CGameEffect::CheckAdd()-ProbabilityFailed]
+Pattern=33C0488B8D20010000
+
+[Hook-CGameEffect::DecodeEffect()-DefaultJmp]
+Pattern=5741564883EC4033DB
+Operations=ADD 38
+
+[Hook-CGameEffect::DecodeEffect()-Fail]
+Pattern=488BD84C8B7C2460
+Operations=ADD 3
+
+[Hook-CGameEffect::DecodeEffect()-Success]
+Pattern=488BD84C8B7C2460
+
+[Hook-CGameSprite::AddEffect()-noSave-Override]
+Pattern=753585F6
+Operations=ADD 4
 
 [Hook-CGameSprite::Construct1()-FirstCall]
 Pattern=4889442460488BF1
@@ -259,142 +367,122 @@ Operations=ADD 31
 Pattern=75DA4C8DB358490000
 Operations=ADD 12
 
-[Hook-CAIObjectType::Decode()-DefaultJmp]
-Pattern=4885D20F84C6020000
-Operations=ADD 33
-
-[Hook-CAIObjectType::Decode()-NormalBranch]
-Pattern=488B55D749FFC7
-Operations=ADD 4
-
-[Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
-Pattern=488BCBFF17
-Operations=ADD 31
-
-[Hook-CGameAIBase::ExecuteAction()-NormalBranch]
-Pattern=6689B3BA040000
-Operations=ADD -5
-
-[Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp]
-Pattern=0FBF8550030000
-Operations=ADD 17
-
-[Hook-CGameEffect::DecodeEffect()-DefaultJmp]
-Pattern=5741564883EC4033DB
-Operations=ADD 38
-
-[Hook-CGameEffect::DecodeEffect()-Fail]
-Pattern=488BD84C8B7C2460
-Operations=ADD 3
-
-[Hook-CGameEffect::DecodeEffect()-Success]
-Pattern=488BD84C8B7C2460
-
-[Data-CGameEffect::vftable]
-Pattern=4889442428488BD9418BF1
-Operations=ADD 29, PUSH, READ DWORD, ADD, ADD 4
-
-[Hook-CInfButtonArray::SetState()-SaveArg]
-Pattern=498D8EF8200000
-Operations=ADD -11
-
-[Data-CInfButtonArray::SetState()-IndirectJumpTable]
-Pattern=41C786B01F0000640000004533FF
-Operations=ADD 332
-
-[Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()]
-Pattern=41C786B01F0000640000004533FF
-Operations=ADD 154
-
-[Hook-uiRefreshMenu()-saveMenuStack()]
-Pattern=48C7C7FFFFFFFF6690
-Operations=ADD -235
-
-[Hook-uiRefreshMenu()-restoreMenuStack()]
-Pattern=85FF0F8E94000000
-Operations=ADD 223
-
-[Hook-dimmInit()-uiLoadMenu()]
-ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
-
-[!ExeSwitch-Baldur.exe-Hook-dimmInit()-uiLoadMenu()]
-Pattern=74034C8B30
-Operations=ADD 34
-
-[!ExeSwitch-icewind.exe-Hook-dimmInit()-uiLoadMenu()]
-Pattern=74034C8B30
+[Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
+Pattern=488D8660050000660F1F440000
 Operations=ADD 37
 
-[Hook-Infinity_InstanceAnimation()-TemplateMenuOverride]
-Pattern=488BD0488BC8
-Operations=ADD 182
-
-[Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
-Pattern=0F848D000000488B4808
-Operations=ADD 17
-
-[Hook-saveMenus()-CheckItemSave]
-Pattern=498B1E4885DB0F8482000000
-Operations=ADD 25
-
-[Hook-SDL_main()-CBaldurChitin::Init()]
-Pattern=4885C0740D4C8BC3
-Operations=ADD 28
-
-[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1]
-Pattern=4889451F488BF9
-Operations=ADD 11
-
-[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2]
-Pattern=0F85B3F2FFFF
-Operations=ADD -7
-
-[Hook-SDL_main()-CLUAConsole::LuaInit()]
-Pattern=C7804010000001000000
-Operations=ADD 10
+[Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
+Pattern=4C8D8F800B0000
+Operations=ADD 31
 
 [Hook-CGameSprite::SetCursor()-SetCharacterToolTip()]
 Pattern=80BF38400000FF
 Operations=ADD 63
 
+[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-1]
+Pattern=FFC63B770C
+Operations=ADD 62
+
+[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-2]
+Pattern=4C8D8B800B0000498BCD
+Operations=ADD 24
+
 [Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving]
 Pattern=488B88901000007402
+
+[Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()]
+Pattern=41C786B01F0000640000004533FF
+Operations=ADD 154
+
+[Hook-CInfButtonArray::SetState()-SaveArg]
+Pattern=498D8EF8200000
+Operations=ADD -11
+
+[Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
+Pattern=0F848D000000488B4808
+Operations=ADD 17
+
+[Hook-Infinity_InstanceAnimation()-TemplateMenuOverride]
+Pattern=488BD0488BC8
+Operations=ADD 182
+
+[Hook-SDL_main()-CBaldurChitin::Init()]
+Pattern=4885C0740D4C8BC3
+Operations=ADD 28
+
+[Hook-SDL_main()-CLUAConsole::LuaInit()]
+Pattern=C7804010000001000000
+Operations=ADD 10
+
+[Hook-dimmInit()-uiLoadMenu()]
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
+
+[Hook-saveMenus()-CheckItemSave]
+Pattern=498B1E4885DB0F8482000000
+Operations=ADD 25
+
+[Hook-uiRefreshMenu()-restoreMenuStack()]
+Pattern=85FF0F8E94000000
+Operations=ADD 223
+
+[Hook-uiRefreshMenu()-saveMenuStack()]
+Pattern=48C7C7FFFFFFFF6690
+Operations=ADD -235
 
 ;------------------------------------------
 ;-- Functions Referenced by Lua Bindings --
 ;------------------------------------------
 
-[Hardcoded_lua_tonumberx]
-Pattern=80F9047554
-Operations=ADD -40
+[Hardcoded_luaL_loadstring]
+Pattern=48894424404889542430
+Operations=ADD -14
 
-[Hardcoded_tolua_constant]
-Pattern=40534883EC300F29742420
-
-[Hardcoded_lua_tocfunction]
-Pattern=83F9167508
-Operations=ADD -12
-
-[Hardcoded_lua_pushlstring]
-Pattern=488B5310488B742438
-Operations=ADD -83
+[Hardcoded_lua_callk]
+Pattern=48895C2408574883EC204C8B5110
 
 [Hardcoded_lua_getmetatable]
 Pattern=7411498B4218
 Operations=ADD -28
 
-[Hardcoded_lua_setmetatable]
-Pattern=4C8B4B104C8BD0
-Operations=ADD -14
+[Hardcoded_lua_gettable]
+Pattern=4D8BC84883C428
+Operations=ADD -26
 
-[Hardcoded_tolua_getmetatable]
-Pattern=BAD8B9F0FF488BCB4883C420
-Operations=ADD -38
+[Hardcoded_lua_insert]
+Pattern=498B53104C8BD0
+Operations=ADD -12
+
+[Hardcoded_lua_iscfunction]
+Pattern=83F916740C
+Operations=ADD -12
+
+[Hardcoded_lua_isnumber]
+Pattern=83F9037428
+Operations=ADD -12
+
+[Hardcoded_lua_isuserdata]
+Pattern=83F947
+Operations=ADD -12
 
 [Hardcoded_lua_newuserdata]
 Pattern=488BFA488B4918
 Operations=ADD -13
+
+[Hardcoded_lua_next]
+Pattern=4C8B4310488BCB4983E810
+Operations=ADD -14
+
+[Hardcoded_lua_pushboolean]
+Pattern=4C8B411033C0
+
+[Hardcoded_lua_pushlightuserdata]
+Pattern=488910C7400802000000
+Operations=ADD -4
+
+[Hardcoded_lua_pushlstring]
+Pattern=488B5310488B742438
+Operations=ADD -83
 
 [Hardcoded_lua_rawget]
 Pattern=488B53104883EA10488B08
@@ -402,6 +490,30 @@ Operations=ADD -14
 
 [Hardcoded_lua_rawgeti]
 Pattern=4883EC28458BD0
+
+[Hardcoded_lua_rawseti]
+Pattern=4883EC20458BD0
+Operations=ADD -6
+
+[Hardcoded_lua_remove]
+Pattern=498B4A104883C010
+Operations=ADD -12
+
+[Hardcoded_lua_setmetatable]
+Pattern=4C8B4B104C8BD0
+Operations=ADD -14
+
+[Hardcoded_lua_settable]
+Pattern=48834310E04883C420
+Operations=ADD -37
+
+[Hardcoded_lua_tocfunction]
+Pattern=83F9167508
+Operations=ADD -12
+
+[Hardcoded_lua_tonumberx]
+Pattern=80F9047554
+Operations=ADD -40
 
 [Hardcoded_lua_touserdata]
 Pattern=83F9027418
@@ -414,9 +526,31 @@ Pattern=4883EC28E8????????488D0D????????483BC1740B
 Pattern=488BD94885D27417
 Operations=ADD -6
 
+[Hardcoded_tolua_bnd_cast]
+Pattern=488BCB488BF0418D5002
+Operations=ADD -33
+
+[Hardcoded_tolua_bnd_release]
+Pattern=488BF84885C00F8487000000
+Operations=ADD -25
+
+[Hardcoded_tolua_bnd_releaseownership]
+Pattern=488BF98D5301
+Operations=ADD -12
+
+[Hardcoded_tolua_bnd_takeownership]
+Pattern=48896C24104889742418574883EC2033F6
+
+[Hardcoded_tolua_bnd_type]
+Pattern=7429BAFFFFFFFF
+Operations=ADD 362, PUSH, READ DWORD, ADD, ADD 4
+
 [Hardcoded_tolua_cclass]
 Pattern=41574881EC38010000
 Operations=ADD -11
+
+[Hardcoded_tolua_constant]
+Pattern=40534883EC300F29742420
 
 [Hardcoded_tolua_endmodule]
 Pattern=41B8AD030000
@@ -425,6 +559,18 @@ Operations=ADD -11897, PUSH, READ DWORD, ADD, ADD 4
 [Hardcoded_tolua_error]
 Pattern=803A23
 Operations=ADD -15
+
+[Hardcoded_tolua_function]
+Pattern=BAFDFFFFFF488BCF488B5C2430
+Operations=ADD -35
+
+[Hardcoded_tolua_getmetatable]
+Pattern=BAD8B9F0FF488BCB4883C420
+Operations=ADD -38
+
+[Hardcoded_tolua_isboolean]
+Pattern=443BC07C43
+Operations=ADD -43
 
 [Hardcoded_tolua_isnumber]
 Pattern=443BC07C0E
@@ -437,17 +583,16 @@ Operations=ADD -43
 [Hardcoded_tolua_isusertype]
 Pattern=48895C240848896C24104889742418574883EC20498BE88BF2
 
-[Hardcoded_lua_isuserdata]
-Pattern=83F947
-Operations=ADD -12
-
 [Hardcoded_tolua_module]
 Pattern=4889742410574883EC20418BF0488BFA
 Operations=ADD -5
 
-[tolua_open]
-Pattern=83F8010F84D7030000
-Operations=ADD -61
+[Hardcoded_tolua_newmetatable]
+Pattern=4883EC20488BFA488BD94C8BC2
+Operations=ADD -6
+
+[Hardcoded_tolua_pushboolean]
+Pattern=4C8B411033C0
 
 [Hardcoded_tolua_pushnumber]
 Pattern=488B4110F20F1108
@@ -455,6 +600,10 @@ Pattern=488B4110F20F1108
 [Hardcoded_tolua_pushstring]
 Pattern=41B14C488D542458
 Operations=ADD 39, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_toboolean]
+Pattern=4889742410574883EC20418BD88BFA
+Operations=ADD -5
 
 [Hardcoded_tolua_tonumber]
 Pattern=0F297424208BDA
@@ -476,114 +625,34 @@ Operations=ADD -37
 Pattern=488BF2498BF9
 Operations=ADD -20
 
-[Hardcoded_tolua_function]
-Pattern=BAFDFFFFFF488BCF488B5C2430
-Operations=ADD -35
-
-[Hardcoded_tolua_toboolean]
-Pattern=4889742410574883EC20418BD88BFA
-Operations=ADD -5
-
-[Hardcoded_tolua_pushboolean]
-Pattern=4C8B411033C0
-
-[Hardcoded_tolua_isboolean]
-Pattern=443BC07C43
-Operations=ADD -43
-
-[Hardcoded_luaL_loadstring]
-Pattern=48894424404889542430
-Operations=ADD -14
-
-[Hardcoded_lua_pushlightuserdata]
-Pattern=488910C7400802000000
-Operations=ADD -4
-
-[Hardcoded_lua_pushboolean]
-Pattern=4C8B411033C0
-
-[Hardcoded_lua_next]
-Pattern=4C8B4310488BCB4983E810
-Operations=ADD -14
-
-[Hardcoded_lua_insert]
-Pattern=498B53104C8BD0
-Operations=ADD -12
-
-[mapsuper]
-Pattern=574883EC20488BFA498BF0
-Operations=ADD -10
-
-[mapinheritance]
-Pattern=498BD8488BF94C8BC2
-Operations=ADD -10
-
-[Hardcoded_lua_iscfunction]
-Pattern=83F916740C
-Operations=ADD -12
-
-[Hardcoded_lua_callk]
-Pattern=48895C2408574883EC204C8B5110
-
-[Hardcoded_lua_settable]
-Pattern=48834310E04883C420
-Operations=ADD -37
-
-[Hardcoded_lua_isnumber]
-Pattern=83F9037428
-Operations=ADD -12
-
-[Hardcoded_lua_remove]
-Pattern=498B4A104883C010
-Operations=ADD -12
-
-[Hardcoded_lua_gettable]
-Pattern=4D8BC84883C428
-Operations=ADD -26
-
-[Hardcoded_lua_rawseti]
-Pattern=4883EC20458BD0
-Operations=ADD -6
-
-[module_newindex_event]
-Pattern=83F8057566
-Operations=ADD -47
+[class_index_event]
+Pattern=0F85B3020000
+Operations=ADD -22
 
 [class_newindex_event]
 Pattern=83F8070F85B3010000
 Operations=ADD -19
 
+[mapinheritance]
+Pattern=498BD8488BF94C8BC2
+Operations=ADD -10
+
+[mapsuper]
+Pattern=574883EC20488BFA498BF0
+Operations=ADD -10
+
 [module_index_event]
 Pattern=83F8057561
 Operations=ADD -47
 
-[class_index_event]
-Pattern=0F85B3020000
-Operations=ADD -22
+[module_newindex_event]
+Pattern=83F8057566
+Operations=ADD -47
 
 [tolua_cclass]
 Pattern=41574881EC38010000
 Operations=ADD -11
 
-[Hardcoded_tolua_newmetatable]
-Pattern=4883EC20488BFA488BD94C8BC2
-Operations=ADD -6
-
-[Hardcoded_tolua_bnd_type]
-Pattern=7429BAFFFFFFFF
-Operations=ADD 362, PUSH, READ DWORD, ADD, ADD 4
-
-[Hardcoded_tolua_bnd_takeownership]
-Pattern=48896C24104889742418574883EC2033F6
-
-[Hardcoded_tolua_bnd_releaseownership]
-Pattern=488BF98D5301
-Operations=ADD -12
-
-[Hardcoded_tolua_bnd_cast]
-Pattern=488BCB488BF0418D5002
-Operations=ADD -33
-
-[Hardcoded_tolua_bnd_release]
-Pattern=488BF84885C00F8487000000
-Operations=ADD -25
+[tolua_open]
+Pattern=83F8010F84D7030000
+Operations=ADD -61

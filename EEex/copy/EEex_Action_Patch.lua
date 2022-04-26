@@ -9,7 +9,7 @@
 		]], EEex_GenLuaCall("EEex_Action_Hook_OnEvaluatingUnknown", {
 			["args"] = {
 				function(rspOffset) return {[[
-					mov qword ptr ss:[rsp+#$1], rbx
+					mov qword ptr ss:[rsp+#$(1)], rbx
 				]], {rspOffset}}, "CGameAIBase" end,
 			},
 			["returnType"] = EEex_LuaCallReturnType.Number,
@@ -18,7 +18,7 @@
 		mov esi, eax
 		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
 		jmp #L(Hook-CGameAIBase::ExecuteAction()-NormalBranch)
-		
+
 		call_error:
 		#RESUME_SHADOW_ENTRY
 		#DESTROY_SHADOW_SPACE

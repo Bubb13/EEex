@@ -16,8 +16,8 @@
 
 			]], EEex_GenLuaCall("EEex_Opcode_Hook_ApplySetExtendedStat", {
 				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
 				},
 			}), [[
 
@@ -51,8 +51,8 @@
 					#ALIGN_END
 				]]},
 				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
 				},
 			}), [[
 
@@ -76,8 +76,8 @@
 
 			]], EEex_GenLuaCall("EEex_Opcode_Hook_ApplyScreenEffects", {
 				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameObject" end,
 				},
 			}), [[
 
@@ -97,8 +97,8 @@
 
 		]], EEex_GenLuaCall("EEex_Opcode_Hook_OnCheckAdd", {
 			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], rdi #ENDL", {rspOffset}}, "CGameEffect" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$1], r14 #ENDL", {rspOffset}}, "CGameSprite" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameEffect" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14 #ENDL", {rspOffset}}, "CGameSprite" end,
 			},
 			["returnType"] = EEex_LuaCallReturnType.Boolean,
 		}), [[
@@ -108,7 +108,7 @@
 		xor rax, rax
 
 		no_error:
-		mov qword ptr ds:[#$1], rax ]], {{effectBlockedHack}}, [[ #ENDL
+		mov qword ptr ds:[#$(1)], rax ]], {{effectBlockedHack}}, [[ #ENDL
 		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE
 		test rax, rax
@@ -116,7 +116,7 @@
 	]]}))
 
 	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameSprite::AddEffect()-noSave-Override"), 3, {[[
-		cmp qword ptr ds:[#$1], 0 ]], {effectBlockedHack}, [[ #ENDL
+		cmp qword ptr ds:[#$(1)], 0 ]], {effectBlockedHack}, [[ #ENDL
 		jnz jmp_fail
 	]]})
 

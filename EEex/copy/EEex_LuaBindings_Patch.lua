@@ -5,7 +5,7 @@
 
 	local override = function(patternName)
 		EEex_JITAt(EEex_Label(patternName), {[[
-			jmp #L(override_#$1) ]], {patternName}
+			jmp #L(override_#$(1)) ]], {patternName}
 		})
 	end
 
