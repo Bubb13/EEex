@@ -367,6 +367,10 @@ Operations=ADD 31
 Pattern=75DA4C8DB358490000
 Operations=ADD 12
 
+[Hook-CGameSprite::IsOver()-B3Invis]
+Pattern=3843387627
+Operations=ADD 3
+
 [Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
 Pattern=488D8660050000660F1F440000
 Operations=ADD 37
@@ -374,6 +378,18 @@ Operations=ADD 37
 [Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
 Pattern=4C8D8F800B0000
 Operations=ADD 31
+
+[Hook-CGameSprite::Render()-B3Invis]
+Pattern=3846387613
+Operations=ADD 18
+
+[Hook-CGameSprite::RenderMarkers()-B3Invis1]
+Pattern=3846387626
+Operations=ADD 3
+
+[Hook-CGameSprite::RenderMarkers()-B3Invis2]
+Pattern=BA060000004C896C2458
+Operations=ADD 46
 
 [Hook-CGameSprite::SetCursor()-SetCharacterToolTip()]
 Pattern=80BF38400000FF

@@ -45,13 +45,29 @@ function EEex_GameObject_GetSelected()
 	return EEex_GameObject_Get(EEex_GameObject_GetSelectedID())
 end
 
-function EEex_GameObject_GetAllSelectedIDs()
-	local toReturn = {}
+function EEex_GameObject_IterateSelectedIDs(func)
 	local node = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_group.m_memberList.m_pNodeHead
 	while node do
-		table.insert(toReturn, node.data)
+		if func(node.data) then
+			break
+		end
 		node = node.pNext
 	end
+end
+
+function EEex_GameObject_IterateSelected(func)
+	EEex_GameObject_IterateSelectedIDs(function(spriteID)
+		if func(EEex_GameObject_Get(spriteID)) then
+			return true
+		end
+	end)
+end
+
+function EEex_GameObject_GetAllSelectedIDs()
+	local toReturn = {}
+	EEex_GameObject_IterateSelectedIDs(function(spriteID)
+		table.insert(toReturn, spriteID)
+	end)
 	return toReturn
 end
 
@@ -129,7 +145,7 @@ function EEex_GameObject_ApplyEffect(object, args)
 			local source = manager:getUD("source")
 			source.x = args["sourceX"] or -1
 			source.y = args["sourceY"] or -1
-		
+
 			local target = manager:getUD("target")
 			target.x = args["targetX"] or -1
 			target.y = args["targetY"] or -1
