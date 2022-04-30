@@ -230,12 +230,6 @@ end
 
 EEex_Menu_HookGlobal_TemplateMenuOverride = nil
 
-function EEex_Menu_Hook_AfterLuaBindingsInitialized()
-	for i, listener in ipairs(EEex_Menu_LuaBindingsInitializedListener) do
-		listener()
-	end
-end
-
 function EEex_Menu_Hook_CheckSaveMenuItem(uiItem)
 	local menuName = uiItem.menu.name
 	return EEex_Menu_IsNative(menuName)

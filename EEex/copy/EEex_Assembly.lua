@@ -1514,6 +1514,12 @@ function EEex_JITNearAsLabel(label, assemblyT)
 	EEex_DefineAssemblyLabel(label, EEex_JITNear(assemblyT))
 end
 
+function EEex_JITNearAsLuaFunction(luaFunctionName, assemblyT)
+	local address = EEex_JITNear(assemblyT)
+	EEex_ExposeToLua(address, luaFunctionName)
+	return address
+end
+
 function EEex_JITAt(dst, assemblyT)
 	local assemblyStr = EEex_PreprocessAssembly(assemblyT)
 	local checkJIT = function(writeSize) return 0 end
