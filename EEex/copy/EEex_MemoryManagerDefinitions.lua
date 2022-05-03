@@ -10,6 +10,20 @@ EEex_MemoryManagerStructDefinitions["C2DArray"] = {
 	["destructor"] = C2DArray.Destruct,
 }
 
+EEex_MemoryManagerStructDefinitions["CAIAction"] = {
+	["constructors"] = {
+		["copy"] = CAIAction.ConstructCopy,
+	},
+	["destructor"] = CAIAction.Destruct,
+}
+
+EEex_MemoryManagerStructDefinitions["CAIScriptFile"] = {
+	["constructors"] = {
+		["#default"] = CAIScriptFile.Construct,
+	},
+	["destructor"] = CAIScriptFile.Destruct,
+}
+
 EEex_MemoryManagerStructDefinitions["CPoint"] = {
 	["constructors"] = {
 		["fromXY"] = function(point, x, y)

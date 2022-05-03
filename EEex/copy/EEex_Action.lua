@@ -8,6 +8,113 @@ EEex_Action_ReturnType = {
 	["ACTION_NO_ACTION"] = 2,
 }
 
+-------------
+-- General --
+-------------
+
+-- Parses the given string as if it was fed through C:Eval() and
+-- returns the compiled script object, (only filled with actions).
+function EEex_Action_ParseResponseString(responseStr)
+
+	local pScriptFile = EEex_NewUD("CAIScriptFile")
+	pScriptFile:Construct()
+
+	EEex_RunWithStackManager({
+		{ ["name"] = "responseStr", ["struct"] = "CString", ["constructor"] = {["args"] = {responseStr} }, ["noDestruct"] = true }, },
+		function(manager)
+			pScriptFile:ParseResponseString(manager:getUD("responseStr"))
+		end)
+
+	return pScriptFile
+end
+
+-- Adds compiled actions returned by EEex_Action_ParseResponseString() to the end of the object's action queue.
+-- Behavior identical to C:Eval().
+function EEex_Action_QueueScriptFileResponseOnAIBase(pScriptFile, pGameAIBase)
+	EEex_Utility_IterateCPtrList(pScriptFile.m_curResponse.m_actionList, function(pAction)
+		pGameAIBase:virtual_InsertAction(pAction)
+	end)
+end
+CAIScriptFile.queueResponseOnAIBase = EEex_Action_QueueScriptFileResponseOnAIBase
+
+-- Same as EEex_Action_QueueScriptFileResponseOnAIBase() but takes a string instead of a compiled script object.
+-- Prefer using compiled actions when efficiency is required.
+function EEex_Action_QueueResponseStringOnAIBase(responseStr, pGameAIBase)
+	EEex_RunWithStackManager({
+		{ ["name"] = "scriptFile", ["struct"] = "CAIScriptFile" },
+		{ ["name"] = "responseStr", ["struct"] = "CString", ["constructor"] = {["args"] = {responseStr} }, ["noDestruct"] = true }, },
+		function(manager)
+			local scriptFile = manager:getUD("scriptFile")
+			scriptFile:ParseResponseString(manager:getUD("responseStr"))
+			scriptFile:queueResponseOnAIBase(pGameAIBase)
+		end)
+end
+
+-- Instantly executes compiled actions returned by EEex_Action_ParseResponseString()
+-- without interrupting the current action / readying the object.
+-- *** ONLY WORKS CORRECTLY FOR ACTIONS DEFINED IN INSTANT.IDS ***
+function EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly(pScriptFile, pGameAIBase)
+
+	local pCurAction = pGameAIBase.m_curAction
+
+	EEex_RunWithStackManager({
+		-- Copy currently executing action
+		{ ["name"] = "curActionCopy", ["struct"] = "CAIAction", ["constructor"] = { ["variant"] = "copy", ["args"] = {pCurAction} }}, },
+		function(manager)
+
+			local isSprite = pGameAIBase:virtual_GetObjectType() == CGameObjectType.SPRITE
+
+			-- Save some clobbered fields
+			local lastActionReturnCopy = pGameAIBase.m_nLastActionReturn
+			local targetIdCopy = isSprite and pGameAIBase.m_targetId or nil
+
+			EEex_Utility_IterateCPtrList(pScriptFile.m_curResponse.m_actionList, function(pAction)
+
+				-- Override current action
+				pCurAction:operator_equ(pAction)
+
+				-- Decode new action's CAIObjectType(s)
+				if not EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_ruleTables.m_lNoDecodeList:Find1(pCurAction.m_actionID) then
+					pCurAction:Decode(pGameAIBase)
+				end
+
+				-- Execute new action
+				pGameAIBase:virtual_ExecuteAction()
+			end)
+
+			-- Restore clobbered fields
+			pGameAIBase.m_nLastActionReturn = lastActionReturnCopy
+			if isSprite then
+				pGameAIBase:UpdateTarget(EEex_GameObject_Get(targetIdCopy))
+			end
+
+			-- Restore overridden action
+			pCurAction:operator_equ(manager:getUD("curActionCopy"))
+		end)
+end
+CAIScriptFile.executeResponseAsAIBaseInstantly = EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly
+
+-- Same as EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly() but takes a string instead of a compiled script object.
+-- Prefer using compiled actions when efficiency is required.
+function EEex_Action_ExecuteResponseStringOnAIBaseInstantly(responseStr, pGameAIBase)
+	EEex_RunWithStackManager({
+		{ ["name"] = "scriptFile", ["struct"] = "CAIScriptFile" },
+		{ ["name"] = "responseStr", ["struct"] = "CString", ["constructor"] = {["args"] = {responseStr} }, ["noDestruct"] = true }, },
+		function(manager)
+			local scriptFile = manager:getUD("scriptFile")
+			scriptFile:ParseResponseString(manager:getUD("responseStr"))
+			scriptFile:executeResponseAsAIBaseInstantly(pGameAIBase)
+		end)
+end
+
+-- Frees the object returned by EEex_Action_ParseResponseString().
+-- Attempting to use an object after free()'ing it will result in a crash.
+function EEex_Action_FreeScriptFile(pScriptFile)
+	pScriptFile:Destruct()
+	EEex_FreeUD(pScriptFile)
+end
+CAIScriptFile.free = EEex_Action_FreeScriptFile
+
 -----------
 -- Hooks --
 -----------

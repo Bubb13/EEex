@@ -89,9 +89,21 @@ Operations=ADD -11
 Pattern=48897C242041564881ECF0000000
 Operations=ADD -10
 
+[CAIAction::ConstructCopy]
+Pattern=4883C208488901
+Operations=ADD -33
+
+[CAIAction::Decode]
+Pattern=488BFA4883C108
+Operations=ADD -13
+
 [CAIAction::Destruct]
-Pattern=E981450000
-Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
+Pattern=488D5348488D4DD8
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[CAIAction::operator_equ]
+Pattern=0FB702488BDA
+Operations=ADD -10
 
 [CAIGroup::AddToSearch]
 Pattern=488B59104885DB0F84DE000000
@@ -122,11 +134,25 @@ Operations=ADD -20
 Pattern=488B5928488BF1488901
 Operations=ADD -18
 
+[CAIIdList::Find1]
+Pattern=837958007415
+
 [CAIIdList::LoadList2]
 Pattern=48895C24184889542410574883EC20
 
 [CAIObjectType::Set]
 Pattern=0FB64208884108
+
+[CAIScriptFile::Construct]
+Pattern=48895C241848896C242056574154415641574883EC20
+
+[CAIScriptFile::Destruct]
+Pattern=488B7908488BD9
+Operations=ADD -10
+
+[CAIScriptFile::ParseResponseString]
+Pattern=B802000000C7470400000000
+Operations=ADD -30
 
 [CChitin::OnResizeWindow]
 Pattern=48895C2420565741564883EC30
@@ -173,6 +199,10 @@ Operations=ADD -33
 [CGameSprite::ReadySpell]
 Pattern=5657488D6C2480
 Operations=ADD -6
+
+[CGameSprite::UpdateTarget]
+Pattern=488BD94885D2740F
+Operations=ADD -13
 
 [CInfButtonArray::SetQuickSlot]
 Pattern=48896C24104889742418574881ECE0000000
@@ -225,6 +255,10 @@ Operations=ADD -17
 
 [CString::Destruct]
 Pattern=488B114883C2F4
+
+[CVariableHash::FindKey]
+Pattern=4155415641574883EC304C8BF9
+Operations=ADD -10
 
 [CompareCResByTypeThenName]
 Pattern=488B09488B12
