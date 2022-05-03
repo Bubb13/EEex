@@ -101,9 +101,10 @@
 	-- EEex_Stats_Hook_OnPlusEqu --
 	-------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CDerivedStats::operator_plus_equ()-FirstCall"), EEex_FlattenTable({
+	EEex_HookBeforeCall(EEex_Label("Hook-CDerivedStats::operator_plus_equ()-FirstCall"), EEex_FlattenTable({
 		{[[
-			#MAKE_SHADOW_SPACE(48)
+			#MAKE_SHADOW_SPACE(56)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 		]]},
 		EEex_GenLuaCall("EEex_Stats_Hook_OnPlusEqu", {
 			["args"] = {
@@ -117,6 +118,7 @@
 		}),
 		{[[
 			call_error:
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE
 		]]},
 	}))
