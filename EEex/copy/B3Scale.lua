@@ -29,11 +29,19 @@ function B3Scale_Hook_DoSizeChange()
 	end
 
 	local w, h = B3Scale_GetVideoSize()
-	local scaledH = 768 + (1 - B3Scale_Percentage) * (h - 768)
-	local scaledW = math.floor(scaledH * (w / h))
+	local ratio = math.max(1.25, math.min(w / h, 2.6))
 
-	CVidMode.SCREENWIDTH = scaledW
-	CVidMode.SCREENHEIGHT = scaledH
+	if ratio <= 4/3 then
+		-- UI wasn't designed for this ratio, no scaling.
+		return
+	end
+
+	local scaledH = w >= 1024 and h >= 768
+		and 768 + (1 - B3Scale_Percentage) * (h - 768)
+		or 768
+
+	CVidMode.SCREENWIDTH = math.floor(scaledH * ratio)
+	CVidMode.SCREENHEIGHT = math.floor(scaledH)
 end
 
 (function()
