@@ -35,6 +35,16 @@ function EEex_Sprite_GetExtendedStat(sprite, id)
 end
 CGameSprite.getExtendedStat = EEex_Sprite_GetExtendedStat
 
+function EEex_Sprite_GetState(sprite)
+	return sprite:getActiveStats().m_generalState
+end
+CGameSprite.getState = EEex_Sprite_GetState
+
+function EEex_Sprite_GetSpellState(sprite, spellStateID)
+	return sprite:getActiveStats():GetSpellState(spellStateID) ~= 0
+end
+CGameSprite.getSpellState = EEex_Sprite_GetSpellState
+
 -- Returns the sprite's current modal state, (as defined in MODAL.IDS; stored at offset 0x28 of the global-creature structure).
 function EEex_Sprite_GetModalState(sprite)
 	if not sprite then return 0 end

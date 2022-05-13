@@ -19,6 +19,7 @@ EEex_DoFile("EEex_Actionbar")
 EEex_DoFile("EEex_Actionbar_Patch")
 
 EEex_DoFile("EEex_GameObject")
+EEex_DoFile("EEex_GameObject_Patch")
 
 EEex_DoFile("EEex_GameState")
 EEex_DoFile("EEex_GameState_Patch")

@@ -15,8 +15,32 @@ REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.
 			END
 		BUT_ONLY
 	END
+
+	DEFINE_ACTION_FUNCTION B3_ESCAPE_STRING
+		STR_VAR
+			str = ~~
+		RET
+			escaped_str
+	BEGIN
+		ACTION_DEFINE_ASSOCIATIVE_ARRAY to_escape BEGIN ~$~ => 1 ~^~ => 1 ~.~ => 1 ~*~ => 1 ~+~ => 1 ~?~ => 1 ~[~ => 1 ~]~ => 1 ~\~ => 1 END
+		OUTER_PATCH_SAVE escaped_str ~%str%~ BEGIN
+			limit = BUFFER_LENGTH
+			FOR (i = 0; i < limit; ++i) BEGIN
+				READ_ASCII i character (1)
+				PATCH_IF VARIABLE_IS_SET EVAL ~to_escape_%character%~ BEGIN
+					INSERT_BYTES i 1
+					WRITE_ASCII i ~\~
+					++i
+					++limit
+				END
+			END
+		END
+	END
+
 	ACTION_PHP_EACH EEex_append_array AS data => ~~ BEGIN
-		APPEND ~%data%.IDS~ ~%data_1% %data_2%~ UNLESS ~^%data_1% ~
+		LAF B3_ESCAPE_STRING STR_VAR str = EVAL ~%data_1%~ RET data_1_escaped = escaped_str END
+		LAF B3_ESCAPE_STRING STR_VAR str = EVAL ~%data_2%~ RET data_2_escaped = escaped_str END
+		APPEND ~%data%.IDS~ ~%data_1% %data_2%~ UNLESS ~^[ %TAB%]*%data_1_escaped%[ %TAB%]+%data_2_escaped%[ %TAB%]*%MNL%*$~
 	END
 
 	COPY ~EEex/loader~ ~.~ IF_EXISTS

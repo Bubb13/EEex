@@ -35,6 +35,10 @@ Operations=ADD -26, PUSH, READ DWORD, ADD, ADD 4
 Pattern=756633C0
 Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
 
+[g_lua]
+Pattern=4885C00F85DA000000
+Operations=ADD 12, PUSH, READ DWORD, ADD, ADD 4
+
 [g_pBaldurChitin]
 Pattern=48895C2430488B5E10
 Operations=ADD 30, PUSH, READ DWORD, ADD, ADD 4
@@ -140,6 +144,10 @@ Pattern=837958007415
 [CAIIdList::LoadList2]
 Pattern=48895C24184889542410574883EC20
 
+[CAIObjectType::OfType]
+Pattern=415441574883EC30488BFA
+Operations=ADD -4
+
 [CAIObjectType::Set]
 Pattern=0FB64208884108
 
@@ -157,12 +165,25 @@ Operations=ADD -30
 [CChitin::OnResizeWindow]
 Pattern=48895C2420565741564883EC30
 
+[CDerivedStats::GetSpellState]
+Pattern=81FA000100007320
+
 [CGameArea::AdjustTarget]
 Pattern=48895C240844884C2420
+
+[CGameArea::CheckLOS]
+Pattern=4C894C242053574156
 
 [CGameArea::CheckWalkable]
 Pattern=4C894C24204C894424185556574154
 Operations=ADD -5
+
+[CGameArea::GetNearest]
+Pattern=4881ECE80000000F29B424D0000000
+Operations=ADD -18
+
+[CGameArea::GetNearest2]
+Pattern=6644894C24204C89442418
 
 [CGameEffect::DecodeEffect]
 Pattern=5741564883EC4033DB
@@ -203,6 +224,10 @@ Operations=ADD -6
 [CGameSprite::UpdateTarget]
 Pattern=488BD94885D2740F
 Operations=ADD -13
+
+[CImmunitiesAIType::OnList]
+Pattern=4889742410574883EC30488B5908
+Operations=ADD -5
 
 [CInfButtonArray::SetQuickSlot]
 Pattern=48896C24104889742418574881ECE0000000
@@ -399,6 +424,18 @@ Operations=ADD 3
 
 [Hook-CGameEffect::DecodeEffect()-Success]
 Pattern=488BD84C8B7C2460
+
+[Hook-CGameObjectArray::Clean()-DestructJmp]
+Pattern=6666660F1F840000000000480FBFC2
+Operations=ADD 32
+
+[Hook-CGameObjectArray::Clean()-LastJmp]
+Pattern=4881C1006500004883C420
+Operations=ADD 12
+
+[Hook-CGameObjectArray::Delete()-DeleteJmp]
+Pattern=6642392C37
+Operations=ADD 5
 
 [Hook-CGameSprite::AddEffect()-noSave-Override]
 Pattern=753585F6

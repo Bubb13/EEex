@@ -89,7 +89,7 @@ end
 
 function EEex_GameObject_IsSprite(object, allowDead)
 	if object and object.m_objectType == CGameObjectType.SPRITE then
-		return allowDead or EEex_BAnd(object.m_baseStats.m_generalState, 0xFC0) == 0
+		return allowDead or EEex_BAnd(EEex_CastUD(object, "CGameSprite").m_baseStats.m_generalState, 0xFC0) == 0
 	end
 	return false
 end
@@ -177,3 +177,25 @@ function EEex_GameObject_ApplyEffect(object, args)
 	object:virtual_AddEffect(effect, args["effectList"] or 1, args["noSave"] or 0, args["immediateResolve"] or 1)
 end
 CGameObject.applyEffect = EEex_GameObject_ApplyEffect
+
+-----------
+-- Hooks --
+-----------
+
+function EEex_GameObject_Hook_OnDeleting(objectID)
+
+	local object = EEex_GameObject_Get(objectID)
+	if not object then
+		return
+	end
+
+	EEex_DeleteUDAux(object)
+
+	if EEex_UDEqual(object, EEex_LuaObject) then
+		EEex_LuaObject = nil
+	end
+end
+
+function EEex_GameObject_Hook_OnObjectsCleaned()
+
+end

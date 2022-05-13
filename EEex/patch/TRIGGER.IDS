@@ -1,1 +1,3 @@
 0x410E EEex_LuaTrigger(S:Chunk*)
+0x4110 EEex_MatchObject(S:Chunk*)
+0x4110 EEex_MatchObjectEx(S:Chunk*,I:Nth*,I:Range*,I:Flags*X-MATOBJ)

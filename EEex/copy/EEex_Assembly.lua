@@ -189,6 +189,11 @@ end
 
 EEex_DeleteUDAux = EEex_DeleteUserDataAuxiliary
 
+function EEex_UserDataEqual(ud1, ud2)
+	return EEex_UDToLightUD(ud1) == EEex_UDToLightUD(ud2)
+end
+EEex_UDEqual = EEex_UserDataEqual
+
 ----------------------------
 -- Start Memory Interface --
 ----------------------------
@@ -1056,7 +1061,7 @@ function EEex_ToHex(number, minLength, suppressPrefix)
 		number = EEex_RShift(number, 4)
 	end
 
-	local wantedLength = (minLength or 0) - #hexString
+	local wantedLength = (minLength or 1) - #hexString
 	for i = 1, wantedLength, 1 do
 		hexString = "0"..hexString
 	end
