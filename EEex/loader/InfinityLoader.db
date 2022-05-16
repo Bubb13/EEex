@@ -206,6 +206,10 @@ Pattern=4056415641574883EC50
 Pattern=84C87476
 Operations=ADD -39
 
+[CGameSprite::GetLauncherSlot]
+Pattern=574883EC20480FBFC2
+Operations=ADD -10
+
 [CGameSprite::GetQuickButtons]
 Pattern=48895C242055565741544156488D6C24C9
 
