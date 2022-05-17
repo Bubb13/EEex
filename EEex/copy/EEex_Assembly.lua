@@ -208,7 +208,7 @@ function EEex_NewMemoryManager(structEntries)
 end
 
 function EEex_RunWithStackManager(structEntries, func)
-	EEex_MemoryManager:runWithStack(structEntries, func)
+	return EEex_MemoryManager:runWithStack(structEntries, func)
 end
 
 function EEex_MemoryManager:init(structEntries, stackModeFunc)
@@ -288,11 +288,13 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 	end
 
 	if stackModeFunc then
+		local retVal
 		EEex_RunWithStack(currentOffset, function(rsp)
 			initMemory(rsp)
-			stackModeFunc(self)
+			retVal = stackModeFunc(self)
 			self:destruct()
 		end)
+		return retVal
 	else
 		initMemory(EEex_Malloc(currentOffset))
 	end
@@ -337,7 +339,7 @@ end
 function EEex_MemoryManager:runWithStack(structEntries, stackModeFunc)
 	local o = {}
 	setmetatable(o, self)
-	o:init(structEntries, stackModeFunc)
+	return o:init(structEntries, stackModeFunc)
 end
 
 ------------------------------
