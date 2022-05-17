@@ -51,6 +51,25 @@ function EEex_Trigger_Hook_OnEvaluatingUnknown(aiBase, trigger)
 			return retVal
 		end
 
+	elseif triggerID == 0x410F then -- EEex_IsImmuneToOpcode
+
+		local targetSprite = quickDecode()
+		if not targetSprite then
+			return false
+		end
+
+		local found = false
+
+		local lookingForID = trigger.m_specificID
+		EEex_Utility_IterateCPtrList(targetSprite:getActiveStats().m_cImmunitiesEffect, function(effect)
+			if effect.m_effectId == lookingForID then
+				found = true
+				return true
+			end
+		end)
+
+		return found
+
 	elseif triggerID == 0x4110 then -- EEex_MatchObject / EEex_MatchObjectEx
 
 		local matchedID = EEex.MatchObject(aiBase, trigger.m_string1.m_pchData:get(),
