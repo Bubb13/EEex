@@ -48,6 +48,34 @@ function EEex_Utility_GetOrCreate(t, key, default)
 	return default
 end
 
+function EEex_Utility_DumpSprite()
+	local object = EEex_GameObject_GetUnderCursor()
+	if not object or not object:isSprite() then
+		return
+	end
+	local str = string.format("[EEex] address:[%s], id:[%s], name:[%s]", EEex_ToHex(EEex_UDToPtr(object)), EEex_ToHex(object.m_id), object.m_sName.m_pchData:get())
+	print(str)
+	Infinity_DisplayString(str)
+end
+
+--------------------
+-- Listeners Init --
+--------------------
+
+function EEex_Utility_KeyPressed(key)
+	if e:GetActiveEngine() == worldScreen then
+		if key == EEex_Key_GetFromName("`") and EEex_Key_IsDown(EEex_Key_GetFromName("Left Alt")) then
+			EEex_Utility_DumpSprite()
+		end
+	end
+end
+
+function EEex_Utility_InitListeners()
+	EEex_Key_AddPressedListener(EEex_Utility_KeyPressed)
+	EEex_Menu_AddBeforeMainFileReloadedListener(EEex_Utility_InitListeners)
+end
+EEex_Utility_InitListeners()
+
 ---------------
 -- EEex_Dump --
 ---------------

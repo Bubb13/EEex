@@ -1,3 +1,4 @@
 472 EEex_LuaAction(S:Chunk*)
 473 EEex_MatchObject(S:Chunk*)
 473 EEex_MatchObjectEx(S:Chunk*,I:Nth*,I:Range*,I:Flags*X-MATOBJ)
+474 EEex_SetTarget(S:Name*,O:Target*)

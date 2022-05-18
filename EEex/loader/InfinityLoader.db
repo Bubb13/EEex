@@ -168,6 +168,10 @@ Pattern=48895C2420565741564883EC30
 [CDerivedStats::GetSpellState]
 Pattern=81FA000100007320
 
+[CGameAIBase::GetTargetShare]
+Pattern=4883EC20488BF94533C0
+Operations=ADD -6
+
 [CGameArea::AdjustTarget]
 Pattern=48895C240844884C2420
 
@@ -366,6 +370,13 @@ Operations=ADD 33
 [Hook-CAIObjectType::Decode()-NormalBranch]
 Pattern=488B55D749FFC7
 Operations=ADD 4
+
+[Hook-CAIObjectType::Decode()-ReturnBranch]
+Pattern=488BB424F00000004C8BBC24A0000000
+
+[Hook-CAIObjectType::Decode()-TargetNameOverride]
+Pattern=41837D0CFF
+Operations=ADD -6
 
 [Hook-CChitin::OnResizeWindow()-B3Scale]
 Pattern=488D542460488B4E20

@@ -119,19 +119,35 @@ CAIScriptFile.free = EEex_Action_FreeScriptFile
 -- Hooks --
 -----------
 
-function EEex_Action_Hook_OnEvaluatingUnknown(object)
-	local curAction = object.m_curAction
+function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
+
+	local curAction = aiBase.m_curAction
 	local actionID = curAction.m_actionID
+
 	if actionID == 472 then -- EEex_LuaAction
-		EEex_LuaAction_Object = object
+
+		EEex_LuaAction_Object = aiBase
+
 		local success, retVal = EEex_Utility_Eval("EEex_LuaAction", curAction.m_string1.m_pchData:get())
 		if success then
 			return retVal ~= nil and retVal or EEex_Action_ReturnType.ACTION_DONE
 		end
+
 	elseif actionID == 473 then -- EEex_MatchObject / EEex_MatchObjectEx
-		EEex_GetUDAux(object)["EEex_MatchObject"] = EEex.MatchObject(object, curAction.m_string1.m_pchData:get(),
+
+		EEex_GetUDAux(aiBase)["EEex_MatchObject"] = EEex.MatchObject(aiBase, curAction.m_string1.m_pchData:get(),
 			curAction.m_specificID, curAction.m_specificID2, curAction.m_specificID3)
+
+		return EEex_Action_ReturnType.ACTION_DONE
+
+	elseif actionID == 474 then -- EEex_SetTarget
+
+		local target = aiBase:GetTargetShare()
+		local targetTable = EEex_Utility_GetOrCreate(EEex_GetUDAux(aiBase), "EEex_Target", {})
+		targetTable[curAction.m_string1.m_pchData:get()] = target and target.m_id or nil
+
 		return EEex_Action_ReturnType.ACTION_DONE
 	end
+
 	return EEex_Action_ReturnType.ACTION_ERROR
 end
