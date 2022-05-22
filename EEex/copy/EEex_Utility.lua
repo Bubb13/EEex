@@ -86,7 +86,7 @@ function EEex_Utility_DeepCopy(t)
 			break
 		end
 
-		local parent = toProcess[stackTop]
+		local parent = processStack[stackTop]
 		parent[1][parent[2]] = vCopy
 	end
 
