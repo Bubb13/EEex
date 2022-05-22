@@ -151,6 +151,10 @@ Operations=ADD -4
 [CAIObjectType::Set]
 Pattern=0FB64208884108
 
+[CAIScript::Construct1]
+Pattern=48895424105556574883EC40
+Operations=ADD -5
+
 [CAIScriptFile::Construct]
 Pattern=48895C241848896C242056574154415641574883EC20
 
@@ -377,6 +381,22 @@ Pattern=488BB424F00000004C8BBC24A0000000
 [Hook-CAIObjectType::Decode()-TargetNameOverride]
 Pattern=41837D0CFF
 Operations=ADD -6
+
+[Hook-CAIScript::Construct()-OnCopy1]
+Pattern=488D5708488BCE
+Operations=ADD 7
+
+[Hook-CAIScript::Construct()-OnCopy2]
+Pattern=740E488D5608
+Operations=ADD 9
+
+[Hook-CAIScript::Destruct()-OnDestruct]
+Pattern=75D1488B7C2430
+Operations=ADD 11
+
+[Hook-CAIScript::Read()-OnRead]
+Pattern=4C8D45F7488945D7
+Operations=ADD 27
 
 [Hook-CChitin::OnResizeWindow()-B3Scale]
 Pattern=488D542460488B4E20

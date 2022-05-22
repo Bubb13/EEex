@@ -3,16 +3,11 @@
 -- Fetching Game Objects --
 ---------------------------
 
-function EEex_GameObject_Get(objectID)
+function EEex_GameObject_CastUserType(object)
 
-	local object
-	EEex_RunWithStack(EEex_PointerSize, function(mem)
-		ptr = EEex_PtrToUD(mem, "Pointer<CGameObject>")
-		CGameObjectArray.GetShare(objectID, ptr)
-		object = ptr.reference
-	end)
-
-	if not object then return nil end
+	if not object then
+		return nil
+	end
 
 	local usertype = ({
 		[CGameObjectType.NONE]          = nil,
@@ -33,6 +28,19 @@ function EEex_GameObject_Get(objectID)
 	})[object.m_objectType]
 
 	return usertype and EEex_CastUD(object, usertype) or object
+end
+EEex_GameObject_CastUT = EEex_GameObject_CastUserType
+
+function EEex_GameObject_Get(objectID)
+
+	local object
+	EEex_RunWithStack(EEex_PointerSize, function(mem)
+		ptr = EEex_PtrToUD(mem, "Pointer<CGameObject>")
+		CGameObjectArray.GetShare(objectID, ptr)
+		object = ptr.reference
+	end)
+
+	return EEex_GameObject_CastUT(object)
 end
 
 function EEex_GameObject_GetSelectedID()

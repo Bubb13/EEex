@@ -18,6 +18,8 @@ EEex_DoFile("EEex_Action_Patch")
 EEex_DoFile("EEex_Actionbar")
 EEex_DoFile("EEex_Actionbar_Patch")
 
+EEex_DoFile("EEex_AIBase")
+
 EEex_DoFile("EEex_GameObject")
 EEex_DoFile("EEex_GameObject_Patch")
 
@@ -37,6 +39,9 @@ EEex_DoFile("EEex_Opcode")
 EEex_DoFile("EEex_Opcode_Patch")
 
 EEex_DoFile("EEex_Resource")
+
+EEex_DoFile("EEex_Script")
+EEex_DoFile("EEex_Script_Patch")
 
 EEex_DoFile("EEex_Sprite")
 EEex_DoFile("EEex_Sprite_Patch")

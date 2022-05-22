@@ -6,7 +6,7 @@
 	----------------------------------------
 	-- EEex_Menu_Hook_BeforeMenuStackSave --
 	----------------------------------------
-	
+
 	EEex_HookRelativeBranch(EEex_Label("Hook-uiRefreshMenu()-saveMenuStack()"), EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(32)
@@ -65,8 +65,8 @@
 
 		mov qword ptr ss:[rsp+32], rdx
 
-		mov rdx, ]], EEex_WriteStringAuto("EEex_Menu_HookGlobal_TemplateMenuOverride"), [[ ; name
-		mov rcx, #L(Hardcoded_InternalLuaState)                                            ; L
+		mov rdx, ]], EEex_WriteStringCache("EEex_Menu_HookGlobal_TemplateMenuOverride"), [[ ; name
+		mov rcx, #L(Hardcoded_InternalLuaState)                                             ; L
 		#ALIGN
 		call #L(Hardcoded_lua_getglobal)
 		#ALIGN_END
@@ -108,8 +108,8 @@
 
 		#MAKE_SHADOW_SPACE(8)
 
-		mov rdx, ]], EEex_WriteStringAuto("EEex_Menu_HookGlobal_TemplateMenuOverride"), [[ ; name
-		mov rcx, #L(Hardcoded_InternalLuaState)                                            ; L
+		mov rdx, ]], EEex_WriteStringCache("EEex_Menu_HookGlobal_TemplateMenuOverride"), [[ ; name
+		mov rcx, #L(Hardcoded_InternalLuaState)                                             ; L
 		#ALIGN
 		call #L(Hardcoded_lua_getglobal)
 		#ALIGN_END

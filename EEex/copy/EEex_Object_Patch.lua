@@ -46,7 +46,7 @@
 		]], EEex_GenLuaCall("EEex_Object_Hook_OnEvaluatingUnknown", {
 			["args"] = {
 				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r13 #ENDL", {rspOffset}}, "CAIObjectType" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r12 #ENDL", {rspOffset}}, "CGameAIBase" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r12 #ENDL", {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
 				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}} end,
 				function(rspOffset) return {[[
 					lea rax, qword ptr ss:[rbp-11h]

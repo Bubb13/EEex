@@ -160,7 +160,6 @@ function EEex_WriteUserDataArgs(userdata, args, writeDefs)
 		end
 	end
 end
-
 EEex_WriteUDArgs = EEex_WriteUserDataArgs
 
 EEex_UserDataAuxiliary = {}
@@ -177,8 +176,15 @@ function EEex_GetUserDataAuxiliary(ud)
 	end
 	return auxiliary
 end
-
 EEex_GetUDAux = EEex_GetUserDataAuxiliary
+
+function EEex_TryGetUserDataAuxiliary(ud)
+	if type(ud) ~= "userdata" then
+		EEex_Error("ud is not a userdata object ("..type(ud)..")!")
+	end
+	return EEex_UserDataAuxiliary[EEex_UDToLightUD(ud)]
+end
+EEex_TryGetUDAux = EEex_TryGetUserDataAuxiliary
 
 function EEex_DeleteUserDataAuxiliary(ud)
 	if type(ud) ~= "userdata" then
@@ -186,7 +192,6 @@ function EEex_DeleteUserDataAuxiliary(ud)
 	end
 	EEex_UserDataAuxiliary[EEex_UDToLightUD(ud)] = nil
 end
-
 EEex_DeleteUDAux = EEex_DeleteUserDataAuxiliary
 
 function EEex_UserDataEqual(ud1, ud2)
@@ -360,6 +365,19 @@ function EEex_Label(label)
 		EEex_Error("Label \""..label.."\" is not defined in the global scope!")
 	end
 	return EEex_GlobalAssemblyLabels[label]
+end
+
+EEex_StringCache = {}
+
+function EEex_WriteStringCache(str)
+	local cached = EEex_StringCache[str]
+	if cached then
+		return cached
+	else
+		local address = EEex_WriteStringAuto(str)
+		EEex_StringCache[str] = address
+		return address
+	end
 end
 
 -------------
@@ -686,28 +704,115 @@ function EEex_GenLuaCall(funcName, meta)
 	local luaCallArgsTop = localArgsTop + numShadowLocalBytes
 
 	local argsUserType = {}
+	local argsCastFunction = {}
 
 	local labelSuffix = (meta or {}).labelSuffix or ""
 
-	pushArgTemplate = function(argI)
+	local errorFunc
+	local errorFuncLuaStackPopAmount
+	if (meta or {}).errorFunction then
+		errorFunc = meta.errorFunction.func
+		errorFuncLuaStackPopAmount = errorFunc and (1 + (meta.errorFunction.precursorAmount or 0)) or 0
+	else
+		errorFunc = {[[
+			mov rdx, ]], EEex_WriteStringCache("debug"), [[ ; name
+			mov rcx, rbx                                    ; L
+			#ALIGN
+			call #L(Hardcoded_lua_getglobal)
+			#ALIGN_END
+
+			mov r8, ]], EEex_WriteStringCache("traceback"), [[ ; k
+			mov rdx, -1                                        ; index
+			mov rcx, rbx                                       ; L
+			#ALIGN
+			call #L(Hardcoded_lua_getfield)
+			#ALIGN_END
+		]]}
+		errorFuncLuaStackPopAmount = 2
+	end
+
+	local pushArgTemplate = function(argI)
+
+		local argStackOffset = luaCallArgsTop + argI * 8
 		local userType = argsUserType[argI + 1]
-		if userType == "" then
+		local userTypeType = type(userType)
+
+		if userType == nil then
+
 			return {[[
-				mov rdx, qword ptr ss:[rsp+#$(1)] ]], {luaCallArgsTop + argI * 8}, [[ ; n
-				mov rcx, rbx                                                        ; L
+				mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; n
+				mov rcx, rbx                                               ; L
 				#ALIGN
 				call #L(Hardcoded_lua_pushinteger)
 				#ALIGN_END
 			]]}
+
+		elseif userTypeType == "string" then
+
+			local argCastFunction = argsCastFunction[argI + 1]
+			if argCastFunction then
+
+				return {[[
+
+					mov rdx, ]], EEex_WriteStringCache(argCastFunction), [[ ; name
+					mov rcx, rbx                                            ; L
+					#ALIGN
+					call #L(Hardcoded_lua_getglobal)
+					#ALIGN_END
+
+					mov r8, ]], EEex_WriteStringCache(userType), [[            ; type
+					mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; value
+					mov rcx, rbx                                               ; L
+					#ALIGN
+					call #L(Hardcoded_tolua_pushusertype)
+					#ALIGN_END
+
+					mov qword ptr ss:[rsp+40], 0                   ; k
+					mov qword ptr ss:[rsp+32], 0                   ; ctx
+					mov r9, ]], errorFunc and -(4 + argI) or 0, [[ ; errfunc
+					mov r8, 1                                      ; nresults
+					mov rdx, 1                                     ; nargs
+					mov rcx, rbx                                   ; L
+					#ALIGN
+					call #L(Hardcoded_lua_pcallk)
+					#ALIGN_END
+
+					mov rcx, rbx
+					#ALIGN
+					call #L(EEex_CheckCallError)
+					#ALIGN_END
+
+					test rax, rax
+
+					#IF ]], errorFunc ~= nil, [[ {
+						jz EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2) ]], {argI, labelSuffix}, [[ #ENDL
+						; Clear function args, function, and error function (+ its precursors) off of Lua stack
+						mov rdx, ]], -(2 + errorFuncLuaStackPopAmount + argI), [[ ; index
+						mov rcx, rbx                                              ; L
+						#ALIGN
+						call short #L(Hardcoded_lua_settop)
+						#ALIGN_END
+						jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
+					}
+
+					#IF ]], errorFunc == nil, [[ {
+						jnz EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
+					}
+
+					EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2): ]], {argI, labelSuffix}, [[ #ENDL
+				]]}
+			else
+				return {[[
+					mov r8, ]], EEex_WriteStringCache(userType), [[            ; type
+					mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; value
+					mov rcx, rbx                                               ; L
+					#ALIGN
+					call #L(Hardcoded_tolua_pushusertype)
+					#ALIGN_END
+				]]}
+			end
 		else
-			return {[[
-				mov r8, ]], EEex_WriteStringAuto(userType), [[                      ; type
-				mov rdx, qword ptr ss:[rsp+#$(1)] ]], {luaCallArgsTop + argI * 8}, [[ ; value
-				mov rcx, rbx                                                        ; L
-				#ALIGN
-				call #L(Hardcoded_tolua_pushusertype)
-				#ALIGN_END
-			]]}
+			EEex_Error("[EEex_GenLuaCall] Invalid arg usertype: "..userTypeType)
 		end
 	end
 
@@ -740,36 +845,14 @@ function EEex_GenLuaCall(funcName, meta)
 		if not args then return toReturn end
 
 		for i = numArgs, 1, -1 do
-			local argT, argUT = args[i](luaCallArgsTop + (i - 1) * 8)
+			local argT, argUT, argCastFunction = args[i](luaCallArgsTop + (i - 1) * 8)
 			toReturn[insertionIndex] = argT
-			argsUserType[i] = argUT or ""
+			argsUserType[i] = argUT
+			argsCastFunction[i] = argCastFunction
 			insertionIndex = insertionIndex + 1
 		end
 
 		return EEex_FlattenTable(toReturn)
-	end
-
-	local errorFunc
-	local errorFuncLuaStackPopAmount
-	if (meta or {}).errorFunction then
-		errorFunc = meta.errorFunction.func
-		errorFuncLuaStackPopAmount = errorFunc and (1 + (meta.errorFunction.precursorAmount or 0)) or 0
-	else
-		errorFunc = {[[
-			mov rdx, ]], EEex_WriteStringAuto("debug"), [[ ; name
-			mov rcx, rbx                                   ; L
-			#ALIGN
-			call #L(Hardcoded_lua_getglobal)
-			#ALIGN_END
-
-			mov r8, ]], EEex_WriteStringAuto("traceback"), [[ ; k
-			mov rdx, -1                                       ; index
-			mov rcx, rbx                                      ; L
-			#ALIGN
-			call #L(Hardcoded_lua_getfield)
-			#ALIGN_END
-		]]}
-		errorFuncLuaStackPopAmount = 2
 	end
 
 	local genFunc = function()
@@ -779,8 +862,8 @@ function EEex_GenLuaCall(funcName, meta)
 				if meta.functionSrc then EEex_Error("[EEex_GenLuaCall] funcName and meta.functionSrc are exclusive") end
 			end
 			return {[[
-				mov rdx, ]], EEex_WriteStringAuto(funcName), [[ ; name
-				mov rcx, rbx                                    ; L
+				mov rdx, ]], EEex_WriteStringCache(funcName), [[ ; name
+				mov rcx, rbx                                     ; L
 				#ALIGN
 				call #L(Hardcoded_lua_getglobal)
 				#ALIGN_END
@@ -890,7 +973,7 @@ function EEex_GenLuaCall(funcName, meta)
 	local numRet = (meta or {}).returnType and 1 or 0
 	local toReturn = EEex_FlattenTable({
 		{[[
-			#MAKE_SHADOW_SPACE(#$(1)) ]], {numShadowExtraBytes}, [[
+			#MAKE_SHADOW_SPACE(#$(1)) ]], {numShadowExtraBytes}, [[ #ENDL
 		]]},
 		genArgPushes1(),
 		(meta or {}).luaState or {[[
@@ -901,7 +984,6 @@ function EEex_GenLuaCall(funcName, meta)
 		genFunc(),
 		genArgPushes2(),
 		{[[
-
 			#ALIGN
 			mov qword ptr ss:[rsp+8], 0                       ; k
 			mov qword ptr ss:[rsp], 0                         ; ctx

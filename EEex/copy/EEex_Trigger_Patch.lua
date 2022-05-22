@@ -10,7 +10,7 @@
 			["args"] = {
 				function(rspOffset) return {[[
 					mov qword ptr ss:[rsp+#$(1)], r14
-				]], {rspOffset}}, "CGameAIBase" end,
+				]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
 				function(rspOffset) return {[[
 					lea rax, qword ptr ss:[rbp+350h]
 					mov qword ptr ss:[rsp+#$(1)], rax

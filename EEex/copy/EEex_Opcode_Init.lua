@@ -9,16 +9,12 @@
 			aux[self.name] = {}
 		end,
 		["onEqu"] = function(self, stats, aux, otherStats, otherAux)
-			local t = {}
-			for i, effect in ipairs(otherAux[self.name]) do
-				t[i] = effect
-			end
-			aux[self.name] = t
+			aux[self.name] = EEex_Utility_DeepCopy(otherAux[self.name])
 		end,
 		["onPlusEqu"] = function(self, stats, aux, otherStats, otherAux)
 			local insertI = #aux + 1
-			for _, effect in ipairs(otherAux[self.name]) do
-				aux[insertI] = effect
+			for _, otherVal in ipairs(otherAux[self.name]) do
+				aux[insertI] = otherVal
 				insertI = insertI + 1
 			end
 		end,

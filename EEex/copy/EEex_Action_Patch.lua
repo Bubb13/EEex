@@ -10,7 +10,7 @@
 			["args"] = {
 				function(rspOffset) return {[[
 					mov qword ptr ss:[rsp+#$(1)], rbx
-				]], {rspOffset}}, "CGameAIBase" end,
+				]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
 			},
 			["returnType"] = EEex_LuaCallReturnType.Number,
 		}), [[

@@ -19,8 +19,8 @@ EEex_JITNearAsLabel("EEex_PrintPopLuaString", {[[
 	mov rbp, rax
 
 	#ALIGN
-	mov rdx, ]], EEex_WriteStringAuto("print"), [[ ; name
-	mov rcx, rbx                                   ; L
+	mov rdx, ]], EEex_WriteStringCache("print"), [[ ; name
+	mov rcx, rbx                                    ; L
 	call #L(Hardcoded_lua_getglobal)
 	#ALIGN_END
 
