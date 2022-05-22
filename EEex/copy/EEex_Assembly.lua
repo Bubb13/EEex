@@ -783,21 +783,15 @@ function EEex_GenLuaCall(funcName, meta)
 					#ALIGN_END
 
 					test rax, rax
+					jz EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2) ]], {argI, labelSuffix}, [[ #ENDL
 
-					#IF ]], errorFunc ~= nil, [[ {
-						jz EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2) ]], {argI, labelSuffix}, [[ #ENDL
-						; Clear function args, function, and error function (+ its precursors) off of Lua stack
-						mov rdx, ]], -(2 + errorFuncLuaStackPopAmount + argI), [[ ; index
-						mov rcx, rbx                                              ; L
-						#ALIGN
-						call short #L(Hardcoded_lua_settop)
-						#ALIGN_END
-						jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
-					}
-
-					#IF ]], errorFunc == nil, [[ {
-						jnz EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
-					}
+					; Clear function args, function, and error function (+ its precursors) off of Lua stack
+					mov rdx, ]], -(2 + errorFuncLuaStackPopAmount + argI), [[ ; index
+					mov rcx, rbx                                              ; L
+					#ALIGN
+					call short #L(Hardcoded_lua_settop)
+					#ALIGN_END
+					jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 
 					EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2): ]], {argI, labelSuffix}, [[ #ENDL
 				]]}
