@@ -17,3 +17,22 @@ function EEex_AIBase_GetScriptLevelResRef(aiBase, scriptLevel)
 	return script and script.cResRef:get() or ""
 end
 CGameAIBase.getScriptLevelResRef = EEex_AIBase_GetScriptLevelResRef
+
+function EEex_AIBase_SetScriptLevel(aiBase, scriptLevel, script)
+	aiBase:virtual_SetScript(scriptLevel, script)
+end
+CGameAIBase.setScriptLevel = EEex_AIBase_SetScriptLevel
+
+function EEex_AIBase_SetScriptLevelResRef(aiBase, scriptLevel, resref)
+
+	local newScript = EEex_NewUD("CAIScript")
+
+	EEex_RunWithStackManager({
+		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = {["args"] = {resref} }}, },
+		function(manager)
+			newScript:Construct1(manager:getUD("resref"), 0)
+		end)
+
+	aiBase:setScriptLevel(scriptLevel, newScript)
+end
+CGameAIBase.setScriptLevelResRef = EEex_AIBase_SetScriptLevelResRef

@@ -293,6 +293,12 @@ Operations=ADD -17
 [CString::Destruct]
 Pattern=488B114883C2F4
 
+[CVariable::Construct]
+Pattern=40534883EC2041B820000000
+
+[CVariableHash::AddKey]
+Pattern=48895C240848895424105556574154415541564157488BEC4883EC70
+
 [CVariableHash::FindKey]
 Pattern=4155415641574883EC304C8BF9
 Operations=ADD -10
@@ -491,6 +497,10 @@ Operations=ADD 12
 [Hook-CGameSprite::IsOver()-B3Invis]
 Pattern=3843387627
 Operations=ADD 3
+
+[Hook-CGameSprite::ProcessEffectList()-AfterListsResolved]
+Pattern=488D866005000085FF
+Operations=ADD 18
 
 [Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
 Pattern=488D8660050000660F1F440000

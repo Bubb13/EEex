@@ -199,6 +199,11 @@ function EEex_UserDataEqual(ud1, ud2)
 end
 EEex_UDEqual = EEex_UserDataEqual
 
+function EEex_UserDataToHex(ud)
+	return ud and EEex_ToHex(EEex_UDToPtr(ud)) or "nil"
+end
+EEex_UDToHex = EEex_UserDataToHex
+
 ----------------------------
 -- Start Memory Interface --
 ----------------------------

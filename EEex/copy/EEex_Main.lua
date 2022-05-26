@@ -20,6 +20,8 @@ EEex_DoFile("EEex_Actionbar_Patch")
 
 EEex_DoFile("EEex_AIBase")
 
+EEex_DoFile("EEex_Area")
+
 EEex_DoFile("EEex_GameObject")
 EEex_DoFile("EEex_GameObject_Patch")
 
@@ -53,6 +55,8 @@ EEex_DoFile("EEex_Trigger")
 EEex_DoFile("EEex_Trigger_Patch")
 
 EEex_DoFile("EEex_Utility")
+
+EEex_DoFile("EEex_Variable")
 
 EEex_GameState_AddInitializedListener(function()
 	EEex_DoFile("EEex_UserDataGlobals")

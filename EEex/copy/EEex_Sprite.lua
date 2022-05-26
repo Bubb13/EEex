@@ -45,6 +45,26 @@ function EEex_Sprite_GetSpellState(sprite, spellStateID)
 end
 CGameSprite.getSpellState = EEex_Sprite_GetSpellState
 
+function EEex_Sprite_GetLocalInt(sprite, variableName)
+	return sprite.m_pLocalVariables:getInt(variableName)
+end
+CGameSprite.getLocalInt = EEex_Sprite_GetLocalInt
+
+function EEex_Sprite_GetLocalString(sprite, variableName)
+	return sprite.m_pLocalVariables:getString(variableName)
+end
+CGameSprite.getLocalString = EEex_Sprite_GetLocalString
+
+function EEex_Sprite_SetLocalInt(sprite, variableName, value)
+	sprite.m_pLocalVariables:setInt(variableName, value)
+end
+CGameSprite.setLocalInt = EEex_Sprite_SetLocalInt
+
+function EEex_Sprite_SetLocalString(sprite, variableName, value)
+	sprite.m_pLocalVariables:setString(variableName, value)
+end
+CGameSprite.setLocalString = EEex_Sprite_SetLocalString
+
 -- Returns the sprite's current modal state, (as defined in MODAL.IDS; stored at offset 0x28 of the global-creature structure).
 function EEex_Sprite_GetModalState(sprite)
 	if not sprite then return 0 end

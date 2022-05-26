@@ -46,6 +46,12 @@ EEex_MemoryManagerStructDefinitions["CString"] = {
 	["destructor"] = CString.Destruct,
 }
 
+EEex_MemoryManagerStructDefinitions["CVariable"] = {
+	["constructors"] = {
+		["#default"] = CVariable.Construct,
+	},
+}
+
 EEex_MemoryManagerStructDefinitions["string"] = {
 	["constructors"] = {
 		["#default"] = function(address, luaString)

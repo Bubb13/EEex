@@ -115,10 +115,8 @@ end
 -- New Opcode #401 (SetExtendedStat) --
 ---------------------------------------
 
-function EEex_Opcode_Hook_ApplySetExtendedStat(effect, object)
+function EEex_Opcode_Hook_ApplySetExtendedStat(effect, sprite)
 
-	if not object:isSprite(true) then return end
-	local sprite = EEex_CastUD(object, "CGameSprite")
 	local exStats = EEex_GetUDAux(sprite.m_derivedStats)["EEex_ExtendedStats"]
 
 	local param1 = effect.m_effectAmount
@@ -149,9 +147,7 @@ end
 -- New Opcode #403 (ScreenEffects) --
 -------------------------------------
 
-function EEex_Opcode_Hook_ApplyScreenEffects(effect, object)
-	if not object:isSprite(true) then return end
-	local sprite = EEex_CastUD(object, "CGameSprite")
+function EEex_Opcode_Hook_ApplyScreenEffects(effect, sprite)
 	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
 	table.insert(statsAux["EEex_ScreenEffects"], effect)
 end
