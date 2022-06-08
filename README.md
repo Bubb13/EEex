@@ -24,7 +24,13 @@ EEex uses a loader to modify the game's executable after it has been loaded into
 <a href="https://github.com/mrfearless/EEexLoader">EEexLoader</a> (thanks mrfearless!) — EEex versions < v0.9.0-alpha.
 
 <h1>Installation:</h1>
-EEex is installed just as any other WeiDU mod. Simply extract the archive's contents into your game's base folder, and run the setup - it will take care of the rest. <b class="Bold">Please note that the game has to be started using InfinityLoader.exe/EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash.</b>
+EEex is installed just as any other WeiDU mod. Simply extract the archive's contents into your game's base folder, and run the setup - it will take care of the rest. <b class="Bold">
+<br>
+<br>
+Please note that the game must be started using InfinityLoader.exe/EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash.
+<br>
+<br>
+If InfinityLoader.exe fails to start, please ensure you have installed the latest <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe/">Microsoft Visual C++ Redistributable</a>.</b>
 
 <br><b class="Bold">Stability:</b> EEex is currently in alpha, and as such the odd crash may occur. If you encounter a crash, please report the issue - stating any installed mods, steps that lead to the crash, and upload the generated crash .dmp.
 <br>
