@@ -107,9 +107,25 @@ function EEex_Opcode_GenDecode(args)
 	return genDecode(writeConstructor(newvtbl))
 end
 
+---------------
+-- Listeners --
+---------------
+
+EEex_Opcode_ListsResolvedListeners = {}
+
+function EEex_Opcode_AddListsResolvedListener(func)
+	table.insert(EEex_Opcode_ListsResolvedListeners, func)
+end
+
 -----------
 -- Hooks --
 -----------
+
+function EEex_Opcode_Hook_AfterListsResolved(sprite)
+	for _, func in ipairs(EEex_Opcode_ListsResolvedListeners) do
+		func(sprite)
+	end
+end
 
 ---------------------------------------
 -- New Opcode #401 (SetExtendedStat) --

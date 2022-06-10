@@ -25,6 +25,18 @@ function EEex_Sprite_GetInPortraitID(portraitIndex)
 	return EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_charactersPortrait:get(portraitIndex)
 end
 
+function EEex_Sprite_GetPortraitIndex(sprite)
+	local spriteID = sprite.m_id
+	local portraitsArray = EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_charactersPortrait
+	for i = 0, 5 do
+		if portraitsArray:get(i) == spriteID then
+			return i
+		end
+	end
+	return -1
+end
+CGameSprite.getPortraitIndex = EEex_Sprite_GetPortraitIndex
+
 function EEex_Sprite_GetActiveStats(sprite)
 	return sprite.m_bAllowEffectListCall and sprite.m_derivedStats or sprite.m_tempStats
 end

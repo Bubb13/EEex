@@ -3,6 +3,25 @@
 
 	EEex_DisableCodeProtection()
 
+	-----------------------------------------
+	-- EEex_Opcode_Hook_AfterListsResolved --
+	-----------------------------------------
+
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(40)
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_AfterListsResolved", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsi #ENDL", {rspOffset}}, "CGameSprite" end,
+			},
+		}),
+		{[[
+			call_error:
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
 	---------------------------------------
 	-- New Opcode #401 (SetExtendedStat) --
 	---------------------------------------

@@ -48,6 +48,15 @@ function EEex_Utility_GetOrCreate(t, key, default)
 	return default
 end
 
+function EEex_Utility_GetOrCreateTable(t, key, fillFunc)
+	local v = t[key]
+	if v ~= nil then return v end
+	local default = {}
+	if fillFunc then fillFunc(default) end
+	t[key] = default
+	return default
+end
+
 function EEex_Utility_DeepCopy(t)
 
 	local tCopy = {}
