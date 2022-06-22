@@ -113,6 +113,9 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 Pattern=0FB702488BDA
 Operations=ADD -10
 
+[CAICondition::Hold]
+Pattern=4053555641544155
+
 [CAIGroup::AddToSearch]
 Pattern=488B59104885DB0F84DE000000
 Operations=ADD -6
@@ -177,6 +180,10 @@ Pattern=48895C241848896C242056574154415641574883EC20
 [CAIScriptFile::Destruct]
 Pattern=488B7908488BD9
 Operations=ADD -10
+
+[CAIScriptFile::ParseConditionalString]
+Pattern=C7470400000000BE01000000
+Operations=ADD -39
 
 [CAIScriptFile::ParseObjectType]
 Pattern=4C8BDC5553574154
