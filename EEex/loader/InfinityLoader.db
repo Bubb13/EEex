@@ -31,6 +31,10 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 Pattern=0F5BD2660F6EC1
 Operations=ADD -26, PUSH, READ DWORD, ADD, ADD 4
 
+[afxPchNil]
+Pattern=488D542420488937
+Operations=ADD 20, PUSH, READ DWORD, ADD, ADD 4
+
 [capture]
 Pattern=756633C0
 Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
@@ -144,6 +148,18 @@ Pattern=837958007415
 [CAIIdList::LoadList2]
 Pattern=48895C24184889542410574883EC20
 
+[CAIObjectType::Construct1]
+Pattern=4889010FB6442428
+Operations=ADD -7
+
+[CAIObjectType::Decode]
+Pattern=5357415441554156488D6C24D1
+Operations=ADD -2
+
+[CAIObjectType::GetShare]
+Pattern=4533ED458BE0
+Operations=ADD -22
+
 [CAIObjectType::OfType]
 Pattern=415441574883EC30488BFA
 Operations=ADD -4
@@ -161,6 +177,9 @@ Pattern=48895C241848896C242056574154415641574883EC20
 [CAIScriptFile::Destruct]
 Pattern=488B7908488BD9
 Operations=ADD -10
+
+[CAIScriptFile::ParseObjectType]
+Pattern=4C8BDC5553574154
 
 [CAIScriptFile::ParseResponseString]
 Pattern=B802000000C7470400000000

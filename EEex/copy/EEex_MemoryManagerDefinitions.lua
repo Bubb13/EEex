@@ -17,6 +17,16 @@ EEex_MemoryManagerStructDefinitions["CAIAction"] = {
 	["destructor"] = CAIAction.Destruct,
 }
 
+EEex_MemoryManagerStructDefinitions["CAIObjectType"] = {
+	["constructors"] = {
+		["#default"] = function(objectType)
+			objectType:Construct1(0, 0, 0, 0, 0, 0, 0, -1)
+		end,
+		["copy"] = CAIObjectType.ConstructCopy,
+	},
+	["destructor"] = CAIObjectType.Destruct,
+}
+
 EEex_MemoryManagerStructDefinitions["CAIScriptFile"] = {
 	["constructors"] = {
 		["#default"] = CAIScriptFile.Construct,

@@ -1,6 +1,57 @@
 
 EEex_LuaObject = nil
 
+-------------
+-- General --
+-------------
+
+-- Compiles the given object string and returns the resulting CAIObjectType.
+-- If the string contains errors, the resulting type acts as "Myself".
+-- Call :free() on the returned CAIObjectType when it is no longer needed.
+function EEex_Object_ParseString(string)
+	local toReturn = EEex_NewUD("CAIObjectType")
+	toReturn.free = function(objectType)
+		objectType:Destruct()
+		EEex_FreeUD(objectType)
+	end
+	EEex_RunWithStackManager({
+		{ ["name"] = "scriptFile", ["struct"] = "CAIScriptFile" },
+		{ ["name"] = "cstring", ["struct"] = "CString", ["constructor"] = { ["args"] = { string } } } },
+		function(manager)
+			manager:getUD("scriptFile"):ParseObjectType(toReturn, manager:getUD("cstring"))
+		end)
+	return toReturn
+end
+
+-- Evaluates the given CAIObjectType in the context of aiBase and returns the found object (or nil).
+function EEex_Object_EvalAsAIBase(objectType, aiBase, checkBackList)
+	return EEex_RunWithStackManager({
+		{ ["name"] = "objectTypeCopy", ["struct"] = "CAIObjectType",
+			["constructor"] = { ["variant"] = "copy", ["args"] = { objectType } }
+		} },
+		function(manager)
+			local objectTypeCopy = manager:getUD("objectTypeCopy")
+			objectTypeCopy:Decode(aiBase)
+			return EEex_GameObject_CastUT(objectTypeCopy:GetShare(aiBase, checkBackList and 1 or 0))
+		end)
+end
+CAIObjectType.evalAsAIBase = EEex_Object_EvalAsAIBase
+
+-- Evaluates the given object string in the context of aiBase and returns the found object (or nil).
+-- Prefer using compiled object types when efficiency is required.
+function EEex_Object_EvalStringAsAIBase(string, aiBase, checkBackList)
+	return EEex_RunWithStackManager({
+		{ ["name"] = "scriptFile", ["struct"] = "CAIScriptFile" },
+		{ ["name"] = "cstring", ["struct"] = "CString", ["constructor"] = { ["args"] = { string } } },
+		{ ["name"] = "objectType", ["struct"] = "CAIObjectType" } },
+		function(manager)
+			local objectType = manager:getUD("objectType")
+			manager:getUD("scriptFile"):ParseObjectType(objectType, manager:getUD("cstring"))
+			objectType:Decode(aiBase)
+			return EEex_GameObject_CastUT(objectType:GetShare(aiBase, checkBackList and 1 or 0))
+		end)
+end
+
 -----------
 -- Hooks --
 -----------
