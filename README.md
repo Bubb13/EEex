@@ -19,6 +19,9 @@ BG:EE v2.5.17.0, BG2:EE v2.5.16.6, and IWD:EE v2.5.17.0 — EEex versions < v0.9
 EEex uses a loader to modify the game's executable after it has been loaded into memory. The exact modifications made depend on the version of EEex installed, and any installed mods that make use of EEex's capabilities.
 <br>
 <br>
+<b class="Bold">Please note: The following links are NOT intended to be used for installing EEex; the loaders are bundled in their respective EEex versions and will be automatically installed alongside EEex.</b>
+<br>
+<br>
 <a href="https://github.com/Bubb13/InfinityLoader">InfinityLoader</a> — EEex versions >= v0.9.0-alpha.
 <br>
 <a href="https://github.com/mrfearless/EEexLoader">EEexLoader</a> (thanks mrfearless!) — EEex versions < v0.9.0-alpha.
@@ -27,7 +30,7 @@ EEex uses a loader to modify the game's executable after it has been loaded into
 EEex is installed just as any other WeiDU mod. Simply extract the archive's contents into your game's base folder, and run the setup - it will take care of the rest. <b class="Bold">
 <br>
 <br>
-Please note that the game must be started using InfinityLoader.exe/EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash.
+Please note: The game must be started using InfinityLoader.exe/EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash.
 <br>
 <br>
 If InfinityLoader.exe fails to start, please ensure you have installed the latest <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe/">Microsoft Visual C++ Redistributable</a>.</b>
