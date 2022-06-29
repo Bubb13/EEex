@@ -22,6 +22,9 @@ EEex_DoFile("EEex_AIBase")
 
 EEex_DoFile("EEex_Area")
 
+EEex_DoFile("EEex_Fix")
+EEex_DoFile("EEex_Fix_Patch")
+
 EEex_DoFile("EEex_GameObject")
 EEex_DoFile("EEex_GameObject_Patch")
 

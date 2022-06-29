@@ -474,6 +474,9 @@ Operations=ADD 31
 Pattern=6689B3BA040000
 Operations=ADD -5
 
+[Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing]
+Pattern=7558498B5500
+
 [Hook-CGameEffect::CheckAdd()-LastProbabilityJmp]
 Pattern=48898520010000488B85A0010000
 Operations=ADD 94
