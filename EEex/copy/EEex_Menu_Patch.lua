@@ -144,14 +144,18 @@
 	-- Prevent EEex_LoadMenuFile() from causing crash when using F11 --
 	-------------------------------------------------------------------
 
-	EEex_HookJump(EEex_Label("Hook-saveMenus()-CheckItemSave"), 5, EEex_FlattenTable({
+	EEex_HookJumpOnFail(EEex_Label("Hook-saveMenus()-CheckItemSave"), 5, EEex_FlattenTable({
 		{[[
-			#MAKE_SHADOW_SPACE(48)
+			#MAKE_SHADOW_SPACE(56)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
 		]]},
 		EEex_GenLuaCall("EEex_Menu_Hook_CheckSaveMenuItem", {
 			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+", rspOffset, "], rbx #ENDL"} end,
+				function(rspOffset) return {[[
+					lea rax, qword ptr ds:[r14-0x28]
+					mov qword ptr ss:[rsp+#$(1)], rax
+				]], {rspOffset}}, "uiMenu" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+", rspOffset, "], rbx #ENDL"}, "uiItem" end,
 			},
 			["returnType"] = EEex_LuaCallReturnType.Boolean,
 		}),
@@ -167,7 +171,6 @@
 			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE
 			jz #L(jmp_success)
-			cmp qword ptr ds:[rbx+20h], 0
 		]]},
 	}))
 

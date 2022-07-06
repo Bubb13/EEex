@@ -230,9 +230,11 @@ end
 
 EEex_Menu_HookGlobal_TemplateMenuOverride = nil
 
-function EEex_Menu_Hook_CheckSaveMenuItem(uiItem)
-	local menuName = uiItem.menu.name
-	return EEex_Menu_IsNative(menuName)
+-- Note: uiItem.menu is NOT valid in this function!
+-- The parent function that contains this hook has temporarily rearranged
+-- the menu array, making uiItem.menu reference the wrong menu.
+function EEex_Menu_Hook_CheckSaveMenuItem(menu, item)
+	return EEex_Menu_IsNative(menu.name:get())
 end
 
 function EEex_Menu_Hook_AfterMainFileLoaded()
@@ -242,7 +244,7 @@ function EEex_Menu_Hook_AfterMainFileLoaded()
 
 	for i = 0, numMenus - 1 do
 		local menu = menus:getReference(i)
-		EEex_Menu_NativeMap[menu.name] = true
+		EEex_Menu_NativeMap[menu.name:get()] = true
 	end
 
 	for i, listener in ipairs(EEex_Menu_MainFileLoadedListeners) do
