@@ -10,6 +10,12 @@ EEex_MemoryManagerStructDefinitions["C2DArray"] = {
 	["destructor"] = C2DArray.Destruct,
 }
 
+EEex_MemoryManagerStructDefinitions["CAbilityId"] = {
+	["constructors"] = {
+		["#default"] = CAbilityId.Construct,
+	},
+}
+
 EEex_MemoryManagerStructDefinitions["CAIAction"] = {
 	["constructors"] = {
 		["copy"] = CAIAction.ConstructCopy,

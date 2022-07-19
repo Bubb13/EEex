@@ -192,6 +192,10 @@ Pattern=4C8BDC5553574154
 Pattern=B802000000C7470400000000
 Operations=ADD -30
 
+[CAbilityId::Construct]
+Pattern=488BF94883C106
+Operations=ADD -25
+
 [CChitin::OnResizeWindow]
 Pattern=48895C2420565741564883EC30
 
@@ -225,6 +229,9 @@ Operations=ADD -11
 
 [CGameObjectArray::GetShare]
 Pattern=48C7020000000083F9FF
+
+[CGameSprite::CheckQuickLists]
+Pattern=405557415441554156488D6C24D1
 
 [CGameSprite::FeedBack]
 Pattern=48895C24105556574154415541564157488D6C24F9
@@ -292,6 +299,10 @@ Operations=ADD 11, PUSH, READ DWORD, ADD, ADD 4
 [CObList::Destruct]
 Pattern=44396C2468
 Operations=ADD 21, PUSH, READ DWORD, ADD, ADD 4
+
+[CObList::RemoveAt]
+Pattern=4883EC20488BD9488B0A
+Operations=ADD -2
 
 [CObList::RemoveHead]
 Pattern=574883EC20488B4108
@@ -510,6 +521,10 @@ Operations=ADD 5
 [Hook-CGameSprite::AddEffect()-noSave-Override]
 Pattern=753585F6
 Operations=ADD 4
+
+[Hook-CGameSprite::AddSpecialAbility()-LastCall]
+Pattern=740A488B4C2448
+Operations=ADD 7
 
 [Hook-CGameSprite::Construct1()-FirstCall]
 Pattern=4889442460488BF1
