@@ -13,7 +13,7 @@ end
 CGameAIBase.getScriptLevel = EEex_AIBase_GetScriptLevel
 
 function EEex_AIBase_GetScriptLevelResRef(aiBase, scriptLevel)
-	local script = EEex_AIBase_GetScriptLevel(scriptLevel)
+	local script = aiBase:getScriptLevel(scriptLevel)
 	return script and script.cResRef:get() or ""
 end
 CGameAIBase.getScriptLevelResRef = EEex_AIBase_GetScriptLevelResRef

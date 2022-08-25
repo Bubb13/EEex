@@ -228,6 +228,9 @@ Pattern=48895C24105556574154415541564157488D6C24F9
 Pattern=488D81C81D0000C3
 Operations=ADD -16
 
+[CGameSprite::GetCasterLevel]
+Pattern=48895C2418555741564883EC30
+
 [CGameSprite::GetInternalButtonList]
 Pattern=4056415641574883EC50
 
@@ -310,6 +313,10 @@ Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
 
 [CSearchBitmap::GetCost]
 Pattern=48895C242056574154415541564883EC30
+
+[CSpell::Construct]
+Pattern=488D4C2448BAEE030000
+Operations=ADD -173
 
 [CString::ConstructFromChars]
 Pattern=488BF2488901488BF9
@@ -525,6 +532,10 @@ Operations=ADD 31
 [Hook-CGameSprite::Destruct()-FirstCall]
 Pattern=75DA4C8DB358490000
 Operations=ADD 12
+
+[Hook-CGameSprite::ExecuteAction()-DefaultJmp]
+Pattern=81F9D7010000
+Operations=ADD 6
 
 [Hook-CGameSprite::IsOver()-B3Invis]
 Pattern=3843387627

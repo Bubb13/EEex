@@ -61,6 +61,8 @@ EEex_DoFile("EEex_Utility")
 
 EEex_DoFile("EEex_Variable")
 
+EEex_DoFile("EEex_Debug")
+
 EEex_GameState_AddInitializedListener(function()
 	EEex_DoFile("EEex_UserDataGlobals")
 	EEex_DoFile("EEex_Opcode_Init")
