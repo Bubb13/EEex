@@ -203,7 +203,3 @@ function EEex_GameObject_Hook_OnDeleting(objectID)
 		EEex_LuaObject = nil
 	end
 end
-
-function EEex_GameObject_Hook_OnObjectsCleaned()
-
-end

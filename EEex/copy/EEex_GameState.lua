@@ -29,12 +29,24 @@ function EEex_GameState_AddInitializedListener(listener)
 	table.insert(EEex_GameState_InitializedListeners, listener)
 end
 
+EEex_GameState_DestroyedListeners = {}
+
+function EEex_GameState_AddDestroyedListener(listener)
+	table.insert(EEex_GameState_DestroyedListeners, listener)
+end
+
 -----------
 -- Hooks --
 -----------
 
 function EEex_GameState_Hook_OnInitialized()
 	for _, listener in ipairs(EEex_GameState_InitializedListeners) do
+		listener()
+	end
+end
+
+function EEex_GameState_Hook_OnDestroyed()
+	for _, listener in ipairs(EEex_GameState_DestroyedListeners) do
 		listener()
 	end
 end

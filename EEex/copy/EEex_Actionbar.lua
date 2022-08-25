@@ -7,6 +7,10 @@ function EEex_Actionbar_GetArray()
 	return EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_cButtonArray
 end
 
+function EEex_Actionbar_GetState()
+	return EEex_Actionbar_GetArray().m_nState
+end
+
 function EEex_Actionbar_SetState(state)
 	EEex_Actionbar_GetArray():SetState(state)
 end

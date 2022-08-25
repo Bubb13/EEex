@@ -199,6 +199,12 @@ function EEex_Menu_IsNative(menuName)
 	return EEex_Menu_NativeMap[menuName] ~= nil
 end
 
+EEex_Menu_ScrollbarForced = {}
+
+function EEex_Menu_SetForceScrollbarRender(itemName, value)
+	EEex_Menu_ScrollbarForced[itemName] = value
+end
+
 ---------------
 -- Listeners --
 ---------------
@@ -222,6 +228,14 @@ EEex_Menu_AfterMainFileReloadedListeners = {}
 -- Given listener function is called after an F5 UI reload is executed.
 function EEex_Menu_AddAfterMainFileReloadedListener(listener)
 	table.insert(EEex_Menu_AfterMainFileReloadedListeners, listener)
+end
+
+EEex_Menu_BeforeListRendersItemListeners = {}
+
+-- Given listener function is called before a list renders an item.
+function EEex_Menu_AddBeforeListRendersItemListener(listName, listener)
+	local listListeners = EEex_Utility_GetOrCreateTable(EEex_Menu_BeforeListRendersItemListeners, listName)
+	table.insert(listListeners, listener)
 end
 
 -----------
@@ -265,4 +279,21 @@ function EEex_Menu_Hook_AfterMenuStackRestore()
 	for i, listener in ipairs(EEex_Menu_AfterMainFileReloadedListeners) do
 		listener()
 	end
+end
+
+function EEex_Menu_Hook_BeforeListRenderingItem(list, item, window, rClipBase, alpha, menu)
+	local listName = list.name:get()
+	if listName ~= "" then
+		local listeners = EEex_Menu_BeforeListRendersItemListeners[listName]
+		if listeners then
+			for _, listener in ipairs(listeners) do
+				listener(list, item, window, rClipBase, alpha, menu)
+			end
+		end
+	end
+end
+
+function EEex_Menu_Hook_CheckForceScrollbarRender(item)
+	local itemName = item.name:get()
+	return itemName ~= "" and EEex_Menu_ScrollbarForced[itemName]
 end

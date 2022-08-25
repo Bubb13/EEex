@@ -641,6 +641,26 @@ function EEex_HookJumpAutoSucceed(address, restoreSize, assemblyT)
 	EEex_HookJumpAuto(address, restoreSize, assemblyT, true)
 end
 
+function EEex_HookBeforeRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+
+	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
+	local returnAddress = address + returnDelay
+
+	local hookCode = EEex_JITNear(EEex_FlattenTable({
+		assemblyT,
+		restoreBytes,
+		{[[
+			return:
+			jmp ]], returnAddress, [[ #ENDL
+		]]},
+	}))
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookCode, [[ #ENDL
+		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
+	})
+end
+
 function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
 
 	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
@@ -701,12 +721,22 @@ function EEex_GenLuaCall(funcName, meta)
 
 	local numArgs = #((meta or {}).args or {})
 
-	local numShadowCallArgBytes = 16
-	local numShadowLocalBytes = 16
-	local numShadowExtraBytes = numShadowCallArgBytes + numShadowLocalBytes + numArgs * 8
+	-- These are used to store pcallk's stack args, plus any stack args the caller requested
+	local numShadowLocalCallArgBytes = 16 + math.max(0, ((meta or {}).numStackArgs or 0) - 2) * 8
 
-	local localArgsTop = 32 + numShadowCallArgBytes
-	local luaCallArgsTop = localArgsTop + numShadowLocalBytes
+	-- qword:[localArgsTop]     - The saved rbx value, which I clobber to store lua_State* L
+	-- qword:[localArgsTop + 8] - The saved return value (if any), I should probably only
+	--                            store this when a return value is requested
+	local numShadowLocalArgBytes = 16
+
+	-- Total shadow space needed (not including the default-included 32 bytes)
+	local numShadowExtraBytes = numShadowLocalCallArgBytes + numShadowLocalArgBytes + numArgs * 8
+
+	-- Top of GenLuaCall's special variables, (+32 to move over shadow space register storage)
+	local localArgsTop = 32 + numShadowLocalCallArgBytes
+
+	-- Top of GenLuaCall's saved Lua function argument values
+	local luaCallArgsTop = localArgsTop + numShadowLocalArgBytes
 
 	local argsUserType = {}
 	local argsCastFunction = {}

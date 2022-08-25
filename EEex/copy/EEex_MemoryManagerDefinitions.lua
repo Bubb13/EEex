@@ -55,11 +55,26 @@ EEex_MemoryManagerStructDefinitions["CResRef"] = {
 	},
 }
 
+EEex_MemoryManagerStructDefinitions["CSpell"] = {
+	["constructors"] = {
+		["#default"] = CSpell.Construct,
+	},
+}
+
 EEex_MemoryManagerStructDefinitions["CString"] = {
 	["constructors"] = {
 		["#default"] = CString.ConstructFromChars,
 	},
 	["destructor"] = CString.Destruct,
+}
+
+EEex_MemoryManagerStructDefinitions["CTypedPtrList<CPtrList,long>"] = {
+	["constructors"] = {
+		["#default"] = function(self)
+			self:Construct(10)
+		end
+	},
+	["destructor"] = _G["CTypedPtrList<CPtrList,long>"].Destruct,
 }
 
 EEex_MemoryManagerStructDefinitions["CVariable"] = {

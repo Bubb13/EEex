@@ -174,6 +174,90 @@
 		]]},
 	}))
 
+	--------------------------------------------
+	-- EEex_Menu_Hook_BeforeListRenderingItem --
+	--------------------------------------------
+
+	EEex_HookBeforeCall(EEex_Label("Hook-RenderListCallback()-drawItem()"), EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(112)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+		]]},
+		EEex_GenLuaCall("EEex_Menu_Hook_BeforeListRenderingItem", {
+			["args"] = {
+				-- list
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsi #ENDL", {rspOffset}}, "uiItem" end,
+				-- item
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx #ENDL", {rspOffset}}, "uiItem" end,
+				-- window
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "SDL_Rect" end,
+				-- rClipBase
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r8 #ENDL", {rspOffset}}, "SDL_Rect" end,
+				-- alpha
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r9 #ENDL", {rspOffset}} end,
+				-- menu
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(20h)]
+					mov qword ptr ss:[rsp+#$(1)], rax
+				]], {rspOffset}}, "uiMenu" end,
+			},
+		}),
+		{[[
+			call_error:
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	----------------------------------------------
+	-- EEex_Menu_Hook_CheckForceScrollbarRender --
+	----------------------------------------------
+
+	EEex_HookJumpOnSuccess(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(40)
+		]]},
+		EEex_GenLuaCall("EEex_Menu_Hook_CheckForceScrollbarRender", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "uiItem" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+
+			#DESTROY_SHADOW_SPACE
+			jnz jmp_fail
+		]]},
+	}))
+
+	---------------------------------------------------------
+	-- Fix forced scrollbar crashing with a divide by zero --
+	---------------------------------------------------------
+
+	for _, address in ipairs({
+		EEex_Label("Hook-drawItem()-FixForcedScrollbarDivideByZero1"),
+		EEex_Label("Hook-drawItem()-FixForcedScrollbarDivideByZero2") })
+	do
+		EEex_HookAfterRestore(address, 0, 11, 11, {[[
+			cmp eax, eax
+			jnz return
+			mov eax, -1
+		]]})
+	end
+
 	EEex_EnableCodeProtection()
 
 end)()

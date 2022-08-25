@@ -1,4 +1,26 @@
 
+function EEex_Utility_AlphanumericSortTable(o, stringAccessor)
+	local conv = function(s)
+		local result, lastPeriod = "", ""
+		for digits, nonZeroDigits, anythingChar in tostring(s):gmatch("(0*(%d*))(.?)") do
+			if digits == "" then
+				lastPeriod, anythingChar = "", lastPeriod..anythingChar
+			else
+				result = result..(lastPeriod == "" and ("%03d%s"):format(#nonZeroDigits, nonZeroDigits) or "."..digits)
+				lastPeriod, anythingChar = anythingChar:match("(%.?)(.*)")
+			end
+			result = result..anythingChar:gsub(".", "\0%0")
+		end
+		return result
+	end
+	table.sort(o, function(a, b)
+		local aString, bString = stringAccessor(a), stringAccessor(b)
+		local ca, cb = conv(aString), conv(bString)
+		return ca < cb or (ca == cb and aString < bString)
+	end)
+	return o
+end
+
 function EEex_Utility_FreeCPtrList(list)
 	while list.m_nCount > 0 do
 		EEex_FreeUD(list:RemoveHead())

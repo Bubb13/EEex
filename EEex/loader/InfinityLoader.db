@@ -1,68 +1,4 @@
 
-;--------------------------
-;-- Bound Engine Globals --
-;--------------------------
-
-[CAIObjectType::NOONE]
-Pattern=E988040000
-Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
-
-[CGameObject::DEFAULT_TERRAIN_TABLE]
-Pattern=480FBFC085C0786A
-Operations=ADD 71, PUSH, READ DWORD, ADD, ADD 4
-
-[CVidMode::SCREENHEIGHT]
-Pattern=0F5BD2660F6EC1
-Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
-
-[CVidMode::SCREENWIDTH]
-Pattern=0F5BD2660F6EC1
-Operations=ADD -26, PUSH, READ DWORD, ADD, ADD 4
-
-[afxPchNil]
-Pattern=488D542420488937
-Operations=ADD 20, PUSH, READ DWORD, ADD, ADD 4
-
-[capture]
-Pattern=756633C0
-Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
-
-[g_lua]
-Pattern=4885C00F85DA000000
-Operations=ADD 12, PUSH, READ DWORD, ADD, ADD 4
-
-[g_pBaldurChitin]
-Pattern=48895C2430488B5E10
-Operations=ADD 30, PUSH, READ DWORD, ADD, ADD 4
-
-[menuLength]
-Pattern=3D020400000F8556010000
-Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
-
-[menuSrc]
-Pattern=3D020400000F8556010000
-Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
-
-[menuStack]
-Pattern=85C00F8E01010000
-Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
-
-[menus]
-Pattern=41B800700000
-Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
-
-[nextStackMenuIdx]
-Pattern=7E03FFC8
-Operations=ADD -6, PUSH, READ DWORD, ADD, ADD 4
-
-[numMenus]
-Pattern=41B800700000
-Operations=ADD 59, PUSH, READ DWORD, ADD, ADD 4
-
-[resources]
-Pattern=488B1CFB4885DB745B
-Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4, ADD -8
-
 ;----------------------------
 ;-- Bound Engine Functions --
 ;----------------------------
@@ -203,6 +139,13 @@ Pattern=4C894C242053574156
 [CGameArea::CheckWalkable]
 Pattern=4C894C24204C894424185556574154
 Operations=ADD -5
+
+[CGameArea::GetAllInRange1]
+Pattern=4C8BE2488BB9380C0000
+Operations=ADD -33
+
+[CGameArea::GetAllInRange2]
+Pattern=4C894C242048894C240853555657415441554156
 
 [CGameArea::GetNearest]
 Pattern=4881ECE80000000F29B424D0000000
@@ -365,6 +308,74 @@ Operations=ADD -31
 Pattern=4883EC60BA7C000000
 Operations=ADD -8
 
+;--------------------------
+;-- Bound Engine Globals --
+;--------------------------
+
+[CAIObjectType::NOONE]
+Pattern=E988040000
+Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
+
+[CGameObject::DEFAULT_TERRAIN_TABLE]
+Pattern=480FBFC085C0786A
+Operations=ADD 71, PUSH, READ DWORD, ADD, ADD 4
+
+[CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE]
+Pattern=4C8D83D8030000
+Operations=ADD 27, PUSH, READ DWORD, ADD, ADD 4
+
+[CVidMode::SCREENHEIGHT]
+Pattern=0F5BD2660F6EC1
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[CVidMode::SCREENWIDTH]
+Pattern=0F5BD2660F6EC1
+Operations=ADD -26, PUSH, READ DWORD, ADD, ADD 4
+
+[afxPchNil]
+Pattern=488D542420488937
+Operations=ADD 20, PUSH, READ DWORD, ADD, ADD 4
+
+[capture]
+Pattern=756633C0
+Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
+
+[g_lua]
+Pattern=4885C00F85DA000000
+Operations=ADD 12, PUSH, READ DWORD, ADD, ADD 4
+
+[g_pBaldurChitin]
+Pattern=48895C2430488B5E10
+Operations=ADD 30, PUSH, READ DWORD, ADD, ADD 4
+
+[menuLength]
+Pattern=3D020400000F8556010000
+Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
+
+[menuSrc]
+Pattern=3D020400000F8556010000
+Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
+
+[menuStack]
+Pattern=85C00F8E01010000
+Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
+
+[menus]
+Pattern=41B800700000
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[nextStackMenuIdx]
+Pattern=7E03FFC8
+Operations=ADD -6, PUSH, READ DWORD, ADD, ADD 4
+
+[numMenus]
+Pattern=41B800700000
+Operations=ADD 59, PUSH, READ DWORD, ADD, ADD 4
+
+[resources]
+Pattern=488B1CFB4885DB745B
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4, ADD -8
+
 ;----------------------
 ;-- Engine Functions --
 ;----------------------
@@ -384,241 +395,6 @@ Operations=ADD -10
 [operator_new]
 Pattern=488BD9EB0F
 Operations=ADD -6
-
-;-----------
-;-- Hooks --
-;-----------
-
-[!ExeSwitch-Baldur.exe-Hook-dimmInit()-uiLoadMenu()]
-Pattern=74034C8B30
-Operations=ADD 34
-
-[!ExeSwitch-icewind.exe-Hook-dimmInit()-uiLoadMenu()]
-Pattern=74034C8B30
-Operations=ADD 37
-
-[Data-CGameEffect::vftable]
-Pattern=4889442428488BD9418BF1
-Operations=ADD 29, PUSH, READ DWORD, ADD, ADD 4
-
-[Data-CInfButtonArray::SetState()-IndirectJumpTable]
-Pattern=41C786B01F0000640000004533FF
-Operations=ADD 332
-
-[Hook-CAIObjectType::Decode()-DefaultJmp]
-Pattern=4885D20F84C6020000
-Operations=ADD 33
-
-[Hook-CAIObjectType::Decode()-NormalBranch]
-Pattern=488B55D749FFC7
-Operations=ADD 4
-
-[Hook-CAIObjectType::Decode()-ReturnBranch]
-Pattern=488BB424F00000004C8BBC24A0000000
-
-[Hook-CAIObjectType::Decode()-TargetNameOverride]
-Pattern=41837D0CFF
-Operations=ADD -6
-
-[Hook-CAIScript::Construct()-OnCopy1]
-Pattern=488D5708488BCE
-Operations=ADD 7
-
-[Hook-CAIScript::Construct()-OnCopy2]
-Pattern=740E488D5608
-Operations=ADD 9
-
-[Hook-CAIScript::Destruct()-OnDestruct]
-Pattern=75D1488B7C2430
-Operations=ADD 11
-
-[Hook-CAIScript::Read()-OnRead]
-Pattern=4C8D45F7488945D7
-Operations=ADD 27
-
-[Hook-CChitin::OnResizeWindow()-B3Scale]
-Pattern=488D542460488B4E20
-Operations=ADD 9
-
-[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1]
-Pattern=4889451F488BF9
-Operations=ADD 11
-
-[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2]
-Pattern=0F85B3F2FFFF
-Operations=ADD -7
-
-[Hook-CDerivedStats::Construct()-FirstCall]
-Pattern=48894C24085741544155415641574883EC20488BF1
-Operations=ADD 28
-
-[Hook-CDerivedStats::Destruct()-FirstCall]
-Pattern=488981500C0000
-Operations=ADD 14
-
-[Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp]
-Pattern=3DC9000000
-Operations=ADD 5
-
-[Hook-CDerivedStats::operator_equ()-FirstCall]
-Pattern=48894424288B02
-Operations=ADD 641
-
-[Hook-CDerivedStats::operator_plus_equ()-FirstCall]
-Pattern=4883EC300FB74204
-Operations=ADD 75
-
-[Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp]
-Pattern=0FBF8550030000
-Operations=ADD 17
-
-[Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
-Pattern=488BCBFF17
-Operations=ADD 31
-
-[Hook-CGameAIBase::ExecuteAction()-NormalBranch]
-Pattern=6689B3BA040000
-Operations=ADD -5
-
-[Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing]
-Pattern=7558498B5500
-
-[Hook-CGameEffect::CheckAdd()-LastProbabilityJmp]
-Pattern=48898520010000488B85A0010000
-Operations=ADD 94
-
-[Hook-CGameEffect::CheckAdd()-ProbabilityFailed]
-Pattern=33C0488B8D20010000
-
-[Hook-CGameEffect::DecodeEffect()-DefaultJmp]
-Pattern=5741564883EC4033DB
-Operations=ADD 38
-
-[Hook-CGameEffect::DecodeEffect()-Fail]
-Pattern=488BD84C8B7C2460
-Operations=ADD 3
-
-[Hook-CGameEffect::DecodeEffect()-Success]
-Pattern=488BD84C8B7C2460
-
-[Hook-CGameObjectArray::Clean()-DestructJmp]
-Pattern=6666660F1F840000000000480FBFC2
-Operations=ADD 32
-
-[Hook-CGameObjectArray::Clean()-LastJmp]
-Pattern=4881C1006500004883C420
-Operations=ADD 12
-
-[Hook-CGameObjectArray::Delete()-DeleteJmp]
-Pattern=6642392C37
-Operations=ADD 5
-
-[Hook-CGameSprite::AddEffect()-noSave-Override]
-Pattern=753585F6
-Operations=ADD 4
-
-[Hook-CGameSprite::AddSpecialAbility()-LastCall]
-Pattern=740A488B4C2448
-Operations=ADD 7
-
-[Hook-CGameSprite::Construct1()-FirstCall]
-Pattern=4889442460488BF1
-Operations=ADD 8
-
-[Hook-CGameSprite::Construct2()-FirstCall]
-Pattern=488945FF33C0
-Operations=ADD 31
-
-[Hook-CGameSprite::Destruct()-FirstCall]
-Pattern=75DA4C8DB358490000
-Operations=ADD 12
-
-[Hook-CGameSprite::ExecuteAction()-DefaultJmp]
-Pattern=81F9D7010000
-Operations=ADD 6
-
-[Hook-CGameSprite::IsOver()-B3Invis]
-Pattern=3843387627
-Operations=ADD 3
-
-[Hook-CGameSprite::ProcessEffectList()-AfterListsResolved]
-Pattern=488D866005000085FF
-Operations=ADD 18
-
-[Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
-Pattern=488D8660050000660F1F440000
-Operations=ADD 37
-
-[Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
-Pattern=4C8D8F800B0000
-Operations=ADD 31
-
-[Hook-CGameSprite::Render()-B3Invis]
-Pattern=3846387613
-Operations=ADD 18
-
-[Hook-CGameSprite::RenderMarkers()-B3Invis1]
-Pattern=3846387626
-Operations=ADD 3
-
-[Hook-CGameSprite::RenderMarkers()-B3Invis2]
-Pattern=BA060000004C896C2458
-Operations=ADD 46
-
-[Hook-CGameSprite::SetCursor()-SetCharacterToolTip()]
-Pattern=80BF38400000FF
-Operations=ADD 63
-
-[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-1]
-Pattern=FFC63B770C
-Operations=ADD 62
-
-[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-2]
-Pattern=4C8D8B800B0000498BCD
-Operations=ADD 24
-
-[Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving]
-Pattern=488B88901000007402
-
-[Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()]
-Pattern=41C786B01F0000640000004533FF
-Operations=ADD 154
-
-[Hook-CInfButtonArray::SetState()-SaveArg]
-Pattern=498D8EF8200000
-Operations=ADD -11
-
-[Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
-Pattern=0F848D000000488B4808
-Operations=ADD 17
-
-[Hook-Infinity_InstanceAnimation()-TemplateMenuOverride]
-Pattern=488BD0488BC8
-Operations=ADD 182
-
-[Hook-SDL_main()-CBaldurChitin::Init()]
-Pattern=4885C0740D4C8BC3
-Operations=ADD 28
-
-[Hook-SDL_main()-CLUAConsole::LuaInit()]
-Pattern=C7804010000001000000
-Operations=ADD 10
-
-[Hook-dimmInit()-uiLoadMenu()]
-ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
-
-[Hook-saveMenus()-CheckItemSave]
-Pattern=498B1E4885DB0F8482000000
-Operations=ADD 25
-
-[Hook-uiRefreshMenu()-restoreMenuStack()]
-Pattern=85FF0F8E94000000
-Operations=ADD 223
-
-[Hook-uiRefreshMenu()-saveMenuStack()]
-Pattern=48C7C7FFFFFFFF6690
-Operations=ADD -235
 
 ;------------------------------------------
 ;-- Functions Referenced by Lua Bindings --
@@ -846,3 +622,289 @@ Operations=ADD -11
 [tolua_open]
 Pattern=83F8010F84D7030000
 Operations=ADD -61
+
+;-----------
+;-- Hooks --
+;-----------
+
+[!ExeSwitch-Baldur.exe-Hook-dimmInit()-uiLoadMenu()]
+Pattern=74034C8B30
+Operations=ADD 34
+
+[!ExeSwitch-icewind.exe-Hook-dimmInit()-uiLoadMenu()]
+Pattern=74034C8B30
+Operations=ADD 37
+
+[Data-CGameEffect::vftable]
+Pattern=4889442428488BD9418BF1
+Operations=ADD 29, PUSH, READ DWORD, ADD, ADD 4
+
+[Data-CInfButtonArray::SetState()-IndirectJumpTable]
+Pattern=41C786B01F0000640000004533FF
+Operations=ADD 332
+
+[Hook-CAIObjectType::Decode()-DefaultJmp]
+Pattern=4885D20F84C6020000
+Operations=ADD 33
+
+[Hook-CAIObjectType::Decode()-NormalBranch]
+Pattern=488B55D749FFC7
+Operations=ADD 4
+
+[Hook-CAIObjectType::Decode()-ReturnBranch]
+Pattern=488BB424F00000004C8BBC24A0000000
+
+[Hook-CAIObjectType::Decode()-TargetNameOverride]
+Pattern=41837D0CFF
+Operations=ADD -6
+
+[Hook-CAIScript::Construct()-OnCopy1]
+Pattern=488D5708488BCE
+Operations=ADD 7
+
+[Hook-CAIScript::Construct()-OnCopy2]
+Pattern=740E488D5608
+Operations=ADD 9
+
+[Hook-CAIScript::Destruct()-OnDestruct]
+Pattern=75D1488B7C2430
+Operations=ADD 11
+
+[Hook-CAIScript::Read()-OnRead]
+Pattern=4C8D45F7488945D7
+Operations=ADD 27
+
+[Hook-CChitin::OnResizeWindow()-B3Scale]
+Pattern=488D542460488B4E20
+Operations=ADD 9
+
+[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1]
+Pattern=4889451F488BF9
+Operations=ADD 11
+
+[Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2]
+Pattern=0F85B3F2FFFF
+Operations=ADD -7
+
+[Hook-CDerivedStats::Construct()-FirstCall]
+Pattern=48894C24085741544155415641574883EC20488BF1
+Operations=ADD 28
+
+[Hook-CDerivedStats::Destruct()-FirstCall]
+Pattern=488981500C0000
+Operations=ADD 14
+
+[Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp]
+Pattern=3DC9000000
+Operations=ADD 5
+
+[Hook-CDerivedStats::operator_equ()-FirstCall]
+Pattern=48894424288B02
+Operations=ADD 641
+
+[Hook-CDerivedStats::operator_plus_equ()-FirstCall]
+Pattern=4883EC300FB74204
+Operations=ADD 75
+
+[Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp]
+Pattern=0FBF8550030000
+Operations=ADD 17
+
+[Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
+Pattern=488BCBFF17
+Operations=ADD 31
+
+[Hook-CGameAIBase::ExecuteAction()-NormalBranch]
+Pattern=6689B3BA040000
+Operations=ADD -5
+
+[Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing]
+Pattern=7558498B5500
+
+[Hook-CGameEffect::CheckAdd()-LastProbabilityJmp]
+Pattern=48898520010000488B85A0010000
+Operations=ADD 94
+
+[Hook-CGameEffect::CheckAdd()-ProbabilityFailed]
+Pattern=33C0488B8D20010000
+
+[Hook-CGameEffect::DecodeEffect()-DefaultJmp]
+Pattern=5741564883EC4033DB
+Operations=ADD 38
+
+[Hook-CGameEffect::DecodeEffect()-Fail]
+Pattern=488BD84C8B7C2460
+Operations=ADD 3
+
+[Hook-CGameEffect::DecodeEffect()-Success]
+Pattern=488BD84C8B7C2460
+
+[Hook-CGameEffectList::Marshal()-OverrideSize]
+Pattern=488BCBFF504085C0
+Operations=ADD 269
+
+[Hook-CGameEffectList::Marshal()-WriteExtra]
+Pattern=488BCBFF504085C0
+Operations=ADD 278
+
+[Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()]
+Pattern=FFCF4885ED
+Operations=ADD 80
+
+[Hook-CGameEffectList::Unmarshal()-Return]
+Pattern=66FFC3FFCF85FF
+Operations=ADD 9
+
+[Hook-CGameObjectArray::Clean()-DestructJmp]
+Pattern=6666660F1F840000000000480FBFC2
+Operations=ADD 32
+
+[Hook-CGameObjectArray::Clean()-LastJmp]
+Pattern=4881C1006500004883C420
+Operations=ADD 12
+
+[Hook-CGameObjectArray::Delete()-DeleteJmp]
+Pattern=6642392C37
+Operations=ADD 5
+
+[Hook-CGameSprite::AddEffect()-noSave-Override]
+Pattern=753585F6
+Operations=ADD 4
+
+[Hook-CGameSprite::AddSpecialAbility()-LastCall]
+Pattern=740A488B4C2448
+Operations=ADD 7
+
+[Hook-CGameSprite::CheckQuickLists()-CallListeners]
+Pattern=405557415441554156488D6C24D1
+
+[Hook-CGameSprite::Construct1()-FirstCall]
+Pattern=4889442460488BF1
+Operations=ADD 8
+
+[Hook-CGameSprite::Construct2()-FirstCall]
+Pattern=488945FF33C0
+Operations=ADD 31
+
+[Hook-CGameSprite::Destruct()-FirstCall]
+Pattern=75DA4C8DB358490000
+Operations=ADD 12
+
+[Hook-CGameSprite::ExecuteAction()-DefaultJmp]
+Pattern=81F9D7010000
+Operations=ADD 6
+
+[Hook-CGameSprite::IsOver()-B3Invis]
+Pattern=3843387627
+Operations=ADD 3
+
+[Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()]
+Pattern=41B001EB17
+Operations=ADD 51
+
+[Hook-CGameSprite::ProcessEffectList()-AfterListsResolved]
+Pattern=488D866005000085FF
+Operations=ADD 18
+
+[Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
+Pattern=488D8660050000660F1F440000
+Operations=ADD 37
+
+[Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
+Pattern=4C8D8F800B0000
+Operations=ADD 31
+
+[Hook-CGameSprite::Render()-B3Invis]
+Pattern=3846387613
+Operations=ADD 18
+
+[Hook-CGameSprite::RenderMarkers()-B3Invis1]
+Pattern=3846387626
+Operations=ADD 3
+
+[Hook-CGameSprite::RenderMarkers()-B3Invis2]
+Pattern=BA060000004C896C2458
+Operations=ADD 46
+
+[Hook-CGameSprite::Rest()-OnResetQuickListCounts]
+Pattern=C745A0FFFFFFFF488D55B8
+Operations=ADD 20
+
+[Hook-CGameSprite::SetCursor()-SetCharacterToolTip()]
+Pattern=80BF38400000FF
+Operations=ADD 63
+
+[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-1]
+Pattern=FFC63B770C
+Operations=ADD 62
+
+[Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-2]
+Pattern=4C8D8B800B0000498BCD
+Operations=ADD 24
+
+[Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()]
+Pattern=0FB6838B050000
+Operations=ADD 65
+
+[Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving]
+Pattern=488B88901000007402
+
+[Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()]
+Pattern=41C786B01F0000640000004533FF
+Operations=ADD 154
+
+[Hook-CInfButtonArray::SetState()-SaveArg]
+Pattern=498D8EF8200000
+Operations=ADD -11
+
+[Hook-CInfGame::DestroyGame()-LastCall]
+Pattern=EB0D4C8D450F
+Operations=ADD 72
+
+[Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
+Pattern=0F848D000000488B4808
+Operations=ADD 17
+
+[Hook-Infinity_InstanceAnimation()-TemplateMenuOverride]
+Pattern=488BD0488BC8
+Operations=ADD 182
+
+[Hook-RenderListCallback()-drawItem()]
+Pattern=448BCB4C896C2420
+Operations=ADD 27
+
+[Hook-SDL_main()-CBaldurChitin::Init()]
+Pattern=4885C0740D4C8BC3
+Operations=ADD 28
+
+[Hook-SDL_main()-CLUAConsole::LuaInit()]
+Pattern=C7804010000001000000
+Operations=ADD 10
+
+[Hook-dimmInit()-uiLoadMenu()]
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
+
+[Hook-drawItem()-CheckScrollbarContentHeight]
+Pattern=85C00F85CE040000
+Operations=ADD 19
+
+[Hook-drawItem()-FixForcedScrollbarDivideByZero1]
+Pattern=8B4DC88B45C0
+Operations=ADD 66
+
+[Hook-drawItem()-FixForcedScrollbarDivideByZero2]
+Pattern=8B5DDC488D55F0
+Operations=ADD 10
+
+[Hook-saveMenus()-CheckItemSave]
+Pattern=498B1E4885DB0F8482000000
+Operations=ADD 25
+
+[Hook-uiRefreshMenu()-restoreMenuStack()]
+Pattern=85FF0F8E94000000
+Operations=ADD 223
+
+[Hook-uiRefreshMenu()-saveMenuStack()]
+Pattern=48C7C7FFFFFFFF6690
+Operations=ADD -235
