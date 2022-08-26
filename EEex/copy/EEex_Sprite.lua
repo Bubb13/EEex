@@ -148,6 +148,103 @@ function EEex_Sprite_GetCasterLevelForSpell(sprite, spellResRef, includeWildMage
 end
 CGameSprite.getCasterLevelForSpell = EEex_Sprite_GetCasterLevelForSpell
 
+-- @bubb_doc
+-- @summary Calls {func} for every creature that matches {aiObjectType} around {sprite} in the given {range}, as per the NumCreature() trigger.
+--
+-- @self  {sprite, usertype=CGameSprite}
+--        The sprite to search around.
+--
+-- @param {aiObjectType, usertype=CAIObjectType}
+--        The aiObjectType used to filter the objects passed to {func}.
+--        Most commonly retrieved from EEex_Object_ParseString(). Remember to call :free().
+--
+-- @param {range, type=number}
+--        The radius to search around ({centerX}, {centerY}). 448 is a sprite's default visual range.
+--
+-- @param {func, type=function}
+--        The function to call for every creature in the search area.
+--
+-- @param {bCheckForLineOfSight, type=boolean, default=true}
+--        Determines whether LOS is required from ({centerX}, {centerY}) to considered objects.
+--
+-- @param {bCheckForNonSprites, type=boolean, default=false}
+--        Determines whether {func} is additionally called for non-sprite objects in the main objects list.
+--
+-- @param {terrainTable, usertype=Array<byte,16>, default=CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE}
+--        The terrain table to use for determining LOS.
+
+function EEex_Sprite_ForAllOfTypeInRange(sprite, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+
+	local area = sprite.m_pArea
+	if not area then
+		return
+	end
+
+	local spritePos = sprite.m_pos
+	local vertListPos = sprite.m_posVertList
+
+	if sprite.m_listType == VertListType.LIST_FRONT and vertListPos then
+		EEex_RunWithStackManager({
+			{ ["name"] = "center", ["struct"] = "CPoint", ["constructor"] = { ["variant"] = "copy", ["args"] = { spritePos } } },
+			{ ["name"] = "resultPtrList", ["struct"] = "CTypedPtrList<CPtrList,long>" } },
+			function(manager)
+				local resultPtrList = manager:getUD("resultPtrList")
+				area:GetAllInRange2(vertListPos, manager:getUD("center"), aiObjectType, range,
+					terrainTable or sprite:virtual_GetVisibleTerrainTable(),
+					resultPtrList, bCheckForLineOfSight or 1, bCheckForNonSprites or 0)
+				EEex_Utility_IterateCPtrList(resultPtrList, function(objectID)
+					func(EEex_GameObject_CastUT(EEex_GameObject_Get(objectID)))
+				end)
+			end)
+	else
+		area:forAllOfTypeInRange(spritePos.x, spritePos.y, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	end
+end
+CGameSprite.forAllOfTypeInRange = EEex_Sprite_ForAllOfTypeInRange
+
+function EEex_Sprite_ForAllOfTypeStringInRange(sprite, aiObjectTypeString, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
+	sprite:forAllOfTypeInRange(aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	aiObjectType:free()
+end
+CGameSprite.forAllOfTypeStringInRange = EEex_Sprite_ForAllOfTypeStringInRange
+
+function EEex_Sprite_GetAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local toReturn = {}
+	local toReturnI = 1
+	sprite:forAllOfTypeInRange(aiObjectType, range, function(object)
+		toReturn[toReturnI] = object
+		toReturnI = toReturnI + 1
+	end, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	return toReturn
+end
+CGameSprite.getAllOfTypeInRange = EEex_Sprite_GetAllOfTypeInRange
+
+function EEex_Sprite_GetAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
+	local toReturn = sprite:getAllOfTypeInRange(aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	aiObjectType:free()
+	return toReturn
+end
+CGameSprite.getAllOfTypeStringInRange = EEex_Sprite_GetAllOfTypeStringInRange
+
+function EEex_Sprite_CountAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local toReturn = 0
+	sprite:forAllOfTypeInRange(aiObjectType, range, function(object)
+		toReturn = toReturn + 1
+	end, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	return toReturn
+end
+CGameSprite.countAllOfTypeInRange = EEex_Sprite_CountAllOfTypeInRange
+
+function EEex_Sprite_CountAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
+	local toReturn = sprite:countAllOfTypeInRange(aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	aiObjectType:free()
+	return toReturn
+end
+CGameSprite.countAllOfTypeStringInRange = EEex_Sprite_CountAllOfTypeStringInRange
+
 ---------------
 -- Listeners --
 ---------------

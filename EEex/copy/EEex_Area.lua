@@ -25,7 +25,7 @@ end
 CGameArea.setVariableString = EEex_Area_SetVariableString
 
 -- @bubb_doc
--- @summary Calls {func} for every creature around ({centerX}, {centerY}) in the given {range}, as per the NumCreature() trigger.
+-- @summary Calls {func} for every creature that matches {aiObjectType} around ({centerX}, {centerY}) in the given {range}, as per the NumCreature() trigger.
 --
 -- @self  {area, usertype=CGameArea}
 --        The area to search.
@@ -40,12 +40,21 @@ CGameArea.setVariableString = EEex_Area_SetVariableString
 --        The aiObjectType used to filter the objects passed to {func}.
 --        Most commonly retrieved from EEex_Object_ParseString(). Remember to call :free().
 --
+-- @param {range, type=number}
+--        The radius to search around ({centerX}, {centerY}). 448 is a sprite's default visual range.
+--
+-- @param {func, type=function}
+--        The function to call for every creature in the search area.
+--
 -- @param {bCheckForLineOfSight, type=boolean, default=true}
---        Pass false to disable requiring LOS from ({centerX}, {centerY}) to object.
+--        Determines whether LOS is required from ({centerX}, {centerY}) to considered objects.
 --
 -- @param {bCheckForNonSprites, type=boolean, default=false}
---        Pass true to additionally call {func} for non-sprite objects in the main objects list.
+--        Determines whether {func} is additionally called for non-sprite objects in the main objects list.
 --
+-- @param {terrainTable, usertype=Array<byte,16>, default=CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE}
+--        The terrain table to use for determining LOS.
+
 function EEex_Area_ForAllOfTypeInRange(area, centerX, centerY, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
 	EEex_RunWithStackManager({
 		{ ["name"] = "center", ["struct"] = "CPoint", ["constructor"] = { ["variant"] = "fromXY", ["args"] = { centerX, centerY } } },
