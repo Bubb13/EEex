@@ -37,6 +37,10 @@ function EEex_Sprite_GetPortraitIndex(sprite)
 end
 CGameSprite.getPortraitIndex = EEex_Sprite_GetPortraitIndex
 
+function EEex_Sprite_GetNumCharacters()
+	return EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_nCharacters
+end
+
 function EEex_Sprite_GetActiveStats(sprite)
 	return sprite.m_bAllowEffectListCall and sprite.m_derivedStats or sprite.m_tempStats
 end
@@ -491,16 +495,24 @@ end
 
 function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 
-	for handlerName, handler in pairs(EEex_Sprite_MarshalHandlers) do
-		local exported = handler.exporter(sprite)
-		if type(exported) ~= "table" then
+	local addTableExport = function(handlerName, toExport)
+		if type(toExport) ~= "table" then
 			EEex_Error("Creature marshal handler must export table")
 		end
 		EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize = EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize + 1
-		EEex_Sprite_CurrentSpriteMarshalHandlerData[EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize] = exported
-		EEex_Sprite_CurrentSpriteMarshalHandlerData_TableToMeta[exported] = {
+		EEex_Sprite_CurrentSpriteMarshalHandlerData[EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize] = toExport
+		EEex_Sprite_CurrentSpriteMarshalHandlerData_TableToMeta[toExport] = {
 			["handlerName"] = handlerName,
 		}
+	end
+
+	for handlerName, handler in pairs(EEex_Sprite_MarshalHandlers) do
+		addTableExport(handlerName, handler.exporter(sprite))
+	end
+
+	-- Marshal data that was stored in the fallback table because it was missing its handler
+	for handlerName, toExport in pairs(EEex_GetUDAux(sprite)["EEex_Sprite_FallbackMarshalStorage"] or {}) do
+		addTableExport(handlerName, toExport)
 	end
 
 	local extraMarshalSize = 8 + EEex_Sprite_CalculateSpriteMarshalHandlerDataSize(EEex_Sprite_CurrentSpriteMarshalHandlerData)
@@ -526,88 +538,105 @@ end
 function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 
 	memory = memory + 8
-	local toFill = {}
-
-	local handlerStr = EEex_ReadString(memory)
-	memory = memory + #handlerStr + 1
-
-	local fieldReadSwitch = {
-		[EEex_Sprite_MarshalHandlerFieldType.STRING] = function()
-			local read = EEex_ReadString(memory)
-			memory = memory + #read + 1
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INT8] = function()
-			local read = EEex_Read8(memory)
-			memory = memory + 1
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INTU8] = function()
-			local read = EEex_ReadU8(memory)
-			memory = memory + 1
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INT16] = function()
-			local read = EEex_Read16(memory)
-			memory = memory + 2
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INTU16] = function()
-			local read = EEex_ReadU16(memory)
-			memory = memory + 2
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INT32] = function()
-			local read = EEex_Read32(memory)
-			memory = memory + 4
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INTU32] = function()
-			local read = EEex_ReadU32(memory)
-			memory = memory + 4
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INT64] = function()
-			local read = EEex_Read64(memory)
-			memory = memory + 8
-			return read
-		end,
-		[EEex_Sprite_MarshalHandlerFieldType.INTU64] = function()
-			local read = EEex_ReadU64(memory)
-			memory = memory + 8
-			return read
-		end,
-	}
-
-	local tableStack = {}
-	local tableStackTop = 0
 
 	while true do
 
-		local keyFieldType = EEex_Read8(memory)
-		memory = memory + 1
+		local toFill = {}
+		local handlerStr = EEex_ReadString(memory)
 
-		if keyFieldType == EEex_Sprite_MarshalHandlerFieldType.TABLE_END then
-			if tableStackTop == 0 then
-				break
-			end
-			toFill = tableStack[tableStackTop]
-			tableStackTop = tableStackTop - 1
-		else
-			local key = fieldReadSwitch[keyFieldType]()
-			local valueFieldType = EEex_Read8(memory)
+		-- The top level list writes TABLE_END('\0') to signal that all
+		-- marshalled data has ended, which reads as an empty string
+		if handlerStr == "" then
+			break
+		end
+
+		memory = memory + #handlerStr + 1
+
+		local fieldReadSwitch = {
+			[EEex_Sprite_MarshalHandlerFieldType.STRING] = function()
+				local read = EEex_ReadString(memory)
+				memory = memory + #read + 1
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INT8] = function()
+				local read = EEex_Read8(memory)
+				memory = memory + 1
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INTU8] = function()
+				local read = EEex_ReadU8(memory)
+				memory = memory + 1
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INT16] = function()
+				local read = EEex_Read16(memory)
+				memory = memory + 2
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INTU16] = function()
+				local read = EEex_ReadU16(memory)
+				memory = memory + 2
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INT32] = function()
+				local read = EEex_Read32(memory)
+				memory = memory + 4
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INTU32] = function()
+				local read = EEex_ReadU32(memory)
+				memory = memory + 4
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INT64] = function()
+				local read = EEex_Read64(memory)
+				memory = memory + 8
+				return read
+			end,
+			[EEex_Sprite_MarshalHandlerFieldType.INTU64] = function()
+				local read = EEex_ReadU64(memory)
+				memory = memory + 8
+				return read
+			end,
+		}
+
+		local tableStack = {}
+		local tableStackTop = 0
+
+		while true do
+
+			local keyFieldType = EEex_Read8(memory)
 			memory = memory + 1
-			if valueFieldType == EEex_Sprite_MarshalHandlerFieldType.TABLE_START then
-				local subTable = {}
-				toFill[key] = subTable
-				tableStackTop = tableStackTop + 1
-				tableStack[tableStackTop] = toFill
-				toFill = subTable
+
+			if keyFieldType == EEex_Sprite_MarshalHandlerFieldType.TABLE_END then
+				if tableStackTop == 0 then
+					break
+				end
+				toFill = tableStack[tableStackTop]
+				tableStackTop = tableStackTop - 1
 			else
-				toFill[key] = fieldReadSwitch[valueFieldType]()
+				local key = fieldReadSwitch[keyFieldType]()
+				local valueFieldType = EEex_Read8(memory)
+				memory = memory + 1
+				if valueFieldType == EEex_Sprite_MarshalHandlerFieldType.TABLE_START then
+					local subTable = {}
+					toFill[key] = subTable
+					tableStackTop = tableStackTop + 1
+					tableStack[tableStackTop] = toFill
+					toFill = subTable
+				else
+					toFill[key] = fieldReadSwitch[valueFieldType]()
+				end
 			end
 		end
-	end
 
-	EEex_Sprite_MarshalHandlers[handlerStr].importer(sprite, toFill)
+		local handlers = EEex_Sprite_MarshalHandlers[handlerStr]
+		if handlers then
+			handlers.importer(sprite, toFill)
+		else
+			-- If the required marshal handler is missing, keep the data around so that it isn't stripped from the savegame
+			local fallbackStorage = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(sprite), "EEex_Sprite_FallbackMarshalStorage")
+			fallbackStorage[handlerStr] = toFill
+		end
+	end
 end
