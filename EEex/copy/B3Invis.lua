@@ -3,7 +3,7 @@ B3Invis_RenderAsInvisible = true
 
 function B3Invis_CanSelectedSeeInvis()
 	local toReturn = false
-	EEex_GameObject_IterateSelected(function(sprite)
+	EEex_Sprite_IterateSelected(function(sprite)
 		if sprite:getActiveStats().m_bSeeInvisible ~= 0 then
 			toReturn = true
 			return true
