@@ -3,6 +3,19 @@
 -- Fetching Game Objects --
 ---------------------------
 
+-- @bubb_doc { EEex_GameObject_CastUserType / alias=EEex_GameObject_CastUT }
+-- @summary:
+--
+--     Takes the given `object` and returns a cast userdata that represents `object`'s true type.
+--     Most EEex functions will call this function before passing an object to the modder API.
+--
+-- @param { object / type=CGameObject }: The object to cast.
+--
+-- @return { usertype=CGameAIArea|CGameAIBase|CGameAIGame|CGameContainer|CGameDoor|CGameFireball3d|CGameSound|CGameSpawning|
+--                    CGameSprite|CGameStatic|CGameTemporal|CGameTiledObject|CGameTrigger|CObjectMarker|nil
+--
+-- }: See summary.
+
 function EEex_GameObject_CastUserType(object)
 
 	if not object then
@@ -31,6 +44,17 @@ function EEex_GameObject_CastUserType(object)
 end
 EEex_GameObject_CastUT = EEex_GameObject_CastUserType
 
+-- @bubb_doc { EEex_GameObject_Get }
+--
+-- @summary: Returns the object associated with `objectID`, or `nil` if `objectID` is invalid.
+--
+-- @param { objectID / type=number }: The id of the object to fetch.
+--
+-- @return { usertype=CGameAIArea|CGameAIBase|CGameAIGame|CGameContainer|CGameDoor|CGameFireball3d|CGameSound|CGameSpawning|
+--                    CGameSprite|CGameStatic|CGameTemporal|CGameTiledObject|CGameTrigger|CObjectMarker|nil
+--
+-- }: See summary.
+
 function EEex_GameObject_Get(objectID)
 
 	local object
@@ -43,47 +67,49 @@ function EEex_GameObject_Get(objectID)
 	return EEex_GameObject_CastUT(object)
 end
 
-function EEex_GameObject_GetSelectedID()
-	local node = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_group.m_memberList.m_pNodeHead
-	if not node then return -1 end
-	return node.data
-end
+-- @bubb_doc { EEex_GameObject_GetSelectedID }
+-- @deprecated: Use `EEex_Sprite_GetSelectedID()` instead.
+-- @mirror { EEex_Sprite_GetSelectedID }
 
-function EEex_GameObject_GetSelected()
-	return EEex_GameObject_Get(EEex_GameObject_GetSelectedID())
-end
+EEex_GameObject_GetSelectedID = EEex_Sprite_GetSelectedID
 
-function EEex_GameObject_IterateSelectedIDs(func)
-	local node = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_group.m_memberList.m_pNodeHead
-	while node do
-		if func(node.data) then
-			break
-		end
-		node = node.pNext
-	end
-end
+-- @bubb_doc { EEex_GameObject_GetSelected }
+-- @deprecated: Use `EEex_Sprite_GetSelected()` instead.
+-- @mirror { EEex_Sprite_GetSelected }
 
-function EEex_GameObject_IterateSelected(func)
-	EEex_GameObject_IterateSelectedIDs(function(spriteID)
-		if func(EEex_GameObject_Get(spriteID)) then
-			return true
-		end
-	end)
-end
+EEex_GameObject_GetSelected = EEex_Sprite_GetSelected
 
-function EEex_GameObject_GetAllSelectedIDs()
-	local toReturn = {}
-	EEex_GameObject_IterateSelectedIDs(function(spriteID)
-		table.insert(toReturn, spriteID)
-	end)
-	return toReturn
-end
+-- @bubb_doc { EEex_GameObject_IterateSelectedIDs }
+-- @deprecated: Use `EEex_Sprite_IterateSelectedIDs()` instead.
+-- @mirror { EEex_Sprite_IterateSelectedIDs }
+
+EEex_GameObject_IterateSelectedIDs = EEex_Sprite_IterateSelectedIDs
+
+-- @bubb_doc { EEex_GameObject_IterateSelected }
+-- @deprecated: Use `EEex_Sprite_IterateSelected()` instead.
+-- @mirror { EEex_Sprite_IterateSelected }
+
+EEex_GameObject_IterateSelected = EEex_Sprite_IterateSelected
+
+-- @bubb_doc { EEex_GameObject_GetAllSelectedIDs }
+-- @deprecated: Use `EEex_Sprite_GetAllSelectedIDs()` instead.
+-- @mirror { EEex_Sprite_GetAllSelectedIDs }
+
+EEex_GameObject_GetAllSelectedIDs = EEex_Sprite_GetAllSelectedIDs
+
+-- @bubb_doc { EEex_GameObject_GetUnderCursor }
+-- @summary: Returns the interactable object currently under the cursor, or `nil` if none exists.
+-- @return { usertype=CGameContainer|CGameDoor|CGameSprite|CGameTrigger|nil }: See summary.
 
 function EEex_GameObject_GetUnderCursor()
 	local game = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame
 	local curArea = game.m_gameAreas:get(game.m_visibleArea)
 	return EEex_GameObject_Get(curArea.m_iPicked)
 end
+
+-- @bubb_doc { EEex_GameObject_GetUnderCursorID }
+-- @summary: Returns the id of the interactable object currently under the cursor, or `-1` if none exists.
+-- @return { type=number }: See summary.
 
 function EEex_GameObject_GetUnderCursorID()
 	local game = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame
@@ -95,6 +121,16 @@ end
 -- Game Object Details --
 -------------------------
 
+-- @bubb_doc { EEex_GameObject_IsSprite / instance_name=isSprite }
+--
+-- @summary: Returns whether the given `object` is a sprite.
+--
+-- @self { object / usertype=CGameObject }: The object to check.
+--
+-- @param { allowDead / type=boolean / default=false}: Determines whether `object` is allowed to be dead.
+--
+-- @return { type=boolean }: See summary.
+
 function EEex_GameObject_IsSprite(object, allowDead)
 	if object and object.m_objectType == CGameObjectType.SPRITE then
 		return allowDead or EEex_BAnd(EEex_CastUD(object, "CGameSprite").m_baseStats.m_generalState, 0xFC0) == 0
@@ -103,9 +139,27 @@ function EEex_GameObject_IsSprite(object, allowDead)
 end
 CGameObject.isSprite = EEex_GameObject_IsSprite
 
+-- @bubb_doc { EEex_GameObject_IsSpriteID }
+--
+-- @summary: Returns whether the given `objectID` is associated with a sprite.
+--
+-- @param { objectID / type=number }: The object id to check.
+--
+-- @param { allowDead / type=boolean / default=false}: Determines whether the sprite associated with `objectID` is allowed to be dead.
+--
+-- @return { type=boolean }: See summary.
+
 function EEex_GameObject_IsSpriteID(objectID, allowDead)
 	return EEex_GameObject_IsSprite(EEex_GameObject_Get(objectID), allowDead)
 end
+
+-- @bubb_doc { EEex_GameObject_GetClass / instance_name=getClass }
+--
+-- @summary: Returns the given `object`'s class.
+--
+-- @self { object / usertype=CGameObject }: The object whose class to fetch.
+--
+-- @return { type=number }: See summary.
 
 function EEex_GameObject_GetClass(object)
 	return object.m_typeAI.m_Class
@@ -116,7 +170,67 @@ CGameObject.getClass = EEex_GameObject_GetClass
 -- Game Object Manipulation --
 ------------------------------
 
--- Directly applies an effect to a game object based on the args table.
+-- @bubb_doc { EEex_GameObject_ApplyEffect / instance_name=applyEffect }
+--
+-- @summary: Applies an effect to the given `object` based on the `args` table.
+--
+-- @self { object / type=CGameObject }: The object to apply the effect to.
+--
+-- @param { args / type=table }:
+--
+--     The table that describes the effect to apply. Valid table keys are as follows:
+--
+--     ["diceSize"]:     As per offset [+0x3C] of .EFF v2.0.
+--     ["duration"]:     As per offset [+0x28] of .EFF v2.0.
+--     ["durationType"]: As per offset [+0x24] of .EFF v2.0.
+--     ["dwFlags"]:      As per offset [+0x20] of .EFF v2.0.
+--     ["effectAmount"]: As per offset [+0x1C] of .EFF v2.0.
+--     ["effectID"]:     As per offset [+0x10] of .EFF v2.0.
+--
+--     ["effectList"]: If 1, adds the effect to the sprite's timed list.
+--                     If 2, adds the effect to the sprite's equipped list.
+--
+--     ["immediateResolve"]: Determines whether the engine immediately applies the effect during the function call,
+--                           or the next time the sprite's effect list is processed.
+--
+--     ["m_casterLevel"]:    As per offset [+0xC8] of .EFF v2.0.
+--     ["m_effectAmount2"]:  As per offset [+0x60] of .EFF v2.0.
+--     ["m_effectAmount3"]:  As per offset [+0x64] of .EFF v2.0.
+--     ["m_effectAmount4"]:  As per offset [+0x68] of .EFF v2.0.
+--     ["m_effectAmount5"]:  As per offset [+0x6C] of .EFF v2.0.
+--     ["m_flags"]:          As per offset [+0x5C] of .EFF v2.0.
+--     ["m_maxLevel"]:       As per offset [+0x58] of .EFF v2.0.
+--     ["m_minLevel"]:       As per offset [+0x54] of .EFF v2.0.
+--     ["m_projectileType"]: As per offset [+0xA0] of .EFF v2.0.
+--     ["m_res2"]:           As per offset [+0x70] of .EFF v2.0.
+--     ["m_res3"]:           As per offset [+0x78] of .EFF v2.0.
+--     ["m_school"]:         As per offset [+0x4C] of .EFF v2.0.
+--     ["m_scriptName"]:     As per offset [+0xA8] of .EFF v2.0.
+--     ["m_secondaryType"]:  As per offset [+0xD0] of .EFF v2.0.
+--     ["m_slotNum"]:        As per offset [+0xA4] of .EFF v2.0.
+--     ["m_sourceFlags"]:    As per offset [+0x9C] of .EFF v2.0.
+--     ["m_sourceRes"]:      As per offset [+0x94] of .EFF v2.0.
+--     ["m_sourceType"]:     As per offset [+0x90] of .EFF v2.0.
+--     ["noSave"]:           If true, the effect bypasses any immunities the sprite might have to its application.
+--     ["numDice"]:          As per offset [+0x38] of .EFF v2.0.
+--     ["probabilityLower"]: As per offset [+0x2E] of .EFF v2.0.
+--     ["probabilityUpper"]: As per offset [+0x2C] of .EFF v2.0.
+--     ["res"]:              As per offset [+0x30] of .EFF v2.0.
+--     ["saveMod"]:          As per offset [+0x44] of .EFF v2.0.
+--     ["savingThrow"]:      As per offset [+0x40] of .EFF v2.0.
+--     ["sourceID"]:         The object id of the effect's source, as per CGameEffect.m_sourceId.
+--
+--     ["sourceTarget"]: The object id of the source's target, as per CGameEffect.m_sourceTarget;
+--                       you might need to set this if the opcode applies additional effects.
+--
+--     ["sourceX"]:    As per offset [+0x80] of .EFF v2.0.
+--     ["sourceY"]:    As per offset [+0x84] of .EFF v2.0.
+--     ["special"]:    As per offset [+0x48] of .EFF v2.0.
+--     ["spellLevel"]: As per offset [+0x18] of .EFF v2.0.
+--     ["targetType"]: As per offset [+0x14] of .EFF v2.0.
+--     ["targetX"]:    As per offset [+0x88] of .EFF v2.0.
+--     ["targetY"]:    As per offset [+0x8C] of .EFF v2.0.
+
 function EEex_GameObject_ApplyEffect(object, args)
 
 	if not object then

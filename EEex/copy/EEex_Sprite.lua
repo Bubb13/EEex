@@ -1,21 +1,63 @@
 
-EEex_DerivedStats_DisabledButtonType = {
-	["BUTTON_STEALTH"] = 0,
-	["BUTTON_THIEVING"] = 1,
-	["BUTTON_CASTSPELL"] = 2,
-	["BUTTON_QUICKSPELL0"] = 3,
-	["BUTTON_QUICKSPELL1"] = 4,
-	["BUTTON_QUICKSPELL2"] = 5,
-	["BUTTON_TURNUNDEAD"] = 6,
-	["BUTTON_DIALOG"] = 7,
-	["BUTTON_USEITEM"] = 8,
-	["BUTTON_QUICKITEM1"] = 9,
-	["BUTTON_BATTLESONG"] = 10,
-	["BUTTON_QUICKITEM2"] = 11,
-	["BUTTON_QUICKITEM3"] = 12,
-	["BUTTON_INNATEBUTTON"] = 13,
-	["SCREEN_INVENTORY"] = 14,
-}
+----------------------
+-- Static Functions --
+----------------------
+
+----------------------
+-- Fetching Sprites --
+----------------------
+
+-- @bubb_doc { EEex_Sprite_GetSelectedID }
+-- @summary:
+--
+--     Returns the objectID associated with the "leader" of the sprites that the player currently has selected and is controlling.
+--
+--     The leader is the party member with the highest portrait slot, (lowest index), or the creature
+--     that was selected first.
+--
+--     If no creatures are currently selected, returns `-1`.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Sprite_GetSelectedID()
+	local node = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_group.m_memberList.m_pNodeHead
+	if not node then return -1 end
+	return node.data
+end
+
+function EEex_Sprite_GetSelected()
+	return EEex_GameObject_Get(EEex_Sprite_GetSelectedID())
+end
+
+function EEex_Sprite_IterateSelectedIDs(func)
+	local node = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_group.m_memberList.m_pNodeHead
+	while node do
+		if func(node.data) then
+			break
+		end
+		node = node.pNext
+	end
+end
+
+function EEex_Sprite_IterateSelected(func)
+	EEex_Sprite_IterateSelectedIDs(function(spriteID)
+		if func(EEex_GameObject_Get(spriteID)) then
+			return true
+		end
+	end)
+end
+
+function EEex_Sprite_GetAllSelectedIDs()
+	local toReturn = {}
+	EEex_Sprite_IterateSelectedIDs(function(spriteID)
+		table.insert(toReturn, spriteID)
+	end)
+	return toReturn
+end
+
+function EEex_Sprite_GetNumCharacters()
+	return EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_nCharacters
+end
 
 function EEex_Sprite_GetInPortrait(portraitIndex)
 	return EEex_GameObject_Get(EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_charactersPortrait:get(portraitIndex))
@@ -24,6 +66,122 @@ end
 function EEex_Sprite_GetInPortraitID(portraitIndex)
 	return EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_charactersPortrait:get(portraitIndex)
 end
+
+----------------------------
+-- / End Static Functions --
+----------------------------
+
+------------------------
+-- Instance Functions --
+------------------------
+
+----------------------
+-- Fetching Sprites --
+----------------------
+
+-- @bubb_doc { EEex_Sprite_ForAllOfTypeInRange, instance_name=forAllOfTypeInRange }
+-- @summary:
+--
+--     Calls `func` for every creature that matches `aiObjectType` around
+--     `sprite` in the given `range`, as per the NumCreature() trigger.
+--
+-- @self { sprite / usertype=CGameSprite }: The sprite to search around.
+--
+-- @param { aiObjectType / usertype=CAIObjectType }:
+--
+--     The AI object type used to filter the objects passed to `func`.
+--     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
+--
+-- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
+--
+-- @param { func / type=function }: The function to call for every creature in the search area.
+--
+-- @param { bCheckForLineOfSight / type=boolean / default=true }:
+--
+--        Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--
+-- @param { bCheckForNonSprites / type=boolean / default=false }:
+--
+--        Determines whether `func` is additionally called for non-sprite objects in the main objects list.
+--
+-- @param { terrainTable / usertype=Array<byte,16> / default=sprite:virtual_GetVisibleTerrainTable() }:
+--
+--        The terrain table to use for determining LOS.
+
+function EEex_Sprite_ForAllOfTypeInRange(sprite, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+
+	local area = sprite.m_pArea
+	if not area then
+		return
+	end
+
+	local spritePos = sprite.m_pos
+	local vertListPos = sprite.m_posVertList
+
+	if sprite.m_listType == VertListType.LIST_FRONT and vertListPos then
+		EEex_RunWithStackManager({
+			{ ["name"] = "resultPtrList", ["struct"] = "CTypedPtrList<CPtrList,long>" } },
+			function(manager)
+				local resultPtrList = manager:getUD("resultPtrList")
+				area:GetAllInRange2(vertListPos, spritePos, aiObjectType, range,
+					terrainTable or sprite:virtual_GetVisibleTerrainTable(),
+					resultPtrList, bCheckForLineOfSight or 1, bCheckForNonSprites or 0)
+				EEex_Utility_IterateCPtrList(resultPtrList, function(objectID)
+					func(EEex_GameObject_Get(objectID))
+				end)
+			end)
+	else
+		area:forAllOfTypeInRange(spritePos.x, spritePos.y, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	end
+end
+CGameSprite.forAllOfTypeInRange = EEex_Sprite_ForAllOfTypeInRange
+
+function EEex_Sprite_ForAllOfTypeStringInRange(sprite, aiObjectTypeString, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
+	sprite:forAllOfTypeInRange(aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	aiObjectType:free()
+end
+CGameSprite.forAllOfTypeStringInRange = EEex_Sprite_ForAllOfTypeStringInRange
+
+function EEex_Sprite_GetAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local toReturn = {}
+	local toReturnI = 1
+	sprite:forAllOfTypeInRange(aiObjectType, range, function(object)
+		toReturn[toReturnI] = object
+		toReturnI = toReturnI + 1
+	end, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	return toReturn
+end
+CGameSprite.getAllOfTypeInRange = EEex_Sprite_GetAllOfTypeInRange
+
+function EEex_Sprite_GetAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
+	local toReturn = sprite:getAllOfTypeInRange(aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	aiObjectType:free()
+	return toReturn
+end
+CGameSprite.getAllOfTypeStringInRange = EEex_Sprite_GetAllOfTypeStringInRange
+
+function EEex_Sprite_CountAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local toReturn = 0
+	sprite:forAllOfTypeInRange(aiObjectType, range, function(object)
+		toReturn = toReturn + 1
+	end, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	return toReturn
+end
+CGameSprite.countAllOfTypeInRange = EEex_Sprite_CountAllOfTypeInRange
+
+function EEex_Sprite_CountAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
+	local toReturn = sprite:countAllOfTypeInRange(aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+	aiObjectType:free()
+	return toReturn
+end
+CGameSprite.countAllOfTypeStringInRange = EEex_Sprite_CountAllOfTypeStringInRange
+
+--------------------
+-- Sprite Details --
+--------------------
 
 function EEex_Sprite_GetPortraitIndex(sprite)
 	local spriteID = sprite.m_id
@@ -36,10 +194,6 @@ function EEex_Sprite_GetPortraitIndex(sprite)
 	return -1
 end
 CGameSprite.getPortraitIndex = EEex_Sprite_GetPortraitIndex
-
-function EEex_Sprite_GetNumCharacters()
-	return EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_nCharacters
-end
 
 function EEex_Sprite_GetActiveStats(sprite)
 	return sprite.m_bAllowEffectListCall and sprite.m_derivedStats or sprite.m_tempStats
@@ -152,123 +306,30 @@ function EEex_Sprite_GetCasterLevelForSpell(sprite, spellResRef, includeWildMage
 end
 CGameSprite.getCasterLevelForSpell = EEex_Sprite_GetCasterLevelForSpell
 
--- @bubb_doc
--- @summary Calls {func} for every creature that matches {aiObjectType} around {sprite} in the given {range}, as per the NumCreature() trigger.
---
--- @self  {sprite, usertype=CGameSprite}
---        The sprite to search around.
---
--- @param {aiObjectType, usertype=CAIObjectType}
---        The aiObjectType used to filter the objects passed to {func}.
---        Most commonly retrieved from EEex_Object_ParseString(). Remember to call :free().
---
--- @param {range, type=number}
---        The radius to search around ({centerX}, {centerY}). 448 is a sprite's default visual range.
---
--- @param {func, type=function}
---        The function to call for every creature in the search area.
---
--- @param {bCheckForLineOfSight, type=boolean, default=true}
---        Determines whether LOS is required from ({centerX}, {centerY}) to considered objects.
---
--- @param {bCheckForNonSprites, type=boolean, default=false}
---        Determines whether {func} is additionally called for non-sprite objects in the main objects list.
---
--- @param {terrainTable, usertype=Array<byte,16>, default=CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE}
---        The terrain table to use for determining LOS.
-
-function EEex_Sprite_ForAllOfTypeInRange(sprite, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-
-	local area = sprite.m_pArea
-	if not area then
-		return
-	end
-
-	local spritePos = sprite.m_pos
-	local vertListPos = sprite.m_posVertList
-
-	if sprite.m_listType == VertListType.LIST_FRONT and vertListPos then
-		EEex_RunWithStackManager({
-			{ ["name"] = "center", ["struct"] = "CPoint", ["constructor"] = { ["variant"] = "copy", ["args"] = { spritePos } } },
-			{ ["name"] = "resultPtrList", ["struct"] = "CTypedPtrList<CPtrList,long>" } },
-			function(manager)
-				local resultPtrList = manager:getUD("resultPtrList")
-				area:GetAllInRange2(vertListPos, manager:getUD("center"), aiObjectType, range,
-					terrainTable or sprite:virtual_GetVisibleTerrainTable(),
-					resultPtrList, bCheckForLineOfSight or 1, bCheckForNonSprites or 0)
-				EEex_Utility_IterateCPtrList(resultPtrList, function(objectID)
-					func(EEex_GameObject_CastUT(EEex_GameObject_Get(objectID)))
-				end)
-			end)
-	else
-		area:forAllOfTypeInRange(spritePos.x, spritePos.y, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	end
-end
-CGameSprite.forAllOfTypeInRange = EEex_Sprite_ForAllOfTypeInRange
-
-function EEex_Sprite_ForAllOfTypeStringInRange(sprite, aiObjectTypeString, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
-	sprite:forAllOfTypeInRange(aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	aiObjectType:free()
-end
-CGameSprite.forAllOfTypeStringInRange = EEex_Sprite_ForAllOfTypeStringInRange
-
-function EEex_Sprite_GetAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	local toReturn = {}
-	local toReturnI = 1
-	sprite:forAllOfTypeInRange(aiObjectType, range, function(object)
-		toReturn[toReturnI] = object
-		toReturnI = toReturnI + 1
-	end, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	return toReturn
-end
-CGameSprite.getAllOfTypeInRange = EEex_Sprite_GetAllOfTypeInRange
-
-function EEex_Sprite_GetAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
-	local toReturn = sprite:getAllOfTypeInRange(aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	aiObjectType:free()
-	return toReturn
-end
-CGameSprite.getAllOfTypeStringInRange = EEex_Sprite_GetAllOfTypeStringInRange
-
-function EEex_Sprite_CountAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	local toReturn = 0
-	sprite:forAllOfTypeInRange(aiObjectType, range, function(object)
-		toReturn = toReturn + 1
-	end, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	return toReturn
-end
-CGameSprite.countAllOfTypeInRange = EEex_Sprite_CountAllOfTypeInRange
-
-function EEex_Sprite_CountAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	local aiObjectType = EEex_Object_ParseString(aiObjectTypeString)
-	local toReturn = sprite:countAllOfTypeInRange(aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
-	aiObjectType:free()
-	return toReturn
-end
-CGameSprite.countAllOfTypeStringInRange = EEex_Sprite_CountAllOfTypeStringInRange
+------------------------------
+-- / End Instance Functions --
+------------------------------
 
 ---------------
 -- Listeners --
 ---------------
 
-EEex_Sprite_QuickListsCheckedListeners = {}
+EEex_Sprite_Private_QuickListsCheckedListeners = {}
 
 function EEex_Sprite_AddQuickListsCheckedListener(listener)
-	table.insert(EEex_Sprite_QuickListsCheckedListeners, listener)
+	table.insert(EEex_Sprite_Private_QuickListsCheckedListeners, listener)
 end
 
-EEex_Sprite_QuickListCountsResetListeners = {}
+EEex_Sprite_Private_QuickListCountsResetListeners = {}
 
 function EEex_Sprite_AddQuickListCountsResetListener(listener)
-	table.insert(EEex_Sprite_QuickListCountsResetListeners, listener)
+	table.insert(EEex_Sprite_Private_QuickListCountsResetListeners, listener)
 end
 
-EEex_Sprite_MarshalHandlers = {}
+EEex_Sprite_Private_MarshalHandlers = {}
 
 function EEex_Sprite_AddMarshalHandlers(handlerName, exporter, importer)
-	EEex_Sprite_MarshalHandlers[handlerName] = {
+	EEex_Sprite_Private_MarshalHandlers[handlerName] = {
 		["exporter"] = exporter,
 		["importer"] = importer,
 	}
@@ -285,13 +346,13 @@ end
 function EEex_Sprite_Hook_OnCheckQuickLists(sprite, abilityId, changeAmount)
 	local resref = abilityId.m_res:get()
 	if changeAmount == 0 or resref == "" then return end
-	for _, listener in ipairs(EEex_Sprite_QuickListsCheckedListeners) do
+	for _, listener in ipairs(EEex_Sprite_Private_QuickListsCheckedListeners) do
 		listener(sprite, resref, changeAmount)
 	end
 end
 
 function EEex_Sprite_Hook_OnResetQuickListCounts(sprite)
-	for _, listener in ipairs(EEex_Sprite_QuickListCountsResetListeners) do
+	for _, listener in ipairs(EEex_Sprite_Private_QuickListCountsResetListeners) do
 		listener(sprite)
 	end
 end
@@ -304,7 +365,7 @@ function EEex_Sprite_Hook_OnDestruct(sprite)
 
 end
 
-EEex_Sprite_MarshalHandlerFieldType = {
+EEex_Sprite_Private_MarshalHandlerFieldType = {
 	["TABLE_END"]   = 0,
 	["TABLE_START"] = 1,
 	["STRING"]      = 2,
@@ -318,40 +379,40 @@ EEex_Sprite_MarshalHandlerFieldType = {
 	["INTU64"]      = 10,
 }
 
-EEex_Sprite_CurrentSpriteMarshalHandlerData = {}
-EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize = 0
-EEex_Sprite_CurrentSpriteMarshalHandlerData_TableToMeta = {}
-EEex_Sprite_CurrentSpriteMarshalHandlerData_MemorySize = 0
+EEex_Sprite_Private_CurrentSpriteMarshalHandlerData = {}
+EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize = 0
+EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta = {}
+EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = 0
 
-function EEex_Sprite_DetermineSpriteMarshalHandlerNumberInfo(number)
+function EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(number)
 	if number >= 0 then
 		if number <= 0xFF then
-			return EEex_Sprite_MarshalHandlerFieldType.INTU8, EEex_Write8, 1
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU8, EEex_Write8, 1
 		elseif number <= 0xFFFF then
-			return EEex_Sprite_MarshalHandlerFieldType.INTU16, EEex_Write16, 2
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU16, EEex_Write16, 2
 		elseif number <= 0xFFFFFFFF then
-			return EEex_Sprite_MarshalHandlerFieldType.INTU32, EEex_Write32, 4
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU32, EEex_Write32, 4
 		elseif number <= 0xFFFFFFFFFFFFFFFF then
-			return EEex_Sprite_MarshalHandlerFieldType.INTU64, EEex_Write64, 8
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU64, EEex_Write64, 8
 		else
 			EEex_Error("Number too large to be marshalled in creature handler")
 		end
 	else
 		if number >= -0x100 then
-			return EEex_Sprite_MarshalHandlerFieldType.INT8, EEex_Write8, 1
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INT8, EEex_Write8, 1
 		elseif number >= -0x10000 then
-			return EEex_Sprite_MarshalHandlerFieldType.INT16, EEex_Write16, 2
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INT16, EEex_Write16, 2
 		elseif number >= -0x100000000 then
-			return EEex_Sprite_MarshalHandlerFieldType.INT32, EEex_Write32, 4
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INT32, EEex_Write32, 4
 		elseif number >= -0x10000000000000000 then
-			return EEex_Sprite_MarshalHandlerFieldType.INT64, EEex_Write64, 8
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INT64, EEex_Write64, 8
 		else
 			EEex_Error("Number too large to be marshalled in creature handler")
 		end
 	end
 end
 
-function EEex_Sprite_CalculateSpriteMarshalHandlerDataSize(t)
+function EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(t)
 
 	local accumulator = 0
 	local lengthTypeSwitch = {
@@ -359,7 +420,7 @@ function EEex_Sprite_CalculateSpriteMarshalHandlerDataSize(t)
 			return #v + 1
 		end,
 		["number"] = function(v)
-			local _, _, writeAdvance = EEex_Sprite_DetermineSpriteMarshalHandlerNumberInfo(v)
+			local _, _, writeAdvance = EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(v)
 			return writeAdvance
 		end,
 	}
@@ -387,7 +448,7 @@ function EEex_Sprite_CalculateSpriteMarshalHandlerDataSize(t)
 			toProcess[2] = k
 
 			if stackTop == 1 then
-				local handlerName = EEex_Sprite_CurrentSpriteMarshalHandlerData_TableToMeta[v].handlerName
+				local handlerName = EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta[v].handlerName
 				-- HANDLER_STRING_LENGTH
 				accumulator = accumulator + #handlerName + 1
 				stackTop = stackTop + 1
@@ -423,10 +484,10 @@ function EEex_Sprite_CalculateSpriteMarshalHandlerDataSize(t)
 	return accumulator
 end
 
-function EEex_Sprite_WriteSpriteMarshalHandlerData(memoryPtr, t)
+function EEex_Sprite_Private_WriteSpriteMarshalHandlerData(memoryPtr, t)
 
 	local writeNumber = function(number)
-		local typeByte, writeFunc, writeAdvance = EEex_Sprite_DetermineSpriteMarshalHandlerNumberInfo(number)
+		local typeByte, writeFunc, writeAdvance = EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(number)
 		EEex_Write8(memoryPtr, typeByte)
 		memoryPtr = memoryPtr + 1
 		writeFunc(memoryPtr, number)
@@ -435,14 +496,14 @@ function EEex_Sprite_WriteSpriteMarshalHandlerData(memoryPtr, t)
 
 	local writeTypeSwitch = {
 		["string"] = function(v)
-			EEex_Write8(memoryPtr, EEex_Sprite_MarshalHandlerFieldType.STRING)
+			EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.STRING)
 			memoryPtr = memoryPtr + 1
 			EEex_WriteString(memoryPtr, v)
 			memoryPtr = memoryPtr + #v + 1
 		end,
 		["number"] = writeNumber,
 		["table"] = function(v)
-			EEex_Write8(memoryPtr, EEex_Sprite_MarshalHandlerFieldType.TABLE_START)
+			EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_START)
 			memoryPtr = memoryPtr + 1
 		end
 	}
@@ -466,7 +527,7 @@ function EEex_Sprite_WriteSpriteMarshalHandlerData(memoryPtr, t)
 			toProcess[2] = k
 
 			if stackTop == 1 then
-				local handlerName = EEex_Sprite_CurrentSpriteMarshalHandlerData_TableToMeta[v].handlerName
+				local handlerName = EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta[v].handlerName
 				EEex_WriteString(memoryPtr, handlerName)
 				memoryPtr = memoryPtr + #handlerName + 1
 			else
@@ -481,7 +542,7 @@ function EEex_Sprite_WriteSpriteMarshalHandlerData(memoryPtr, t)
 			end
 		end
 
-		EEex_Write8(memoryPtr, EEex_Sprite_MarshalHandlerFieldType.TABLE_END)
+		EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_END)
 		memoryPtr = memoryPtr + 1
 
 		processStack[stackTop] = nil
@@ -499,14 +560,14 @@ function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 		if type(toExport) ~= "table" then
 			EEex_Error("Creature marshal handler must export table")
 		end
-		EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize = EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize + 1
-		EEex_Sprite_CurrentSpriteMarshalHandlerData[EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize] = toExport
-		EEex_Sprite_CurrentSpriteMarshalHandlerData_TableToMeta[toExport] = {
+		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize = EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize + 1
+		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData[EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize] = toExport
+		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta[toExport] = {
 			["handlerName"] = handlerName,
 		}
 	end
 
-	for handlerName, handler in pairs(EEex_Sprite_MarshalHandlers) do
+	for handlerName, handler in pairs(EEex_Sprite_Private_MarshalHandlers) do
 		addTableExport(handlerName, handler.exporter(sprite))
 	end
 
@@ -515,24 +576,24 @@ function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 		addTableExport(handlerName, toExport)
 	end
 
-	local extraMarshalSize = 8 + EEex_Sprite_CalculateSpriteMarshalHandlerDataSize(EEex_Sprite_CurrentSpriteMarshalHandlerData)
-	EEex_Sprite_CurrentSpriteMarshalHandlerData_MemorySize = (extraMarshalSize ~= 8 and
+	local extraMarshalSize = 8 + EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(EEex_Sprite_Private_CurrentSpriteMarshalHandlerData)
+	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = (extraMarshalSize ~= 8 and
 		EEex_RoundUp(extraMarshalSize, CGameEffectBase.sizeof)
 		or 0) - 8
-	return EEex_Sprite_CurrentSpriteMarshalHandlerData_MemorySize + 8
+	return EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize + 8
 end
 
 function EEex_Sprite_Hook_WriteExtraEffectListMarshal(memory)
-	if EEex_Sprite_CurrentSpriteMarshalHandlerData_MemorySize > 0 then
+	if EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize > 0 then
 		EEex_WriteLString(memory, "X-BIV1.0", 8)
 		local marshalPtr = memory + 8
-		EEex_Memset(marshalPtr, 0, EEex_Sprite_CurrentSpriteMarshalHandlerData_MemorySize)
-		EEex_Sprite_WriteSpriteMarshalHandlerData(marshalPtr, EEex_Sprite_CurrentSpriteMarshalHandlerData)
+		EEex_Memset(marshalPtr, 0, EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize)
+		EEex_Sprite_Private_WriteSpriteMarshalHandlerData(marshalPtr, EEex_Sprite_Private_CurrentSpriteMarshalHandlerData)
 	end
-	EEex_Sprite_CurrentSpriteMarshalHandlerData = {}
-	EEex_Sprite_CurrentSpriteMarshalHandlerData_TableSize = 0
-	EEex_Sprite_CurrentSpriteMarshalHandlerData_TableToMeta = {}
-	EEex_Sprite_CurrentSpriteMarshalHandlerData_MemorySize = 0
+	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData = {}
+	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize = 0
+	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta = {}
+	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = 0
 end
 
 function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
@@ -553,47 +614,47 @@ function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 		memory = memory + #handlerStr + 1
 
 		local fieldReadSwitch = {
-			[EEex_Sprite_MarshalHandlerFieldType.STRING] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.STRING] = function()
 				local read = EEex_ReadString(memory)
 				memory = memory + #read + 1
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INT8] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INT8] = function()
 				local read = EEex_Read8(memory)
 				memory = memory + 1
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INTU8] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU8] = function()
 				local read = EEex_ReadU8(memory)
 				memory = memory + 1
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INT16] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INT16] = function()
 				local read = EEex_Read16(memory)
 				memory = memory + 2
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INTU16] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU16] = function()
 				local read = EEex_ReadU16(memory)
 				memory = memory + 2
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INT32] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INT32] = function()
 				local read = EEex_Read32(memory)
 				memory = memory + 4
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INTU32] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU32] = function()
 				local read = EEex_ReadU32(memory)
 				memory = memory + 4
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INT64] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INT64] = function()
 				local read = EEex_Read64(memory)
 				memory = memory + 8
 				return read
 			end,
-			[EEex_Sprite_MarshalHandlerFieldType.INTU64] = function()
+			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU64] = function()
 				local read = EEex_ReadU64(memory)
 				memory = memory + 8
 				return read
@@ -608,7 +669,7 @@ function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 			local keyFieldType = EEex_Read8(memory)
 			memory = memory + 1
 
-			if keyFieldType == EEex_Sprite_MarshalHandlerFieldType.TABLE_END then
+			if keyFieldType == EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_END then
 				if tableStackTop == 0 then
 					break
 				end
@@ -618,7 +679,7 @@ function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 				local key = fieldReadSwitch[keyFieldType]()
 				local valueFieldType = EEex_Read8(memory)
 				memory = memory + 1
-				if valueFieldType == EEex_Sprite_MarshalHandlerFieldType.TABLE_START then
+				if valueFieldType == EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_START then
 					local subTable = {}
 					toFill[key] = subTable
 					tableStackTop = tableStackTop + 1
@@ -630,7 +691,7 @@ function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 			end
 		end
 
-		local handlers = EEex_Sprite_MarshalHandlers[handlerStr]
+		local handlers = EEex_Sprite_Private_MarshalHandlers[handlerStr]
 		if handlers then
 			handlers.importer(sprite, toFill)
 		else

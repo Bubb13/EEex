@@ -24,36 +24,38 @@ function EEex_Area_SetVariableString(area, variableName, value)
 end
 CGameArea.setVariableString = EEex_Area_SetVariableString
 
--- @bubb_doc
--- @summary Calls {func} for every creature that matches {aiObjectType} around ({centerX}, {centerY}) in the given {range}, as per the NumCreature() trigger.
+-- @bubb_doc { EEex_Area_ForAllOfTypeInRange / instance_name=forAllOfTypeInRange }
+-- @summary:
 --
--- @self  {area, usertype=CGameArea}
---        The area to search.
+--     Calls `func` for every creature that matches `aiObjectType` around (`centerX`, `centerY`)
+--     in the given `range`, as per the NumCreature() trigger.
 --
--- @param {centerX, type=number}
---        The x coordinate to use as the center of the search radius.
+-- @self { area / usertype=CGameArea }: The area to search.
 --
--- @param {centerY, type=number}
---        The y coordinate to use as the center of the search radius.
+-- @param { centerX / type=number }: The x coordinate to use as the center of the search radius.
 --
--- @param {aiObjectType, usertype=CAIObjectType}
---        The aiObjectType used to filter the objects passed to {func}.
---        Most commonly retrieved from EEex_Object_ParseString(). Remember to call :free().
+-- @param { centerY / type=number }: The y coordinate to use as the center of the search radius.
 --
--- @param {range, type=number}
---        The radius to search around ({centerX}, {centerY}). 448 is a sprite's default visual range.
+-- @param { aiObjectType / usertype=CAIObjectType }:
 --
--- @param {func, type=function}
---        The function to call for every creature in the search area.
+--     The AI object type used to filter the objects passed to `func`.
+--     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
 --
--- @param {bCheckForLineOfSight, type=boolean, default=true}
---        Determines whether LOS is required from ({centerX}, {centerY}) to considered objects.
+-- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
 --
--- @param {bCheckForNonSprites, type=boolean, default=false}
---        Determines whether {func} is additionally called for non-sprite objects in the main objects list.
+-- @param { func / type=function }: The function to call for every creature in the search area.
 --
--- @param {terrainTable, usertype=Array<byte,16>, default=CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE}
---        The terrain table to use for determining LOS.
+-- @param { bCheckForLineOfSight / type=boolean / default=true }:
+--
+--     Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--
+-- @param { bCheckForNonSprites / type=boolean / default=false }:
+--
+--     Determines whether `func` is additionally called for non-sprite objects in the main objects list.
+--
+-- @param { terrainTable / usertype=Array<byte,16> / default=CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE }:
+--
+--     The terrain table to use for determining LOS.
 
 function EEex_Area_ForAllOfTypeInRange(area, centerX, centerY, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
 	EEex_RunWithStackManager({
@@ -64,7 +66,7 @@ function EEex_Area_ForAllOfTypeInRange(area, centerX, centerY, aiObjectType, ran
 			area:GetAllInRange1(manager:getUD("center"), aiObjectType, range, terrainTable or CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE,
 				resultPtrList, bCheckForLineOfSight or 1, bCheckForNonSprites or 0)
 			EEex_Utility_IterateCPtrList(resultPtrList, function(objectID)
-				func(EEex_GameObject_CastUT(EEex_GameObject_Get(objectID)))
+				func(EEex_GameObject_Get(objectID))
 			end)
 		end)
 end
