@@ -27,8 +27,8 @@ CGameArea.setVariableString = EEex_Area_SetVariableString
 -- @bubb_doc { EEex_Area_ForAllOfTypeInRange / instance_name=forAllOfTypeInRange }
 -- @summary:
 --
---     Calls `func` for every creature that matches `aiObjectType` around (`centerX`, `centerY`)
---     in the given `range`, as per the `NumCreature()` trigger.
+--     Calls ``func`` for every creature that matches ``aiObjectType`` around (``centerX``, ``centerY``)
+--     in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { area / usertype=CGameArea }: The area to search.
 --
@@ -38,16 +38,16 @@ CGameArea.setVariableString = EEex_Area_SetVariableString
 --
 -- @param { aiObjectType / usertype=CAIObjectType }:
 --
---     The AI object type used to filter the objects passed to `func`.
---     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
+--     The AI object type used to filter the objects passed to ``func``. @EOL
+--     Most commonly retrieved from ``EEex_Object_ParseString()``. Remember to call ``:free()``.
 --
--- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around (``centerX``, ``centerY``). ``448`` is a sprite's default visual range.
 --
 -- @param { func / type=function }: The function to call for every creature in the search area.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--     Determines whether LOS is required from (``centerX``, ``centerY``) to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -75,8 +75,8 @@ CGameArea.forAllOfTypeInRange = EEex_Area_ForAllOfTypeInRange
 -- @bubb_doc { EEex_Area_ForAllOfTypeStringInRange / instance_name=forAllOfTypeStringInRange }
 -- @summary:
 --
---     Calls `func` for every creature that matches `aiObjectTypeString` around (`centerX`, `centerY`)
---     in the given `range`, as per the `NumCreature()` trigger.
+--     Calls ``func`` for every creature that matches ``aiObjectTypeString`` around (``centerX``, ``centerY``)
+--     in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { area / usertype=CGameArea }: The area to search.
 --
@@ -86,16 +86,16 @@ CGameArea.forAllOfTypeInRange = EEex_Area_ForAllOfTypeInRange
 --
 -- @param { aiObjectTypeString / type=string }:
 --
---     The AI object type string used to filter the objects passed to `func`.
---     Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return.
+--     The AI object type string used to filter the objects passed to ``func``. @EOL
+--     Automatically parsed by ``EEex_Object_ParseString()``; the resulting object is freed before return.
 --
--- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around (``centerX``, ``centerY``). ``448`` is a sprite's default visual range.
 --
 -- @param { func / type=function }: The function to call for every creature in the search area.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--     Determines whether LOS is required from (``centerX``, ``centerY``) to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -115,8 +115,8 @@ CGameArea.forAllOfTypeStringInRange = EEex_Area_ForAllOfTypeStringInRange
 -- @bubb_doc { EEex_Area_GetAllOfTypeInRange / instance_name=getAllOfTypeInRange }
 -- @summary:
 --
---     Returns a table populated by every creature that matches `aiObjectType` around (`centerX`, `centerY`)
---     in the given `range`, as per the `NumCreature()` trigger.
+--     Returns a table populated by every creature that matches ``aiObjectType`` around (``centerX``, ``centerY``)
+--     in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { area / usertype=CGameArea }: The area to search.
 --
@@ -126,14 +126,14 @@ CGameArea.forAllOfTypeStringInRange = EEex_Area_ForAllOfTypeStringInRange
 --
 -- @param { aiObjectType / usertype=CAIObjectType }:
 --
---     The AI object type used to filter the objects passed to `func`.
---     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
+--     The AI object type used to filter the objects passed to ``func``. @EOL
+--     Most commonly retrieved from ``EEex_Object_ParseString()``. Remember to call ``:free()``.
 --
--- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around (``centerX``, ``centerY``). ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--     Determines whether LOS is required from (``centerX``, ``centerY``) to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -159,8 +159,8 @@ CGameArea.getAllOfTypeInRange = EEex_Area_GetAllOfTypeInRange
 -- @bubb_doc { EEex_Area_GetAllOfTypeStringInRange / instance_name=getAllOfTypeStringInRange }
 -- @summary:
 --
---     Returns a table populated by every creature that matches `aiObjectTypeString` around (`centerX`, `centerY`)
---     in the given `range`, as per the `NumCreature()` trigger.
+--     Returns a table populated by every creature that matches ``aiObjectTypeString`` around (``centerX``, ``centerY``)
+--     in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { area / usertype=CGameArea }: The area to search.
 --
@@ -170,14 +170,14 @@ CGameArea.getAllOfTypeInRange = EEex_Area_GetAllOfTypeInRange
 --
 -- @param { aiObjectTypeString / type=string }:
 --
---     The AI object type string used to filter the objects added to the return table.
---     Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return.
+--     The AI object type string used to filter the objects added to the return table. @EOL
+--     Automatically parsed by ``EEex_Object_ParseString()``; the resulting object is freed before return.
 --
--- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around (``centerX``, ``centerY``). ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--     Determines whether LOS is required from (``centerX``, ``centerY``) to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -200,8 +200,8 @@ CGameArea.getAllOfTypeStringInRange = EEex_Area_GetAllOfTypeStringInRange
 -- @bubb_doc { EEex_Area_CountAllOfTypeInRange / instance_name=countAllOfTypeInRange }
 -- @summary:
 --
---     Returns the number of creatures that match `aiObjectType` around (`centerX`, `centerY`)
---     in the given `range`, as per the `NumCreature()` trigger.
+--     Returns the number of creatures that match ``aiObjectType`` around (``centerX``, ``centerY``)
+--     in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { area / usertype=CGameArea }: The area to search.
 --
@@ -211,14 +211,14 @@ CGameArea.getAllOfTypeStringInRange = EEex_Area_GetAllOfTypeStringInRange
 --
 -- @param { aiObjectType / usertype=CAIObjectType }:
 --
---     The AI object type used to filter the objects passed to `func`.
---     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
+--     The AI object type used to filter the objects passed to ``func``. @EOL
+--     Most commonly retrieved from ``EEex_Object_ParseString()``. Remember to call ``:free()``.
 --
--- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around (``centerX``, ``centerY``). ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--     Determines whether LOS is required from (``centerX``, ``centerY``) to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -242,8 +242,8 @@ CGameArea.countAllOfTypeInRange = EEex_Area_CountAllOfTypeInRange
 -- @bubb_doc { EEex_Area_CountAllOfTypeStringInRange / instance_name=countAllOfTypeStringInRange }
 -- @summary:
 --
---     Returns the number of creatures that match `aiObjectTypeString` around (`centerX`, `centerY`)
---     in the given `range`, as per the `NumCreature()` trigger.
+--     Returns the number of creatures that match ``aiObjectTypeString`` around (``centerX``, ``centerY``)
+--     in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { area / usertype=CGameArea }: The area to search.
 --
@@ -253,14 +253,14 @@ CGameArea.countAllOfTypeInRange = EEex_Area_CountAllOfTypeInRange
 --
 -- @param { aiObjectTypeString / type=string }:
 --
---     The AI object type string used to filter the objects added to the return table.
---     Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return.
+--     The AI object type string used to filter the objects added to the return table. @EOL
+--     Automatically parsed by ``EEex_Object_ParseString()``; the resulting object is freed before return.
 --
--- @param { range / type=number }: The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around (``centerX``, ``centerY``). ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from (`centerX`, `centerY`) to considered objects.
+--     Determines whether LOS is required from (``centerX``, ``centerY``) to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --

@@ -15,7 +15,7 @@
 --     The leader is the party member with the highest portrait slot, (lowest index), or the creature
 --     that was selected first.
 --
---     If no creatures are currently selected, returns `-1`.
+--     If no creatures are currently selected, returns ``-1``.
 --
 -- @return { type=number }: See summary.
 
@@ -33,7 +33,7 @@ end
 --     The leader is the party member with the highest portrait slot, (lowest index), or the creature
 --     that was selected first.
 --
---     If no creatures are currently selected, returns `nil`.
+--     If no creatures are currently selected, returns ``nil``.
 --
 -- @return { type=CGameSprite|nil }: See summary.
 
@@ -45,8 +45,8 @@ end
 --
 -- @summary:
 --
---     Calls `func` for every sprite the player currently has selected and is controlling, (passing the sprite's object id).
---     Return `true` from `func` to stop iteration.
+--     Calls ``func`` for every sprite the player currently has selected and is controlling, (passing the sprite's object id).
+--     Return ``true`` from ``func`` to stop iteration.
 --
 -- @param { func / type=function }: The function to call.
 
@@ -64,8 +64,8 @@ end
 --
 -- @summary:
 --
---     Calls `func` for every sprite the player currently has selected and is controlling, (passing the sprite).
---     Return `true` from `func` to stop iteration.
+--     Calls ``func`` for every sprite the player currently has selected and is controlling, (passing the sprite).
+--     Return ``true`` from ``func`` to stop iteration.
 --
 -- @param { func / type=function }: The function to call.
 
@@ -103,7 +103,7 @@ end
 
 -- @bubb_doc { EEex_Sprite_GetInPortrait }
 --
--- @summary: Returns the sprite of the party member in the given `portraitIndex`, or `nil` if none exists.
+-- @summary: Returns the sprite of the party member in the given ``portraitIndex``, or ``nil`` if none exists.
 --
 -- @param { portraitIndex / type=number }: The portrait index of the sprite to fetch; valid values are [0-5].
 --
@@ -115,7 +115,7 @@ end
 
 -- @bubb_doc { EEex_Sprite_GetInPortraitID }
 --
--- @summary: Returns the object id of the party member in the given `portraitIndex`, or `-1` if none exists.
+-- @summary: Returns the object id of the party member in the given ``portraitIndex``, or ``-1`` if none exists.
 --
 -- @param { portraitIndex / type=number }: The portrait index of the sprite to fetch; valid values are [0-5].
 --
@@ -140,23 +140,23 @@ end
 -- @bubb_doc { EEex_Sprite_ForAllOfTypeInRange / instance_name=forAllOfTypeInRange }
 -- @summary:
 --
---     Calls `func` for every creature that matches `aiObjectType` around
---     `sprite` in the given `range`, as per the `NumCreature()` trigger.
+--     Calls ``func`` for every creature that matches ``aiObjectType`` around
+--     ``sprite`` in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { sprite / usertype=CGameSprite }: The sprite to search around.
 --
 -- @param { aiObjectType / usertype=CAIObjectType }:
 --
---     The AI object type used to filter the objects passed to `func`.
---     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
+--     The AI object type used to filter the objects passed to ``func``. @EOL
+--     Most commonly retrieved from ``EEex_Object_ParseString()``. Remember to call ``:free()``.
 --
--- @param { range / type=number }: The radius to search around `sprite`. `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around ``sprite``. ``448`` is a sprite's default visual range.
 --
 -- @param { func / type=function }: The function to call for every creature in the search area.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from `sprite` to considered objects.
+--     Determines whether LOS is required from ``sprite`` to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -197,23 +197,23 @@ CGameSprite.forAllOfTypeInRange = EEex_Sprite_ForAllOfTypeInRange
 -- @bubb_doc { EEex_Sprite_ForAllOfTypeStringInRange / instance_name=forAllOfTypeStringInRange }
 -- @summary:
 --
---     Calls `func` for every creature that matches `aiObjectTypeString` around
---     `sprite` in the given `range`, as per the `NumCreature()` trigger.
+--     Calls ``func`` for every creature that matches ``aiObjectTypeString`` around
+--     ``sprite`` in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { sprite / usertype=CGameSprite }: The sprite to search around.
 --
 -- @param { aiObjectTypeString / type=string }:
 --
---     The AI object type string used to filter the objects passed to `func`.
---     Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return.
+--     The AI object type string used to filter the objects passed to ``func``. @EOL
+--     Automatically parsed by ``EEex_Object_ParseString()``; the resulting object is freed before return.
 --
--- @param { range / type=number }: The radius to search around `sprite`. `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around ``sprite``. ``448`` is a sprite's default visual range.
 --
 -- @param { func / type=function }: The function to call for every creature in the search area.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from `sprite` to considered objects.
+--     Determines whether LOS is required from ``sprite`` to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -233,21 +233,21 @@ CGameSprite.forAllOfTypeStringInRange = EEex_Sprite_ForAllOfTypeStringInRange
 -- @bubb_doc { EEex_Sprite_GetAllOfTypeInRange / instance_name=getAllOfTypeInRange }
 -- @summary:
 --
---     Returns a table populated by every creature that matches `aiObjectType` around
---     `sprite` in the given `range`, as per the `NumCreature()` trigger.
+--     Returns a table populated by every creature that matches ``aiObjectType`` around
+--     ``sprite`` in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { sprite / usertype=CGameSprite }: The sprite to search around.
 --
 -- @param { aiObjectType / usertype=CAIObjectType }:
 --
---     The AI object type used to filter the objects passed to `func`.
---     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
+--     The AI object type used to filter the objects passed to ``func``. @EOL
+--     Most commonly retrieved from ``EEex_Object_ParseString()``. Remember to call ``:free()``.
 --
--- @param { range / type=number }: The radius to search around `sprite`. `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around ``sprite``. ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from `sprite` to considered objects.
+--     Determines whether LOS is required from ``sprite`` to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -273,21 +273,21 @@ CGameSprite.getAllOfTypeInRange = EEex_Sprite_GetAllOfTypeInRange
 -- @bubb_doc { EEex_Sprite_GetAllOfTypeStringInRange / instance_name=getAllOfTypeStringInRange }
 -- @summary:
 --
---     Returns a table populated by every creature that matches `aiObjectTypeString` around
---     `sprite` in the given `range`, as per the `NumCreature()` trigger.
+--     Returns a table populated by every creature that matches ``aiObjectTypeString`` around
+--     ``sprite`` in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { sprite / usertype=CGameSprite }: The sprite to search around.
 --
 -- @param { aiObjectTypeString / type=string }:
 --
---     The AI object type string used to filter the objects added to the return table.
---     Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return.
+--     The AI object type string used to filter the objects added to the return table. @EOL
+--     Automatically parsed by ``EEex_Object_ParseString()``; the resulting object is freed before return.
 --
--- @param { range / type=number }: The radius to search around `sprite`. `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around ``sprite``. ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from `sprite` to considered objects.
+--     Determines whether LOS is required from ``sprite`` to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -310,21 +310,21 @@ CGameSprite.getAllOfTypeStringInRange = EEex_Sprite_GetAllOfTypeStringInRange
 -- @bubb_doc { EEex_Sprite_CountAllOfTypeInRange / instance_name=countAllOfTypeInRange }
 -- @summary:
 --
---     Returns the number of creatures that match `aiObjectType` around
---     `sprite` in the given `range`, as per the `NumCreature()` trigger.
+--     Returns the number of creatures that match ``aiObjectType`` around
+--     ``sprite`` in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { sprite / usertype=CGameSprite }: The sprite to search around.
 --
 -- @param { aiObjectType / usertype=CAIObjectType }:
 --
---     The AI object type used to filter the objects passed to `func`.
---     Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`.
+--     The AI object type used to filter the objects passed to ``func``. @EOL
+--     Most commonly retrieved from ``EEex_Object_ParseString()``. Remember to call ``:free()``.
 --
--- @param { range / type=number }: The radius to search around `sprite`. `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around ``sprite``. ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from `sprite` to considered objects.
+--     Determines whether LOS is required from ``sprite`` to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -348,21 +348,21 @@ CGameSprite.countAllOfTypeInRange = EEex_Sprite_CountAllOfTypeInRange
 -- @bubb_doc { EEex_Sprite_CountAllOfTypeStringInRange / instance_name=countAllOfTypeStringInRange }
 -- @summary:
 --
---     Returns the number of creatures that match `aiObjectTypeString` around
---     `sprite` in the given `range`, as per the `NumCreature()` trigger.
+--     Returns the number of creatures that match ``aiObjectTypeString`` around
+--     ``sprite`` in the given ``range``, as per the ``NumCreature()`` trigger.
 --
 -- @self { sprite / usertype=CGameSprite }: The sprite to search around.
 --
 -- @param { aiObjectTypeString / type=string }:
 --
---     The AI object type string used to filter the objects added to the return table.
---     Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return.
+--     The AI object type string used to filter the objects added to the return table. @EOL
+--     Automatically parsed by ``EEex_Object_ParseString()``; the resulting object is freed before return.
 --
--- @param { range / type=number }: The radius to search around `sprite`. `448` is a sprite's default visual range.
+-- @param { range / type=number }: The radius to search around ``sprite``. ``448`` is a sprite's default visual range.
 --
 -- @param { bCheckForLineOfSight / type=boolean / default=true }:
 --
---     Determines whether LOS is required from `sprite` to considered objects.
+--     Determines whether LOS is required from ``sprite`` to considered objects.
 --
 -- @param { bCheckForNonSprites / type=boolean / default=false }:
 --
@@ -388,7 +388,7 @@ CGameSprite.countAllOfTypeStringInRange = EEex_Sprite_CountAllOfTypeStringInRang
 
 -- @bubb_doc { EEex_Sprite_GetPortraitIndex / instance_name=getPortraitIndex }
 --
--- @summary: Returns the given `sprite`'s portrait index, or `-1` if it isn't a party member.
+-- @summary: Returns the given ``sprite``'s portrait index, or ``-1`` if it isn't a party member.
 --
 -- @self { sprite / type=CGameSprite }: The sprite whose portrait index is being fetched.
 --
@@ -410,7 +410,7 @@ CGameSprite.getPortraitIndex = EEex_Sprite_GetPortraitIndex
 --
 -- @summary:
 --
--- Returns the given `sprite`'s active stats structure. If the creature is in the middle of an effects list process,
+-- Returns the given ``sprite``'s active stats structure. If the creature is in the middle of an effects list process,
 -- using this function ensures that the work-in-progress stats structure isn't used.
 --
 -- @self { sprite / type=CGameSprite }: The sprite whose stats structure is being fetched.
