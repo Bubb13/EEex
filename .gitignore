@@ -1,5 +1,7 @@
 *.*
+!.gitattributes
 !.gitignore
+!README.md
 !setup-EEex.exe
 !EEex/*.*
 !EEex/copy/*.*
