@@ -945,16 +945,20 @@ public class UpdateDocs
 
 							if (doc.self != null)
 							{
-								tableMaker.addRow(doc.self.name, doc.self.type, "``"
-									+ (doc.self.defaultValue != null ? doc.self.defaultValue : "nil") + "``",
+								String defaultString = doc.self.defaultValue != null
+									? "``" + doc.self.defaultValue + "``"
+									: "";
+								tableMaker.addRow(doc.self.name, doc.self.type, defaultString,
 									preprocessDescription(doc.self.description));
 							}
 
 							writer.println("**Parameters:**" + System.lineSeparator());
 							for (BubbDoc.BubbDocParam param : doc.params)
 							{
-								tableMaker.addRow(param.name, param.type, "``"
-									+ (param.defaultValue != null ? param.defaultValue : "nil") + "``",
+								String defaultString = param.defaultValue != null
+									? "``" + param.defaultValue + "``"
+									: "";
+								tableMaker.addRow(param.name, param.type, defaultString,
 									preprocessDescription(param.description));
 							}
 
@@ -1058,7 +1062,6 @@ public class UpdateDocs
 	public static void main(String[] args) throws IOException
 	{
 		BASE_PATH = Paths.get("").toAbsolutePath().toString();
-		createFunctionDocs("./EEex/EEex/copy",
-			"./EEex-Docs/source/EEex Functions");
+		createFunctionDocs(args[0], args[1]);
 	}
 }
