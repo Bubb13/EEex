@@ -1,0 +1,49 @@
+
+name: 'Update Docs'
+
+on:
+  push:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+
+  update_docs:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v3
+        with:
+          path: 'EEex'
+
+      - uses: actions/checkout@v3
+        with:
+          repository: 'Bubb13/EEex-Docs'
+          path: 'EEex-Docs'
+          token: ${{ secrets.DOCS_UPDATE_SECRET }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          check-latest: true
+
+      - name: Run UpdateDocs
+        run: java -cp EEex/.github/workflows/java/out/production/workflows/ UpdateDocs
+
+      - name: Push to EEex-Docs
+        run: |
+          cd EEex-Docs
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git commit -m "Automatic EEex Functions Update"; then
+            git push https://github.com/Bubb13/EEex-Docs
+          else
+            echo "Docs already up-to-date, exiting..."
+          fi
