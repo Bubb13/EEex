@@ -41,7 +41,8 @@ public class UpdateDocs
 		}
 	}
 
-	private static HashMap<String, StructInfo> requestStructInfo(HashSet<String> availableRefTargets) throws IOException
+	private static HashMap<String, StructInfo> requestStructInfo(HashSet<String> availableRefTargets)
+		throws IOException
 	{
 		String requestTypesOutName = BASE_PATH + "\\python\\in\\request_types.txt";
 		new FileWriter(requestTypesOutName).close();
@@ -118,7 +119,9 @@ public class UpdateDocs
 				if (file.isDirectory()) {
 					folderQueue.addLast(file);
 				}
-				else if (file.getName().equals("index.rst") && !folder.getName().equals("EE Game Structures (x86)")) {
+				else if (file.getName().equals("index.rst")
+					&& !folder.getName().equals("EE Game Structures (x86)"))
+				{
 					structFiles.add(file);
 				}
 			}
@@ -136,24 +139,20 @@ public class UpdateDocs
 		{
 			String[] cells;
 
-			public TableRow(String... rowValues)
-			{
+			public TableRow(String... rowValues) {
 				cells = rowValues;
 			}
 
-			public String getCell(int cellIndex)
-			{
+			public String getCell(int cellIndex) {
 				return cells[cellIndex];
 			}
 
-			public int getCellLength(int cellIndex)
-			{
+			public int getCellLength(int cellIndex) {
 				return cells[cellIndex].length();
 			}
 		}
 
-		public TableMaker(int rowLength)
-		{
+		public TableMaker(int rowLength) {
 			this.rowLength = rowLength;
 		}
 
@@ -194,7 +193,8 @@ public class UpdateDocs
 				tableSeparatorLineBuilder.append("-".repeat(dashCount));
 			}
 
-			String tableSeparatorLine = tableSeparatorLineBuilder.append("+").append(System.lineSeparator()).toString();
+			String tableSeparatorLine = tableSeparatorLineBuilder.append("+")
+				.append(System.lineSeparator()).toString();
 
 			for (TableRow row : rows)
 			{
@@ -235,7 +235,8 @@ public class UpdateDocs
 		}
 
 		TableMaker tableMaker = new TableMaker(4);
-		tableMaker.addRow("**Offset**", "**Size (Total: " + structInfo.size + ")**", "**Type**", "**Field**");
+		tableMaker.addRow("**Offset**", "**Size (Total: "
+			+ structInfo.size + ")**", "**Type**", "**Field**");
 
 		for (int i = 0; i < structInfo.fieldInfo.size(); ++i)
 		{
@@ -341,7 +342,8 @@ public class UpdateDocs
 					findStartIndex = tableStart + newTable.length();
 				}
 				else {
-					System.err.println("Failed to replace table for \"" + structName + "\" (couldn't find table end)");
+					System.err.println("Failed to replace table for \"" + structName
+						+ "\" (couldn't find table end)");
 				}
 			}
 
@@ -434,7 +436,7 @@ public class UpdateDocs
 			StringParser innerParser = new StringParser(innerPart);
 
 			String innerFieldName = innerParser.advanceToAfterNextOneOfAssert(
-				"",true, allowedFieldNames);
+				"", true, allowedFieldNames);
 
 			innerParser.advanceToAfterNextOneOfAssert(" \t",
 				true, "=");
@@ -476,7 +478,8 @@ public class UpdateDocs
 							continue;
 						}
 
-						if (!checkLine.startsWith(indent)) {
+						if (!checkLine.startsWith(indent))
+						{
 							noConflict = false;
 							break;
 						}
@@ -631,7 +634,8 @@ public class UpdateDocs
 					}
 
 					int lineByLineBlockCommentBuilderLen = lineByLineBlockCommentBuilder.length();
-					if (lineByLineBlockCommentBuilderLen > 0) {
+					if (lineByLineBlockCommentBuilderLen > 0)
+					{
 						lineByLineBlockCommentBuilder.setLength(lineByLineBlockCommentBuilderLen -
 							System.lineSeparator().length());
 					}
@@ -674,8 +678,8 @@ public class UpdateDocs
 				}
 			});
 
-		String[] fieldsArray = new String[]{"@deprecated",
-			"@mirror", "@param", "@return", "@self", "@summary", "@extra_comment"};
+		String[] fieldsArray = new String[]{ "@deprecated", "@mirror", "@param",
+			"@return", "@self", "@summary", "@extra_comment" };
 
 		while (true)
 		{
@@ -720,8 +724,7 @@ public class UpdateDocs
 									param.type = value;
 									param.typeIsUserdata = true;
 								}
-								case "default" ->
-								{
+								case "default" -> {
 									param.defaultValue = value;
 								}
 							}
@@ -756,8 +759,7 @@ public class UpdateDocs
 									ret.type = value;
 									ret.typeIsUserdata = true;
 								}
-								case "default" ->
-								{
+								case "default" -> {
 									ret.defaultValue = value;
 								}
 							}
@@ -766,12 +768,10 @@ public class UpdateDocs
 					ret.description = extractBlockComment(commentParser, fieldsArray);
 					doc.returnValues.add(ret);
 				}
-				case "@summary" ->
-				{
+				case "@summary" -> {
 					doc.summary = extractBlockComment(commentParser, fieldsArray);
 				}
-				case "@extra_comment" ->
-				{
+				case "@extra_comment" -> {
 					doc.extraComment = extractBlockComment(commentParser, fieldsArray);
 				}
 			}
@@ -818,7 +818,8 @@ public class UpdateDocs
 		docMap.put(fullFunctionName, fillValue);
 	}
 
-	private static final Pattern LUA_FUNCTION_PATTERN = Pattern.compile("(local\\s+)?function\\s+(\\S+)\\s*\\([\\s\\S]*?\\)");
+	private static final Pattern LUA_FUNCTION_PATTERN = Pattern.compile(
+		"(local\\s+)?function\\s+(\\S+)\\s*\\([\\s\\S]*?\\)");
 
 	private static String preprocessDescription(String str)
 	{
@@ -870,8 +871,8 @@ public class UpdateDocs
 				for (Map.Entry<String, TreeMap<String, BubbDoc>> docsEntry : bubbDocs.entrySet())
 				{
 					String fileName = docsEntry.getKey();
-					PrintWriter writer = openTextWriter(folderOutPath + File.separator + fileName
-						+ File.separator + "index.rst");
+					PrintWriter writer = openTextWriter(folderOutPath + File.separator
+						+ fileName + File.separator + "index.rst");
 
 					writer.println(".. role:: raw-html(raw)" + System.lineSeparator() +
 						           "   :format: html" + System.lineSeparator());
@@ -895,7 +896,6 @@ public class UpdateDocs
 							writer.println(".. warning::");
 							writer.println("   This function is currently undocumented.");
 							writer.println();
-
 							continue;
 						}
 
@@ -920,24 +920,28 @@ public class UpdateDocs
 							writer.println("**Instance Name:** ``" + doc.instanceName + "``");
 						}
 
-						if (doc.deprecated != null) {
+						if (doc.deprecated != null)
+						{
 							writer.println(".. warning::");
 							writer.println("   **Deprecated:** "
 								+ indentSubsequentLines(doc.deprecated, "   "));
 							writer.println();
 						}
 
-						if (doc.summary != null) {
+						if (doc.summary != null)
+						{
 							writer.println();
 							writer.println(".. note::");
-							writer.println("   **Summary:** " + indentSubsequentLines(doc.summary, "   "));
+							writer.println("   **Summary:** " + indentSubsequentLines(
+								doc.summary, "   "));
 							writer.println();
 						}
 
 						if (doc.params.size() > 0)
 						{
 							TableMaker tableMaker = new TableMaker(4);
-							tableMaker.addRow("**Name**", "**Type**", "**Default Value**", "**Description**");
+							tableMaker.addRow("**Name**", "**Type**",
+								"**Default Value**", "**Description**");
 
 							if (doc.self != null)
 							{
@@ -979,6 +983,9 @@ public class UpdateDocs
 
 						writer.println();
 					}
+
+					writer.flush();
+					writer.close();
 				}
 			}
 		}
@@ -1005,7 +1012,9 @@ public class UpdateDocs
 	private static void printFiles(String folderStart)
 	{
 		ArrayDeque<FolderContents> folderContentsQueue = new ArrayDeque<>();
-		folderContentsQueue.addFirst(new FolderContents("<print_root>", new File[]{new File(folderStart)}));
+		folderContentsQueue.addFirst(new FolderContents("<print_root>",
+			new File[]{ new File(folderStart) }));
+
 		StringBuilder indent = new StringBuilder();
 
 		while (!folderContentsQueue.isEmpty())
