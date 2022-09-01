@@ -42,7 +42,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
-          if git commit -m "Automatic EEex Functions Update"; then
+          if git commit -m "Automatic EEex Functions Update" -m "${{ github.event.repository.full_name }}@${{ github.event.after }}"; then
             git push https://github.com/Bubb13/EEex-Docs
           else
             echo "Docs already up-to-date, exiting..."
