@@ -25,6 +25,12 @@ function EEex_Sprite_GetSelectedID()
 	return node.data
 end
 
+-- @bubb_doc { EEex_GameObject_GetSelectedID }
+-- @deprecated: Use ``EEex_Sprite_GetSelectedID()`` instead.
+-- @mirror { EEex_Sprite_GetSelectedID }
+
+EEex_GameObject_GetSelectedID = EEex_Sprite_GetSelectedID
+
 -- @bubb_doc { EEex_Sprite_GetSelected }
 -- @summary:
 --
@@ -40,6 +46,12 @@ end
 function EEex_Sprite_GetSelected()
 	return EEex_GameObject_Get(EEex_Sprite_GetSelectedID())
 end
+
+-- @bubb_doc { EEex_GameObject_GetSelected }
+-- @deprecated: Use ``EEex_Sprite_GetSelected()`` instead.
+-- @mirror { EEex_Sprite_GetSelected }
+
+EEex_GameObject_GetSelected = EEex_Sprite_GetSelected
 
 -- @bubb_doc { EEex_Sprite_IterateSelectedIDs }
 --
@@ -60,6 +72,12 @@ function EEex_Sprite_IterateSelectedIDs(func)
 	end
 end
 
+-- @bubb_doc { EEex_GameObject_IterateSelectedIDs }
+-- @deprecated: Use ``EEex_Sprite_IterateSelectedIDs()`` instead.
+-- @mirror { EEex_Sprite_IterateSelectedIDs }
+
+EEex_GameObject_IterateSelectedIDs = EEex_Sprite_IterateSelectedIDs
+
 -- @bubb_doc { EEex_Sprite_IterateSelected }
 --
 -- @summary:
@@ -77,6 +95,12 @@ function EEex_Sprite_IterateSelected(func)
 	end)
 end
 
+-- @bubb_doc { EEex_GameObject_IterateSelected }
+-- @deprecated: Use ``EEex_Sprite_IterateSelected()`` instead.
+-- @mirror { EEex_Sprite_IterateSelected }
+
+EEex_GameObject_IterateSelected = EEex_Sprite_IterateSelected
+
 -- @bubb_doc { EEex_Sprite_GetAllSelectedIDs }
 --
 -- @summary: Returns a table populated with the object ids of all the sprites the player currently has selected and is controlling.
@@ -90,6 +114,12 @@ function EEex_Sprite_GetAllSelectedIDs()
 	end)
 	return toReturn
 end
+
+-- @bubb_doc { EEex_GameObject_GetAllSelectedIDs }
+-- @deprecated: Use ``EEex_Sprite_GetAllSelectedIDs()`` instead.
+-- @mirror { EEex_Sprite_GetAllSelectedIDs }
+
+EEex_GameObject_GetAllSelectedIDs = EEex_Sprite_GetAllSelectedIDs
 
 -- @bubb_doc { EEex_Sprite_GetNumCharacters }
 --

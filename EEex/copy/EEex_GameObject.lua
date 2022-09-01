@@ -68,36 +68,6 @@ function EEex_GameObject_Get(objectID)
 	return EEex_GameObject_CastUT(object)
 end
 
--- @bubb_doc { EEex_GameObject_GetSelectedID }
--- @deprecated: Use ``EEex_Sprite_GetSelectedID()`` instead.
--- @mirror { EEex_Sprite_GetSelectedID }
-
-EEex_GameObject_GetSelectedID = EEex_Sprite_GetSelectedID
-
--- @bubb_doc { EEex_GameObject_GetSelected }
--- @deprecated: Use ``EEex_Sprite_GetSelected()`` instead.
--- @mirror { EEex_Sprite_GetSelected }
-
-EEex_GameObject_GetSelected = EEex_Sprite_GetSelected
-
--- @bubb_doc { EEex_GameObject_IterateSelectedIDs }
--- @deprecated: Use ``EEex_Sprite_IterateSelectedIDs()`` instead.
--- @mirror { EEex_Sprite_IterateSelectedIDs }
-
-EEex_GameObject_IterateSelectedIDs = EEex_Sprite_IterateSelectedIDs
-
--- @bubb_doc { EEex_GameObject_IterateSelected }
--- @deprecated: Use ``EEex_Sprite_IterateSelected()`` instead.
--- @mirror { EEex_Sprite_IterateSelected }
-
-EEex_GameObject_IterateSelected = EEex_Sprite_IterateSelected
-
--- @bubb_doc { EEex_GameObject_GetAllSelectedIDs }
--- @deprecated: Use ``EEex_Sprite_GetAllSelectedIDs()`` instead.
--- @mirror { EEex_Sprite_GetAllSelectedIDs }
-
-EEex_GameObject_GetAllSelectedIDs = EEex_Sprite_GetAllSelectedIDs
-
 -- @bubb_doc { EEex_GameObject_GetUnderCursor }
 -- @summary: Returns the interactable object currently under the cursor, or ``nil`` if none exists.
 -- @return { usertype=CGameContainer | CGameDoor | CGameSprite | CGameTrigger | nil }: See summary.
