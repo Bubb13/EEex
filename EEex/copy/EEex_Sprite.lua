@@ -35,7 +35,7 @@ end
 --
 --     If no creatures are currently selected, returns ``nil``.
 --
--- @return { type=CGameSprite|nil }: See summary.
+-- @return { type=CGameSprite | nil }: See summary.
 
 function EEex_Sprite_GetSelected()
 	return EEex_GameObject_Get(EEex_Sprite_GetSelectedID())
@@ -107,7 +107,7 @@ end
 --
 -- @param { portraitIndex / type=number }: The portrait index of the sprite to fetch; valid values are [0-5].
 --
--- @return { type=CGameSprite|nil }: See summary.
+-- @return { type=CGameSprite | nil }: See summary.
 
 function EEex_Sprite_GetInPortrait(portraitIndex)
 	return EEex_GameObject_Get(EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_charactersPortrait:get(portraitIndex))

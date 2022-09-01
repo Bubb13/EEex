@@ -12,8 +12,17 @@ EEex_Action_ReturnType = {
 -- General --
 -------------
 
--- Parses the given string as if it was fed through C:Eval() and
--- returns the compiled script object, (only filled with actions).
+-- @bubb_doc { EEex_Action_ParseResponseString }
+--
+-- @summary: Parses ``responseStr`` as if it was fed through ``C:Eval()`` and
+--           returns the compiled script object, (only filled with actions).
+--
+--           *** Remember to call *** ``:free()`` *** on the returned value when it is no longer being used. ***
+--
+-- @param { responseStr / type=string }: The string to parse.
+--
+-- @return { usertype=CAIScriptFile }: See summary.
+
 function EEex_Action_ParseResponseString(responseStr)
 
 	local pScriptFile = EEex_NewUD("CAIScriptFile")
@@ -28,8 +37,15 @@ function EEex_Action_ParseResponseString(responseStr)
 	return pScriptFile
 end
 
--- Adds compiled actions returned by EEex_Action_ParseResponseString() to the end of the object's action queue.
--- Behavior identical to C:Eval().
+-- @bubb_doc { EEex_Action_QueueScriptFileResponseOnAIBase / instance_name=queueResponseOnAIBase }
+--
+-- @summary: Adds compiled actions returned by ``EEex_Action_ParseResponseString()`` to the end of ``pGameAIBase``'s action queue.
+--           Behavior identical to ``C:Eval()``.
+--
+-- @self { pScriptFile / usertype=CAIScriptFile }: The AI script file returned by ``EEex_Action_ParseResponseString()``.
+--
+-- @param { pGameAIBase / usertype=CGameAIBase }: The AI base to queue the actions on.
+
 function EEex_Action_QueueScriptFileResponseOnAIBase(pScriptFile, pGameAIBase)
 	EEex_Utility_IterateCPtrList(pScriptFile.m_curResponse.m_actionList, function(pAction)
 		pGameAIBase:virtual_InsertAction(pAction)
@@ -37,8 +53,18 @@ function EEex_Action_QueueScriptFileResponseOnAIBase(pScriptFile, pGameAIBase)
 end
 CAIScriptFile.queueResponseOnAIBase = EEex_Action_QueueScriptFileResponseOnAIBase
 
--- Same as EEex_Action_QueueScriptFileResponseOnAIBase() but takes a string instead of a compiled script object.
--- Prefer using compiled actions when efficiency is required.
+-- @bubb_doc { EEex_Action_QueueResponseStringOnAIBase }
+--
+-- @summary: Adds the actions contained in ``responseStr`` to the end of ``pGameAIBase``'s action queue.
+--           Behavior identical to ``C:Eval()``.
+--
+--           ``EEex_Action_ParseResponseString()`` is used to compile ``responseStr``; prefer using this function
+--           in conjunction with ``EEex_Action_QueueScriptFileResponseOnAIBase()`` when efficiency is required.
+--
+-- @param { responseStr / type=string }: The string to parse.
+--
+-- @param { pGameAIBase / usertype=CGameAIBase }: The AI base to queue the actions on.
+
 function EEex_Action_QueueResponseStringOnAIBase(responseStr, pGameAIBase)
 	EEex_RunWithStackManager({
 		{ ["name"] = "scriptFile", ["struct"] = "CAIScriptFile" },
@@ -50,9 +76,17 @@ function EEex_Action_QueueResponseStringOnAIBase(responseStr, pGameAIBase)
 		end)
 end
 
--- Instantly executes compiled actions returned by EEex_Action_ParseResponseString()
--- without interrupting the current action / readying the object.
--- *** ONLY WORKS CORRECTLY FOR ACTIONS DEFINED IN INSTANT.IDS ***
+-- @bubb_doc { EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly / instance_name=executeResponseAsAIBaseInstantly }
+--
+-- @summary: Has ``pGameAIBase`` instantly execute compiled actions returned by ``EEex_Action_ParseResponseString()``
+--           without interrupting ``pGameAIBase``'s current action / readying ``pGameAIBase``.
+--
+--           *** Running this function with actions not defined in INSTANT.IDS is undefined behavior. ***
+--
+-- @self { pScriptFile / usertype=CAIScriptFile }: The AI script file returned by ``EEex_Action_ParseResponseString()``.
+--
+-- @param { pGameAIBase / usertype=CGameAIBase }: The AI base that will execute the actions.
+
 function EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly(pScriptFile, pGameAIBase)
 
 	local pCurAction = pGameAIBase.m_curAction
@@ -94,8 +128,20 @@ function EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly(pScriptFile, pGa
 end
 CAIScriptFile.executeResponseAsAIBaseInstantly = EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly
 
--- Same as EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly() but takes a string instead of a compiled script object.
--- Prefer using compiled actions when efficiency is required.
+-- @bubb_doc { EEex_Action_ExecuteResponseStringOnAIBaseInstantly }
+--
+-- @summary: Has ``pGameAIBase`` instantly execute the actions contained in ``responseStr``
+--           without interrupting ``pGameAIBase``'s current action / readying ``pGameAIBase``.
+--
+--           ``EEex_Action_ParseResponseString()`` is used to compile ``responseStr``; prefer using this function
+--           in conjunction with ``EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly()`` when efficiency is required.
+--
+--           *** Running this function with actions not defined in INSTANT.IDS is undefined behavior. ***
+--
+-- @param { responseStr / type=string }: The string to parse.
+--
+-- @param { pGameAIBase / usertype=CGameAIBase }: The AI base that will execute the actions.
+
 function EEex_Action_ExecuteResponseStringOnAIBaseInstantly(responseStr, pGameAIBase)
 	EEex_RunWithStackManager({
 		{ ["name"] = "scriptFile", ["struct"] = "CAIScriptFile" },
@@ -107,8 +153,14 @@ function EEex_Action_ExecuteResponseStringOnAIBaseInstantly(responseStr, pGameAI
 		end)
 end
 
--- Frees the object returned by EEex_Action_ParseResponseString().
--- Attempting to use an object after free()'ing it will result in a crash.
+-- @bubb_doc { EEex_Action_FreeScriptFile / instance_name=free }
+--
+-- @summary: Frees the value returned by ``EEex_Action_ParseResponseString()``.
+--
+--           *** Attempting to use *** ``pScriptFile`` *** after calling *** ``:free()`` *** will result in a crash. ***
+--
+-- @self { pScriptFile / usertype=CAIScriptFile }: The AI script file to free.
+
 function EEex_Action_FreeScriptFile(pScriptFile)
 	pScriptFile:Destruct()
 	EEex_FreeUD(pScriptFile)

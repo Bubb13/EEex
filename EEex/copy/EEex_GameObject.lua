@@ -100,7 +100,7 @@ EEex_GameObject_GetAllSelectedIDs = EEex_Sprite_GetAllSelectedIDs
 
 -- @bubb_doc { EEex_GameObject_GetUnderCursor }
 -- @summary: Returns the interactable object currently under the cursor, or ``nil`` if none exists.
--- @return { usertype=CGameContainer|CGameDoor|CGameSprite|CGameTrigger|nil }: See summary.
+-- @return { usertype=CGameContainer | CGameDoor | CGameSprite | CGameTrigger | nil }: See summary.
 
 function EEex_GameObject_GetUnderCursor()
 	local game = EEex_EngineGlobal_CBaldurChitin.m_pObjectGame

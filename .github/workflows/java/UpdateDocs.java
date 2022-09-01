@@ -821,12 +821,35 @@ public class UpdateDocs
 	private static final Pattern LUA_FUNCTION_PATTERN = Pattern.compile(
 		"(local\\s+)?function\\s+(\\S+)\\s*\\([\\s\\S]*?\\)");
 
+	private static String replaceRole(String str, String macroString, String roleName)
+	{
+		macroString = "(@" + macroString + "[ \t]*\\([ \t]*(.*?)[ \t]*\\))";
+		str = str.replaceAll("\\S" + macroString, " $1");
+		str = str.replaceAll(macroString + "\\S", "$1 ");
+		str = str.replaceAll("[ \t]+" + macroString, " $1");
+		str = str.replaceAll(macroString + "[ \t]+", "$1 ");
+		str = str.replaceAll(macroString + "[ \t]+(?=\r?\n)", "$1");
+		return str.replaceAll(macroString, ":" + roleName + ":`$2`");
+	}
+
+	private static String replaceBoldItalic(String str)
+	{
+		String macroString = "(\\*\\*\\*[ \t]*(.*?)[ \t]*\\*\\*\\*)";
+		str = str.replaceAll("\\S" + macroString, " $1");
+		str = str.replaceAll(macroString + "\\S", "$1 ");
+		str = str.replaceAll("[ \t]+" + macroString, " $1");
+		str = str.replaceAll(macroString + "[ \t]+", "$1 ");
+		str = str.replaceAll(macroString + "[ \t]+(?=\r?\n)", "$1");
+		return str.replaceAll(macroString, ":bold-italic:`$2`");
+	}
+
 	private static String preprocessDescription(String str)
 	{
 		str = str.replaceAll("\\S@EOL", " @EOL");
 		str = str.replaceAll("@EOL\\S", "@EOL ");
 		str = str.replaceAll("\\s*@EOL\\s*", " @EOL ");
-		return str.replaceAll("@EOL", ":raw-html:`<br/>`");
+		str = str.replaceAll("@EOL", ":raw-html:`<br/>`");
+		return replaceBoldItalic(str);
 	}
 
 	private static void createFunctionDocs(String folderSrcPath, String folderOutPath) throws IOException
@@ -879,6 +902,9 @@ public class UpdateDocs
 
 					writer.println(".. role:: underline" + System.lineSeparator() +
 						           "   :class: underline" + System.lineSeparator());
+
+					writer.println(".. role:: bold-italic" + System.lineSeparator() +
+						"   :class: bold-italic" + System.lineSeparator());
 
 					writeHeader(writer, fileName);
 
@@ -933,11 +959,11 @@ public class UpdateDocs
 							writer.println();
 							writer.println(".. note::");
 							writer.println("   **Summary:** " + indentSubsequentLines(
-								doc.summary, "   "));
+								preprocessDescription(doc.summary), "   "));
 							writer.println();
 						}
 
-						if (doc.params.size() > 0)
+						if (doc.self != null || doc.params.size() > 0)
 						{
 							TableMaker tableMaker = new TableMaker(4);
 							tableMaker.addRow("**Name**", "**Type**",
