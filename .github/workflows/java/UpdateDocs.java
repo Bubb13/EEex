@@ -854,8 +854,9 @@ public class UpdateDocs
 
 	private static void createFunctionDocs(String folderSrcPath, String folderOutPath) throws IOException
 	{
-		File folderSrc = new File(folderSrcPath);
-		for (File srcFile : folderSrc.listFiles())
+		TreeMap<String, TreeMap<String, BubbDoc>> bubbDocs = new TreeMap<>();
+
+		for (File srcFile : new File(folderSrcPath).listFiles())
 		{
 			if (srcFile.isFile() && getFileExtension(srcFile).equalsIgnoreCase("LUA"))
 			{
@@ -865,9 +866,7 @@ public class UpdateDocs
 
 				ArrayList<String> comments = extractComments(luaFileContents);
 
-				// Functions
-
-				TreeMap<String, TreeMap<String, BubbDoc>> bubbDocs = new TreeMap<>();
+				// Find all non-local functions
 
 				Matcher luaFunctionMatcher = LUA_FUNCTION_PATTERN.matcher(luaFileContents);
 				while (luaFunctionMatcher.find())
@@ -890,134 +889,134 @@ public class UpdateDocs
 						fillDocMap(bubbDocs, doc.name, doc);
 					}
 				}
+			}
+		}
 
-				for (Map.Entry<String, TreeMap<String, BubbDoc>> docsEntry : bubbDocs.entrySet())
+		for (Map.Entry<String, TreeMap<String, BubbDoc>> docsEntry : bubbDocs.entrySet())
+		{
+			String fileName = docsEntry.getKey();
+			PrintWriter writer = openTextWriter(folderOutPath + File.separator
+				+ fileName + File.separator + "index.rst");
+
+			writer.println(".. role:: raw-html(raw)" + System.lineSeparator() +
+				"   :format: html" + System.lineSeparator());
+
+			writer.println(".. role:: underline" + System.lineSeparator() +
+				"   :class: underline" + System.lineSeparator());
+
+			writer.println(".. role:: bold-italic" + System.lineSeparator() +
+				"   :class: bold-italic" + System.lineSeparator());
+
+			writeHeader(writer, fileName);
+
+			for (Map.Entry<String, BubbDoc> docEntry : docsEntry.getValue().entrySet())
+			{
+				String docName = ":underline:`" + docEntry.getKey() + "`";
+				BubbDoc doc = docEntry.getValue();
+
+				writer.println(docName);
+				writer.println("^".repeat(docName.length()));
+				writer.println();
+
+				if (doc == null)
 				{
-					String fileName = docsEntry.getKey();
-					PrintWriter writer = openTextWriter(folderOutPath + File.separator
-						+ fileName + File.separator + "index.rst");
+					writer.println(".. warning::");
+					writer.println("   This function is currently undocumented.");
+					writer.println();
+					continue;
+				}
 
-					writer.println(".. role:: raw-html(raw)" + System.lineSeparator() +
-						           "   :format: html" + System.lineSeparator());
+				if (doc.alias != null)
+				{
+					StringBuilder aliasBuilder = new StringBuilder();
 
-					writer.println(".. role:: underline" + System.lineSeparator() +
-						           "   :class: underline" + System.lineSeparator());
-
-					writer.println(".. role:: bold-italic" + System.lineSeparator() +
-						"   :class: bold-italic" + System.lineSeparator());
-
-					writeHeader(writer, fileName);
-
-					for (Map.Entry<String, BubbDoc> docEntry : docsEntry.getValue().entrySet())
+					String[] aliases = doc.alias.split("\\|");
+					for (String alias : aliases)
 					{
-						String docName = ":underline:`" + docEntry.getKey() + "`";
-						BubbDoc doc = docEntry.getValue();
-
-						writer.println(docName);
-						writer.println("^".repeat(docName.length()));
-						writer.println();
-
-						if (doc == null)
-						{
-							writer.println(".. warning::");
-							writer.println("   This function is currently undocumented.");
-							writer.println();
-							continue;
-						}
-
-						if (doc.alias != null)
-						{
-							StringBuilder aliasBuilder = new StringBuilder();
-
-							String[] aliases = doc.alias.split("\\|");
-							for (String alias : aliases)
-							{
-								aliasBuilder.append("``");
-								aliasBuilder.append(alias);
-								aliasBuilder.append("``");
-								aliasBuilder.append(", ");
-							}
-
-							aliasBuilder.setLength(aliasBuilder.length() - 2);
-							writer.println("**Aliases:** " + aliasBuilder);
-						}
-
-						if (doc.instanceName != null) {
-							writer.println("**Instance Name:** ``" + doc.instanceName + "``");
-						}
-
-						if (doc.deprecated != null)
-						{
-							writer.println(".. warning::");
-							writer.println("   **Deprecated:** "
-								+ indentSubsequentLines(doc.deprecated, "   "));
-							writer.println();
-						}
-
-						if (doc.summary != null)
-						{
-							writer.println();
-							writer.println(".. note::");
-							writer.println("   **Summary:** " + indentSubsequentLines(
-								preprocessDescription(doc.summary), "   "));
-							writer.println();
-						}
-
-						if (doc.self != null || doc.params.size() > 0)
-						{
-							TableMaker tableMaker = new TableMaker(4);
-							tableMaker.addRow("**Name**", "**Type**",
-								"**Default Value**", "**Description**");
-
-							if (doc.self != null)
-							{
-								String defaultString = doc.self.defaultValue != null
-									? "``" + doc.self.defaultValue + "``"
-									: "";
-								tableMaker.addRow(doc.self.name, doc.self.type, defaultString,
-									preprocessDescription(doc.self.description));
-							}
-
-							writer.println("**Parameters:**" + System.lineSeparator());
-							for (BubbDoc.BubbDocParam param : doc.params)
-							{
-								String defaultString = param.defaultValue != null
-									? "``" + param.defaultValue + "``"
-									: "";
-								tableMaker.addRow(param.name, param.type, defaultString,
-									preprocessDescription(param.description));
-							}
-
-							writer.println(tableMaker.build());
-						}
-
-						if (doc.returnValues.size() > 0)
-						{
-							writer.println("**Return Values:**" + System.lineSeparator());
-
-							TableMaker tableMaker = new TableMaker(2);
-							tableMaker.addRow("**Type**", "**Description**");
-
-							for (BubbDoc.BubbDocReturn returnValue : doc.returnValues)
-							{
-								tableMaker.addRow(preprocessDescription(returnValue.type),
-									preprocessDescription(returnValue.description));
-							}
-
-							writer.println(tableMaker.build());
-						}
-
-						if (doc.extraComment != null) {
-							writer.println(doc.extraComment);
-						}
-
-						writer.println();
+						aliasBuilder.append("``");
+						aliasBuilder.append(alias);
+						aliasBuilder.append("``");
+						aliasBuilder.append(", ");
 					}
 
-					writer.flush();
-					writer.close();
+					aliasBuilder.setLength(aliasBuilder.length() - 2);
+					writer.println("**Aliases:** " + aliasBuilder);
 				}
+
+				if (doc.instanceName != null) {
+					writer.println("**Instance Name:** ``" + doc.instanceName + "``");
+				}
+
+				if (doc.deprecated != null)
+				{
+					writer.println(".. warning::");
+					writer.println("   **Deprecated:** "
+						+ indentSubsequentLines(doc.deprecated, "   "));
+					writer.println();
+				}
+
+				if (doc.summary != null)
+				{
+					writer.println();
+					writer.println(".. note::");
+					writer.println("   **Summary:** " + indentSubsequentLines(
+						preprocessDescription(doc.summary), "   "));
+					writer.println();
+				}
+
+				if (doc.self != null || doc.params.size() > 0)
+				{
+					TableMaker tableMaker = new TableMaker(4);
+					tableMaker.addRow("**Name**", "**Type**",
+						"**Default Value**", "**Description**");
+
+					if (doc.self != null)
+					{
+						String defaultString = doc.self.defaultValue != null
+							? "``" + doc.self.defaultValue + "``"
+							: "";
+						tableMaker.addRow(doc.self.name, doc.self.type, defaultString,
+							preprocessDescription(doc.self.description));
+					}
+
+					writer.println("**Parameters:**" + System.lineSeparator());
+					for (BubbDoc.BubbDocParam param : doc.params)
+					{
+						String defaultString = param.defaultValue != null
+							? "``" + param.defaultValue + "``"
+							: "";
+						tableMaker.addRow(param.name, param.type, defaultString,
+							preprocessDescription(param.description));
+					}
+
+					writer.println(tableMaker.build());
+				}
+
+				if (doc.returnValues.size() > 0)
+				{
+					writer.println("**Return Values:**" + System.lineSeparator());
+
+					TableMaker tableMaker = new TableMaker(2);
+					tableMaker.addRow("**Type**", "**Description**");
+
+					for (BubbDoc.BubbDocReturn returnValue : doc.returnValues)
+					{
+						tableMaker.addRow(preprocessDescription(returnValue.type),
+							preprocessDescription(returnValue.description));
+					}
+
+					writer.println(tableMaker.build());
+				}
+
+				if (doc.extraComment != null) {
+					writer.println(doc.extraComment);
+				}
+
+				writer.println();
 			}
+
+			writer.flush();
+			writer.close();
 		}
 	}
 
