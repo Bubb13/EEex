@@ -3,6 +3,10 @@
 -- Options --
 -------------
 
+B3Timer_ShowModalTimer = false
+B3Timer_ShowContingencyTimer = false
+B3Timer_ShowCastTimer = false
+
 B3Timer_HugPortraits = false
 
 -----------------------
@@ -141,9 +145,9 @@ function B3Timer_Menu_Tick()
 				end
 			end
 
-			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerCast",        sprite:getCastTimerPercentage() > 0                     )
-			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerContingency", sprite:getActiveStats().m_cContingencyList.m_nCount > 0 )
-			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerModal",       sprite:getModalState() ~= 0                             )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerCast",        B3Timer_ShowCastTimer        and sprite:getCastTimerPercentage() > 0                     )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerContingency", B3Timer_ShowContingencyTimer and sprite:getActiveStats().m_cContingencyList.m_nCount > 0 )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerModal",       B3Timer_ShowModalTimer       and sprite:getModalState() ~= 0                             )
 
 			for i, backgroundEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_Background"]) do
 				local startX = portraitInstanceStartX[i]

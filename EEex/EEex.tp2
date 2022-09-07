@@ -47,7 +47,7 @@ REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.
 	COPY ~EEex/copy~ ~override~ IF_EXISTS
 
 
-BEGIN ~Enable effect menu module - (LShift-on-hover to view spells affecting creature)~
+BEGIN ~Enable effect menu module - LShift-on-hover to view spells affecting creature~
 REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
@@ -55,9 +55,33 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 	BUT_ONLY
 
 
-BEGIN ~Enable timer module - (visual indicators for modal actions, contingency spells, and spell/item cooldowns)~
+BEGIN ~Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns~
 REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3Timer"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
+	BUT_ONLY
+
+
+BEGIN ~Timer module - Show modal actions (red bar)~
+REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
+
+	COPY ~override/B3Timer.lua~ ~override~
+		REPLACE_TEXTUALLY ~^\(B3Timer_ShowModalTimer = \)[^ %TAB%%WNL%]+~ ~\1true~
+	BUT_ONLY
+
+
+BEGIN ~Timer module - Show contingencies (green bar)~
+REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
+
+	COPY ~override/B3Timer.lua~ ~override~
+		REPLACE_TEXTUALLY ~^\(B3Timer_ShowContingencyTimer = \)[^ %TAB%%WNL%]+~ ~\1true~
+	BUT_ONLY
+
+
+BEGIN ~Timer module - Show spell/item cooldowns (cyan bar)~
+REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
+
+	COPY ~override/B3Timer.lua~ ~override~
+		REPLACE_TEXTUALLY ~^\(B3Timer_ShowCastTimer = \)[^ %TAB%%WNL%]+~ ~\1true~
 	BUT_ONLY
