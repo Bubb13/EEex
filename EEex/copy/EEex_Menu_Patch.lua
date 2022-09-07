@@ -252,7 +252,7 @@
 		EEex_Label("Hook-drawItem()-FixForcedScrollbarDivideByZero2") })
 	do
 		EEex_HookAfterRestore(address, 0, 11, 11, {[[
-			cmp eax, eax
+			test eax, eax
 			jnz return
 			mov eax, -1
 		]]})
