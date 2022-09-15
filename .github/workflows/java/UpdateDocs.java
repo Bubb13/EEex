@@ -914,6 +914,8 @@ public class UpdateDocs
 				String docName = ":underline:`" + docEntry.getKey() + "`";
 				BubbDoc doc = docEntry.getValue();
 
+				writer.println(".. _" + docEntry.getKey() + ":");
+				writer.println();
 				writer.println(docName);
 				writer.println("^".repeat(docName.length()));
 				writer.println();
