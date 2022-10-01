@@ -30,7 +30,7 @@ function EEex_AIBase_SetScriptLevelResRef(aiBase, scriptLevel, resref, bPlayerSc
 	EEex_RunWithStackManager({
 		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = {["args"] = {resref} }}, },
 		function(manager)
-			newScript:Construct1(manager:getUD("resref"), bPlayerScript)
+			newScript:Construct1(manager:getUD("resref"), EEex_Utility_Default(bPlayerScript, false))
 		end)
 
 	aiBase:setScriptLevel(scriptLevel, newScript)

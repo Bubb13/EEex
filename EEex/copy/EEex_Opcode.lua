@@ -144,8 +144,10 @@ function EEex_Opcode_Hook_SetTemporaryAIScript_ApplyEffect(effect, sprite)
 	end
 	effect.m_firstCall = 0
 	local existingScript = sprite:getScriptLevel(param2)
-	effect.m_effectAmount2 = existingScript:isPlayerScript()
-	effect.m_res2:set(existingScript:getResRef())
+	effect.m_effectAmount2 = EEex_Utility_Ternary(existingScript,
+		function() return existingScript:isPlayerScript() end,
+		function() return false end)
+	effect.m_res2:set(existingScript and existingScript:getResRef() or "")
 	sprite:setScriptLevelResRef(param2, effect.m_res:get())
 end
 

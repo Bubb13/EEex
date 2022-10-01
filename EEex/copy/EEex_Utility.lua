@@ -63,6 +63,14 @@ function EEex_Utility_CallSuper(t, funcName, ...)
 	return superFunc(...)
 end
 
+function EEex_Utility_Default(value, default)
+	if value == nil then return default else return value end
+end
+
+function EEex_Utility_Ternary(condition, ifTrue, ifFalse)
+	if condition then return ifTrue() else return ifFalse() end
+end
+
 function EEex_Utility_GetOrCreate(t, key, default)
 	local v = t[key]
 	if v ~= nil then return v end
