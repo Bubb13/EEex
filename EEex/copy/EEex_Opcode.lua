@@ -132,7 +132,7 @@ end
 -----------------
 
 function EEex_Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget(effect)
-	return EEex_IsBitSet(effect.m_special, 0)
+	return EEex_IsBitSet(effect.m_special, 1)
 end
 
 --------------------------------------------
