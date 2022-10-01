@@ -81,7 +81,7 @@ end
 		-- Force circle
 		EEex_HookAfterRestore(EEex_Label("Hook-CGameSprite::RenderMarkers()-B3Invis2"), 0, 6, 6, EEex_FlattenTable({[[
 
-			jnz return
+			jnz #L(return)
 
 			#MAKE_SHADOW_SPACE(64)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax

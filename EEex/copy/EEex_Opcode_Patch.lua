@@ -22,6 +22,45 @@
 		]]},
 	}))
 
+	--------------------------------------------------------------------------
+	-- Opcode #326 (Special BIT0 flips SPLPROT.2DA's "source" and "target") --
+	--------------------------------------------------------------------------
+
+	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 0, 7, 7, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(72)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			jz #L(return)
+
+			mov rax, r8
+			mov r8, r9
+			mov r9, rax
+		]]},
+	}))
+
 	--------------------------------------------
 	-- New Opcode #400 (SetTemporaryAIScript) --
 	--------------------------------------------

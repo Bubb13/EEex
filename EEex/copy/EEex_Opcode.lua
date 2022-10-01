@@ -127,6 +127,14 @@ function EEex_Opcode_Hook_AfterListsResolved(sprite)
 	end
 end
 
+-----------------
+-- Opcode #326 --
+-----------------
+
+function EEex_Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget(effect)
+	return EEex_IsBitSet(effect.m_special, 0)
+end
+
 --------------------------------------------
 -- New Opcode #400 (SetTemporaryAIScript) --
 --------------------------------------------

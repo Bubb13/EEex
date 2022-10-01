@@ -648,9 +648,11 @@ function EEex_HookBeforeRestore(address, restoreDelay, restoreSize, returnDelay,
 
 	local hookCode = EEex_JITNear(EEex_FlattenTable({
 		assemblyT,
-		restoreBytes,
 		{[[
 			return:
+		]]},
+		restoreBytes,
+		{[[
 			jmp ]], returnAddress, [[ #ENDL
 		]]},
 	}))
@@ -665,12 +667,12 @@ function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, 
 
 	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
 	local returnAddress = address + returnDelay
+	EEex_DefineAssemblyLabel("return", returnAddress)
 
 	local hookCode = EEex_JITNear(EEex_FlattenTable({
 		restoreBytes,
 		assemblyT,
 		{[[
-			return:
 			jmp ]], returnAddress, [[ #ENDL
 		]]},
 	}))

@@ -253,7 +253,7 @@
 	do
 		EEex_HookAfterRestore(address, 0, 11, 11, {[[
 			test eax, eax
-			jnz return
+			jnz #L(return)
 			mov eax, -1
 		]]})
 	end

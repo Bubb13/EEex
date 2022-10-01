@@ -747,6 +747,10 @@ Operations=ADD 3
 [Hook-CGameEffect::DecodeEffect()-Success]
 Pattern=488BD84C8B7C2460
 
+[Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext]
+Pattern=4C8BCF8B5320
+Operations=ADD 9
+
 [Hook-CGameEffectList::Marshal()-OverrideSize]
 Pattern=488BCBFF504085C0
 Operations=ADD 269
