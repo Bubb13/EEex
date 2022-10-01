@@ -123,6 +123,10 @@ Operations=ADD -25
 [CChitin::OnResizeWindow]
 Pattern=48895C2420565741564883EC30
 
+[CDerivedStats::GetAtOffset]
+Pattern=3DC9000000
+Operations=ADD -5
+
 [CDerivedStats::GetSpellState]
 Pattern=81FA000100007320
 
@@ -582,6 +586,10 @@ Operations=ADD -43
 [Hardcoded_tolua_tousertype]
 Pattern=488BC3488B5C2430488B7424384883C4205FC38BD7
 Operations=ADD -43
+
+[Hardcoded_tolua_typename]
+Pattern=E9A90000008BD7
+Operations=ADD -60
 
 [Hardcoded_tolua_usertype]
 Pattern=488BFA89442420

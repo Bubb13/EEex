@@ -23,14 +23,14 @@ function EEex_AIBase_SetScriptLevel(aiBase, scriptLevel, script)
 end
 CGameAIBase.setScriptLevel = EEex_AIBase_SetScriptLevel
 
-function EEex_AIBase_SetScriptLevelResRef(aiBase, scriptLevel, resref)
+function EEex_AIBase_SetScriptLevelResRef(aiBase, scriptLevel, resref, bPlayerScript)
 
 	local newScript = EEex_NewUD("CAIScript")
 
 	EEex_RunWithStackManager({
 		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = {["args"] = {resref} }}, },
 		function(manager)
-			newScript:Construct1(manager:getUD("resref"), 0)
+			newScript:Construct1(manager:getUD("resref"), bPlayerScript)
 		end)
 
 	aiBase:setScriptLevel(scriptLevel, newScript)

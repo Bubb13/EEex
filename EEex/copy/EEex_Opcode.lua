@@ -127,6 +127,34 @@ function EEex_Opcode_Hook_AfterListsResolved(sprite)
 	end
 end
 
+--------------------------------------------
+-- New Opcode #400 (SetTemporaryAIScript) --
+--------------------------------------------
+
+function EEex_Opcode_Hook_SetTemporaryAIScript_ApplyEffect(effect, sprite)
+	if effect.m_firstCall == 0 then
+		return
+	end
+	local param2 = effect.m_dWFlags
+	if param2 < 0 or param2 > 7 or param2 == 3 then
+		-- Engine fails to call OnRemove() if an effect was applied with immediateResolve=1
+		-- and it immediately returns from ApplyEffect() with m_done=1
+		effect.m_done = 1
+		return
+	end
+	effect.m_firstCall = 0
+	local existingScript = sprite:getScriptLevel(param2)
+	effect.m_effectAmount2 = existingScript:isPlayerScript()
+	effect.m_res2:set(existingScript:getResRef())
+	sprite:setScriptLevelResRef(param2, effect.m_res:get())
+end
+
+function EEex_Opcode_Hook_SetTemporaryAIScript_OnRemove(effect, sprite)
+	if effect.m_firstCall == 0 then
+		sprite:setScriptLevelResRef(effect.m_dWFlags, effect.m_res2:get(), effect.m_effectAmount2)
+	end
+end
+
 ---------------------------------------
 -- New Opcode #401 (SetExtendedStat) --
 ---------------------------------------

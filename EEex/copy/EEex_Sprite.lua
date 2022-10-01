@@ -462,15 +462,20 @@ function EEex_Sprite_GetName(sprite)
 end
 CGameSprite.getName = EEex_Sprite_GetName
 
-function EEex_Sprite_GetState(sprite)
-	return sprite:getActiveStats().m_generalState
-end
-CGameSprite.getState = EEex_Sprite_GetState
-
 function EEex_Sprite_GetSpellState(sprite, spellStateID)
 	return sprite:getActiveStats():GetSpellState(spellStateID) ~= 0
 end
 CGameSprite.getSpellState = EEex_Sprite_GetSpellState
+
+function EEex_Sprite_GetStat(sprite, statID)
+	return sprite:getActiveStats():GetAtOffset(statID)
+end
+CGameSprite.getStat = EEex_Sprite_GetStat
+
+function EEex_Sprite_GetState(sprite)
+	return sprite:getActiveStats().m_generalState
+end
+CGameSprite.getState = EEex_Sprite_GetState
 
 function EEex_Sprite_GetLocalInt(sprite, variableName)
 	return sprite.m_pLocalVariables:getInt(variableName)

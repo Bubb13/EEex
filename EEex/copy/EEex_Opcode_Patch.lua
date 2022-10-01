@@ -22,6 +22,48 @@
 		]]},
 	}))
 
+	--------------------------------------------
+	-- New Opcode #400 (SetTemporaryAIScript) --
+	--------------------------------------------
+
+	local EEex_SetTemporaryAIScript = EEex_Opcode_GenDecode({
+
+		["ApplyEffect"] = EEex_FlattenTable({[[
+
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(48)
+
+			]], EEex_GenLuaCall("EEex_Opcode_Hook_SetTemporaryAIScript_ApplyEffect", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+			}), [[
+
+			call_error:
+			#DESTROY_SHADOW_SPACE
+			mov rax, 1
+			ret
+		]]}),
+
+		["OnRemove"] = EEex_FlattenTable({[[
+
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(48)
+
+			]], EEex_GenLuaCall("EEex_Opcode_Hook_SetTemporaryAIScript_OnRemove", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+			}), [[
+
+			call_error:
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]}),
+	})
+
 	---------------------------------------
 	-- New Opcode #401 (SetExtendedStat) --
 	---------------------------------------
@@ -150,6 +192,11 @@
 		cmp eax, 367
 		jbe jmp_fail
 
+		cmp eax, 400
+		jne _401
+		]], EEex_SetTemporaryAIScript, [[
+
+		_401:
 		cmp eax, 401
 		jne _402
 		]], EEex_SetExtendedStat, [[
