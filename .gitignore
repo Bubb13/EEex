@@ -16,7 +16,10 @@
 !/EEex/loader/*.*
 !/EEex/patch
 !/EEex/patch/*.*
+!/style
+!/style/*.*
 !/.gitattributes
 !/.gitignore
+!/EEex.png
+!/package_mod.bat
 !/README.md
-!/setup-EEex.exe

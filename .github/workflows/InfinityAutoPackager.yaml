@@ -1,0 +1,35 @@
+# Infinity Auto Packager by AL|EN (alienquake@hotmail.com)
+# A tool that automatically generates Infinity Engine mod packages when you publish a release.
+
+on:
+  release:
+    types: [published]
+jobs:
+  InfinityAutoPackager:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Initial setup
+        run: |
+          git lfs uninstall
+          git config --global core.autocrlf false
+          git config --global core.ignorecase true
+
+      - name: Clone repository using 'github.ref' from release
+        uses: actions/checkout@master
+
+      - name: Create Infinity Engine Mod Packages (.iemod and .zip)
+        uses: ALIENQuake/CreateIEModZipPackage@master
+        id: CreateIEModZipPackage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload iemod package to latest release
+        uses: svenstaro/upload-release-action@v1-release
+        if: github.ref != 'refs/heads/master'
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ steps.CreateIEModZipPackage.outputs.PackageBaseName }}.iemod
+          asset_name: ${{ steps.CreateIEModZipPackage.outputs.PackageBaseName }}.iemod
+          tag: ${{ github.ref }}
+          overwrite: true
