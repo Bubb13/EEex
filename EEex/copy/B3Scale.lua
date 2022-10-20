@@ -2,7 +2,7 @@
 B3Scale_Percentage = nil
 
 EEex_GameState_AddInitializedListener(function()
-	B3Scale_Percentage = Infinity_GetINIValue("B3Scale", "Percentage", -1)
+	B3Scale_Percentage = tonumber(Infinity_GetINIString("B3Scale", "Percentage", -1))
 end)
 
 -- p = [0-1], where 0 is minimum scaling and 1 is maximum scaling
