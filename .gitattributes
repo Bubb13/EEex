@@ -1,6 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 /.github export-ignore
+!/EEex/loader/pdb
 /.gitattributes export-ignore
 /.gitignore export-ignore
 /EEex.png export-ignore

@@ -14,6 +14,8 @@
 !/EEex/copy/*.*
 !/EEex/loader
 !/EEex/loader/*.*
+!/EEex/loader/pdb
+!/EEex/loader/pdb/*.*
 !/EEex/patch
 !/EEex/patch/*.*
 !/style
