@@ -958,3 +958,12 @@ function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 		end
 	end
 end
+
+function EEex_Sprite_Hook_OnLoadConcentrationCheckMode(checkMode)
+	local prefix = "EEex-LuaFunction="
+	local prefixLen = #prefix
+	if checkMode:sub(1, prefixLen) == prefix then
+		local concentrationFunc = checkMode:sub(prefixLen + 1)
+		EEex_WritePtr(EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem, EEex_WriteStringAuto(concentrationFunc))
+	end
+end

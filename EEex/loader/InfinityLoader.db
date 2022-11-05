@@ -790,6 +790,10 @@ Operations=ADD 7
 [Hook-CGameSprite::CheckQuickLists()-CallListeners]
 Pattern=405557415441554156488D6C24D1
 
+[Hook-CGameSprite::ConcentrationFailed()-CHECK_MODE-Redirect]
+Pattern=8BBA1C3C0000
+Operations=ADD -27
+
 [Hook-CGameSprite::Construct1()-FirstCall]
 Pattern=4889442460488BF1
 Operations=ADD 8
@@ -872,6 +876,10 @@ Operations=ADD -11
 [Hook-CInfGame::DestroyGame()-LastCall]
 Pattern=EB0D4C8D450F
 Operations=ADD 72
+
+[Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt]
+Pattern=663BBD58030000
+Operations=ADD 35
 
 [Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
 Pattern=0F848D000000488B4808

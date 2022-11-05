@@ -261,6 +261,80 @@
 		]]},
 	}))
 
+	---------------------------------------------------
+	-- EEex_Sprite_Hook_OnLoadConcentrationCheckMode --
+	---------------------------------------------------
+
+	EEex_HookBeforeCall(EEex_Label("Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt"), EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(48)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_OnLoadConcentrationCheckMode", {
+			["args"] = {
+				function(rspOffset) return {[[
+					mov qword ptr ss:[rsp+#$(1)], rcx
+				]], {rspOffset}}, "string" end,
+			},
+		}),
+		{[[
+			call_error:
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	----------------------------------------------------------------------------------
+	-- Call CONCENTR.2DA[VALUE,CHECK_MODE] EEex-LuaFunction=<function name>(sprite) --
+	-- instead of running the normal concentration code.                            --
+	-- Return:                                                                      --
+	--     false -> Spell NOT disrupted.                                            --
+	--     true  -> Spell disrupted.                                                --
+	----------------------------------------------------------------------------------
+
+	EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem = EEex_Malloc(EEex_PtrSize)
+	EEex_WritePtr(EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem, 0x0)
+
+	EEex_HookBeforeRestore(EEex_Label("Hook-CGameSprite::ConcentrationFailed()-CHECK_MODE-Redirect"), 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(40)
+
+			mov rdx, qword ptr ss:[#$(1)] ]], {EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem}, [[ #ENDL
+			test rdx, rdx
+			jnz redirect
+
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			jmp return
+
+			redirect:
+			#RESUME_SHADOW_ENTRY
+		]]},
+		EEex_GenLuaCall(nil, {
+			["functionSrc"] = {[[
+				mov rdx, qword ptr ss:[#$(1)] ]], {EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem}, [[ #ENDL
+				mov rcx, rbx
+				#ALIGN
+				call #L(Hardcoded_lua_getglobal)
+				#ALIGN_END
+			]]},
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx #ENDL", {rspOffset}}, "CGameSprite" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			mov rax, 1
+
+			no_error:
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	}))
+
 	EEex_EnableCodeProtection()
 
 end)()

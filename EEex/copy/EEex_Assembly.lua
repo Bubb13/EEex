@@ -786,61 +786,71 @@ function EEex_GenLuaCall(funcName, meta)
 
 		elseif userTypeType == "string" then
 
-			local argCastFunction = argsCastFunction[argI + 1]
-			if argCastFunction then
-
+			if userType == "string" then
 				return {[[
-
-					mov rdx, ]], EEex_WriteStringCache(argCastFunction), [[ ; name
-					mov rcx, rbx                                            ; L
-					#ALIGN
-					call #L(Hardcoded_lua_getglobal)
-					#ALIGN_END
-
-					mov r8, ]], EEex_WriteStringCache(userType), [[            ; type
-					mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; value
+					mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; n
 					mov rcx, rbx                                               ; L
 					#ALIGN
-					call #L(Hardcoded_tolua_pushusertype)
+					call #L(Hardcoded_lua_pushstring)
 					#ALIGN_END
-
-					mov qword ptr ss:[rsp+40], 0                   ; k
-					mov qword ptr ss:[rsp+32], 0                   ; ctx
-					mov r9, ]], errorFunc and -(4 + argI) or 0, [[ ; errfunc
-					mov r8, 1                                      ; nresults
-					mov rdx, 1                                     ; nargs
-					mov rcx, rbx                                   ; L
-					#ALIGN
-					call #L(Hardcoded_lua_pcallk)
-					#ALIGN_END
-
-					mov rcx, rbx
-					#ALIGN
-					call #L(EEex_CheckCallError)
-					#ALIGN_END
-
-					test rax, rax
-					jz EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2) ]], {argI, labelSuffix}, [[ #ENDL
-
-					; Clear function args, function, and error function (+ its precursors) off of Lua stack
-					mov rdx, ]], -(2 + errorFuncLuaStackPopAmount + argI), [[ ; index
-					mov rcx, rbx                                              ; L
-					#ALIGN
-					call short #L(Hardcoded_lua_settop)
-					#ALIGN_END
-					jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
-
-					EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2): ]], {argI, labelSuffix}, [[ #ENDL
 				]]}
 			else
-				return {[[
-					mov r8, ]], EEex_WriteStringCache(userType), [[            ; type
-					mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; value
-					mov rcx, rbx                                               ; L
-					#ALIGN
-					call #L(Hardcoded_tolua_pushusertype)
-					#ALIGN_END
-				]]}
+				local argCastFunction = argsCastFunction[argI + 1]
+				if argCastFunction then
+
+					return {[[
+
+						mov rdx, ]], EEex_WriteStringCache(argCastFunction), [[ ; name
+						mov rcx, rbx                                            ; L
+						#ALIGN
+						call #L(Hardcoded_lua_getglobal)
+						#ALIGN_END
+
+						mov r8, ]], EEex_WriteStringCache(userType), [[            ; type
+						mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; value
+						mov rcx, rbx                                               ; L
+						#ALIGN
+						call #L(Hardcoded_tolua_pushusertype)
+						#ALIGN_END
+
+						mov qword ptr ss:[rsp+40], 0                   ; k
+						mov qword ptr ss:[rsp+32], 0                   ; ctx
+						mov r9, ]], errorFunc and -(4 + argI) or 0, [[ ; errfunc
+						mov r8, 1                                      ; nresults
+						mov rdx, 1                                     ; nargs
+						mov rcx, rbx                                   ; L
+						#ALIGN
+						call #L(Hardcoded_lua_pcallk)
+						#ALIGN_END
+
+						mov rcx, rbx
+						#ALIGN
+						call #L(EEex_CheckCallError)
+						#ALIGN_END
+
+						test rax, rax
+						jz EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2) ]], {argI, labelSuffix}, [[ #ENDL
+
+						; Clear function args, function, and error function (+ its precursors) off of Lua stack
+						mov rdx, ]], -(2 + errorFuncLuaStackPopAmount + argI), [[ ; index
+						mov rcx, rbx                                              ; L
+						#ALIGN
+						call short #L(Hardcoded_lua_settop)
+						#ALIGN_END
+						jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
+
+						EEex_GenLuaCall_arg#$(1)_cast_function_no_error#$(2): ]], {argI, labelSuffix}, [[ #ENDL
+					]]}
+				else
+					return {[[
+						mov r8, ]], EEex_WriteStringCache(userType), [[            ; type
+						mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; value
+						mov rcx, rbx                                               ; L
+						#ALIGN
+						call #L(Hardcoded_tolua_pushusertype)
+						#ALIGN_END
+					]]}
+				end
 			end
 		else
 			EEex_Error("[EEex_GenLuaCall] Invalid arg usertype: "..userTypeType)
