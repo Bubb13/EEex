@@ -227,6 +227,10 @@ Operations=ADD -21
 Pattern=4489814C400000
 Operations=ADD -9
 
+[CMessageHandler::AddMessage]
+Pattern=4889742410574883EC20488B02
+Operations=ADD -5
+
 [CObList::AddTail]
 Pattern=48895C2408574883EC20488BDA4533C0
 
@@ -399,6 +403,14 @@ Operations=ADD -10
 [operator_new]
 Pattern=488BD9EB0F
 Operations=ADD -6
+
+;---------------------
+;-- Engine VFTables --
+;---------------------
+
+[CMessageSetDirection::VFTable]
+Pattern=8B4B48498B06
+Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
 
 ;------------------------------------------
 ;-- Functions Referenced by Lua Bindings --
@@ -846,9 +858,29 @@ Operations=ADD 46
 Pattern=C745A0FFFFFFFF488D55B8
 Operations=ADD 20
 
+[Hook-CGameSprite::SetCurrAction()-FirstCall]
+Pattern=0FB7978C4E0000
+Operations=ADD -5
+
 [Hook-CGameSprite::SetCursor()-SetCharacterToolTip()]
 Pattern=80BF38400000FF
 Operations=ADD 63
+
+[Hook-CGameSprite::Spell()-ApplyCastingEffect()]
+Pattern=E9C40F0000
+Operations=ADD 34
+
+[Hook-CGameSprite::Spell()-CheckDirectionJmp]
+Pattern=663BF8745B
+Operations=ADD 3
+
+[Hook-CGameSprite::SpellPoint()-ApplyCastingEffect()]
+Pattern=7CB24D85ED
+Operations=ADD 43
+
+[Hook-CGameSprite::SpellPoint()-CheckDirectionJmp]
+Pattern=8B4B48488B442460
+Operations=ADD -20
 
 [Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-1]
 Pattern=FFC63B770C
