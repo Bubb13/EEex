@@ -292,32 +292,18 @@
 	--     true  -> Spell disrupted.                                                --
 	----------------------------------------------------------------------------------
 
-	EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem = EEex_Malloc(EEex_PtrSize)
-	EEex_WritePtr(EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem, 0x0)
+	EEex_Sprite_Private_RunCustomConcentrationCheckMem = EEex_Malloc(1)
+	EEex_Write8(EEex_Sprite_Private_RunCustomConcentrationCheckMem, 0)
 
 	EEex_HookBeforeRestore(EEex_Label("Hook-CGameSprite::ConcentrationFailed()-CHECK_MODE-Redirect"), 0, 5, 5, EEex_FlattenTable({
 		{[[
+			cmp byte ptr ss:[#$(1)], 0 ]], {EEex_Sprite_Private_RunCustomConcentrationCheckMem}, [[ #ENDL
+			jz return
+
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE(40)
-
-			mov rdx, qword ptr ss:[#$(1)] ]], {EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem}, [[ #ENDL
-			test rdx, rdx
-			jnz redirect
-
-			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-			jmp return
-
-			redirect:
-			#RESUME_SHADOW_ENTRY
 		]]},
-		EEex_GenLuaCall(nil, {
-			["functionSrc"] = {[[
-				mov rdx, qword ptr ss:[#$(1)] ]], {EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem}, [[ #ENDL
-				mov rcx, rbx
-				#ALIGN
-				call #L(Hardcoded_lua_getglobal)
-				#ALIGN_END
-			]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_OnCheckConcentration", {
 			["args"] = {
 				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx #ENDL", {rspOffset}}, "CGameSprite" end,
 			},
@@ -332,6 +318,81 @@
 			no_error:
 			#DESTROY_SHADOW_SPACE
 			ret
+		]]},
+	}))
+
+	---------------------------------------------------------
+	-- EEex_Sprite_Hook_OnDamageEffectStartingCalculations --
+	---------------------------------------------------------
+
+	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectDamage::ApplyEffect()-StartingCalculations"), 0, 6, 6, EEex_FlattenTable({
+		{[[
+			cmp byte ptr ss:[#$(1)], 0 ]], {EEex_Sprite_Private_RunCustomConcentrationCheckMem}, [[ #ENDL
+			jz #L(return)
+
+			#MAKE_SHADOW_SPACE(64)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_OnDamageEffectStartingCalculations", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14 #ENDL", {rspOffset}}, "CGameEffect" end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rbp-0x41]
+					mov qword ptr ss:[rsp+#$(1)], rax
+				]], {rspOffset}}, "CGameSprite" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+			},
+		}),
+		{[[
+			call_error:
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	-----------------------------------------
+	-- EEex_Sprite_Hook_OnDamageEffectDone --
+	-----------------------------------------
+
+	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectDamage::ApplyEffect()-OnDone"), 0, 7, 7, EEex_FlattenTable({
+		{[[
+			cmp byte ptr ss:[#$(1)], 0 ]], {EEex_Sprite_Private_RunCustomConcentrationCheckMem}, [[ #ENDL
+			jz #L(return)
+
+			#MAKE_SHADOW_SPACE(56)
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_OnDamageEffectDone", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14 #ENDL", {rspOffset}}, "CGameEffect" end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rbp-0x41]
+					mov qword ptr ss:[rsp+#$(1)], rax
+				]], {rspOffset}}, "CGameSprite" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+			},
+		}),
+		{[[
+			call_error:
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	--------------------------------------
+	-- EEex_Sprite_Hook_OnSetCurrAction --
+	--------------------------------------
+
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::SetCurrAction()-FirstCall"), EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(40)
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_OnSetCurrAction", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameSprite" end,
+			},
+		}),
+		{[[
+			call_error:
+			#DESTROY_SHADOW_SPACE
 		]]},
 	}))
 

@@ -44,7 +44,3 @@ end
 function EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow(sprite)
 	EEex_GetUDAux(sprite)["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 1
 end
-
-function EEex_Fix_Hook_OnSetCurrAction(sprite)
-	EEex_GetUDAux(sprite)["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 0
-end

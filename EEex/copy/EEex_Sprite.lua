@@ -959,11 +959,69 @@ function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 	end
 end
 
+EEex_Sprite_Private_CustomConcentrationCheckFuncName = nil
+
 function EEex_Sprite_Hook_OnLoadConcentrationCheckMode(checkMode)
 	local prefix = "EEex-LuaFunction="
 	local prefixLen = #prefix
 	if checkMode:sub(1, prefixLen) == prefix then
-		local concentrationFunc = checkMode:sub(prefixLen + 1)
-		EEex_WritePtr(EEex_Sprite_Private_CHECK_MODE_LuaFunctionMem, EEex_WriteStringAuto(concentrationFunc))
+		EEex_Sprite_Private_CustomConcentrationCheckFuncName = checkMode:sub(prefixLen + 1)
+		EEex_Write8(EEex_Sprite_Private_RunCustomConcentrationCheckMem, 1)
 	end
+end
+
+function EEex_Sprite_Hook_OnCheckConcentration(sprite)
+
+	local spriteAux = EEex_GetUDAux(sprite)
+	local damageEntries = spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] or {}
+
+	local totalDamageTaken = 0
+	for _, damageEntry in ipairs(damageEntries) do
+		totalDamageTaken = totalDamageTaken + damageEntry.damageTaken
+	end
+
+	_G[EEex_Sprite_Private_CustomConcentrationCheckFuncName](sprite, {
+		["totalDamageTaken"] = totalDamageTaken,
+		["damageEntries"] = damageEntries
+	})
+
+	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
+end
+
+EEex_Sprite_Private_SavedDamageEffectTargetStartingHP = nil
+
+function EEex_Sprite_Hook_OnDamageEffectStartingCalculations(effect, sourceSprite, targetSprite)
+	local actionID = targetSprite.m_curAction.m_actionID
+	if actionID == 31 or actionID == 95 then -- Spell() or SpellPoint()
+		EEex_Sprite_Private_SavedDamageEffectTargetStartingHP = targetSprite.m_baseStats.m_hitPoints
+	end
+end
+
+function EEex_Sprite_Hook_OnDamageEffectDone(effect, sourceSprite, targetSprite)
+
+	local actionID = targetSprite.m_curAction.m_actionID
+	if actionID == 31 or actionID == 95 then -- Spell() or SpellPoint()
+
+		local damageTaken = EEex_Sprite_Private_SavedDamageEffectTargetStartingHP - targetSprite.m_baseStats.m_hitPoints
+		if damageTaken > 0 then
+
+			local effectCopy = effect:virtual_Copy()
+			EEex_SetUDGCFunc(effectCopy, function(effect)
+				effect:virtual_Destruct(true)
+			end)
+
+			table.insert(EEex_Utility_GetOrCreateTable(EEex_GetUDAux(targetSprite), "EEex_Sprite_DamageEntriesSinceActionStarted"), {
+				["damageTaken"] = damageTaken,
+				["effect"] = effectCopy,
+				["sourceSprite"] = sourceSprite,
+				["targetSprite"] = targetSprite,
+			})
+		end
+	end
+end
+
+function EEex_Sprite_Hook_OnSetCurrAction(sprite)
+	local spriteAux = EEex_GetUDAux(sprite)
+	spriteAux["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 0
+	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
 end

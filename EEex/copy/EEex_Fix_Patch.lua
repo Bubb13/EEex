@@ -129,25 +129,6 @@
 		]]})
 	end
 
-	-----------------------------------
-	-- EEex_Fix_Hook_OnSetCurrAction --
-	-----------------------------------
-
-	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::SetCurrAction()-FirstCall"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(40)
-		]]},
-		EEex_GenLuaCall("EEex_Fix_Hook_OnSetCurrAction", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameSprite" end,
-			},
-		}),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
-
     EEex_EnableCodeProtection()
 
 end)()
