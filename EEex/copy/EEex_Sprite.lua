@@ -980,12 +980,13 @@ function EEex_Sprite_Hook_OnCheckConcentration(sprite)
 		totalDamageTaken = totalDamageTaken + damageEntry.damageTaken
 	end
 
-	_G[EEex_Sprite_Private_CustomConcentrationCheckFuncName](sprite, {
+	local bSpellDisrupted = _G[EEex_Sprite_Private_CustomConcentrationCheckFuncName](sprite, {
 		["totalDamageTaken"] = totalDamageTaken,
 		["damageEntries"] = damageEntries
 	})
 
 	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
+	return bSpellDisrupted
 end
 
 EEex_Sprite_Private_SavedDamageEffectTargetStartingHP = nil
