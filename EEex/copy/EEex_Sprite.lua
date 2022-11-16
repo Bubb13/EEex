@@ -973,17 +973,14 @@ end
 function EEex_Sprite_Hook_OnCheckConcentration(sprite)
 
 	local spriteAux = EEex_GetUDAux(sprite)
-	local damageEntries = spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] or {}
+	local bSpellDisrupted = false
 
-	local totalDamageTaken = 0
-	for _, damageEntry in ipairs(damageEntries) do
-		totalDamageTaken = totalDamageTaken + damageEntry.damageTaken
+	for _, damageData in ipairs(spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] or {}) do
+		bSpellDisrupted = _G[EEex_Sprite_Private_CustomConcentrationCheckFuncName](sprite, damageData)
+		if bSpellDisrupted then
+			break
+		end
 	end
-
-	local bSpellDisrupted = _G[EEex_Sprite_Private_CustomConcentrationCheckFuncName](sprite, {
-		["totalDamageTaken"] = totalDamageTaken,
-		["damageEntries"] = damageEntries
-	})
 
 	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
 	return bSpellDisrupted
