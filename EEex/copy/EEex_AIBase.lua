@@ -36,3 +36,9 @@ function EEex_AIBase_SetScriptLevelResRef(aiBase, scriptLevel, resref, bPlayerSc
 	aiBase:setScriptLevel(scriptLevel, newScript)
 end
 CGameAIBase.setScriptLevelResRef = EEex_AIBase_SetScriptLevelResRef
+
+function EEex_AIBase_SetStoredScriptingTarget(aiBase, targetKey, target)
+	local targetTable = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(aiBase), "EEex_Target")
+	targetTable[targetKey] = target and target.m_id or nil
+end
+CGameAIBase.setStoredScriptingTarget = EEex_AIBase_SetStoredScriptingTarget

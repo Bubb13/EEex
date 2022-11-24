@@ -195,7 +195,7 @@ function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
 	elseif actionID == 474 then -- EEex_SetTarget
 
 		local target = aiBase:GetTargetShare()
-		local targetTable = EEex_Utility_GetOrCreate(EEex_GetUDAux(aiBase), "EEex_Target", {})
+		local targetTable = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(aiBase), "EEex_Target")
 		targetTable[curAction.m_string1.m_pchData:get()] = target and target.m_id or nil
 
 		return EEex_Action_ReturnType.ACTION_DONE

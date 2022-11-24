@@ -94,7 +94,7 @@ function EEex_Object_Hook_OnEvaluatingUnknown(decodingAIType, caller, nSpecialCa
 
 	elseif nObjectIDS == 117 then -- EEex_Target
 
-		local targetTable = EEex_Utility_GetOrCreate(EEex_GetUDAux(caller), "EEex_Target", {})
+		local targetTable = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(caller), "EEex_Target")
 		return setInstance(targetTable[curAIType.m_name.m_pchData:get()])
 	end
 
