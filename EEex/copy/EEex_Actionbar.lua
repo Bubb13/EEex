@@ -56,6 +56,10 @@ function EEex_Actionbar_SetButton(buttonIndex, buttonType)
 	EEex_Actionbar_GetArray().m_buttonTypes:set(buttonIndex, buttonType)
 end
 
+function EEex_Actionbar_IsThievingHotkeyOpeningSpecialAbilities()
+	return EEex_Actionbar_HookGlobal_IsThievingHotkeyOpeningSpecialAbilities
+end
+
 ---------------
 -- Listeners --
 ---------------

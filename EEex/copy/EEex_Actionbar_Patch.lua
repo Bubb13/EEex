@@ -77,6 +77,36 @@
 		]]},
 	}))
 
+	EEex_HookRelativeBranch(EEex_Label("Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall"), {[[
+
+		#MAKE_SHADOW_SPACE(16)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+		mov rdx, 1
+		mov rcx, #L(Hardcoded_InternalLuaState)
+		call #L(Hardcoded_lua_pushboolean)
+		mov rdx, #$(1) ]], {EEex_WriteStringCache("EEex_Actionbar_HookGlobal_IsThievingHotkeyOpeningSpecialAbilities")}, [[ #ENDL
+		mov rcx, #L(Hardcoded_InternalLuaState)
+		call #L(Hardcoded_lua_setglobal)
+
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		call #L(original)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+
+		mov rdx, 0
+		mov rcx, #L(Hardcoded_InternalLuaState)
+		call #L(Hardcoded_lua_pushboolean)
+		mov rdx, #$(1) ]], {EEex_WriteStringCache("EEex_Actionbar_HookGlobal_IsThievingHotkeyOpeningSpecialAbilities")}, [[ #ENDL
+		mov rcx, #L(Hardcoded_InternalLuaState)
+		call #L(Hardcoded_lua_setglobal)
+
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
+		jmp #L(return)
+	]]})
+
 	EEex_EnableCodeProtection()
 
 end)()

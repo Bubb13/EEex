@@ -663,6 +663,10 @@ Operations=ADD 29, PUSH, READ DWORD, ADD, ADD 4
 Pattern=41C786B01F0000640000004533FF
 Operations=ADD 332
 
+[Data-EngineConsoleAttachedPtr]
+Pattern=40554883EC30488D6C2430
+Operations=ADD 13, PUSH, READ DWORD, ADD, ADD 5
+
 [Hook-CAIObjectType::Decode()-DefaultJmp]
 Pattern=4885D20F84C6020000
 Operations=ADD 33
@@ -920,6 +924,10 @@ Operations=ADD 72
 [Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt]
 Pattern=663BBD58030000
 Operations=ADD 35
+
+[Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall]
+Pattern=3CFF7484
+Operations=ADD 10
 
 [Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
 Pattern=0F848D000000488B4808

@@ -75,4 +75,8 @@ for moduleName, enabled in pairs(EEex_Modules) do
 	end
 end
 
+-- Stops a call to SDL_LogOutput() higher in this file
+-- preventing the console from attaching later on
+EEex_Write32(EEex_Label("Data-EngineConsoleAttachedPtr"), 0)
+
 EEex_Active = true
