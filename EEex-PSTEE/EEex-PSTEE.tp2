@@ -1,0 +1,8 @@
+BACKUP ~EEex-PSTEE/backup~
+AUTHOR ~Bubb~
+VERSION ~v0.1.0-alpha~
+
+BEGIN ~EEex for PST:EE~
+REQUIRE_PREDICATE (GAME_IS ~pstee~) ~Game not supported.~
+	COPY ~EEex-PSTEE/loader~ ~.~ IF_EXISTS
+	COPY ~EEex-PSTEE/copy~ ~override~ IF_EXISTS

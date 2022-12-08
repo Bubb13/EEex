@@ -1,0 +1,17 @@
+*
+!/EEex-PSTEE
+!/EEex-PSTEE/*.*
+!/EEex-PSTEE/copy
+!/EEex-PSTEE/copy/*.*
+!/EEex-PSTEE/loader
+!/EEex-PSTEE/loader/*.*
+!/pdb
+!/pdb/*.*
+!/style
+!/style/*.*
+!/.gitattributes
+!/.gitignore
+!/EEex.png
+!/EEex-PSTEE-*.exe
+!/package_mod.bat
+!/README.md

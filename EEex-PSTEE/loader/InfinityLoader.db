@@ -1,0 +1,287 @@
+
+;----------------------------
+;-- Bound Engine Functions --
+;----------------------------
+
+[CGameEffect::DecodeEffect]
+Pattern=83C40485C074BA
+Operations=ADD -151
+
+[CGameObjectArray::GetShare]
+Pattern=8B550C8B4508C70200000000
+Operations=ADD -3
+
+[CProjectile::DecodeProjectile]
+Pattern=8D470153
+Operations=ADD 6, PUSH, READ DWORD, ADD, ADD 4
+
+;--------------------------
+;-- Bound Engine Globals --
+;--------------------------
+
+[g_pBaldurChitin]
+Pattern=0FB7D8C7460401000000
+Operations=ADD -27, READ DWORD
+
+;----------
+;-- Data --
+;----------
+
+[Data-EngineConsoleAttachedPtr]
+Pattern=EB2F83F805
+Operations=ADD 30, READ DWORD
+
+;----------------------
+;-- Engine Functions --
+;----------------------
+
+;---------------------
+;-- Engine VFTables --
+;---------------------
+
+;------------------------------------------
+;-- Functions Referenced by Lua Bindings --
+;------------------------------------------
+
+[!ExeSwitch-Torment.exe-Hardcoded_tolua_endmodule]
+Pattern=83C414DD1C24
+Operations=ADD 625, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_luaL_loadstring]
+Pattern=8944240C8B550C
+Operations=ADD -16
+
+[Hardcoded_lua_callk]
+Pattern=83E4F88B450C8B4D18
+Operations=ADD -3
+
+[Hardcoded_lua_getmetatable]
+Pattern=B9030000008B5804
+Operations=ADD -18
+
+[Hardcoded_lua_gettable]
+Pattern=8B75088BCE8B4608
+Operations=ADD -7
+
+[Hardcoded_lua_insert]
+Pattern=8B550C56578B7D08
+Operations=ADD -3
+
+[Hardcoded_lua_iscfunction]
+Pattern=8B40043D16A5F77F
+Operations=ADD -14
+
+[Hardcoded_lua_isnumber]
+Pattern=83E4F88B4D0883EC08
+Operations=ADD -3
+
+[Hardcoded_lua_isuserdata]
+Pattern=3D47A5F77F
+Operations=ADD -17
+
+[Hardcoded_lua_newuserdata]
+Pattern=83E4F8568B7508578B4E0C
+Operations=ADD -3
+
+[Hardcoded_lua_next]
+Pattern=83E90851
+Operations=ADD -21
+
+[Hardcoded_lua_pushboolean]
+Pattern=8B550833C039450C
+Operations=ADD -3
+
+[Hardcoded_lua_pushlightuserdata]
+Pattern=8BEC8B55088B450C8B4A08
+Operations=ADD -1
+
+[Hardcoded_lua_pushlstring]
+Pattern=8BDA8B770C
+Operations=ADD -12
+
+[Hardcoded_lua_rawget]
+Pattern=83EA088B08
+Operations=ADD -20
+
+[Hardcoded_lua_rawgeti]
+Pattern=8B55108B08
+Operations=ADD -17
+
+[Hardcoded_lua_rawseti]
+Pattern=894424188B550C
+Operations=ADD -16
+
+[Hardcoded_lua_remove]
+Pattern=3B4608731D
+Operations=ADD -20
+
+[Hardcoded_lua_setmetatable]
+Pattern=8BEC8B550C535657
+Operations=ADD -1
+
+[Hardcoded_lua_settable]
+Pattern=8B550C568B75088B4E08
+Operations=ADD -3
+
+[Hardcoded_lua_tocfunction]
+Pattern=81F916A5F77F
+Operations=ADD -17
+
+[Hardcoded_lua_tonumberx]
+Pattern=33C4894424108B4D08
+Operations=ADD -14
+
+[Hardcoded_lua_touserdata]
+Pattern=83E905740433C05D
+Operations=ADD -49
+
+[Hardcoded_lua_type]
+Pattern=83F8047528
+Operations=ADD -7, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_beginmodule]
+Pattern=8BEC8B450C568B750885C0
+Operations=ADD -1
+
+[Hardcoded_tolua_bnd_cast]
+Pattern=83C4188BF8
+Operations=ADD -31
+
+[Hardcoded_tolua_bnd_release]
+Pattern=83C40C85C0740C50
+Operations=ADD -15
+
+[Hardcoded_tolua_bnd_releaseownership]
+Pattern=83C43CBE01000000
+Operations=ADD -93
+
+[Hardcoded_tolua_bnd_takeownership]
+Pattern=83C40885C0744F
+Operations=ADD -33
+
+[Hardcoded_tolua_bnd_type]
+Pattern=83C4105756
+Operations=ADD -168, READ DWORD
+
+[Hardcoded_tolua_cclass]
+Pattern=8B45088985E8FEFFFF
+Operations=ADD -19
+
+[Hardcoded_tolua_constant]
+Pattern=DD4510DD1C2456
+Operations=ADD -16
+
+[Hardcoded_tolua_endmodule]
+ExeSwitch=1
+
+[Hardcoded_tolua_error]
+Pattern=803E23
+Operations=ADD -7
+
+[Hardcoded_tolua_function]
+Pattern=83C414DD1C24
+Operations=ADD 568, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_getmetatable]
+Pattern=83C4085E5F5DC357
+Operations=ADD 10, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_isboolean]
+Pattern=3BC87C36
+Operations=ADD -35
+
+[Hardcoded_tolua_isnumber]
+Pattern=837D1000568B750C7420
+Operations=ADD -3
+
+[Hardcoded_tolua_isstring]
+Pattern=2BC23BC87C35
+Operations=ADD -33
+
+[Hardcoded_tolua_isusertype]
+Pattern=837D1400568B750C57
+Operations=ADD -3
+
+[Hardcoded_tolua_module]
+Pattern=8B7D0C85FF744D
+Operations=ADD -8
+
+[Hardcoded_tolua_newmetatable]
+Pattern=83C41485C0741F
+Operations=ADD -36
+
+[Hardcoded_tolua_pushboolean]
+Pattern=8B550833C039450C
+Operations=ADD -3
+
+[Hardcoded_tolua_pushnumber]
+Pattern=8BECDD450C
+Operations=ADD -1
+
+[Hardcoded_tolua_pushstring]
+Pattern=8B450C85C0750D
+Operations=ADD -3
+
+[Hardcoded_tolua_toboolean]
+Pattern=83C42485C00F9545FC
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[Hardcoded_tolua_tonumber]
+Pattern=7D05DD4510
+Operations=ADD -26
+
+[Hardcoded_tolua_tostring]
+Pattern=8B45105DC3C7451000000000
+Operations=ADD -28
+
+[Hardcoded_tolua_tousertype]
+Pattern=83C40885C07502
+Operations=ADD -44
+
+[Hardcoded_tolua_typename]
+Pattern=8BEC568B7508578B7D0C57
+Operations=ADD -1
+
+[Hardcoded_tolua_usertype]
+Pattern=8B750889857CFFFFFF
+Operations=ADD -25
+
+[Hardcoded_tolua_variable]
+Pattern=83C424837D1400
+Operations=ADD -126
+
+[class_index_event]
+Pattern=83F8070F85FE010000
+Operations=ADD -18
+
+[class_newindex_event]
+Pattern=83F8070F854A010000
+Operations=ADD -18
+
+[mapinheritance]
+Pattern=8B451083C41885C0
+Operations=ADD -41
+
+[mapsuper]
+Pattern=83C43885C07545
+Operations=ADD -81
+
+[module_index_event]
+Pattern=83F805754C
+Operations=ADD -37
+
+[module_newindex_event]
+Pattern=83F8057545
+Operations=ADD -37
+
+[tolua_cclass]
+Pattern=8B45088985E8FEFFFF
+Operations=ADD -19
+
+[tolua_open]
+Pattern=83C41C83F801
+Operations=ADD -46
+
+;-----------
+;-- Hooks --
+;-----------
