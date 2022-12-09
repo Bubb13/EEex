@@ -224,3 +224,12 @@ function EEex_Opcode_Hook_OnCheckAdd(effect, sprite)
 
 	return foundImmunity
 end
+
+-----------------------------------------
+-- New Opcode #408 (ProjectileMutator) --
+-----------------------------------------
+
+function EEex_Opcode_Hook_ProjectileMutator_ApplyEffect(effect, sprite)
+	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
+	table.insert(statsAux["EEex_ProjectileMutatorEffects"], effect)
+end

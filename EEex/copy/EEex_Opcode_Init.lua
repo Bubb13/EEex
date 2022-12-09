@@ -12,10 +12,10 @@
 			aux[self.name] = EEex_Utility_DeepCopy(otherAux[self.name])
 		end,
 		["onPlusEqu"] = function(self, stats, aux, otherStats, otherAux)
-			local insertI = #aux + 1
+			local insertI = #aux
 			for _, otherVal in ipairs(otherAux[self.name]) do
-				aux[insertI] = otherVal
 				insertI = insertI + 1
+				aux[insertI] = EEex_Utility_DeepCopy(otherVal)
 			end
 		end,
 	}
@@ -89,5 +89,11 @@
 	-------------------------------------
 
 	registerStat("EEex_ScreenEffects")
+
+	-----------------------------------------
+	-- New Opcode #408 (ProjectileMutator) --
+	-----------------------------------------
+
+	registerStat("EEex_ProjectileMutatorEffects")
 
 end)()

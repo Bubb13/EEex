@@ -220,6 +220,31 @@
 		jnz jmp_fail
 	]]})
 
+	-----------------------------------------
+	-- New Opcode #408 (ProjectileMutator) --
+	-----------------------------------------
+
+	local EEex_ProjectileMutator = EEex_Opcode_GenDecode({
+
+		["ApplyEffect"] = EEex_FlattenTable({[[
+
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(48)
+
+			]], EEex_GenLuaCall("EEex_Opcode_Hook_ProjectileMutator_ApplyEffect", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+			}), [[
+
+			call_error:
+			#DESTROY_SHADOW_SPACE
+			mov rax, 1
+			ret
+		]]}),
+	})
+
 	-------------------
 	-- Decode Switch --
 	-------------------
@@ -247,8 +272,13 @@
 
 		_403:
 		cmp eax, 403
-		jne #L(jmp_success)
+		jne _408
 		]], EEex_ScreenEffects, [[
+
+		_408:
+		cmp eax, 408
+		jne #L(jmp_success)
+		]], EEex_ProjectileMutator, [[
 	]]}))
 
 	EEex_EnableCodeProtection()

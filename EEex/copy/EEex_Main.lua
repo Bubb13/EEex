@@ -43,6 +43,9 @@ EEex_DoFile("EEex_Object_Patch")
 EEex_DoFile("EEex_Opcode")
 EEex_DoFile("EEex_Opcode_Patch")
 
+EEex_DoFile("EEex_Projectile")
+EEex_DoFile("EEex_Projectile_Patch")
+
 EEex_DoFile("EEex_Resource")
 
 EEex_DoFile("EEex_Script")

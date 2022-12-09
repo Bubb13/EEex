@@ -89,6 +89,10 @@ end
 
 function EEex_Utility_DeepCopy(t)
 
+	if type(t) ~= "table" then
+		return t
+	end
+
 	local tCopy = {}
 	local processStack = {{tCopy, nil, t}} -- vCopy, iterK, toProcessT
 	local stackTop = 1
