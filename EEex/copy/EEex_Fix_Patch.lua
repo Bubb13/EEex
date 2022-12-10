@@ -1,7 +1,7 @@
 
 (function()
 
-    EEex_DisableCodeProtection()
+	EEex_DisableCodeProtection()
 
 	EEex_HookJumpOnFail(EEex_Label("Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing"), 4, EEex_FlattenTable({
 		{[[
@@ -129,6 +129,6 @@
 		]]})
 	end
 
-    EEex_EnableCodeProtection()
+	EEex_EnableCodeProtection()
 
 end)()
