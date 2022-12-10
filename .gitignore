@@ -3,11 +3,12 @@
 !/.github/workflows
 !/.github/workflows/*.*
 !/.github/workflows/java
-!/.github/workflows/java/*.java
 !/.github/workflows/java/out
 !/.github/workflows/java/out/production
-!/.github/workflows/java/out/production/workflows
-!/.github/workflows/java/out/production/workflows/*.class
+!/.github/workflows/java/out/production/java
+!/.github/workflows/java/out/production/java/*.class
+!/.github/workflows/java/src
+!/.github/workflows/java/src/*.java
 !/EEex
 !/EEex/*.*
 !/EEex/copy

@@ -4,8 +4,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -780,11 +780,11 @@ public class UpdateDocs
 		return doc;
 	}
 
-	private static void fillDocMap(TreeMap<String, TreeMap<String, BubbDoc>> bubbDocs, String fullFunctionName,
+	private static void fillDocMap(Map<String, Map<String, BubbDoc>> bubbDocs, String fullFunctionName,
 		BubbDoc fillValue)
 	{
-		Pattern nameNoModifierPattern = Pattern.compile("^EEex_(\\S+)_(\\S+)");
-		Pattern nameWithModifierPattern = Pattern.compile("^EEex_(\\S+)_(\\S+)_(\\S+)");
+		Pattern nameNoModifierPattern = Pattern.compile("^EEex_(\\S+?)_(\\S+)");
+		Pattern nameWithModifierPattern = Pattern.compile("^EEex_(\\S+?)_(\\S+?)_(\\S+)");
 
 		String fileName;
 		//String functionName;
@@ -814,7 +814,7 @@ public class UpdateDocs
 			}
 		}
 
-		TreeMap<String, BubbDoc> docMap = bubbDocs.computeIfAbsent(fileName, k -> new TreeMap<>());
+		Map<String, BubbDoc> docMap = bubbDocs.computeIfAbsent(fileName, k -> new HashMap<>());
 		docMap.put(fullFunctionName, fillValue);
 	}
 
@@ -852,9 +852,57 @@ public class UpdateDocs
 		return replaceBoldItalic(str);
 	}
 
-	private static void createFunctionDocs(String folderSrcPath, String folderOutPath) throws IOException
+	private interface KeyValueProcessor<KeyType, ValueType> {
+		void process(KeyType key, ValueType value) throws Exception;
+	}
+
+	private static <KeyType, ValueType> void iterateMapAsSorted(Map<KeyType, ValueType> map,
+		Comparator<KeyType> comparator, KeyValueProcessor<KeyType, ValueType> processor) throws Exception
 	{
-		TreeMap<String, TreeMap<String, BubbDoc>> bubbDocs = new TreeMap<>();
+		List<Map.Entry<KeyType, ValueType>> entries = new ArrayList<>(map.entrySet());
+		entries.sort((o1, o2) -> comparator.compare(o1.getKey(), o2.getKey()));
+		for (Map.Entry<KeyType, ValueType> entry : entries) {
+			processor.process(entry.getKey(), entry.getValue());
+		}
+	}
+
+	private static void deletePath(Path path) throws IOException
+	{
+		if (!path.getName(path.getNameCount() - 1).toString().equals("EEex Functions")) {
+			throw new IllegalStateException("[!!!] Attempted to recursively delete something unexpected [!!!]");
+		}
+
+		Files.walkFileTree(path, new FileVisitor<>()
+		{
+			@Override
+			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException
+			{
+				Files.delete(file);
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFileFailed(Path file, IOException exc) {
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException
+			{
+				Files.delete(dir);
+				return FileVisitResult.CONTINUE;
+			}
+		});
+	}
+
+	private static void createFunctionDocs(String folderSrcPath, String folderOutPathStr) throws Exception
+	{
+		HashMap<String, Map<String, BubbDoc>> bubbDocs = new HashMap<>();
 
 		for (File srcFile : new File(folderSrcPath).listFiles())
 		{
@@ -892,10 +940,33 @@ public class UpdateDocs
 			}
 		}
 
-		for (Map.Entry<String, TreeMap<String, BubbDoc>> docsEntry : bubbDocs.entrySet())
+		Path folderOutPath = FileSystems.getDefault().getPath(folderOutPathStr);
+		deletePath(folderOutPath);
+		Files.createDirectory(folderOutPath);
+
+		PrintWriter mainIndexWriter = openTextWriter(folderOutPathStr + File.separator
+			+ "index.rst");
+
+		mainIndexWriter.println(
+   		"""
+		.. _EEex Functions:
+
+		==============
+		EEex Functions
+		==============
+
+		.. note:: EEex functions are located in Lua files provided by the EEex WeiDU installer and installed into the ``override`` folder of the game. The functions have been organized into related categories to better navigate and browse.
+
+		.. toctree::
+		   :maxdepth: 2
+		""");
+
+		iterateMapAsSorted(bubbDocs, String::compareToIgnoreCase,
+			(String fileName, Map<String, BubbDoc> funcDocs) ->
 		{
-			String fileName = docsEntry.getKey();
-			PrintWriter writer = openTextWriter(folderOutPath + File.separator
+			mainIndexWriter.println("   " + fileName + "/index");
+
+			PrintWriter writer = openTextWriter(folderOutPathStr + File.separator
 				+ fileName + File.separator + "index.rst");
 
 			writer.println(".. role:: raw-html(raw)" + System.lineSeparator() +
@@ -909,12 +980,11 @@ public class UpdateDocs
 
 			writeHeader(writer, fileName);
 
-			for (Map.Entry<String, BubbDoc> docEntry : docsEntry.getValue().entrySet())
+			iterateMapAsSorted(funcDocs, String::compareToIgnoreCase, (String funcName, BubbDoc doc) ->
 			{
-				String docName = ":underline:`" + docEntry.getKey() + "`";
-				BubbDoc doc = docEntry.getValue();
+				String docName = ":underline:`" + funcName + "`";
 
-				writer.println(".. _" + docEntry.getKey() + ":");
+				writer.println(".. _" + funcName + ":");
 				writer.println();
 				writer.println(docName);
 				writer.println("^".repeat(docName.length()));
@@ -925,7 +995,7 @@ public class UpdateDocs
 					writer.println(".. warning::");
 					writer.println("   This function is currently undocumented.");
 					writer.println();
-					continue;
+					return;
 				}
 
 				if (doc.alias != null)
@@ -1015,11 +1085,11 @@ public class UpdateDocs
 				}
 
 				writer.println();
-			}
+			});
 
 			writer.flush();
 			writer.close();
-		}
+		});
 	}
 
 	private static class FolderContents
@@ -1086,7 +1156,7 @@ public class UpdateDocs
 		}
 	}
 
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws Exception
 	{
 		BASE_PATH = Paths.get("").toAbsolutePath().toString();
 		createFunctionDocs(args[0], args[1]);

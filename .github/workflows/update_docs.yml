@@ -34,7 +34,7 @@ jobs:
           check-latest: true
 
       - name: Run UpdateDocs
-        run: java -cp EEex/.github/workflows/java/out/production/workflows/ UpdateDocs ./EEex/EEex/copy "./EEex-Docs/source/EEex Functions"
+        run: java -cp EEex/.github/workflows/java/out/production/java/ UpdateDocs ./EEex/EEex/copy "./EEex-Docs/source/EEex Functions"
 
       - name: Push to EEex-Docs
         run: |

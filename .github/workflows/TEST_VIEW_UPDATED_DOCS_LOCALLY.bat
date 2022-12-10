@@ -9,7 +9,7 @@ if exist "./EEex-Docs/" (
 	git clone https://github.com/Bubb13/EEex-Docs
 )
 
-java -cp ./java/out/production/workflows/ UpdateDocs ../../EEex/copy "./EEex-Docs/source/EEex Functions"
+java -cp ./java/out/production/java/ UpdateDocs ../../EEex/copy "./EEex-Docs/source/EEex Functions"
 
 cd ./EEex-Docs/
 call make html
