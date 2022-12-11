@@ -211,12 +211,42 @@ EEex_Projectile_Private_GlobalMutators = {}
 -- Functions --
 ---------------
 
+-- @bubb_doc { EEex_Projectile_RegisterGlobalMutator }
+-- @summary: Registers a global Lua table as a global (always processed) projectile mutator.
+-- @param { mutatorTableName / type=string }: The name of the table to register.
+
 function EEex_Projectile_RegisterGlobalMutator(mutatorTableName)
 	if type(mutatorTableName) ~= "string" then
 		EEex_Error("[EEex_Projectile_RegisterGlobalMutator] Invalid mutatorTableName parameter value")
 	end
 	table.insert(EEex_Projectile_Private_GlobalMutators, mutatorTableName)
 end
+
+-- @bubb_doc { EEex_Projectile_CastUserType / alias=EEex_Projectile_CastUT }
+-- @summary:
+--
+--     Takes the given ``projectile`` and returns a cast userdata that represents ``projectile``'s true type.
+--
+--     Most EEex functions will call this function before passing a projectile to the modder API.
+--
+-- @param { projectile / type=CProjectile }: The projectile to cast.
+--
+-- @return {
+--
+--     usertype = 
+--     @|
+--         CProjectile                    | CProjectileAmbiant             | CProjectileArea                | @EOL
+--         CProjectileBAM                 | CProjectileCallLightning       | CProjectileCastingGlow         | @EOL
+--         CProjectileChain               | CProjectileColorSpray          | CProjectileConeOfCold          | @EOL
+--         CProjectileFall                | CProjectileFireHands           | CProjectileInstant             | @EOL
+--         CProjectileInvisibleTravelling | CProjectileLightningBolt       | CProjectileLightningBoltGround | @EOL
+--         CProjectileLightningBounce     | CProjectileLightningStorm      | CProjectileMagicMissileMulti   | @EOL
+--         CProjectileMulti               | CProjectileMushroom            | CProjectileNewScorcher         | @EOL
+--         CProjectileScorcher            | CProjectileSegment             | CProjectileSkyStrike           | @EOL
+--         CProjectileSkyStrikeBAM        | CProjectileSpellHit            | CProjectileTravelDoor          | nil
+--     @|
+--
+-- }: See summary.
 
 function EEex_Projectile_CastUserType(projectile)
 

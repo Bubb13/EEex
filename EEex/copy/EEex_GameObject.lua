@@ -12,8 +12,13 @@
 --
 -- @param { object / type=CGameObject }: The object to cast.
 --
--- @return { usertype = CGameAIArea   | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor        | CGameFireball3d | CGameSound    | @EOL
---                      CGameSpawning | CGameSprite | CGameStatic | CGameTemporal  | CGameTiledObject | CGameTrigger    | CObjectMarker | nil
+-- @return {
+--
+--     usertype =
+--     @|
+--         CGameAIArea   | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor        | CGameFireball3d | CGameSound    | @EOL
+--         CGameSpawning | CGameSprite | CGameStatic | CGameTemporal  | CGameTiledObject | CGameTrigger    | CObjectMarker | nil
+--     @|
 --
 -- }: See summary.
 
@@ -51,8 +56,13 @@ EEex_GameObject_CastUT = EEex_GameObject_CastUserType
 --
 -- @param { objectID / type=number }: The id of the object to fetch.
 --
--- @return { usertype = CGameAIArea   | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor        | CGameFireball3d | CGameSound    | @EOL
---                      CGameSpawning | CGameSprite | CGameStatic | CGameTemporal  | CGameTiledObject | CGameTrigger    | CObjectMarker | nil
+-- @return {
+--
+--     usertype =
+--     @|
+--         CGameAIArea   | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor        | CGameFireball3d | CGameSound    | @EOL
+--         CGameSpawning | CGameSprite | CGameStatic | CGameTemporal  | CGameTiledObject | CGameTrigger    | CObjectMarker | nil
+--     @|
 --
 -- }: See summary.
 

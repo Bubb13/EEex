@@ -843,13 +843,24 @@ public class UpdateDocs
 		return str.replaceAll(macroString, ":bold-italic:`$2`");
 	}
 
+	private static String replacePre(String str)
+	{
+		String macroString = "(@\\|[ \t]*(.*?)[ \t]*@\\|)";
+		str = str.replaceAll("\\S" + macroString, " $1");
+		str = str.replaceAll(macroString + "\\S", "$1 ");
+		str = str.replaceAll("[ \t]+" + macroString, " $1");
+		str = str.replaceAll(macroString + "[ \t]+", "$1 ");
+		str = str.replaceAll(macroString + "[ \t]+(?=\r?\n)", "$1");
+		return str.replaceAll(macroString, ":raw-html:`<pre>` $2 :raw-html:`</pre>`");
+	}
+
 	private static String preprocessDescription(String str)
 	{
-		str = str.replaceAll("\\S@EOL", " @EOL");
-		str = str.replaceAll("@EOL\\S", "@EOL ");
+		str = str.replaceAll("(?<=\\S)@EOL", " @EOL");
+		str = str.replaceAll("@EOL(?=\\S)", "@EOL ");
 		str = str.replaceAll("\\s*@EOL\\s*", " @EOL ");
 		str = str.replaceAll("@EOL", ":raw-html:`<br/>`");
-		return replaceBoldItalic(str);
+		return replacePre(replaceBoldItalic(str));
 	}
 
 	private interface KeyValueProcessor<KeyType, ValueType> {
