@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -991,8 +992,18 @@ public class UpdateDocs
 
 			writeHeader(writer, fileName);
 
+			AtomicBoolean first = new AtomicBoolean(true);
+
 			iterateMapAsSorted(funcDocs, String::compareToIgnoreCase, (String funcName, BubbDoc doc) ->
 			{
+				if (!first.get()) {
+					writer.println("==========================================================================================================================================================================================================");
+					writer.println();
+				}
+				else {
+					first.set(false);
+				}
+
 				String docName = ":underline:`" + funcName + "`";
 
 				writer.println(".. _" + funcName + ":");
