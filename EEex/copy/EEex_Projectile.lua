@@ -212,8 +212,237 @@ EEex_Projectile_Private_GlobalMutators = {}
 ---------------
 
 -- @bubb_doc { EEex_Projectile_RegisterGlobalMutator }
+--
 -- @summary: Registers a global Lua table as a global (always processed) projectile mutator.
+--
 -- @param { mutatorTableName / type=string }: The name of the table to register.
+--
+-- @extra_comment:
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **The Mutator Table**
+-- *********************
+--
+-- A mutator table can contain can contain three optional keys, each of which should be assigned a respective mutator function.
+--
+-- The valid function keys are: ``typeMutator``, ``projectileMutator``, and ``effectMutator``:
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **typeMutator**
+-- """""""""""""""
+--
+-- **Parameters:**
+--
+-- +---------+-------+---------------------------------------------+
+-- | Name    | Type  | Description                                 |
+-- +---------+-------+---------------------------------------------+
+-- | context | table | A table containing the context of the hook. |
+-- +---------+-------+---------------------------------------------+
+--
+-- ``context`` **keys:**
+--
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | Context Key       | Value Type                   | Description                                                                                                                                      |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | decodeSource      | EEex_Projectile_DecodeSource | The source of the hook, such as ``EEex_Projectile_DecodeSource.CGameSprite_Spell``                           :raw-html:`<br/>`                   |
+-- |                   |                              | for the ``Spell()`` action, ``EEex_Projectile_DecodeSource.CGameSprite_SpellPoint``                          :raw-html:`<br/>`                   |
+-- |                   |                              | for the ``SpellPoint()`` action, etc.                                                                                                            |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | originatingEffect | CGameEffect | nil            | The op408 (ProjectileMutator) effect that registered the containing mutator table.                           :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                              |                                                                                                                                                  |
+-- |                   |                              | This is always ``nil`` for global mutator tables registered via ``EEex_Projectile_RegisterGlobalMutator()``.                                     |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | originatingSprite | CGameSprite | nil            | The sprite that is decoding (creating) the projectile.                                                       :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                              |                                                                                                                                                  |
+-- |                   |                              | Global mutator tables registered via ``EEex_Projectile_RegisterGlobalMutator()``                             :raw-html:`<br/>`                   |
+-- |                   |                              | also run for non-sprite decode sources; in these cases this is ``nil``.                                                                          |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | projectileType    | number                       | The projectile type about to be decoded.                                                                     :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                              |                                                                                                                                                  |
+-- |                   |                              | This is equivalent to the value at ``.SPL->Ability Header->[+0x26]``.                                        :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                              |                                                                                                                                                  |
+-- |                   |                              | Subtract one from this value to get the corresponding ``PROJECTL.IDS`` index.                                                                    |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+--
+-- **Return Values:**
+--
+-- +--------------+-------------------------------------------------------------------------------------------------------------------+
+-- | Type         | Description                                                                                                       |
+-- +--------------+-------------------------------------------------------------------------------------------------------------------+
+-- | number | nil | The new projectile type, or ``nil`` if the type should not be overridden.     :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |              |                                                                                                                   |
+-- |              | This is equivalent to the value at ``.SPL->Ability Header->[+0x26]``.         :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |              |                                                                                                                   |
+-- |              | Subtract one from this value to get the corresponding ``PROJECTL.IDS`` index.                                     |
+-- +--------------+-------------------------------------------------------------------------------------------------------------------+
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **projectileMutator**
+-- """""""""""""""""""""
+--
+-- **Parameters:**
+--
+-- +---------+-------+---------------------------------------------+
+-- | Name    | Type  | Description                                 |
+-- +---------+-------+---------------------------------------------+
+-- | context | table | A table containing the context of the hook. |
+-- +---------+-------+---------------------------------------------+
+--
+-- ``context`` **keys:**
+--
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | Context Key       | Value Type                   | Description                                                                                                                                      |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | decodeSource      | EEex_Projectile_DecodeSource | The source of the hook, such as ``EEex_Projectile_DecodeSource.CGameSprite_Spell``                           :raw-html:`<br/>`                   |
+-- |                   |                              | for the ``Spell()`` action, ``EEex_Projectile_DecodeSource.CGameSprite_SpellPoint``                          :raw-html:`<br/>`                   |
+-- |                   |                              | for the ``SpellPoint()`` action, etc.                                                                                                            |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | originatingEffect | CGameEffect | nil            | The op408 (ProjectileMutator) effect that registered the containing mutator table.                           :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                              |                                                                                                                                                  |
+-- |                   |                              | This is always ``nil`` for global mutator tables registered via ``EEex_Projectile_RegisterGlobalMutator()``.                                     |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | originatingSprite | CGameSprite | nil            | The sprite that is decoding (creating) the projectile.                                                       :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                              |                                                                                                                                                  |
+-- |                   |                              | Global mutator tables registered via ``EEex_Projectile_RegisterGlobalMutator()``                             :raw-html:`<br/>`                   |
+-- |                   |                              | also run for non-sprite decode sources; in these cases this is ``nil``.                                                                          |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | projectile        | CProjectile                  | The projectile about to be returned from the decoding process.                                                                                   |
+-- +-------------------+------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **effectMutator**
+-- """""""""""""""""
+--
+-- **Parameters:**
+--
+-- +---------+-------+---------------------------------------------+
+-- | Name    | Type  | Description                                 |
+-- +---------+-------+---------------------------------------------+
+-- | context | table | A table containing the context of the hook. |
+-- +---------+-------+---------------------------------------------+
+--
+-- ``context`` **keys:**
+--
+-- +-------------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | Context Key       | Value Type                      | Description                                                                                                                                      |
+-- +-------------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | addEffectSource   | EEex_Projectile_AddEffectSource | The source of the hook, such as ``EEex_Projectile_AddEffectSource.CGameSprite_Spell``                           :raw-html:`<br/>`                |
+-- |                   |                                 | for the ``Spell()`` action, ``EEex_Projectile_AddEffectSource.CGameSprite_SpellPoint``                          :raw-html:`<br/>`                |
+-- |                   |                                 | for the ``SpellPoint()`` action, etc.                                                                                                            |
+-- +-------------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | effect            | CGameEffect                     | The effect that is being added to ``projectile``.                                                                                                |
+-- +-------------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | originatingEffect | CGameEffect | nil               | The op408 (ProjectileMutator) effect that registered the containing mutator table.                           :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                                 |                                                                                                                                                  |
+-- |                   |                                 | This is always ``nil`` for global mutator tables registered via ``EEex_Projectile_RegisterGlobalMutator()``.                                     |
+-- +-------------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | originatingSprite | CGameSprite | nil               | The sprite that decoded (created) the projectile.                                                            :raw-html:`<br/>` :raw-html:`<br/>` |
+-- |                   |                                 |                                                                                                                                                  |
+-- |                   |                                 | Global mutator tables registered via ``EEex_Projectile_RegisterGlobalMutator()``                             :raw-html:`<br/>`                   |
+-- |                   |                                 | also run for non-sprite sources; in these cases this is ``nil``.                                                                                 |
+-- +-------------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+-- | projectile        | CProjectile                     | The projectile that ``effect`` is being added to.                                                                                                |
+-- +-------------------+---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **EEex_Projectile_DecodeSource**
+-- """"""""""""""""""""""""""""""""
+-- +-------------------------------------------------+-------------+
+-- | Name                                            | Description |
+-- +-------------------------------------------------+-------------+
+-- | CBounceList_Add                                 |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameAIBase_FireItem                            |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameAIBase_FireItemPoint                       |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameAIBase_FireSpell                           |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameAIBase_FireSpellPoint                      |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameAIBase_ForceSpell                          |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameAIBase_ForceSpellPoint                     |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameEffect_FireSpell                           |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameEffectCastingGlow_ApplyEffect              |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameEffectChangeStatic_ApplyEffect             |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameEffectSummon_ApplyVisualEffect             |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameEffectVisualSpellHitIWD_ApplyEffect        |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameSprite_Spell                               |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameSprite_SpellPoint                          |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameSprite_Swing                               |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameSprite_UpdateAOE                           |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameSprite_UseItem                             |             |
+-- +-------------------------------------------------+-------------+
+-- | CGameSprite_UseItemPoint                        |             |
+-- +-------------------------------------------------+-------------+
+-- | CMessageFireProjectile_Run                      |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectile_DecodeProjectile_MultiMagicMissile  |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectile_DecodeProjectile_ChainCallLightning |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectile_DecodeProjectile_MultiProjectile    |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectileArea_CreateSecondary                 |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectileArea_Explode                         |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectileChain_AIUpdate                       |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectileChain_Fire                           |             |
+-- +-------------------------------------------------+-------------+
+-- | CProjectileFall_AIUpdate                        |             |
+-- +-------------------------------------------------+-------------+
+--
+-- **EEex_Projectile_AddEffectSource**
+-- """""""""""""""""""""""""""""""""""
+-- +-----------------------------+-------------+
+-- | Name                        | Description |
+-- +-----------------------------+-------------+
+-- | CBounceList_Add             |             |
+-- +-----------------------------+-------------+
+-- | CGameAIBase_FireItem        |             |
+-- +-----------------------------+-------------+
+-- | CGameAIBase_FireItemPoint   |             |
+-- +-----------------------------+-------------+
+-- | CGameAIBase_FireSpell       |             |
+-- +-----------------------------+-------------+
+-- | CGameAIBase_FireSpellPoint  |             |
+-- +-----------------------------+-------------+
+-- | CGameAIBase_ForceSpell      |             |
+-- +-----------------------------+-------------+
+-- | CGameAIBase_ForceSpellPoint |             |
+-- +-----------------------------+-------------+
+-- | CGameEffect_FireSpell       |             |
+-- +-----------------------------+-------------+
+-- | CGameSprite_LoadProjectile  |             |
+-- +-----------------------------+-------------+
+-- | CGameSprite_Spell           |             |
+-- +-----------------------------+-------------+
+-- | CGameSprite_SpellPoint      |             |
+-- +-----------------------------+-------------+
+-- | CGameSprite_Swing           |             |
+-- +-----------------------------+-------------+
+-- | CGameSprite_UseItem         |             |
+-- +-----------------------------+-------------+
+-- | CGameSprite_UseItemPoint    |             |
+-- +-----------------------------+-------------+
 
 function EEex_Projectile_RegisterGlobalMutator(mutatorTableName)
 	if type(mutatorTableName) ~= "string" then
@@ -229,11 +458,11 @@ end
 --
 --     Most EEex functions will call this function before passing a projectile to the modder API.
 --
--- @param { projectile / type=CProjectile }: The projectile to cast.
+-- @param { projectile / usertype=CProjectile }: The projectile to cast.
 --
 -- @return {
 --
---     usertype = 
+--     usertype =
 --     @|
 --         CProjectile                    | CProjectileAmbiant             | CProjectileArea                | @EOL
 --         CProjectileBAM                 | CProjectileCallLightning       | CProjectileCastingGlow         | @EOL
@@ -288,11 +517,84 @@ function EEex_Projectile_CastUserType(projectile)
 end
 EEex_Projectile_CastUT = EEex_Projectile_CastUserType
 
+-- @bubb_doc { EEex_Projectile_GetType / instance_name=getType }
+--
+-- @summary: Returns the ``EEex_Projectile_Type`` of the given ``projectile``.
+--
+-- @self { projectile / usertype=CProjectile }: The projectile whose type is being fetched.
+--
+-- @return { type = EEex_Projectile_Type }: See summary.
+--
+-- @extra_comment:
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **EEex_Projectile_Type**
+-- ************************
+-- +-------------------------+-------------+
+-- | Name                    | Description |
+-- +-------------------------+-------------+
+-- | Unknown                 |             |
+-- +-------------------------+-------------+
+-- | CProjectile             |             |
+-- +-------------------------+-------------+
+-- | CProjectileAmbiant      |             |
+-- +-------------------------+-------------+
+-- | CProjectileArea         |             |
+-- +-------------------------+-------------+
+-- | CProjectileBAM          |             |
+-- +-------------------------+-------------+
+-- | CProjectileChain        |             |
+-- +-------------------------+-------------+
+-- | CProjectileColorSpray   |             |
+-- +-------------------------+-------------+
+-- | CProjectileConeOfCold   |             |
+-- +-------------------------+-------------+
+-- | CProjectileFall         |             |
+-- +-------------------------+-------------+
+-- | CProjectileFireHands    |             |
+-- +-------------------------+-------------+
+-- | CProjectileInstant      |             |
+-- +-------------------------+-------------+
+-- | CProjectileMulti        |             |
+-- +-------------------------+-------------+
+-- | CProjectileMushroom     |             |
+-- +-------------------------+-------------+
+-- | CProjectileNewScorcher  |             |
+-- +-------------------------+-------------+
+-- | CProjectileScorcher     |             |
+-- +-------------------------+-------------+
+-- | CProjectileSegment      |             |
+-- +-------------------------+-------------+
+-- | CProjectileSkyStrike    |             |
+-- +-------------------------+-------------+
+-- | CProjectileSkyStrikeBAM |             |
+-- +-------------------------+-------------+
+-- | CProjectileSpellHit     |             |
+-- +-------------------------+-------------+
+-- | CProjectileTravelDoor   |             |
+-- +-------------------------+-------------+
+
 function EEex_Projectile_GetType(projectile)
 	local type = EEex_Projectile_Private_VFTableToType[EEex_ReadPtr(EEex_UDToPtr(projectile))]
 	return type or EEex_Projectile_Type.Unknown
 end
 CProjectile.getType = EEex_Projectile_GetType
+
+-- @bubb_doc { EEex_Projectile_IsOfType / instance_name=isOfType }
+--
+-- @summary:
+--
+--     Returns ``true`` if ``projectile`` has the type ``checkType`` or is a derivative thereof.
+--
+--     This is useful to ensure that a projectile is of a certain type before accessing members
+--     it may or may not have.
+--
+-- @self { projectile / usertype=CProjectile }: The projectile whose type is being checked.
+--
+-- @param { checkType / type=EEex_Projectile_Type }: The type to check against.
+--
+-- @return { type=boolean }: See summary.
 
 function EEex_Projectile_IsOfType(projectile, checkType)
 	local projType = projectile:getType()
