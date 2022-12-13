@@ -197,20 +197,27 @@ public class UpdateDocs
 			String tableSeparatorLine = tableSeparatorLineBuilder.append("+")
 				.append(System.lineSeparator()).toString();
 
-			for (TableRow row : rows)
+			for (int i = 0; i < rows.size(); ++i)
 			{
-				builder.append(tableSeparatorLine);
+				TableRow row = rows.get(i);
 
-				for (int i = 0; i < rowLength; ++i)
+				if (i != 1) {
+					builder.append(tableSeparatorLine);
+				}
+				else {
+					builder.append(tableSeparatorLine.replaceAll("-", "="));
+				}
+
+				for (int j = 0; j < rowLength; ++j)
 				{
 					builder.append("|");
 
-					String cell = row.getCell(i);
+					String cell = row.getCell(j);
 					int cellLength = cell.length();
 
 					builder.append(" ");
 					builder.append(cell);
-					builder.append(" ".repeat(columnDashCounts[i] - cellLength - 1));
+					builder.append(" ".repeat(columnDashCounts[j] - cellLength - 1));
 				}
 
 				builder.append("|").append(System.lineSeparator());
@@ -992,19 +999,9 @@ public class UpdateDocs
 
 			writeHeader(writer, fileName);
 
-			AtomicBoolean first = new AtomicBoolean(true);
-
 			iterateMapAsSorted(funcDocs, String::compareToIgnoreCase, (String funcName, BubbDoc doc) ->
 			{
-				if (!first.get()) {
-					writer.println("==========================================================================================================================================================================================================");
-					writer.println();
-				}
-				else {
-					first.set(false);
-				}
-
-				String docName = ":underline:`" + funcName + "`";
+				String docName = funcName;
 
 				writer.println(".. _" + funcName + ":");
 				writer.println();
