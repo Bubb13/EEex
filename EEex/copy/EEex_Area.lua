@@ -1,23 +1,75 @@
 
+-- @bubb_doc { EEex_Area_GetVisible }
+--
+-- @summary: Returns the currently-visible ``CGameArea``, or ``nil`` if the worldscreen is not initialized.
+--
+-- @return { usertype=CGameArea | nil }: See summary.
+
 function EEex_Area_GetVisible()
 	local game = EngineGlobals.g_pBaldurChitin.m_pObjectGame
 	return game.m_gameAreas:get(game.m_visibleArea)
 end
+
+-- @bubb_doc { EEex_Area_GetVariableInt / instance_name=getVariableInt }
+--
+-- @summary: Returns the integer value of the ``variableName`` Global that is stored in ``area``'s scope.
+--           If no variable named ``variableName`` exists, returns ``0``.
+--
+-- @self { area / usertype=CGameArea }: The area that the variable being fetched is scoped to.
+--
+-- @param { variableName / type=string }: The name of the variable to fetch.
+--
+-- @return { type=number }: See summary.
 
 function EEex_Area_GetVariableInt(area, variableName)
 	return area.m_variables:getInt(variableName)
 end
 CGameArea.getVariableInt = EEex_Area_GetVariableInt
 
+-- @bubb_doc { EEex_Area_GetVariableString / instance_name=getVariableString }
+--
+-- @summary: Returns the string value of the ``variableName`` Global that is stored in ``area``'s scope.
+--           If no variable named ``variableName`` exists, returns ``""``.
+--
+--           **Note:** Global string values can only be accessed through EEex functions.
+--
+-- @self { area / usertype=CGameArea }: The area that the variable being fetched is scoped to.
+--
+-- @param { variableName / type=string }: The name of the variable to fetch.
+--
+-- @return { type=string }: See summary.
+
 function EEex_Area_GetVariableString(area, variableName)
 	return area.m_variables:getString(variableName)
 end
 CGameArea.getVariableString = EEex_Area_GetVariableString
 
+-- @bubb_doc { EEex_Area_SetVariableInt / instance_name=setVariableInt }
+--
+-- @summary: Sets the integer value of the ``variableName`` Global that is stored in ``area``'s scope to ``value``.
+--
+-- @self { area / usertype=CGameArea }: The area that the variable being set is scoped to.
+--
+-- @param { variableName / type=string }: The name of the variable to set.
+--
+-- @param { value / type=number }: The value to set the variable to.
+
 function EEex_Area_SetVariableInt(area, variableName, value)
 	area.m_variables:setInt(variableName, value)
 end
 CGameArea.setVariableInt = EEex_Area_SetVariableInt
+
+-- @bubb_doc { EEex_Area_SetVariableString / instance_name=setVariableString }
+--
+-- @summary: Sets the string value of the ``variableName`` Global that is stored in ``area``'s scope to ``value``.
+--
+--           **Note:** Global string values can only be accessed through EEex functions.
+--
+-- @self { area / usertype=CGameArea }: The area that the variable being set is scoped to.
+--
+-- @param { variableName / type=string }: The name of the variable to set.
+--
+-- @param { value / type=string }: The value to set the variable to.
 
 function EEex_Area_SetVariableString(area, variableName, value)
 	area.m_variables:setString(variableName, value)

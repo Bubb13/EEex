@@ -101,7 +101,6 @@ CGameAIBase.setScriptLevel = EEex_AIBase_SetScriptLevel
 --     differentiating between ``.BS`` and ``.BCS`` files with the same name. If a script     @EOL
 --     with the given ``resref`` has already been loaded by the engine, that script will be   @EOL
 --     used, regardless of ``bPlayerScript``.
---
 
 function EEex_AIBase_SetScriptLevelResRef(aiBase, scriptLevel, resref, bPlayerScript)
 
@@ -171,7 +170,6 @@ CGameAIBase.setScriptLevelResRef = EEex_AIBase_SetScriptLevelResRef
 --        RESPONSE #100
 --            Dialog(EEex_Target("AlivePartyLeader"))
 --    END
---
 
 function EEex_AIBase_SetStoredScriptingTarget(aiBase, targetKey, target)
 	local targetTable = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(aiBase), "EEex_Target")
