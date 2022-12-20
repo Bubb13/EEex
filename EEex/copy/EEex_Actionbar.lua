@@ -265,15 +265,15 @@ EEex_Actionbar_Listeners = EEex_Actionbar_Listeners or {}
 --
 -- **Parameters:**
 --
--- +--------+--------+---------------------------------------------------------------------------------------------+
--- | Name   | Type   | Description                                                                                 |
--- +========+========+=============================================================================================+
--- | config | number | Certain actionbar states map to the same button configuration, albeit with :raw-html:`<br>` |
--- |        |        | different functionality. This value represents a unique button             :raw-html:`<br>` |
--- |        |        | configuration; see below for more details.                                                  |
--- +--------+--------+---------------------------------------------------------------------------------------------+
--- | state  | number | See :ref:`EEex_Actionbar_GetState`.                                                         |
--- +--------+--------+---------------------------------------------------------------------------------------------+
+-- +--------+--------+---------------------------------------------------------------------------------------------------------+
+-- | Name   | Type   | Description                                                                                             |
+-- +========+========+=========================================================================================================+
+-- | config | number | Certain actionbar states map to the same button configuration, albeit with different   :raw-html:`<br>` |
+-- |        |        | functionality. This value represents a unique button configuration; see below for more :raw-html:`<br>` |
+-- |        |        | details.                                                                                                |
+-- +--------+--------+---------------------------------------------------------------------------------------------------------+
+-- | state  | number | See :ref:`EEex_Actionbar_GetState`.                                                                     |
+-- +--------+--------+---------------------------------------------------------------------------------------------------------+
 --
 -- **The following shows what actionbar states each** ``config`` **encompases:**
 --
