@@ -402,6 +402,8 @@ public class UpdateDocs
 		BubbDocParam self;
 		String summary;
 		String extraComment;
+		ArrayList<String> warnings = new ArrayList<>();
+		ArrayList<String> notes = new ArrayList<>();
 	}
 
 	private interface UnnamedFieldHandler
@@ -687,7 +689,7 @@ public class UpdateDocs
 			});
 
 		String[] fieldsArray = new String[]{ "@deprecated", "@mirror", "@param",
-			"@return", "@self", "@summary", "@extra_comment" };
+			"@return", "@self", "@summary", "@extra_comment", "@warning", "@note" };
 
 		while (true)
 		{
@@ -781,6 +783,12 @@ public class UpdateDocs
 				}
 				case "@extra_comment" -> {
 					doc.extraComment = extractBlockComment(commentParser, fieldsArray);
+				}
+				case "@warning" -> {
+					doc.warnings.add(extractBlockComment(commentParser, fieldsArray));
+				}
+				case "@note" -> {
+					doc.notes.add(extractBlockComment(commentParser, fieldsArray));
 				}
 			}
 		}
@@ -1049,9 +1057,27 @@ public class UpdateDocs
 				if (doc.summary != null)
 				{
 					writer.println();
+					writer.println(".. admonition:: Summary");
+					writer.println();
+					writer.println("   " + indentSubsequentLines(preprocessDescription(doc.summary), "   "));
+					writer.println();
+				}
+
+				for (String warning : doc.notes)
+				{
+					writer.println();
 					writer.println(".. note::");
-					writer.println("   **Summary:** " + indentSubsequentLines(
-						preprocessDescription(doc.summary), "   "));
+					writer.println(indentSubsequentLines("   " + preprocessDescription(warning),
+						"   "));
+					writer.println();
+				}
+
+				for (String warning : doc.warnings)
+				{
+					writer.println();
+					writer.println(".. warning::");
+					writer.println(indentSubsequentLines("   " + preprocessDescription(warning),
+						"   "));
 					writer.println();
 				}
 

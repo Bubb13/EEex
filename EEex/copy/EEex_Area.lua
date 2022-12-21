@@ -31,7 +31,7 @@ CGameArea.getVariableInt = EEex_Area_GetVariableInt
 -- @summary: Returns the string value of the ``variableName`` Global that is stored in ``area``'s scope.
 --           If no variable named ``variableName`` exists, returns ``""``.
 --
---           **Note:** Global string values can only be accessed through EEex functions.
+-- @note: Global string values can only be accessed through EEex functions.
 --
 -- @self { area / usertype=CGameArea }: The area that the variable being fetched is scoped to.
 --
@@ -63,7 +63,10 @@ CGameArea.setVariableInt = EEex_Area_SetVariableInt
 --
 -- @summary: Sets the string value of the ``variableName`` Global that is stored in ``area``'s scope to ``value``.
 --
---           **Note:** Global string values can only be accessed through EEex functions.
+-- @note: Global string values can only be accessed through EEex functions.
+--
+-- @warning: Global string values can be a maximum of 32 characters. Attempting to set a value
+--           that is longer than 32 characters will result in the value being truncated.
 --
 -- @self { area / usertype=CGameArea }: The area that the variable being set is scoped to.
 --
