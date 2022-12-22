@@ -24,7 +24,7 @@
 				function(rspOffset) return {[[
 					lea rcx, qword ptr ds:[rbp-51h]
 					mov qword ptr ss:[rsp+#$(1)], rcx ]], {rspOffset}, [[ #ENDL
-				]]} end,
+				]]}, "SDL_Event" end,
 			},
 		}),
 		{[[
