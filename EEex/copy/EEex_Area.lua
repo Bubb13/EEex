@@ -12,7 +12,7 @@ end
 
 -- @bubb_doc { EEex_Area_GetVariableInt / instance_name=getVariableInt }
 --
--- @summary: Returns the integer value of the ``variableName`` Global that is stored in ``area``'s scope.
+-- @summary: Returns the integer value of the ``variableName`` Global scoped to ``area``.
 --           If no variable named ``variableName`` exists, returns ``0``.
 --
 -- @self { area / usertype=CGameArea }: The area that the variable being fetched is scoped to.
@@ -28,7 +28,7 @@ CGameArea.getVariableInt = EEex_Area_GetVariableInt
 
 -- @bubb_doc { EEex_Area_GetVariableString / instance_name=getVariableString }
 --
--- @summary: Returns the string value of the ``variableName`` Global that is stored in ``area``'s scope.
+-- @summary: Returns the string value of the ``variableName`` Global scoped to ``area``.
 --           If no variable named ``variableName`` exists, returns ``""``.
 --
 -- @note: Global string values can only be accessed through EEex functions.
@@ -46,7 +46,7 @@ CGameArea.getVariableString = EEex_Area_GetVariableString
 
 -- @bubb_doc { EEex_Area_SetVariableInt / instance_name=setVariableInt }
 --
--- @summary: Sets the integer value of the ``variableName`` Global that is stored in ``area``'s scope to ``value``.
+-- @summary: Sets the integer value of the ``variableName`` Global scoped to ``area`` to ``value``.
 --
 -- @self { area / usertype=CGameArea }: The area that the variable being set is scoped to.
 --
@@ -61,7 +61,7 @@ CGameArea.setVariableInt = EEex_Area_SetVariableInt
 
 -- @bubb_doc { EEex_Area_SetVariableString / instance_name=setVariableString }
 --
--- @summary: Sets the string value of the ``variableName`` Global that is stored in ``area``'s scope to ``value``.
+-- @summary: Sets the string value of the ``variableName`` Global scoped to ``area`` to ``value``.
 --
 -- @note: Global string values can only be accessed through EEex functions.
 --
