@@ -1,0 +1,10 @@
+
+menu
+{
+	name "B3TimeStep_Menu"
+	ignoreEsc
+	label
+	{
+		enabled "B3TimeStep_Tick()"
+	}
+}
