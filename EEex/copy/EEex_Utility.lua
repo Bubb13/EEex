@@ -146,6 +146,15 @@ function EEex_Utility_DumpSprite()
 	Infinity_DisplayString(str)
 end
 
+function EEex_Utility_Switch(toSwitchOn, cases, defaultCase)
+	local func = cases[toSwitchOn]
+	if func then
+		func()
+	elseif defaultCase then
+		defaultCase()
+	end
+end
+
 --------------------
 -- Listeners Init --
 --------------------

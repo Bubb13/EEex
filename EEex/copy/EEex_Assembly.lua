@@ -794,6 +794,14 @@ function EEex_GenLuaCall(funcName, meta)
 					call #L(Hardcoded_lua_pushstring)
 					#ALIGN_END
 				]]}
+			elseif userType == "boolean" then
+				return {[[
+					mov rdx, qword ptr ss:[rsp+#$(1)] ]], {argStackOffset}, [[ ; n
+					mov rcx, rbx                                               ; L
+					#ALIGN
+					call #L(Hardcoded_lua_pushboolean)
+					#ALIGN_END
+				]]}
 			else
 				local argCastFunction = argsCastFunction[argI + 1]
 				if argCastFunction then

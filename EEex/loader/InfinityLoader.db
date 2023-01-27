@@ -130,12 +130,18 @@ Operations=ADD -5
 [CDerivedStats::GetSpellState]
 Pattern=81FA000100007320
 
+[CGameAIBase::ApplyEffectToParty]
+Pattern=405355415641574883EC28
+
 [CGameAIBase::GetTargetShare]
 Pattern=4883EC20488BF94533C0
 Operations=ADD -6
 
 [CGameArea::AdjustTarget]
 Pattern=48895C240844884C2420
+
+[CGameArea::ApplyEffect]
+Pattern=405741544156
 
 [CGameArea::CheckLOS]
 Pattern=4C894C242053574156
@@ -248,6 +254,13 @@ Operations=ADD -2
 
 [CObList::RemoveHead]
 Pattern=574883EC20488B4108
+Operations=ADD -10
+
+[CProjectile::AddEffect]
+Pattern=0FB741604883C178
+
+[CProjectile::ClearEffects]
+Pattern=488B9980000000488BF9
 Operations=ADD -10
 
 [CRes::Construct]
@@ -467,6 +480,9 @@ Operations=ADD 20
 Pattern=410FB74E26488BD3
 Operations=ADD 13
 
+[Data-CGameEffect::DecodeEffectFromBase()-After-CGameEffect::CopyFromBase()]
+Pattern=488BC3488B4C24704833CC
+
 [Data-CGameEffect::FireSpell()-CProjectile::AddEffect()-RetPtr]
 Pattern=483B88B01000007422
 Operations=ADD 29
@@ -647,6 +663,10 @@ Operations=ADD -6
 ;---------------------
 ;-- Engine VFTables --
 ;---------------------
+
+[CMessageAddEffect::VFTable]
+Pattern=488B49104885C97412
+Operations=ADD -12, PUSH, READ DWORD, ADD, ADD 4
 
 [CMessageSetDirection::VFTable]
 Pattern=8B4B48498B06
@@ -1056,6 +1076,10 @@ Operations=ADD 94
 [Hook-CGameEffect::CheckAdd()-ProbabilityFailed]
 Pattern=33C0488B8D20010000
 
+[Hook-CGameEffect::CopyFromBase()-FirstCall]
+Pattern=488BF2488BF94C8BC2
+Operations=ADD 18
+
 [Hook-CGameEffect::DecodeEffect()-DefaultJmp]
 Pattern=5741564883EC4033DB
 Operations=ADD 38
@@ -1066,6 +1090,10 @@ Operations=ADD 3
 
 [Hook-CGameEffect::DecodeEffect()-Success]
 Pattern=488BD84C8B7C2460
+
+[Hook-CGameEffect::Destruct()_FirstCall]
+Pattern=F6C301740DBA58010000
+Operations=ADD -5
 
 [Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext]
 Pattern=4C8BCF8B5320
@@ -1094,6 +1122,18 @@ Operations=ADD 80
 [Hook-CGameEffectList::Unmarshal()-Return]
 Pattern=66FFC3FFCF85FF
 Operations=ADD 9
+
+[Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail]
+Pattern=F6472004
+Operations=ADD 25
+
+[Hook-CGameEffectRangeEffect::ApplyEffect()]
+Pattern=4885C9747B
+Operations=ADD -43
+
+[Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail]
+Pattern=488D8FC81C0000
+Operations=ADD 20
 
 [Hook-CGameObjectArray::Clean()-DestructJmp]
 Pattern=6666660F1F840000000000480FBFC2
@@ -1197,6 +1237,18 @@ Operations=ADD 43
 [Hook-CGameSprite::SpellPoint()-CheckDirectionJmp]
 Pattern=8B4B48488B442460
 Operations=ADD -20
+
+[Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee]
+Pattern=0F85B5070000
+Operations=ADD -7
+
+[Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged]
+Pattern=4D8D6F0CE95E010000
+Operations=ADD 36
+
+[Hook-CGameSprite::Swing()-NoCImmunitiesWeaponElseContinue]
+Pattern=418B47484D8D6F0C
+Operations=ADD 41
 
 [Hook-CGameSprite::Unmarshal()-CDerivedStats::Reload()-1]
 Pattern=FFC63B770C
