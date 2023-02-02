@@ -78,6 +78,11 @@
 	-- is currently saved for the given CProjectile::AddEffect() call.
 	local getAddEffectAIBase = EEex_JITNear({[[
 
+		#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+		#MAKE_SHADOW_SPACE(24)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
 		mov rax, #$(1) ]], {EEex_Label("Data-CGameAIBase::ForceSpell()-CProjectile::AddEffect()-RetPtr")}, [[       ; 0x14016CE36
 		cmp rcx, rax
 		je in_rbx
@@ -146,41 +151,39 @@
 		je in_rsi
 
 		xor rax, rax
-		ret
+		jmp return
 
 		in_rbx:
 		mov rax, rbx
-		ret
+		jmp return
 
 		in_r14:
 		mov rax, r14
-		ret
+		jmp return
 
 		in_rbp:
 		mov rax, rbp
-		ret
+		jmp return
 
 		in_r15:
 		mov rax, r15
-		ret
+		jmp return
 
 		source_id_on_stack:
-		#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-		#MAKE_SHADOW_SPACE(16)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
-
 		mov ecx, dword ptr ss:[rbp+0x7F]
-		lea rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		lea rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
 		mov qword ptr ss:[rdx], 0
 		call #L(CGameObjectArray::GetShare)
-		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE
-		ret
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+		jmp return
 
 		in_rsi:
 		mov rax, rsi
+
+		return:
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
 		ret
 	]]})
 

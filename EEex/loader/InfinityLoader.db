@@ -649,9 +649,6 @@ Operations=ADD -30
 Pattern=488BF9B930000000
 Operations=ADD -10
 
-[CProjectile::AddEffect]
-Pattern=0FB741604883C178
-
 [CProjectile::DecodeProjectile]
 Pattern=488BF24889542468
 Operations=ADD -49
