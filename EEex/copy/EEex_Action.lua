@@ -167,6 +167,55 @@ function EEex_Action_FreeScriptFile(pScriptFile)
 end
 CAIScriptFile.free = EEex_Action_FreeScriptFile
 
+---------------
+-- Listeners --
+---------------
+
+EEex_Action_Private_SpriteStartedNextActionListeners = {}
+
+function EEex_Action_AddSpriteStartedNextActionListener(func)
+	table.insert(EEex_Action_Private_SpriteStartedNextActionListeners, func)
+end
+
+EEex_Action_Private_SpriteStartedActionListeners = {}
+
+function EEex_Action_AddSpriteStartedActionListener(func)
+	table.insert(EEex_Action_Private_SpriteStartedActionListeners, func)
+end
+
+------------------------------------
+-- Built-In Action Hook Listeners --
+------------------------------------
+
+EEex_Action_BuiltInListener = {
+	["SpellToPoint"] = function(sprite, action)
+		local spellActions = {
+			 [31] =  95, -- Spell            => SpellPoint
+			[113] = 114, -- ForceSpell       => ForceSpellPoint
+			[181] = 337, -- ReallyForceSpell => ReallyForceSpellPoint
+			[191] = 192, -- SpellNoDec       => SpellPointNoDec
+		}
+		local newActionID = spellActions[action.m_actionID]
+		if newActionID then
+			local targetObject = EEex_GameObject_Get(action.m_acteeID.m_Instance)
+			if targetObject then
+				action.m_actionID = newActionID
+				action.m_dest.x = targetObject.m_pos.x
+				action.m_dest.y = targetObject.m_pos.y
+			end
+		end
+	end
+}
+
+-- Causes the next action's projectile to target a point instead of tracking the entity.
+-- Used from a script like:
+--     EEex_LuaAction("EEex_Action_NextSpellToPoint()")
+--     SpellNoDecRES("SPWI304",PartySlot1)  // Fireball
+
+function EEex_Action_NextSpellToPoint(actorID)
+	EEex_Action_AddSpriteStartedNextActionListener(EEex_Action_BuiltInListener.SpellToPoint)
+end
+
 -----------
 -- Hooks --
 -----------
@@ -202,4 +251,20 @@ function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
 	end
 
 	return EEex_Action_ReturnType.ACTION_ERROR
+end
+
+function EEex_Action_Hook_OnAfterSpriteStartedAction(sprite)
+
+	local action = sprite.m_curAction
+
+	local temp = EEex_Action_Private_SpriteStartedNextActionListeners
+	EEex_Action_Private_SpriteStartedNextActionListeners = {}
+
+	for _, listener in ipairs(temp) do
+		listener(sprite, action)
+	end
+
+	for _, listener in ipairs(EEex_Action_Private_SpriteStartedActionListeners) do
+		listener(sprite, action)
+	end
 end

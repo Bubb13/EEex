@@ -988,6 +988,10 @@ Operations=ADD 34
 Pattern=74034C8B30
 Operations=ADD 37
 
+[CGameSprite::SetCurrAction()-LastCall]
+Pattern=0FBF87B84A0000
+Operations=ADD 31
+
 [Hook-CAIObjectType::Decode()-DefaultJmp]
 Pattern=4885D20F84C6020000
 Operations=ADD 33
