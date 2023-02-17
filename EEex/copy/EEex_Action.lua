@@ -212,7 +212,7 @@ EEex_Action_BuiltInListener = {
 --     EEex_LuaAction("EEex_Action_NextSpellToPoint()")
 --     SpellNoDecRES("SPWI304",PartySlot1)  // Fireball
 
-function EEex_Action_NextSpellToPoint(actorID)
+function EEex_Action_NextSpellToPoint()
 	EEex_Action_AddSpriteStartedNextActionListener(EEex_Action_BuiltInListener.SpellToPoint)
 end
 
