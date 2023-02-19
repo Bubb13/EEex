@@ -196,7 +196,10 @@
 		]]},
 		EEex_GenLuaCall("EEex_Projectile_Hook_BeforeAddEffect", {
 			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx #ENDL", {rspOffset}}, "CProjectile", "EEex_Projectile_CastUT" end,
+				function(rspOffset) return {[[
+					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+					mov qword ptr ss:[rsp+#$(1)], rcx
+				]], {rspOffset}}, "CProjectile", "EEex_Projectile_CastUT" end,
 				function(rspOffset) return {[[
 					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
 					call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
