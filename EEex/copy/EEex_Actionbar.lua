@@ -248,6 +248,7 @@ end
 ---------------
 
 EEex_Actionbar_Listeners = EEex_Actionbar_Listeners or {}
+EEex_Actionbar_SuppressingListeners = false
 
 -- @bubb_doc { EEex_Actionbar_AddListener }
 --
@@ -347,6 +348,18 @@ function EEex_Actionbar_AddListener(func)
 	table.insert(EEex_Actionbar_Listeners, func)
 end
 
+function EEex_Actionbar_SuppressListeners(bSuppress)
+	EEex_Actionbar_SuppressingListeners = bSuppress
+end
+
+function EEex_Actionbar_RunWithListenersSuppressed(func)
+	local saved = EEex_Actionbar_SuppressingListeners
+	EEex_Actionbar_SuppressingListeners = true
+	local toReturn = func()
+	EEex_Actionbar_SuppressingListeners = saved
+	return toReturn
+end
+
 -----------
 -- Hooks --
 -----------
@@ -396,12 +409,20 @@ Unique Config | State(s)
               |
 --]]
 function EEex_Actionbar_Hook_StateUpdating(config, state)
+
 	if EEex_Actionbar_IgnoreEngineStatup then
 		EEex_Actionbar_IgnoreEngineStatup = false
 		return
 	end
+
+	if EEex_Actionbar_SuppressingListeners then
+		return
+	end
+
 	for i, func in ipairs(EEex_Actionbar_Listeners) do
-		func(config, state)
+		if func(config, state) then
+			break
+		end
 	end
 end
 

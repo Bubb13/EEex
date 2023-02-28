@@ -164,6 +164,9 @@ Operations=ADD -18
 [CGameArea::GetNearest2]
 Pattern=6644894C24204C89442418
 
+[CGameArea::OnActionButtonClickGround]
+Pattern=48895C2410565741564883EC40
+
 [CGameEffect::DecodeEffect]
 Pattern=5741564883EC4033DB
 Operations=ADD -11
@@ -225,6 +228,17 @@ Pattern=48896C24104889742418574881ECE0000000
 Pattern=4889442430448BFA
 Operations=ADD -38
 
+[CInfGame::OnPortraitLDblClick]
+Pattern=0F8DAE000000
+Operations=ADD -7
+
+[CInfGame::SelectCharacter]
+Pattern=48896C241856574154415541564883EC30
+Operations=ADD -5
+
+[CInfGame::SelectToolbar]
+Pattern=40535741564883EC20
+
 [CInfGame::SetIconIndex]
 Pattern=889138400000
 Operations=ADD -21
@@ -232,6 +246,10 @@ Operations=ADD -21
 [CInfGame::SetState]
 Pattern=4489814C400000
 Operations=ADD -9
+
+[CInfGame::UnselectAll]
+Pattern=5541564883EC30488BD9
+Operations=ADD -2
 
 [CMessageHandler::AddMessage]
 Pattern=4889742410574883EC20488B02
