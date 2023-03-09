@@ -429,3 +429,10 @@ end
 function EEex_Actionbar_Hook_HasFullThieving(sprite)
 	return sprite:getClass() ~= 5
 end
+
+function EEex_Actionbar_Hook_IsPartyLeader(sprite)
+	-- Allow non-party-members with EEex_Actionbar_Hook_HasFullThieving() == true
+	-- to pick locks / disarm traps.
+	return EEex_Actionbar_GetArray().m_nSelectedButton == EEex_Actionbar_ButtonType.THIEVING
+		and EEex_Actionbar_Hook_HasFullThieving(sprite)
+end

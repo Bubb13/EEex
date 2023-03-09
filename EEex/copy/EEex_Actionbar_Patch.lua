@@ -46,7 +46,7 @@
 
 	EEex_HookAfterRestore(EEex_Label("Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving"), 0, 7, 11, EEex_FlattenTable({
 		{[[
-			#MAKE_SHADOW_SPACE(40)
+			#MAKE_SHADOW_SPACE(48)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 		]]},
 		EEex_GenLuaCall("EEex_Actionbar_Hook_HasFullThieving", {
@@ -73,6 +73,30 @@
 
 			full_thieving:
 			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	EEex_HookAfterCall(EEex_Label("Hook-CAIGroup::IsPartyLeader()-Override"), EEex_FlattenTable({
+		{[[
+			test rax, rax
+			jnz #L(return)
+
+			#MAKE_SHADOW_SPACE(40)
+		]]},
+		EEex_GenLuaCall("EEex_Actionbar_Hook_IsPartyLeader", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
 			#DESTROY_SHADOW_SPACE
 		]]},
 	}))

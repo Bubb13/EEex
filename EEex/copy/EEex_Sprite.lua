@@ -813,6 +813,10 @@ end
 
 function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 
+	if EEex_Debug_DisableExtraCreatureMarshalling then
+		return 0
+	end
+
 	local addTableExport = function(handlerName, toExport)
 		if type(toExport) ~= "table" then
 			EEex_Error("Creature marshal handler must export table")
@@ -841,6 +845,11 @@ function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 end
 
 function EEex_Sprite_Hook_WriteExtraEffectListMarshal(memory)
+
+	if EEex_Debug_DisableExtraCreatureMarshalling then
+		return
+	end
+
 	if EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize > 0 then
 		EEex_WriteLString(memory, "X-BIV1.0", 8)
 		local marshalPtr = memory + 8

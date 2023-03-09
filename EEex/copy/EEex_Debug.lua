@@ -1,4 +1,5 @@
 
+EEex_Debug_DisableExtraCreatureMarshalling = false
 EEex_Debug_LogActions = false
 
 (function()

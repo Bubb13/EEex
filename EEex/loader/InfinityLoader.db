@@ -198,6 +198,14 @@ Operations=ADD -39
 Pattern=574883EC20480FBFC2
 Operations=ADD -10
 
+[CGameSprite::GetName]
+Pattern=83B960050000FF
+Operations=ADD -25
+
+[CGameSprite::GetNameRef]
+Pattern=8B8160050000
+Operations=ADD -4
+
 [CGameSprite::GetQuickButtons]
 Pattern=48895C242055565741544156488D6C24C9
 
@@ -293,15 +301,30 @@ Operations=ADD -6
 Pattern=4D39A708020000
 Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
 
+[CRuleTables::MapCharacterSpecializationToSchool]
+Pattern=81FA000800007736
+
 [CScreenWorld::TogglePauseGame]
 Pattern=48895C241855565741564157488D6C24D9
 
 [CSearchBitmap::GetCost]
 Pattern=48895C242056574154415541564883EC30
 
+[CSound::Construct]
+Pattern=4C89314883C110
+Operations=ADD -43
+
+[CSound::Destruct]
+Pattern=488B8D30110000
+Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
+
 [CSpell::Construct]
 Pattern=488D4C2448BAEE030000
 Operations=ADD -173
+
+[CString::ConstructFromCString]
+Pattern=488BD98378F400
+Operations=ADD -9
 
 [CString::ConstructFromChars]
 Pattern=488BF2488901488BF9
@@ -309,6 +332,10 @@ Operations=ADD -17
 
 [CString::Destruct]
 Pattern=488B114883C2F4
+
+[CTlkTable::Fetch]
+Pattern=8D43FF83F8FD
+Operations=ADD -118
 
 [CVariable::Construct]
 Pattern=40534883EC2041B820000000
@@ -655,6 +682,10 @@ Operations=ADD 13, PUSH, READ DWORD, ADD, ADD 5
 ;-- Engine Functions --
 ;----------------------
 
+[CGameEffect::CheckSave]
+Pattern=4889442470410FB600
+Operations=ADD -28
+
 [CGameEffect::Construct]
 Pattern=4889442428488BD9418BF1
 Operations=ADD -23
@@ -682,6 +713,14 @@ Operations=ADD -6
 [CMessageAddEffect::VFTable]
 Pattern=488B49104885C97412
 Operations=ADD -12, PUSH, READ DWORD, ADD, ADD 4
+
+[CMessageDisplayText::VFTable]
+Pattern=895F0C488D4F10
+Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
+
+[CMessageDisplayTextRef::VFTable]
+Pattern=744D8B5E48
+Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
 
 [CMessageSetDirection::VFTable]
 Pattern=8B4B48498B06
@@ -1009,6 +1048,10 @@ Operations=ADD 37
 [CGameSprite::SetCurrAction()-LastCall]
 Pattern=0FBF87B84A0000
 Operations=ADD 31
+
+[Hook-CAIGroup::IsPartyLeader()-Override]
+Pattern=4885C0740BB801000000
+Operations=ADD -5
 
 [Hook-CAIObjectType::Decode()-DefaultJmp]
 Pattern=4885D20F84C6020000
