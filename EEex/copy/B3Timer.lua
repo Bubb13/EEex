@@ -82,18 +82,13 @@ function B3Timer_InstallBars()
 		item = item.next
 	end
 end
+EEex_Menu_AddMainFileLoadedListener(B3Timer_InstallBars)
 
 function B3Timer_PushMenuListener()
 	Infinity_PushMenu("B3Timer_Menu")
 end
-
-function B3Timer_InitListeners()
-	EEex_Menu_AddMainFileLoadedListener(B3Timer_InstallBars)
-	EEex_GameState_AddInitializedListener(B3Timer_PushMenuListener)
-	EEex_Menu_AddAfterMainFileReloadedListener(B3Timer_PushMenuListener)
-	EEex_Menu_AddBeforeMainFileReloadedListener(B3Timer_InitListeners)
-end
-B3Timer_InitListeners()
+EEex_GameState_AddInitializedListener(B3Timer_PushMenuListener)
+EEex_Menu_AddAfterMainFileReloadedListener(B3Timer_PushMenuListener)
 
 --------------------
 -- Menu Functions --

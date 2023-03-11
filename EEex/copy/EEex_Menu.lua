@@ -219,7 +219,7 @@ end
 EEex_Menu_BeforeMainFileReloadedListeners = {}
 
 -- Given listener function is called before an F5 UI reload is executed.
-function EEex_Menu_AddBeforeMainFileReloadedListener()
+function EEex_Menu_AddBeforeMainFileReloadedListener(listener)
 	table.insert(EEex_Menu_BeforeMainFileReloadedListeners, listener)
 end
 

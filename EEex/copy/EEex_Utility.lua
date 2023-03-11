@@ -166,12 +166,7 @@ function EEex_Utility_KeyPressed(key)
 		end
 	end
 end
-
-function EEex_Utility_InitListeners()
-	EEex_Key_AddPressedListener(EEex_Utility_KeyPressed)
-	EEex_Menu_AddBeforeMainFileReloadedListener(EEex_Utility_InitListeners)
-end
-EEex_Utility_InitListeners()
+EEex_Key_AddPressedListener(EEex_Utility_KeyPressed)
 
 ---------------
 -- EEex_Dump --
