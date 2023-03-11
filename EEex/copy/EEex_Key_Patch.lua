@@ -16,20 +16,25 @@
 			ret
 
 			call_hook:
-			#MAKE_SHADOW_SPACE(48)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+			#MAKE_SHADOW_SPACE(40)
 		]]},
 		EEex_GenLuaCall("EEex_Key_Hook_AfterEventsPoll", {
 			["args"] = {
 				function(rspOffset) return {[[
 					lea rcx, qword ptr ds:[rbp-51h]
-					mov qword ptr ss:[rsp+#$(1)], rcx ]], {rspOffset}, [[ #ENDL
-				]]}, "SDL_Event" end,
+					mov qword ptr ss:[rsp+#$(1)], rcx
+				]], {rspOffset}}, "SDL_Event" end,
 			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
 		}),
 		{[[
+			xor rax, 1
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			ret
+
 			call_error:
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#RESUME_SHADOW_ENTRY
+			mov rax, 1
 			#DESTROY_SHADOW_SPACE
 			ret
 		]]},

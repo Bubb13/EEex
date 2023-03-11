@@ -945,7 +945,9 @@ function EEex_Key_Private_OnPressed(key, bRepeat)
 	EEex_Key_IsDownMap[key] = true
 	if not bRepeat then
 		for i, func in ipairs(EEex_Key_PressedListeners) do
-			func(key)
+			if func(key) then
+				return true -- Consume event
+			end
 		end
 	end
 end
@@ -953,14 +955,16 @@ end
 function EEex_Key_Private_OnReleased(key)
 	EEex_Key_IsDownMap[key] = false
 	for i, func in ipairs(EEex_Key_ReleasedListeners) do
-		func(key)
+		if func(key) then
+			return true -- Consume event
+		end
 	end
 end
 
 function EEex_Key_Hook_AfterEventsPoll(event)
 	if event.type == SDL_EventType.SDL_KEYDOWN then
-		EEex_Key_Private_OnPressed(event.key.keysym.sym, event.key["repeat"] ~= 0)
+		return EEex_Key_Private_OnPressed(event.key.keysym.sym, event.key["repeat"] ~= 0)
 	elseif event.type == SDL_EventType.SDL_KEYUP then
-		EEex_Key_Private_OnReleased(event.key.keysym.sym)
+		return EEex_Key_Private_OnReleased(event.key.keysym.sym)
 	end
 end
