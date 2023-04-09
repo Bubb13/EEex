@@ -96,4 +96,16 @@
 
 	registerStat("EEex_ProjectileMutatorEffects")
 
+	--------------------------------------------
+	-- New Opcode #409 (EnableActionListener) --
+	--------------------------------------------
+
+	registerStat("EEex_EnabledActionListeners", {
+		["onPlusEqu"] = function(self, stats, aux, otherStats, otherAux)
+			for k, v in pairs(otherAux[self.name]) do
+				aux[k] = EEex_Utility_DeepCopy(v)
+			end
+		end,
+	})
+
 end)()

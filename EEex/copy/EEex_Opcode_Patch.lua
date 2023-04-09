@@ -480,6 +480,31 @@
 		]]}),
 	})
 
+	--------------------------------------------
+	-- New Opcode #409 (EnableActionListener) --
+	--------------------------------------------
+
+	local EEex_EnableActionListener = genOpcodeDecode({
+
+		["ApplyEffect"] = EEex_FlattenTable({[[
+
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(48)
+
+			]], EEex_GenLuaCall("EEex_Opcode_Hook_EnableActionListener_ApplyEffect", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+			}), [[
+
+			call_error:
+			#DESTROY_SHADOW_SPACE
+			mov rax, 1
+			ret
+		]]}),
+	})
+
 	-------------------
 	-- Decode Switch --
 	-------------------
@@ -512,8 +537,13 @@
 
 		_408:
 		cmp eax, 408
-		jne #L(jmp_success)
+		jne _409
 		]], EEex_ProjectileMutator, [[
+
+		_409:
+		cmp eax, 409
+		jne #L(jmp_success)
+		]], EEex_EnableActionListener, [[
 	]]}))
 
 	EEex_EnableCodeProtection()

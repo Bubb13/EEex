@@ -183,6 +183,12 @@ function EEex_Action_AddSpriteStartedActionListener(func)
 	table.insert(EEex_Action_Private_SpriteStartedActionListeners, func)
 end
 
+EEex_Action_Private_EnabledSpriteStartedActionListeners = {}
+
+function EEex_Action_AddEnabledSpriteStartedActionListener(funcName, func)
+	EEex_Action_Private_EnabledSpriteStartedActionListeners[funcName] = func
+end
+
 ------------------------------------
 -- Built-In Action Hook Listeners --
 ------------------------------------
@@ -266,5 +272,13 @@ function EEex_Action_Hook_OnAfterSpriteStartedAction(sprite)
 
 	for _, listener in ipairs(EEex_Action_Private_SpriteStartedActionListeners) do
 		listener(sprite, action)
+	end
+
+	local statsAux = EEex_GetUDAux(sprite:getActiveStats())
+	for funcName, effect in pairs(statsAux["EEex_EnabledActionListeners"]) do
+		if effect.m_effectAmount ~= 0 then
+			local func = EEex_Action_Private_EnabledSpriteStartedActionListeners[funcName]
+			EEex_Utility_CallIfExists(func, sprite, action, effect)
+		end
 	end
 end

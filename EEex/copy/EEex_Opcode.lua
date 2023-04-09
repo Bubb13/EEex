@@ -275,3 +275,12 @@ function EEex_Opcode_Hook_ProjectileMutator_ApplyEffect(effect, sprite)
 	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
 	table.insert(statsAux["EEex_ProjectileMutatorEffects"], effect)
 end
+
+--------------------------------------------
+-- New Opcode #409 (EnableActionListener) --
+--------------------------------------------
+
+function EEex_Opcode_Hook_EnableActionListener_ApplyEffect(effect, sprite)
+	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
+	statsAux["EEex_EnabledActionListeners"][effect.m_res:get()] = effect
+end
