@@ -259,6 +259,10 @@ Operations=ADD -9
 Pattern=5541564883EC30488BD9
 Operations=ADD -2
 
+[CItem::Construct3]
+Pattern=48896C242048895424105657
+Operations=ADD -5
+
 [CMessageHandler::AddMessage]
 Pattern=4889742410574883EC20488B02
 Operations=ADD -5
@@ -333,6 +337,14 @@ Operations=ADD -17
 [CString::Destruct]
 Pattern=488B114883C2F4
 
+[CString::SetFromCString]
+Pattern=488B02488BD9488B09
+Operations=ADD -10
+
+[CString::SetFromChars]
+Pattern=B301E959FFFFFF
+Operations=ADD -14, PUSH, READ DWORD, ADD, ADD 4
+
 [CTlkTable::Fetch]
 Pattern=8D43FF83F8FD
 Operations=ADD -118
@@ -384,6 +396,10 @@ Operations=ADD -8
 [CAIObjectType::NOONE]
 Pattern=E988040000
 Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
+
+[CChitin::TIMER_UPDATES_PER_SECOND]
+Pattern=0F57C9488B9090100000
+Operations=ADD 19, PUSH, READ DWORD, ADD, ADD 4
 
 [CGameObject::DEFAULT_TERRAIN_TABLE]
 Pattern=480FBFC085C0786A

@@ -1,0 +1,15 @@
+
+-------------------------------
+-- EEex_StutterDetector_Menu --
+-------------------------------
+
+menu
+{
+	name "EEex_StutterDetector_Menu"
+	ignoreesc
+
+	label
+	{
+		enabled "EEex_StutterDetector_Private_Tick()"
+	}
+}

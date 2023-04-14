@@ -155,6 +155,19 @@ function EEex_Utility_Switch(toSwitchOn, cases, defaultCase)
 	end
 end
 
+function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
+	local t = {}
+	local insertI = 1
+	for k, v in pairs(map) do
+		t[insertI] = { k, v }
+		insertI = insertI + 1
+	end
+	table.sort(t, sortFunc)
+	for i, v in ipairs(t) do
+		func(i, v[1], v[2])
+	end
+end
+
 --------------------
 -- Listeners Init --
 --------------------
@@ -166,7 +179,10 @@ function EEex_Utility_KeyPressed(key)
 		end
 	end
 end
-EEex_Key_AddPressedListener(EEex_Utility_KeyPressed)
+
+if not EEex_Main_MinimalStutterStartup then
+	EEex_Key_AddPressedListener(EEex_Utility_KeyPressed)
+end
 
 ---------------
 -- EEex_Dump --
