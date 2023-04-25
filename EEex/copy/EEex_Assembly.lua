@@ -1,4 +1,14 @@
 
+-- LuaJIT compatibility
+if not table.pack then
+	table.pack = function(...)
+		local t = {...}
+		t.n = #t
+		return t
+	end
+	table.unpack = unpack
+end
+
 EEex_OnceTable = {}
 EEex_GlobalAssemblyLabels = {}
 EEex_CodePageAllocations = {}
@@ -843,7 +853,7 @@ function EEex_GenLuaCall(funcName, meta)
 						mov rdx, ]], -(2 + errorFuncLuaStackPopAmount + argI), [[ ; index
 						mov rcx, rbx                                              ; L
 						#ALIGN
-						call short #L(Hardcoded_lua_settop)
+						call #L(Hardcoded_lua_settop)
 						#ALIGN_END
 						jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 
@@ -926,7 +936,7 @@ function EEex_GenLuaCall(funcName, meta)
 					{[[
 						mov rcx, rbx ; L
 						#ALIGN
-						call short #L(Hardcoded_luaL_loadstring)
+						call #L(Hardcoded_luaL_loadstring)
 						#ALIGN_END
 
 						test rax, rax
@@ -1040,7 +1050,7 @@ function EEex_GenLuaCall(funcName, meta)
 			mov r8, ]], numRet, [[                            ; nresults
 			mov rdx, ]], numArgs, [[                          ; nargs
 			mov rcx, rbx                                      ; L
-			call short #L(Hardcoded_lua_pcallk)
+			call #L(Hardcoded_lua_pcallk)
 			#ALIGN_END
 
 			#ALIGN
@@ -1051,12 +1061,12 @@ function EEex_GenLuaCall(funcName, meta)
 			test rax, rax
 
 			#IF ]], errorFunc ~= nil, [[ {
-				jz short EEex_GenLuaCall_no_error#$(1) ]], {labelSuffix}, [[ #ENDL
+				jz EEex_GenLuaCall_no_error#$(1) ]], {labelSuffix}, [[ #ENDL
 				; Clear error function and its precursors off of Lua stack
 				mov rdx, ]], -(1 + errorFuncLuaStackPopAmount), [[ ; index
 				mov rcx, rbx                                       ; L
 				#ALIGN
-				call short #L(Hardcoded_lua_settop)
+				call #L(Hardcoded_lua_settop)
 				#ALIGN_END
 				jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 			}
@@ -1162,22 +1172,6 @@ function EEex_ReverseTable(t, tMaxI)
 		insertI = insertI + 1
 	end
 	return newT
-end
-
-function EEex_AssemblyToHex(number)
-
-	local hexT = {}
-	local insertI = 1
-
-	repeat
-		hexT[insertI] = string.format("%x", EEex_Extract(number, 0, 4)):upper()
-		insertI = insertI + 1
-		number = EEex_RShift(number, 4)
-	until number == 0x0
-
-	hexT = EEex_ReverseTable(hexT, insertI - 1)
-	hexT[insertI] = "h"
-	return table.concat(hexT)
 end
 
 function EEex_ToHex(number, minLength, suppressPrefix)
@@ -1383,12 +1377,15 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 		local argsTableSize = #argsTable
 		if argIndex > argsTableSize then EEex_Error(string.format("#$%d out of bounds for arg table of size %d", argIndex, argsTableSize)) end
 		advanceCount = 2
-		return tostring(argsTable[argIndex])
+		local argVal = argsTable[argIndex]
+		return type(argVal) == "number"
+			and string.format("%d", argVal)
+			or tostring(argVal)
 	end)
 
 	-- #L
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#L(%b())", function(match)
-		return EEex_AssemblyToHex(EEex_Label(match.groups[1]:sub(2, -2)))
+		return string.format("%d", EEex_Label(match.groups[1]:sub(2, -2)))
 	end)
 
 	--#REPEAT
@@ -1425,7 +1422,7 @@ function EEex_PreprocessAssembly(assemblyT)
 			builtStr[insertI], advanceCount = EEex_PreprocessAssemblyStr(assemblyT, i, v)
 			insertI = insertI + 1
 		elseif vtype == "number" then
-			builtStr[insertI] = tostring(v)
+			builtStr[insertI] = string.format("%d", v)
 			insertI = insertI + 1
 		else
 			EEex_Error("Unexpected type encountered during JIT: "..vtype)

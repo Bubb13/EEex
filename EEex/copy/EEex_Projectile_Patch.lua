@@ -190,30 +190,25 @@
 	EEex_HookBeforeRestore(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, EEex_FlattenTable({
 		{[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(80)
+			#MAKE_SHADOW_SPACE(24)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 		]]},
-		EEex_GenLuaCall("EEex_Projectile_Hook_BeforeAddEffect", {
-			["args"] = {
-				function(rspOffset) return {[[
-					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-					mov qword ptr ss:[rsp+#$(1)], rcx
-				]], {rspOffset}}, "CProjectile", "EEex_Projectile_CastUT" end,
-				function(rspOffset) return {[[
-					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
-					call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
-					mov qword ptr ss:[rsp+#$(1)], rax
-				]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameEffect" end,
-				function(rspOffset) return {[[
-					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
-					mov qword ptr ss:[rsp+#$(1)], rax
-				]], {rspOffset}} end,
-			},
-		}),
 		{[[
-			call_error:
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
+			call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
+			mov r8, rax
+
+			mov rcx, #L(Hardcoded_InternalLuaState)
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
+			mov qword ptr ss:[rsp+32], rax
+
+			call #L(EEex::Projectile_Hook_BeforeAddEffect)
+
 			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
 			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE

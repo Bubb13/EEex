@@ -77,25 +77,12 @@
 	-- EEex_Stats_Hook_OnEqu --
 	---------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CDerivedStats::operator_equ()-FirstCall"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(48)
-		]]},
-		EEex_GenLuaCall("EEex_Stats_Hook_OnEqu", {
-			["args"] = {
-				function(rspOffset) return {[[
-					mov qword ptr ss:[rsp+#$(1)], r14
-				]], {rspOffset}}, "CDerivedStats" end,
-				function(rspOffset) return {[[
-					mov qword ptr ss:[rsp+#$(1)], rsi
-				]], {rspOffset}}, "CDerivedStats" end,
-			},
-		}),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+	EEex_HookAfterCall(EEex_Label("Hook-CDerivedStats::operator_equ()-FirstCall"), {[[
+		mov rcx, #L(Hardcoded_InternalLuaState)
+		mov r8, r14
+		mov r9, rsi
+		call #L(EEex::Stats_Hook_OnEqu)
+	]]})
 
 	-------------------------------
 	-- EEex_Stats_Hook_OnPlusEqu --

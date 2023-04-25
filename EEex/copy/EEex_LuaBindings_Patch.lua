@@ -18,6 +18,9 @@
 	override("module_index_event")
 	override("class_index_event")
 
+	override("tolua_beginmodule")
+	override("tolua_module")
+
 	EEex_EnableCodeProtection()
 
 end)()

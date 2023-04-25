@@ -910,10 +910,6 @@ Operations=ADD -15
 [Hardcoded_lua_type]
 Pattern=4883EC28E8????????488D0D????????483BC1740B
 
-[Hardcoded_tolua_beginmodule]
-Pattern=488BD94885D27417
-Operations=ADD -6
-
 [Hardcoded_tolua_bnd_cast]
 Pattern=488BCB488BF0418D5002
 Operations=ADD -33
@@ -960,6 +956,10 @@ Operations=ADD -38
 Pattern=443BC07C43
 Operations=ADD -43
 
+[Hardcoded_tolua_ismodulemetatable]
+Pattern=488BD98D57FF
+Operations=ADD -12
+
 [Hardcoded_tolua_isnumber]
 Pattern=443BC07C0E
 Operations=ADD -43
@@ -971,9 +971,9 @@ Operations=ADD -43
 [Hardcoded_tolua_isusertype]
 Pattern=48895C240848896C24104889742418574883EC20498BE88BF2
 
-[Hardcoded_tolua_module]
-Pattern=4889742410574883EC20418BF0488BFA
-Operations=ADD -5
+[Hardcoded_tolua_moduleevents]
+Pattern=85C0740DBAFEFFFFFF
+Operations=ADD -17, PUSH, READ DWORD, ADD, ADD 4
 
 [Hardcoded_tolua_newmetatable]
 Pattern=4883EC20488BFA488BD94C8BC2
@@ -1041,9 +1041,17 @@ Operations=ADD -47
 Pattern=83F8057566
 Operations=ADD -47
 
+[tolua_beginmodule]
+Pattern=488BD94885D27417
+Operations=ADD -6
+
 [tolua_cclass]
 Pattern=41574881EC38010000
 Operations=ADD -11
+
+[tolua_module]
+Pattern=4889742410574883EC20418BF0488BFA
+Operations=ADD -5
 
 [tolua_open]
 Pattern=83F8010F84D7030000
@@ -1414,3 +1422,380 @@ Operations=ADD 223
 [Hook-uiRefreshMenu()-saveMenuStack()]
 Pattern=48C7C7FFFFFFFF6690
 Operations=ADD -235
+
+;-------------------------------
+;-- Lua Replacement Functions --
+;-------------------------------
+
+[luaL_addlstring]
+Pattern=488BDA498BF0
+Operations=ADD -15
+
+[luaL_addstring]
+Pattern=4883EC20488BFA488BF148C7C3FFFFFFFF
+Operations=ADD -11
+
+[luaL_addvalue]
+Pattern=41574883EC20488B591833F6
+Operations=ADD -18
+
+[luaL_argerror]
+Pattern=48898424B0000000488BD9
+Operations=ADD -21
+
+[luaL_checkinteger]
+Pattern=80F904754F
+Operations=ADD -46
+
+[luaL_checknumber]
+Pattern=80F904754E
+Operations=ADD -46
+
+[luaL_checkudata]
+Pattern=4D8BF08BEA488BF1
+Operations=ADD -26
+
+[luaL_error]
+Pattern=4C894C242053574883EC28
+Operations=ADD -10
+
+[luaL_getmetafield]
+Pattern=744F488BD7
+Operations=ADD -23
+
+[luaL_getsubtable]
+Pattern=4883EC20BAD8B9F0FF
+Operations=ADD -6
+
+[luaL_gsub]
+Pattern=41554157488DAC2478FEFFFF
+Operations=ADD -6
+
+[luaL_len]
+Pattern=4883431010488B53108B42F8
+Operations=ADD -44
+
+[luaL_loadbufferx]
+Pattern=4833C44889442440488B842480000000
+Operations=ADD -11
+
+[luaL_loadfilex]
+Pattern=53415441564157488DAC24A0FEFFFF
+Operations=ADD -2
+
+[luaL_loadstring]
+Pattern=48894424404889542430
+Operations=ADD -14
+
+[luaL_newmetatable]
+Pattern=48895C2418574883EC20488BFA4C8BC2
+
+[luaL_newstate]
+Pattern=7412488B4818
+Operations=ADD -21
+
+[luaL_optlstring]
+Pattern=48895C2408574883EC204D8BD9
+
+[luaL_prepbuffsize]
+Pattern=4889742418574883EC204C8B4108
+Operations=ADD -5
+
+[luaL_pushresult]
+Pattern=488B7918488BD9
+Operations=ADD -10
+
+[luaL_ref]
+Pattern=488B4910488D41F0
+Operations=ADD -26
+
+[luaL_requiref]
+Pattern=40535641574883EC20488B4110
+
+[luaL_setfuncs]
+Pattern=48895424105355564883EC50
+Operations=ADD -5
+
+[luaL_tolstring]
+Pattern=8D8227460F00
+Operations=ADD -20
+
+[luaL_traceback]
+Pattern=48895C2420555657415641574881ECB0000000
+
+[luaL_where]
+Pattern=48898424A0000000488BD985D2
+Operations=ADD -19
+
+[lua_atpanic]
+Pattern=498B8000010000
+Operations=ADD -4
+
+[lua_callk]
+Pattern=48895C2408574883EC204C8B5110
+
+[lua_checkstack]
+Pattern=4889442428488B7920
+Operations=ADD -20
+
+[lua_concat]
+Pattern=488BF983FA02
+Operations=ADD -12
+
+[lua_createtable]
+Pattern=418BF8488B4918
+Operations=ADD -18
+
+[lua_error]
+Pattern=488B5424484C8BC7
+Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
+
+[lua_gc]
+Pattern=4889742410574883EC20488B5918
+Operations=ADD -5
+
+[lua_getfield]
+Pattern=49C7C0FFFFFFFF0F1F840000000000
+Operations=ADD -33
+
+[lua_getglobal]
+Pattern=4D8BC8488B5C2430
+Operations=ADD -112
+
+[lua_getinfo]
+Pattern=488944244080790A01
+Operations=ADD -23
+
+[lua_getlocal]
+Pattern=4883EC2080790A01
+Operations=ADD -2
+
+[lua_getmetatable]
+Pattern=7411498B4218
+Operations=ADD -28
+
+[lua_gettable]
+Pattern=4D8BC84883C428
+Operations=ADD -26
+
+[lua_gettop]
+Pattern=48C1F804C3
+Operations=ADD -15
+
+[lua_getuservalue]
+Pattern=488B10498B4210
+Operations=ADD -12
+
+[lua_insert]
+Pattern=498B53104C8BD0
+Operations=ADD -12
+
+[lua_iscfunction]
+Pattern=83F916740C
+Operations=ADD -12
+
+[lua_isnumber]
+Pattern=83F9037428
+Operations=ADD -12
+
+[lua_isstring]
+Pattern=483BC17418
+Operations=ADD -16
+
+[lua_isuserdata]
+Pattern=83F947
+Operations=ADD -12
+
+[lua_len]
+Pattern=4585F60F8544010000
+Operations=ADD 48, PUSH, READ DWORD, ADD, ADD 4
+
+[lua_load]
+Pattern=4889442448498BC1
+Operations=ADD -16
+
+[lua_newstate]
+Pattern=4889442448488BEA
+Operations=ADD -18
+
+[lua_newuserdata]
+Pattern=488BFA488B4918
+Operations=ADD -13
+
+[lua_next]
+Pattern=4C8B4310488BCB4983E810
+Operations=ADD -14
+
+[lua_pcallk]
+Pattern=4053565741564883EC68
+
+[lua_pushboolean]
+Pattern=4C8B411033C0
+
+[lua_pushcclosure]
+Pattern=4889742410574883EC304963F8
+Operations=ADD -5
+
+[lua_pushfstring]
+Pattern=4C894C2420534883EC20488BD9
+Operations=ADD -10
+
+[lua_pushinteger]
+Pattern=488B41100F57C0
+
+[lua_pushlightuserdata]
+Pattern=488910C7400802000000
+Operations=ADD -4
+
+[lua_pushlstring]
+Pattern=488B5310488B742438
+Operations=ADD -83
+
+[lua_pushnil]
+Pattern=C74008000000004883411010
+Operations=ADD -4
+
+[lua_pushnumber]
+Pattern=488B4110F20F1108
+
+[lua_pushstring]
+Pattern=488BFA488BD94885D27519
+Operations=ADD -10
+
+[lua_pushvalue]
+Pattern=4189400849834210104883C428
+Operations=ADD -25
+
+[lua_pushvfstring]
+Pattern=488BD6488BCB488B5C2430
+Operations=ADD -72
+
+[lua_rawequal]
+Pattern=40534883EC20458BD8
+
+[lua_rawget]
+Pattern=4883EA10488B08
+Operations=ADD -18
+
+[lua_rawgeti]
+Pattern=4883EC28458BD0
+
+[lua_rawlen]
+Pattern=498B16488BD8
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[lua_rawset]
+Pattern=488B7310488BF8
+Operations=ADD -34
+
+[lua_rawseti]
+Pattern=4883EC20458BD0
+Operations=ADD -6
+
+[lua_remove]
+Pattern=498B4A104883C010
+Operations=ADD -12
+
+[lua_resume]
+Pattern=440FB77144
+Operations=ADD -14
+
+[lua_setfield]
+Pattern=49C7C0FFFFFFFF488D5710
+Operations=ADD -33
+
+[lua_setglobal]
+Pattern=4885C0740A488BD0
+Operations=ADD 35, PUSH, READ DWORD, ADD, ADD 4
+
+[lua_setmetatable]
+Pattern=4C8B4B104C8BD0
+Operations=ADD -14
+
+[lua_settable]
+Pattern=48834310E04883C420
+Operations=ADD -37
+
+[lua_settop]
+Pattern=7834488B4120
+Operations=ADD -2
+
+[lua_setupvalue]
+Pattern=4D63D04C8BD9
+Operations=ADD -4
+
+[lua_setuservalue]
+Pattern=4C8BD8498B4210
+Operations=ADD -12
+
+[lua_toboolean]
+Pattern=8B480885C97414
+Operations=ADD -9
+
+[lua_tocfunction]
+Pattern=83F9167508
+Operations=ADD -12
+
+[lua_tointegerx]
+Pattern=80F9047555
+Operations=ADD -40
+
+[lua_tolstring]
+Pattern=4883EC20498BD88BF2
+Operations=ADD -11
+
+[lua_tonumberx]
+Pattern=80F9047554
+Operations=ADD -40
+
+[lua_tounsignedx]
+Pattern=4889442440498BD8
+Operations=ADD -16
+
+[lua_touserdata]
+Pattern=83F9027418
+Operations=ADD -15
+
+[lua_type]
+Pattern=740B8B4008
+Operations=ADD -19
+
+[lua_typename]
+Pattern=4C8BC08BD7
+Operations=ADD -25, PUSH, READ DWORD, ADD, ADD 4
+
+[lua_xmove]
+Pattern=4C8BD1483BCA
+Operations=ADD -3
+
+[luaopen_base]
+Pattern=488BF1BA02000000
+Operations=ADD -15
+
+[luaopen_bit32]
+Pattern=488B4B1041B90C000000
+Operations=ADD -61
+
+[luaopen_coroutine]
+Pattern=0F849A000000488BD0
+Operations=ADD -165, PUSH, READ DWORD, ADD, ADD 4
+
+[luaopen_debug]
+Pattern=488B4B1041B910000000
+Operations=ADD -61
+
+[luaopen_math]
+Pattern=574883EC20488B5118
+Operations=ADD -10
+
+[luaopen_package]
+Pattern=488BCEC7400816000000
+Operations=ADD -151
+
+[luaopen_string]
+Pattern=488BF1488B4918
+Operations=ADD -15
+
+[luaopen_table]
+Pattern=B918190000
+Operations=ADD -31, PUSH, READ DWORD, ADD, ADD 4, ADD 114, PUSH, READ DWORD, ADD, ADD 4

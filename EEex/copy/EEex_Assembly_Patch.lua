@@ -37,7 +37,7 @@ EEex_JITNearAsLabel("EEex_PrintPopLuaString", {[[
 	mov r8, 0                   ; nresults
 	mov rdx, 1                  ; nargs
 	mov rcx, rbx                ; L
-	call short #L(Hardcoded_lua_pcallk)
+	call #L(Hardcoded_lua_pcallk)
 	#ALIGN_END
 
 	; Clear error string off of stack
@@ -64,7 +64,7 @@ EEex_JITNearAsLabel("EEex_CheckCallError", {[[
 	#MAKE_SHADOW_SPACE
 
 	#ALIGN
-	call short #L(EEex_PrintPopLuaString)
+	call #L(EEex_PrintPopLuaString)
 	#ALIGN_END
 
 	mov rax, 1

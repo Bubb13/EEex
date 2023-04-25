@@ -40,7 +40,7 @@
 			#DESTROY_SHADOW_SPACE
 			mov rcx, r14
 			call #L(original)
-			jmp short #L(return)
+			jmp #L(return)
 		]]},
 	}))
 

@@ -477,42 +477,43 @@ end
 --
 -- }: See summary.
 
+EEex_Projectile_Private_CastUserTypes = {
+	[EEex_Projectile_Type.CProjectile]                      = "CProjectile",
+	[EEex_Projectile_Type.CProjectileAmbiant]               = "CProjectileAmbiant",
+	[EEex_Projectile_Type.CProjectileArea]                  = "CProjectileArea",
+	[EEex_Projectile_Type.CProjectileBAM]                   = "CProjectileBAM",
+	--[EEex_Projectile_Type.CProjectileCallLightning]       = "CProjectileCallLightning",
+	--[EEex_Projectile_Type.CProjectileCastingGlow]         = "CProjectileCastingGlow",
+	[EEex_Projectile_Type.CProjectileChain]                 = "CProjectileChain",
+	[EEex_Projectile_Type.CProjectileColorSpray]            = "CProjectileColorSpray",
+	[EEex_Projectile_Type.CProjectileConeOfCold]            = "CProjectileConeOfCold",
+	[EEex_Projectile_Type.CProjectileFall]                  = "CProjectileFall",
+	[EEex_Projectile_Type.CProjectileFireHands]             = "CProjectileFireHands",
+	[EEex_Projectile_Type.CProjectileInstant]               = "CProjectileInstant",
+	--[EEex_Projectile_Type.CProjectileInvisibleTravelling] = "CProjectileInvisibleTravelling",
+	--[EEex_Projectile_Type.CProjectileLightningBolt]       = "CProjectileLightningBolt",
+	--[EEex_Projectile_Type.CProjectileLightningBoltGround] = "CProjectileLightningBoltGround",
+	--[EEex_Projectile_Type.CProjectileLightningBounce]     = "CProjectileLightningBounce",
+	--[EEex_Projectile_Type.CProjectileLightningStorm]      = "CProjectileLightningStorm",
+	--[EEex_Projectile_Type.CProjectileMagicMissileMulti]   = "CProjectileMagicMissileMulti",
+	[EEex_Projectile_Type.CProjectileMulti]                 = "CProjectileMulti",
+	[EEex_Projectile_Type.CProjectileMushroom]              = "CProjectileMushroom",
+	[EEex_Projectile_Type.CProjectileNewScorcher]           = "CProjectileNewScorcher",
+	[EEex_Projectile_Type.CProjectileScorcher]              = "CProjectileScorcher",
+	[EEex_Projectile_Type.CProjectileSegment]               = "CProjectileSegment",
+	[EEex_Projectile_Type.CProjectileSkyStrike]             = "CProjectileSkyStrike",
+	[EEex_Projectile_Type.CProjectileSkyStrikeBAM]          = "CProjectileSkyStrikeBAM",
+	[EEex_Projectile_Type.CProjectileSpellHit]              = "CProjectileSpellHit",
+	[EEex_Projectile_Type.CProjectileTravelDoor]            = "CProjectileTravelDoor",
+}
+
 function EEex_Projectile_CastUserType(projectile)
 
 	if not projectile then
 		return nil
 	end
 
-	local usertype = ({
-		[EEex_Projectile_Type.CProjectile]                      = "CProjectile",
-		[EEex_Projectile_Type.CProjectileAmbiant]               = "CProjectileAmbiant",
-		[EEex_Projectile_Type.CProjectileArea]                  = "CProjectileArea",
-		[EEex_Projectile_Type.CProjectileBAM]                   = "CProjectileBAM",
-		--[EEex_Projectile_Type.CProjectileCallLightning]       = "CProjectileCallLightning",
-		--[EEex_Projectile_Type.CProjectileCastingGlow]         = "CProjectileCastingGlow",
-		[EEex_Projectile_Type.CProjectileChain]                 = "CProjectileChain",
-		[EEex_Projectile_Type.CProjectileColorSpray]            = "CProjectileColorSpray",
-		[EEex_Projectile_Type.CProjectileConeOfCold]            = "CProjectileConeOfCold",
-		[EEex_Projectile_Type.CProjectileFall]                  = "CProjectileFall",
-		[EEex_Projectile_Type.CProjectileFireHands]             = "CProjectileFireHands",
-		[EEex_Projectile_Type.CProjectileInstant]               = "CProjectileInstant",
-		--[EEex_Projectile_Type.CProjectileInvisibleTravelling] = "CProjectileInvisibleTravelling",
-		--[EEex_Projectile_Type.CProjectileLightningBolt]       = "CProjectileLightningBolt",
-		--[EEex_Projectile_Type.CProjectileLightningBoltGround] = "CProjectileLightningBoltGround",
-		--[EEex_Projectile_Type.CProjectileLightningBounce]     = "CProjectileLightningBounce",
-		--[EEex_Projectile_Type.CProjectileLightningStorm]      = "CProjectileLightningStorm",
-		--[EEex_Projectile_Type.CProjectileMagicMissileMulti]   = "CProjectileMagicMissileMulti",
-		[EEex_Projectile_Type.CProjectileMulti]                 = "CProjectileMulti",
-		[EEex_Projectile_Type.CProjectileMushroom]              = "CProjectileMushroom",
-		[EEex_Projectile_Type.CProjectileNewScorcher]           = "CProjectileNewScorcher",
-		[EEex_Projectile_Type.CProjectileScorcher]              = "CProjectileScorcher",
-		[EEex_Projectile_Type.CProjectileSegment]               = "CProjectileSegment",
-		[EEex_Projectile_Type.CProjectileSkyStrike]             = "CProjectileSkyStrike",
-		[EEex_Projectile_Type.CProjectileSkyStrikeBAM]          = "CProjectileSkyStrikeBAM",
-		[EEex_Projectile_Type.CProjectileSpellHit]              = "CProjectileSpellHit",
-		[EEex_Projectile_Type.CProjectileTravelDoor]            = "CProjectileTravelDoor",
-	})[projectile:getType()]
-
+	local usertype = EEex_Projectile_Private_CastUserTypes[projectile:getType()]
 	return usertype and EEex_CastUD(projectile, usertype) or projectile
 end
 EEex_Projectile_CastUT = EEex_Projectile_CastUserType

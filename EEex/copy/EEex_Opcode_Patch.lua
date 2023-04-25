@@ -151,25 +151,15 @@
 
 	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 0, 7, 7, EEex_FlattenTable({
 		{[[
-			#MAKE_SHADOW_SPACE(72)
+			#MAKE_SHADOW_SPACE(32)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-			},
-			["returnType"] = EEex_LuaCallReturnType.Boolean,
-		}),
-		{[[
-			jmp no_error
 
-			call_error:
-			xor rax, rax
+			mov rcx, rbx
+			call #L(EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget)
 
-			no_error:
 			test rax, rax
 			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
 			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
@@ -430,19 +420,11 @@
 		#MAKE_SHADOW_SPACE(56)
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
 
-		]], EEex_GenLuaCall("EEex_Opcode_Hook_OnCheckAdd", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameEffect" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14 #ENDL", {rspOffset}}, "CGameSprite" end,
-			},
-			["returnType"] = EEex_LuaCallReturnType.Boolean,
-		}), [[
-		jmp no_error
+		mov rcx, #L(Hardcoded_InternalLuaState)
+		mov rdx, rdi
+		mov r8, r14
+		call #L(EEex::Opcode_Hook_OnCheckAdd)
 
-		call_error:
-		xor rax, rax
-
-		no_error:
 		mov qword ptr ds:[#$(1)], rax ]], {{effectBlockedHack}}, [[ #ENDL
 		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE

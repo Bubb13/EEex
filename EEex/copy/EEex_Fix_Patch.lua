@@ -85,7 +85,7 @@
 	EEex_HookJumpOnFail(EEex_Label("Hook-CGameSprite::Spell()-CheckDirectionJmp"), 3, {[[
 		mov rdx, r14
 		mov rcx, rbx
-		call short #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL
+		call #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL
 		test rax, rax
 		jnz #L(jmp_success)
 	]]})
@@ -93,7 +93,7 @@
 	EEex_HookJumpOnFail(EEex_Label("Hook-CGameSprite::SpellPoint()-CheckDirectionJmp"), 5, {[[
 		lea rdx, qword ptr ss:[rsp+0x60]
 		mov rcx, rbx
-		call short #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL
+		call #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL
 		test rax, rax
 		jnz #L(jmp_success)
 	]]})
@@ -125,7 +125,7 @@
 	}) do
 		EEex_HookAfterCall(address, {[[
 			mov rcx, rbx
-			call short #$(1) ]], {callOnSpellOrSpellPointStartedCastingGlow}, [[ #ENDL
+			call #$(1) ]], {callOnSpellOrSpellPointStartedCastingGlow}, [[ #ENDL
 		]]})
 	end
 
