@@ -9,6 +9,7 @@ EEex's core component does <b>not</b> make any gameplay changes itself – it me
 <h1>Compatibility</h1>
 Operating systems:
 <br>
+<br>
 
 - Windows — Yes (native)
 - Linux — Proton / Wine with the appropriate option toggled in InfinityLoader.ini
