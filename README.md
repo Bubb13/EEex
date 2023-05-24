@@ -4,10 +4,10 @@ EEex is an executable extender for Beamdog's Enhanced Edition of the Infinity En
 <br>
 <br>
 EEex's core component does <b>not</b> make any gameplay changes itself – it merely enables other mods to do so. The installer provides additional <a href="https://eeex-docs.readthedocs.io/en/latest/Introduction/components.html">components</a> that make gameplay changes.
-
+<br>
+<br>
 <h1>Compatibility</h1>
 Operating systems:
-<br>
 <br>
 
 - Windows — Yes (native)
@@ -22,13 +22,15 @@ Game versions:
 Dependencies:
 
 - <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe/">Microsoft Visual C++ Redistributable</a>
-
+<br>
 <h1>Download</h1>
 The latest EEex version can be downloaded from the <a href="https://github.com/Bubb13/EEex/releases">Releases</a> page. The installer is located under the collapsible "Assets" menu.
 <br>
 <br>
 A WeiDU installer has been intentionally omitted from the master branch to prevent it from being accidentally installed, as it contains work-in-progress features and is not guaranteed to be stable.
-
+<br>
+<br>
+<br>
 <h1>Installation</h1>
 EEex is distributed as a Gibberlings3 installer. After running the setup file, simply point it to your game directory and click "Install".
 <br>
@@ -48,6 +50,7 @@ EEex is distributed as a Gibberlings3 installer. After running the setup file, s
 - And:
   - Provide a series of steps that reproduce the issue.
 
+<br>
 <h1>How EEex works</h1>
 EEex uses a loader program to modify the game's executable after it has been placed into memory. The exact modifications depend on the version of EEex, and any installed mods that make use of EEex's capabilities.
 <br>
@@ -62,6 +65,7 @@ Due to EEex's use of in-memory patching, antivirus solutions might flag Infinity
 - <a href="https://github.com/Bubb13/InfinityLoader">InfinityLoader</a> — EEex versions ≥ v0.9.0-alpha
 - <a href="https://github.com/mrfearless/EEexLoader">EEexLoader</a> (thanks mrfearless!) — EEex versions < v0.9.0-alpha
 
+<br>
 <h1>Documentation</h1>
 EEex makes extensive use of the EE Lua environment, with most of its functionality implemented as Lua code. Features include new Lua functions, opcodes, scripting actions, triggers, and objects. Please see the <a href="https://eeex-docs.readthedocs.io/en/latest/">EEex Documentation</a> for an overview of EEex's features.
 <br>
