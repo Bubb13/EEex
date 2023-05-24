@@ -24,32 +24,32 @@ Dependencies:
 - <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe/">Microsoft Visual C++ Redistributable</a>
 
 <h1>Download</h1>
-The latest EEex version can be downloaded from the <a href="https://github.com/Bubb13/EEex/releases">Releases</a> page.
+The latest EEex version can be downloaded from the <a href="https://github.com/Bubb13/EEex/releases">Releases</a> page. The installer is located under the collapsible "Assets" menu.
 <br>
 <br>
-The main branch intentionally lacks a WeiDU installer to prevent it from being accidently installed, as it contains work-in-progress features and is not guaranteed to be stable.
+A WeiDU installer has been intentionally omitted from the master branch to prevent it from being accidentally installed, as it contains work-in-progress features and is not guaranteed to be stable.
 
 <h1>Installation</h1>
 EEex is distributed as a Gibberlings3 installer. After running the setup file, simply point it to your game directory and click "Install".
 <br>
 <br>
 
-- Older versions of EEex are distributed without the Gibberlings3 installer. Extract the archive's contents into your game directory, and run the setup file.
+- Older versions of EEex are distributed without the Gibberlings3 installer. Extract the archive's contents into your game directory and run the setup file to install.
 
 <b>Please note:</b> The game must be started using InfinityLoader.exe / EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash. If InfinityLoader.exe fails to start, please ensure you have installed the latest <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe/">Microsoft Visual C++ Redistributable</a>.
 <br>
 <br>
-<b>Stability:</b> While crashes are extremely rare, they may still occur. If you encounter a crash, please report the issue by:
+<b>Stability:</b> While crashes are extremely rare, they may still occur. If you encounter a crash, or a bug with EEex, please report the issue by:
 <br>
 - Uploading:
-  - WeiDU.log. This is in your game directory.
-  - A save that exhibits the issue. Saves are found in `C:\Users\<user name>\Documents\<game folder>\save`. Zip the entire save folder.
-  - The generated crash .dmp. This is usually found in `C:\Users\<user name>\Documents\Infinity Engine - Enhanced Edition\crash`.
+  - WeiDU.log — This is in your game directory.
+  - A save that exhibits the issue — Saves are found in `C:\Users\<user name>\Documents\<game folder>\save`. Zip the entire save folder.
+  - (If applicable) The generated crash .dmp — This is usually found in `C:\Users\<user name>\Documents\Infinity Engine - Enhanced Edition\crash`.
 - And:
-  - Provide a series of steps that reproduce the crash.
+  - Provide a series of steps that reproduce the issue.
 
 <h1>How EEex works</h1>
-EEex uses a loader program to modify the game's executable after it has been placed into memory. The exact modifications made depend on the version of EEex installed, and any installed mods that make use of EEex's capabilities.
+EEex uses a loader program to modify the game's executable after it has been placed into memory. The exact modifications depend on the version of EEex, and any installed mods that make use of EEex's capabilities.
 <br>
 <br>
 Due to EEex's use of in-memory patching, antivirus solutions might flag InfinityLoader.exe / EEex.exe as a virus. This is a false positive.
