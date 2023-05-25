@@ -31,6 +31,22 @@
 		EEex_Stats_Register(name, args)
 	end
 
+	-----------------------------------------------------------------------
+	-- Opcode #280                                                       --
+	--   param1  != 0 => Force wild surge number                         --
+	--   special != 0 => Suppress wild surge feedback string and visuals --
+	-----------------------------------------------------------------------
+
+	registerStat("EEex_Op280", {
+		["onConstruct"] = function(self, stats, aux)
+			aux["EEex_Op280"] = nil
+		end,
+		["onReload"] = function(self, stats, aux, sprite)
+			aux["EEex_Op280"] = nil
+		end,
+		["onPlusEqu"] = function(self, stats, aux, otherStats, otherAux) end,
+	})
+
 	---------------------------------------
 	-- New Opcode #401 (SetExtendedStat) --
 	---------------------------------------

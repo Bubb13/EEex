@@ -169,6 +169,37 @@ function EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite, targetSprite, bBlocke
 	end
 end
 
+-----------------------------------------------------------------------
+-- Opcode #280                                                       --
+--   param1  != 0 => Force wild surge number                         --
+--   special != 0 => Suppress wild surge feedback string and visuals --
+-----------------------------------------------------------------------
+
+function EEex_Opcode_Hook_OnOp280ApplyEffect(effect, sprite)
+	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
+	local t = EEex_Utility_GetOrCreateTable(statsAux, "EEex_Op280")
+	t.param1 = effect.m_effectAmount
+	t.special = effect.m_special
+end
+
+-- Return:
+--     0  => Don't override wild surge number
+--     !0 => Override wild surge number
+function EEex_Opcode_Hook_OverrideWildSurgeNumber(sprite)
+	local statsAux = EEex_GetUDAux(sprite:getActiveStats())
+	local t = statsAux["EEex_Op280"]
+	return t and t.param1 or 0
+end
+
+-- Return:
+--     false => Don't suppress wild surge feedback string and visuals
+--     true  => Suppress wild surge feedback string and visuals
+function EEex_Opcode_Hook_SuppressWildSurgeVisuals(sprite)
+	local statsAux = EEex_GetUDAux(sprite:getActiveStats())
+	local t = statsAux["EEex_Op280"]
+	return t and t.special ~= 0 or false
+end
+
 --------------------------------------------------------------------------
 -- Opcode #326 (Special BIT0 flips SPLPROT.2DA's "source" and "target") --
 --------------------------------------------------------------------------
