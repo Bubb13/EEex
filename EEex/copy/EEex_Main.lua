@@ -61,6 +61,8 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 
 (function()
 
+	EEex_DoFile("EEex_Assembly")
+
 	EEex_LoadLuaBindings("LuaBindings-v2.6.6.0", function()
 		EEex_GlobalAssemblyLabels = EEex_GetPatternMap()
 		EEex_DoFile("EEex_LuaBindings_Patch")

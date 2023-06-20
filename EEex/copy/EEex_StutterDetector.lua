@@ -3,7 +3,7 @@
 -- Options --
 -------------
 
-EEex_StutterDetector_Load = true
+EEex_StutterDetector_Load = false
 EEex_StutterDetector_OutputEnabled = true
 
 ---------------

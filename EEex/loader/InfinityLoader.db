@@ -822,12 +822,36 @@ Operations=ADD -38, PUSH, READ DWORD, ADD, ADD 4
 ;-- Functions Referenced by Lua Bindings --
 ;------------------------------------------
 
+[Hardcoded_luaL_error]
+Pattern=4C894C242053574883EC28
+Operations=ADD -10
+
+[Hardcoded_luaL_loadfilex]
+Pattern=53415441564157488DAC24A0FEFFFF
+Operations=ADD -2
+
 [Hardcoded_luaL_loadstring]
 Pattern=48894424404889542430
 Operations=ADD -14
 
+[Hardcoded_luaL_ref]
+Pattern=488B4910488D41F0
+Operations=ADD -26
+
 [Hardcoded_lua_callk]
 Pattern=48895C2408574883EC204C8B5110
+
+[Hardcoded_lua_createtable]
+Pattern=418BF8488B4918
+Operations=ADD -18
+
+[Hardcoded_lua_getfield]
+Pattern=49C7C0FFFFFFFF0F1F840000000000
+Operations=ADD -33
+
+[Hardcoded_lua_getglobal]
+Pattern=4D8BC8488B5C2430
+Operations=ADD -112
 
 [Hardcoded_lua_getmetatable]
 Pattern=7411498B4218
@@ -836,6 +860,10 @@ Operations=ADD -28
 [Hardcoded_lua_gettable]
 Pattern=4D8BC84883C428
 Operations=ADD -26
+
+[Hardcoded_lua_gettop]
+Pattern=48C1F804C3
+Operations=ADD -15
 
 [Hardcoded_lua_insert]
 Pattern=498B53104C8BD0
@@ -861,8 +889,18 @@ Operations=ADD -13
 Pattern=4C8B4310488BCB4983E810
 Operations=ADD -14
 
+[Hardcoded_lua_pcallk]
+Pattern=4053565741564883EC68
+
 [Hardcoded_lua_pushboolean]
 Pattern=4C8B411033C0
+
+[Hardcoded_lua_pushcclosure]
+Pattern=4889742410574883EC304963F8
+Operations=ADD -5
+
+[Hardcoded_lua_pushinteger]
+Pattern=488B41100F57C0
 
 [Hardcoded_lua_pushlightuserdata]
 Pattern=488910C7400802000000
@@ -872,12 +910,30 @@ Operations=ADD -4
 Pattern=488B5310488B742438
 Operations=ADD -83
 
+[Hardcoded_lua_pushnil]
+Pattern=C74008000000004883411010
+Operations=ADD -4
+
+[Hardcoded_lua_pushnumber]
+Pattern=488B4110F20F1108
+
+[Hardcoded_lua_pushstring]
+Pattern=48895C2408574883EC20488BFA488BD94885D27519
+
+[Hardcoded_lua_pushvalue]
+Pattern=4189400849834210104883C428
+Operations=ADD -25
+
 [Hardcoded_lua_rawget]
 Pattern=488B53104883EA10488B08
 Operations=ADD -14
 
 [Hardcoded_lua_rawgeti]
 Pattern=4883EC28458BD0
+
+[Hardcoded_lua_rawset]
+Pattern=488B7310488BF8
+Operations=ADD -34
 
 [Hardcoded_lua_rawseti]
 Pattern=4883EC20458BD0
@@ -887,6 +943,10 @@ Operations=ADD -6
 Pattern=498B4A104883C010
 Operations=ADD -12
 
+[Hardcoded_lua_setglobal]
+Pattern=C6862595000001
+Operations=ADD -11, PUSH, READ DWORD, ADD, ADD 4
+
 [Hardcoded_lua_setmetatable]
 Pattern=4C8B4B104C8BD0
 Operations=ADD -14
@@ -895,9 +955,25 @@ Operations=ADD -14
 Pattern=48834310E04883C420
 Operations=ADD -37
 
+[Hardcoded_lua_settop]
+Pattern=7834488B4120
+Operations=ADD -2
+
+[Hardcoded_lua_toboolean]
+Pattern=8B480885C97414
+Operations=ADD -9
+
 [Hardcoded_lua_tocfunction]
 Pattern=83F9167508
 Operations=ADD -12
+
+[Hardcoded_lua_tointegerx]
+Pattern=80F9047555
+Operations=ADD -40
+
+[Hardcoded_lua_tolstring]
+Pattern=4883EC20498BD88BF2
+Operations=ADD -11
 
 [Hardcoded_lua_tonumberx]
 Pattern=80F9047554
@@ -908,7 +984,8 @@ Pattern=83F9027418
 Operations=ADD -15
 
 [Hardcoded_lua_type]
-Pattern=4883EC28E8????????488D0D????????483BC1740B
+Pattern=740B8B4008
+Operations=ADD -19
 
 [Hardcoded_tolua_bnd_cast]
 Pattern=488BCB488BF0418D5002

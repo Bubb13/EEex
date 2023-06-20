@@ -1174,6 +1174,10 @@ function EEex_ReverseTable(t, tMaxI)
 	return newT
 end
 
+-- Warning: Don't use this with negative numbers in anything critical!
+-- Lua's precision breaks down when RShifting near-max 64bit values.
+-- If you need to convert a 64bit integer to a string, use
+-- EEex_ToDecStr(), which is written in C++.
 function EEex_ToHex(number, minLength, suppressPrefix)
 
 	if type(number) ~= "number" then
@@ -1379,13 +1383,13 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 		advanceCount = 2
 		local argVal = argsTable[argIndex]
 		return type(argVal) == "number"
-			and string.format("%d", argVal)
+			and EEex_ToDecStr(argVal)
 			or tostring(argVal)
 	end)
 
 	-- #L
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#L(%b())", function(match)
-		return string.format("%d", EEex_Label(match.groups[1]:sub(2, -2)))
+		return EEex_ToDecStr(EEex_Label(match.groups[1]:sub(2, -2)))
 	end)
 
 	--#REPEAT
@@ -1422,7 +1426,7 @@ function EEex_PreprocessAssembly(assemblyT)
 			builtStr[insertI], advanceCount = EEex_PreprocessAssemblyStr(assemblyT, i, v)
 			insertI = insertI + 1
 		elseif vtype == "number" then
-			builtStr[insertI] = string.format("%d", v)
+			builtStr[insertI] = EEex_ToDecStr(v)
 			insertI = insertI + 1
 		else
 			EEex_Error("Unexpected type encountered during JIT: "..vtype)
