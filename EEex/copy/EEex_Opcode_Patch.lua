@@ -273,7 +273,7 @@
 		jz normal
 
 		; This is normally done by the CVisualEffect::Load() call
-		lea rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		call #L(CString::Destruct)
 
 		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
@@ -318,9 +318,7 @@
 	-- Only send SPFLESHS message if it is non-nullptr
 	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CMessageHandler::AddMessage()-SPFLESHS"), {[[
 		test rdx, rdx
-		jnz normal
-		jmp #L(return)
-		normal:
+		jz #L(return)
 	]]})
 
 	--------------------------------------------------------------------------
