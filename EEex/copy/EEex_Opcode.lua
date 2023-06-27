@@ -208,6 +208,16 @@ function EEex_Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget(effect)
 	return EEex_IsBitSet(effect.m_special, 1)
 end
 
+-------------------------------------------------------------------------------------------------
+-- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
+-------------------------------------------------------------------------------------------------
+
+function EEex_Opcode_Hook_OnOp333CopiedSelf(effect)
+	if EEex_IsBitSet(effect.m_effectAmount2, 0) then
+		effect.m_savingThrow = 0
+	end
+end
+
 --------------------------------------------
 -- New Opcode #400 (SetTemporaryAIScript) --
 --------------------------------------------

@@ -360,6 +360,29 @@
 		]]},
 	}))
 
+	-------------------------------------------------------------------------------------------------
+	-- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
+	-------------------------------------------------------------------------------------------------
+
+	EEex_HookAfterRestore(0x1401C7DBA, 0, 9, 9, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(56)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp333CopiedSelf", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax #ENDL", {rspOffset}}, "CGameEffect" end,
+			},
+		}),
+		{[[
+			call_error:
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
 	-----------------
 	-- New Opcodes --
 	-----------------
