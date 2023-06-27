@@ -1217,6 +1217,9 @@ Operations=ADD -43
 Pattern=488D8FC81C0000
 Operations=ADD 20
 
+[Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call]
+Pattern=FF50088B9350010000
+
 [Hook-CGameObjectArray::Clean()-DestructJmp]
 Pattern=6666660F1F840000000000480FBFC2
 Operations=ADD 32

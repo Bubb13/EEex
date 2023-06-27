@@ -364,7 +364,7 @@
 	-- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
 	-------------------------------------------------------------------------------------------------
 
-	EEex_HookAfterRestore(0x1401C7DBA, 0, 9, 9, EEex_FlattenTable({
+	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call"), 0, 9, 9, EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(56)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
