@@ -1173,6 +1173,10 @@ Pattern=488BD84C8B7C2460
 Pattern=F6C301740DBA58010000
 Operations=ADD -5
 
+[Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-CheckRetVal]
+Pattern=6685C00F848E0000004885DB
+Operations=ADD 3
+
 [Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext]
 Pattern=4C8BCF8B5320
 Operations=ADD 9
