@@ -61,17 +61,26 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 
 (function()
 
+	-- Contains most of the code editing functions. This file is the core of EEex.
 	EEex_DoFile("EEex_Assembly")
 
+	-- Contains Lua bindings that map engine structures to Lua
 	EEex_LoadLuaBindings("LuaBindings-v2.6.6.0", function()
-		EEex_GlobalAssemblyLabels = EEex_GetPatternMap()
+		-- Patches in-engine tolua functions with EEex versions.
+		-- These are required for proper bindings operation.
 		EEex_DoFile("EEex_LuaBindings_Patch")
 	end)
 
+	-- Contains EEex's C++ functionality
+	EEex_LoadLuaBindings("EEex")
+
+	-- Contains some assembly functions for EEex_Assembly.lua
 	EEex_DoFile("EEex_Assembly_Patch")
 
+	-- Defines information about usertypes for the EEex_MemoryManager helper
 	EEex_DoFile("EEex_MemoryManagerDefinitions")
 
+	-- Run EEex's other files (which each pertain to a specific category)
 	for _, fileName in ipairs(not EEex_Main_MinimalStutterStartup
 		and EEex_Main_Private_NormalStartupFiles
 		or  EEex_Main_Private_MinimalStutterStartupFiles)
@@ -80,15 +89,21 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 	end
 
 	if not EEex_Main_MinimalStutterStartup then
+
+		-- This file may run before the game is initialized.
+		-- The following listener runs files that need to
+		-- wait for the game to be somewhat initialized.
 		EEex_GameState_AddInitializedListener(function()
 			EEex_DoFile("EEex_UserDataGlobals")
 			EEex_DoFile("EEex_Opcode_Init")
 			EEex_DoFile("EEex_StutterDetector")
 		end)
 
+		-- Run EEex_Modules.lua, which determines the enabled EEex modules
 		EEex_DoFile("EEex_Modules")
 		for moduleName, enabled in pairs(EEex_Modules) do
 			if enabled then
+				-- Load the enabled modules
 				EEex_DoFile(moduleName)
 			end
 		end

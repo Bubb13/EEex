@@ -1,4 +1,12 @@
 
+-- This file needs to be called by both EEex_EarlyMain.lua and
+-- EEex_Main.lua. This guard prevents the file from being
+-- needlessly processed twice.
+if EEex_Assembly_AlreadyLoaded then
+	return
+end
+EEex_Assembly_AlreadyLoaded = true
+
 -- LuaJIT compatibility
 if not table.pack then
 	table.pack = function(...)
@@ -8,10 +16,6 @@ if not table.pack then
 	end
 	table.unpack = unpack
 end
-
-EEex_OnceTable = {}
-EEex_GlobalAssemblyLabels = {}
-EEex_CodePageAllocations = {}
 
 -------------------
 -- Debug Utility --
@@ -47,6 +51,8 @@ end
 --------------------
 -- Random Utility --
 --------------------
+
+EEex_OnceTable = {}
 
 function EEex_Once(key, func)
 	if not EEex_OnceTable[key] then
@@ -365,6 +371,10 @@ end
 ------------------------------
 -- General Assembly Writing --
 ------------------------------
+
+-- This table is stored in the Lua registry. InfinityLoader automatically
+-- updates it when new patterns are added by EEex_LoadLuaBindings() DLLs.
+EEex_GlobalAssemblyLabels = EEex_GetPatternMap()
 
 function EEex_DefineAssemblyLabel(label, value)
 	EEex_GlobalAssemblyLabels[label] = value
@@ -1550,6 +1560,8 @@ function EEex_PreprocessAssembly(assemblyT)
 	--print("EEex_PreprocessAssembly returning:\n\n"..toReturn.."\n")
 	return toReturn
 end
+
+EEex_CodePageAllocations = {}
 
 function EEex_AllocCodePage()
 	local address, size = EEex_AllocCodePageInternal()

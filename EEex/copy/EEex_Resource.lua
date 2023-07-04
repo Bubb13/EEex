@@ -95,7 +95,7 @@ end
 function EEex_Resource_Fetch(resref, extension)
 	local toReturn
 	EEex_RunWithStack(CRes.sizeof + #resref + 1, function(rsp)
-	
+
 		local resObj = EEex_PtrToUD(rsp, "CRes")
 		resObj:Construct()
 		local resrefStr = EEex_CastUD(resObj.resref, "CharString")

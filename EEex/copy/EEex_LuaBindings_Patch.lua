@@ -9,17 +9,15 @@
 		})
 	end
 
-	override("tolua_open")
-	override("tolua_cclass")
-
-	override("module_newindex_event")
-	override("class_newindex_event")
-
-	override("module_index_event")
 	override("class_index_event")
-
+	override("class_newindex_event")
+	override("module_index_event")
+	override("module_newindex_event")
 	override("tolua_beginmodule")
+	override("tolua_cclass")
 	override("tolua_module")
+	override("tolua_open")
+	override("tolua_usertype")
 
 	EEex_EnableCodeProtection()
 

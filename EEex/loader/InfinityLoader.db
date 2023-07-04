@@ -1086,10 +1086,6 @@ Operations=ADD -43
 Pattern=E9A90000008BD7
 Operations=ADD -60
 
-[Hardcoded_tolua_usertype]
-Pattern=488BFA89442420
-Operations=ADD -37
-
 [Hardcoded_tolua_variable]
 Pattern=488BF2498BF9
 Operations=ADD -20
@@ -1133,6 +1129,10 @@ Operations=ADD -5
 [tolua_open]
 Pattern=83F8010F84D7030000
 Operations=ADD -61
+
+[tolua_usertype]
+Pattern=488BFA89442420
+Operations=ADD -37
 
 ;-----------
 ;-- Hooks --
