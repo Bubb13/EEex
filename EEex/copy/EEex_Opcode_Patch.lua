@@ -383,6 +383,28 @@
 		]]},
 	}))
 
+	-------------------------------------------------------------------------------------------------
+	-- Opcode #178 --
+	-- Param3 checks for currently selected weapon slot --
+	-- Param4 checks for currently selected weapon category --
+	-------------------------------------------------------------------------------------------------
+
+	EEex_HookAfterCall(0x1401c4cda, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(48)
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp178WeaponSlotWeaponCategory", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsp", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+			},
+		}),
+		{[[
+			call_error:
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
 	-----------------
 	-- New Opcodes --
 	-----------------
