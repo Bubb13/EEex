@@ -3,6 +3,10 @@
 
 	EEex_DisableCodeProtection()
 
+	---------------------------------------------------
+	-- [Lua] EEex_Trigger_Hook_OnEvaluatingUnknown() --
+	---------------------------------------------------
+
 	EEex_HookJumpAutoSucceed(EEex_Label("Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp"), 0, EEex_FlattenTable({[[
 		jbe jmp_fail
 		#MAKE_SHADOW_SPACE(48)

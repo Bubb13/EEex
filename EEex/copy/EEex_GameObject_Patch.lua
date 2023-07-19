@@ -3,9 +3,9 @@
 
 	EEex_DisableCodeProtection()
 
-	---------------------------------------
-	-- EEex_GameObject_Hook_OnDeleting() --
-	---------------------------------------
+	---------------------------------------------
+	-- [Lua] EEex_GameObject_Hook_OnDeleting() --
+	---------------------------------------------
 
 	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameObjectArray::Delete()-DeleteJmp"), 5, EEex_FlattenTable({
 		{[[

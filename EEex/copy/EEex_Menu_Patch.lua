@@ -3,9 +3,9 @@
 
 	EEex_DisableCodeProtection()
 
-	----------------------------------------
-	-- EEex_Menu_Hook_BeforeMenuStackSave --
-	----------------------------------------
+	------------------------------------------------
+	-- [Lua] EEex_Menu_Hook_BeforeMenuStackSave() --
+	------------------------------------------------
 
 	EEex_HookRelativeBranch(EEex_Label("Hook-uiRefreshMenu()-saveMenuStack()"), EEex_FlattenTable({
 		{[[
@@ -20,9 +20,9 @@
 		]]},
 	}))
 
-	------------------------------------------
-	-- EEex_Menu_Hook_AfterMenuStackRestore --
-	------------------------------------------
+	--------------------------------------------------
+	-- [Lua] EEex_Menu_Hook_AfterMenuStackRestore() --
+	--------------------------------------------------
 
 	EEex_HookRelativeBranch(EEex_Label("Hook-uiRefreshMenu()-restoreMenuStack()"), EEex_FlattenTable({
 		{[[
@@ -38,9 +38,9 @@
 		]]},
 	}))
 
-	------------------------------------------
-	-- EEex_Menu_Hook_AfterMainFileLoaded() --
-	------------------------------------------
+	------------------------------------------------
+	-- [Lua] EEex_Menu_Hook_AfterMainFileLoaded() --
+	------------------------------------------------
 
 	EEex_HookRelativeBranch(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), EEex_FlattenTable({
 		{[[
@@ -55,9 +55,10 @@
 		]]},
 	}))
 
-	--------------------------------------------------------------------------------
-	-- EEex_Menu_HookGlobal_TemplateMenuOverride for Infinity_InstanceAnimation() --
-	--------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------
+	-- Infinity_InstanceAnimation() can be forced to create the template in an arbitrary menu --
+	--  [Lua Global] EEex_Menu_HookGlobal_TemplateMenuOverride                                --
+	--------------------------------------------------------------------------------------------
 
 	EEex_HookNOPs(EEex_Label("Hook-Infinity_InstanceAnimation()-TemplateMenuOverride"), 7, {[[
 
@@ -100,9 +101,10 @@
 		jmp #L(return)
 	]]})
 
-	-------------------------------------------------------------------------------
-	-- EEex_Menu_HookGlobal_TemplateMenuOverride for Infinity_DestroyAnimation() --
-	-------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------
+	-- Infinity_DestroyAnimation() can be forced to destroy the template in an arbitrary menu --
+	--  [Lua Global] EEex_Menu_HookGlobal_TemplateMenuOverride                                --
+	--------------------------------------------------------------------------------------------
 
 	EEex_HookBetweenRestore(EEex_Label("Hook-Infinity_DestroyAnimation()-TemplateMenuOverride"), 0, 4, 4, 3, 7, {[[
 
@@ -140,8 +142,8 @@
 	]]})
 
 	-------------------------------------------------------------------
-	-- EEex_Menu_Hook_CheckSaveMenuItem()                            --
 	-- Prevent EEex_LoadMenuFile() from causing crash when using F11 --
+	--  [Lua] EEex_Menu_Hook_CheckSaveMenuItem()                     --
 	-------------------------------------------------------------------
 
 	EEex_HookJumpOnFail(EEex_Label("Hook-saveMenus()-CheckItemSave"), 5, EEex_FlattenTable({
@@ -174,9 +176,9 @@
 		]]},
 	}))
 
-	--------------------------------------------
-	-- EEex_Menu_Hook_BeforeListRenderingItem --
-	--------------------------------------------
+	----------------------------------------------------
+	-- [Lua] EEex_Menu_Hook_BeforeListRenderingItem() --
+	----------------------------------------------------
 
 	EEex_HookBeforeCall(EEex_Label("Hook-RenderListCallback()-drawItem()"), EEex_FlattenTable({
 		{[[
@@ -215,9 +217,9 @@
 		]]},
 	}))
 
-	----------------------------------------------
-	-- EEex_Menu_Hook_CheckForceScrollbarRender --
-	----------------------------------------------
+	------------------------------------------------------
+	-- [Lua] EEex_Menu_Hook_CheckForceScrollbarRender() --
+	------------------------------------------------------
 
 	EEex_HookJumpOnSuccess(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, EEex_FlattenTable({
 		{[[
@@ -243,9 +245,9 @@
 		]]},
 	}))
 
-	---------------------------------------------------------
-	-- Fix forced scrollbar crashing with a divide by zero --
-	---------------------------------------------------------
+	---------------------------------------------------------------
+	-- [JIT] Fix forced scrollbar crashing with a divide by zero --
+	---------------------------------------------------------------
 
 	for _, address in ipairs({
 		EEex_Label("Hook-drawItem()-FixForcedScrollbarDivideByZero1"),

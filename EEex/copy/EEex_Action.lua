@@ -242,6 +242,7 @@ function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
 
 	elseif actionID == 473 then -- EEex_MatchObject / EEex_MatchObjectEx
 
+		-- [EEex.dll]
 		EEex_GetUDAux(aiBase)["EEex_MatchObject"] = EEex.MatchObject(aiBase, curAction.m_string1.m_pchData:get(),
 			curAction.m_specificID, curAction.m_specificID2, curAction.m_specificID3)
 
@@ -259,7 +260,7 @@ function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
 	return EEex_Action_ReturnType.ACTION_ERROR
 end
 
-function EEex_Action_Hook_OnAfterSpriteStartedAction(sprite)
+function EEex_Action_LuaHook_OnAfterSpriteStartedAction(sprite)
 
 	local action = sprite.m_curAction
 
@@ -272,13 +273,5 @@ function EEex_Action_Hook_OnAfterSpriteStartedAction(sprite)
 
 	for _, listener in ipairs(EEex_Action_Private_SpriteStartedActionListeners) do
 		listener(sprite, action)
-	end
-
-	local statsAux = EEex_GetUDAux(sprite:getActiveStats())
-	for funcName, effect in pairs(statsAux["EEex_EnabledActionListeners"]) do
-		if effect.m_effectAmount ~= 0 then
-			local func = EEex_Action_Private_EnabledSpriteStartedActionListeners[funcName]
-			EEex_Utility_CallIfExists(func, sprite, action, effect)
-		end
 	end
 end

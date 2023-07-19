@@ -123,6 +123,14 @@ Operations=ADD -25
 [CChitin::OnResizeWindow]
 Pattern=48895C2420565741564883EC30
 
+[CDerivedStats::Construct]
+Pattern=48894C24085741544155415641574883EC20488BF1
+Operations=ADD -15
+
+[CDerivedStats::Destruct]
+Pattern=488981500C0000
+Operations=ADD -34
+
 [CDerivedStats::GetAtOffset]
 Pattern=3DC9000000
 Operations=ADD -5
@@ -930,6 +938,10 @@ Operations=ADD -14
 
 [Hardcoded_lua_rawgeti]
 Pattern=4883EC28458BD0
+
+[Hardcoded_lua_rawlen]
+Pattern=498B16488BD8
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 
 [Hardcoded_lua_rawset]
 Pattern=488B7310488BF8

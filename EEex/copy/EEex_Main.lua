@@ -95,7 +95,6 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 		-- wait for the game to be somewhat initialized.
 		EEex_GameState_AddInitializedListener(function()
 			EEex_DoFile("EEex_UserDataGlobals")
-			EEex_DoFile("EEex_Opcode_Init")
 			EEex_DoFile("EEex_StutterDetector")
 		end)
 

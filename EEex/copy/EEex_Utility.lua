@@ -90,6 +90,7 @@ end
 -- @bubb_doc { EEex_Utility_DeepCopy }
 -- @deprecated: Use ``EEex.DeepCopy`` instead.
 function EEex_Utility_DeepCopy(t)
+	-- [EEex.dll]
 	return EEex.DeepCopy(t)
 end
 

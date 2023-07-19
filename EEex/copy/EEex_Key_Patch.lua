@@ -3,9 +3,9 @@
 
 	EEex_DisableCodeProtection()
 
-	-------------------------------------
-	-- EEex_Key_Hook_AfterEventsPoll() --
-	-------------------------------------
+	-------------------------------------------
+	-- [Lua] EEex_Key_Hook_AfterEventsPoll() --
+	-------------------------------------------
 
 	local afterEventsPollHook = EEex_JITNear(EEex_FlattenTable({
 		{[[

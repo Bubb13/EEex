@@ -3,9 +3,9 @@
 
 	EEex_DisableCodeProtection()
 
-	-------------------------------------------
-	-- EEex_Sprite_Hook_CheckSuppressTooltip --
-	-------------------------------------------
+	---------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_CheckSuppressTooltip() --
+	---------------------------------------------------
 
 	EEex_HookRelativeBranch(EEex_Label("Hook-CGameSprite::SetCursor()-SetCharacterToolTip()"), EEex_FlattenTable({
 		{[[
@@ -31,9 +31,9 @@
 		]]},
 	}))
 
-	----------------------------------
-	-- EEex_Sprite_Hook_OnConstruct --
-	----------------------------------
+	------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnConstruct() --
+	------------------------------------------
 
 	for _, labelName in ipairs({
 		"Hook-CGameSprite::Construct1()-FirstCall",
@@ -57,9 +57,9 @@
 		}))
 	end
 
-	---------------------------------
-	-- EEex_Sprite_Hook_OnDestruct --
-	---------------------------------
+	-----------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnDestruct() --
+	-----------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Destruct()-FirstCall"), EEex_FlattenTable({
 		{[[
@@ -78,9 +78,9 @@
 		]]},
 	}))
 
-	----------------------------------------
-	-- EEex_Sprite_Hook_OnCheckQuickLists --
-	----------------------------------------
+	------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnCheckQuickLists() --
+	------------------------------------------------
 
 	EEex_HookBeforeRestore(EEex_Label("Hook-CGameSprite::CheckQuickLists()-CallListeners"), 0, 5, 5, EEex_FlattenTable({
 		{[[
@@ -111,9 +111,9 @@
 		]]},
 	}))
 
-	----------------------------------------
-	-- EEex_Sprite_Hook_OnCheckQuickLists --
-	----------------------------------------
+	-----------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnResetQuickListCounts() --
+	-----------------------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Rest()-OnResetQuickListCounts"), EEex_FlattenTable({
 		{[[
@@ -130,9 +130,9 @@
 		]]},
 	}))
 
-	-----------------------------------------------
-	-- CGameEffectList_Marshal_SavedSpritePtrMem --
-	-----------------------------------------------
+	-----------------------------------------------------
+	-- [JIT] CGameEffectList_Marshal_SavedSpritePtrMem --
+	-----------------------------------------------------
 
 	local CGameEffectList_Marshal_SavedSpritePtrMem = EEex_Malloc(EEex_PtrSize * 2)
 	EEex_WritePtr(CGameEffectList_Marshal_SavedSpritePtrMem, 0x0)
@@ -144,9 +144,9 @@
 		jmp #L(return)
 	]]})
 
-	-------------------------------------------------
-	-- CGameEffectList_Unmarshal_SavedSpritePtrMem --
-	-------------------------------------------------
+	-------------------------------------------------------
+	-- [JIT] CGameEffectList_Unmarshal_SavedSpritePtrMem --
+	-------------------------------------------------------
 
 	local CGameEffectList_Unmarshal_SavedSpritePtrMem = CGameEffectList_Marshal_SavedSpritePtrMem + EEex_PtrSize
 	EEex_WritePtr(CGameEffectList_Unmarshal_SavedSpritePtrMem, 0x0)
@@ -158,9 +158,9 @@
 		jmp #L(return)
 	]]})
 
-	----------------------------------------------------------
-	-- EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize --
-	----------------------------------------------------------
+	------------------------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize() --
+	------------------------------------------------------------------
 
 	local CGameEffectList_Marshal_OriginalMarshalSize = EEex_Malloc(EEex_PtrSize)
 	EEex_WritePtr(CGameEffectList_Marshal_OriginalMarshalSize, 0x0)
@@ -196,9 +196,9 @@
 		]]},
 	}))
 
-	--------------------------------------------------
-	-- EEex_Sprite_Hook_WriteExtraEffectListMarshal --
-	--------------------------------------------------
+	----------------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_WriteExtraEffectListMarshal() --
+	----------------------------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectList::Marshal()-WriteExtra"), EEex_FlattenTable({
 		{[[
@@ -224,9 +224,9 @@
 		]]},
 	}))
 
-	---------------------------------------------------
-	-- EEex_Sprite_Hook_ReadExtraEffectListUnmarshal --
-	---------------------------------------------------
+	-----------------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal() --
+	-----------------------------------------------------------
 
 	EEex_HookRelativeBranch(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), EEex_FlattenTable({
 		{[[
@@ -261,9 +261,9 @@
 		]]},
 	}))
 
-	---------------------------------------------------
-	-- EEex_Sprite_Hook_OnLoadConcentrationCheckMode --
-	---------------------------------------------------
+	-----------------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnLoadConcentrationCheckMode() --
+	-----------------------------------------------------------
 
 	EEex_HookBeforeCall(EEex_Label("Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt"), EEex_FlattenTable({
 		{[[
@@ -290,6 +290,8 @@
 	-- Return:                                                                      --
 	--     false -> Spell NOT disrupted.                                            --
 	--     true  -> Spell disrupted.                                                --
+	--                                                                              --
+	--  [Lua] EEex_Sprite_Hook_OnCheckConcentration()                               --
 	----------------------------------------------------------------------------------
 
 	EEex_Sprite_Private_RunCustomConcentrationCheckMem = EEex_Malloc(1)
@@ -321,9 +323,9 @@
 		]]},
 	}))
 
-	---------------------------------------------------------
-	-- EEex_Sprite_Hook_OnDamageEffectStartingCalculations --
-	---------------------------------------------------------
+	-----------------------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnDamageEffectStartingCalculations() --
+	-----------------------------------------------------------------
 
 	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectDamage::ApplyEffect()-StartingCalculations"), 0, 6, 6, EEex_FlattenTable({
 		{[[
@@ -350,9 +352,9 @@
 		]]},
 	}))
 
-	-----------------------------------------
-	-- EEex_Sprite_Hook_OnDamageEffectDone --
-	-----------------------------------------
+	-------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnDamageEffectDone() --
+	-------------------------------------------------
 
 	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectDamage::ApplyEffect()-OnDone"), 0, 7, 7, EEex_FlattenTable({
 		{[[
@@ -377,9 +379,9 @@
 		]]},
 	}))
 
-	--------------------------------------
-	-- EEex_Sprite_Hook_OnSetCurrAction --
-	--------------------------------------
+	----------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnSetCurrAction() --
+	----------------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::SetCurrAction()-FirstCall"), EEex_FlattenTable({
 		{[[

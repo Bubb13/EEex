@@ -3,6 +3,10 @@
 
 	EEex_DisableCodeProtection()
 
+	-----------------------------------------------
+	-- [Lua] EEex_Actionbar_Hook_StateUpdating() --
+	-----------------------------------------------
+
 	EEex_HookRelativeBranch(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {[[
 		mov dword ptr ds:[rsp+70h], r15d
 		call #L(original)
@@ -44,6 +48,10 @@
 		]]},
 	}))
 
+	-------------------------------------------------
+	-- [Lua] EEex_Actionbar_Hook_HasFullThieving() --
+	-------------------------------------------------
+
 	EEex_HookAfterRestore(EEex_Label("Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving"), 0, 7, 11, EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(48)
@@ -77,6 +85,10 @@
 		]]},
 	}))
 
+	-----------------------------------------------
+	-- [Lua] EEex_Actionbar_Hook_IsPartyLeader() --
+	-----------------------------------------------
+
 	EEex_HookAfterCall(EEex_Label("Hook-CAIGroup::IsPartyLeader()-Override"), EEex_FlattenTable({
 		{[[
 			test rax, rax
@@ -100,6 +112,10 @@
 			#DESTROY_SHADOW_SPACE
 		]]},
 	}))
+
+	------------------------------------------------------------------------------------
+	-- [Lua Global] EEex_Actionbar_HookGlobal_IsThievingHotkeyOpeningSpecialAbilities --
+	------------------------------------------------------------------------------------
 
 	EEex_HookRelativeBranch(EEex_Label("Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall"), {[[
 

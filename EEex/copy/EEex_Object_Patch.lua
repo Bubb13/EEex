@@ -3,9 +3,10 @@
 
 	EEex_DisableCodeProtection()
 
-	---------------------
-	-- 117 EEex_Target --
-	---------------------
+	----------------------------------------------------------
+	-- 117 EEex_Target                                      --
+	--  [Lua] EEex_Object_Hook_ForceIgnoreActorScriptName() --
+	----------------------------------------------------------
 
 	EEex_HookJumpOnFail(EEex_Label("Hook-CAIObjectType::Decode()-TargetNameOverride"), 0, EEex_FlattenTable({[[
 
@@ -30,9 +31,9 @@
 		jnz #L(jmp_success)
 	]]}))
 
-	------------------------------------------
-	-- EEex_Object_Hook_OnEvaluatingUnknown --
-	------------------------------------------
+	--------------------------------------------------
+	-- [Lua] EEex_Object_Hook_OnEvaluatingUnknown() --
+	--------------------------------------------------
 
 	EEex_HookJumpAutoSucceed(EEex_Label("Hook-CAIObjectType::Decode()-DefaultJmp"), 0, EEex_FlattenTable({[[
 

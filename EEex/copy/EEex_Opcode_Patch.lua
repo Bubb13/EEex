@@ -3,19 +3,20 @@
 
 	EEex_DisableCodeProtection()
 
-	-------------------------------------------
-	-- Clean up CGameEffect auxiliary values --
-	-------------------------------------------
+	------------------------------------------------
+	-- Clean up extended CGameEffect values       --
+	--  [EEex.dll] EEex::Opcode_Hook_OnDestruct() --
+	------------------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameEffect::Destruct()_FirstCall"), {[[
-		mov rdx, rdi
-		mov rcx, #L(Hardcoded_InternalLuaState)
-		call #L(EEex::DestroyUDAux)
+		mov rcx, rdi ; pEffect
+		call #L(EEex::Opcode_Hook_OnDestruct)
 	]]})
 
-	---------------------------------------
-	-- Copy CGameEffect auxiliary values --
-	---------------------------------------
+	--------------------------------------------------
+	-- Copy CGameEffect extended CGameEffect values --
+	--  [EEex.dll] EEex::Opcode_Hook_OnCopy()       --
+	--------------------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameEffect::CopyFromBase()-FirstCall"), {[[
 
@@ -24,50 +25,36 @@
 		cmp qword ptr ss:[rsp+0x38], rax
 		je #L(return)
 
-		mov r8, rdi                                              ; targetPtr
-		lea rdx, qword ptr ds:[rsi-#$(1)] ]], {EEex_PtrSize}, [[ ; sourcePtr
-		mov rcx, #L(Hardcoded_InternalLuaState)
-		call #L(EEex::CopyUDAux)
+		mov rdx, rdi                                             ; pDstEffect
+		lea rcx, qword ptr ds:[rsi-#$(1)] ]], {EEex_PtrSize}, [[ ; pSrcEffect
+		call #L(EEex::Opcode_Hook_OnCopy)
 	]]})
 
-	-----------------------------------------
-	-- EEex_Opcode_Hook_AfterListsResolved --
-	-----------------------------------------
+	-------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_AfterListsResolved() --
+	-- [Lua] EEex_Opcode_LuaHook_AfterListsResolved()    --
+	-------------------------------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(40)
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_AfterListsResolved", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsi #ENDL", {rspOffset}}, "CGameSprite" end,
-			},
-		}),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), {[[
+		mov rcx, rsi ; pSprite
+		call #L(EEex::Opcode_Hook_AfterListsResolved)
+	]]})
+
+	--------------------------------------
+	--          Opcode Changes          --
+	--------------------------------------
 
 	------------------------------------------------------------
 	-- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
+	--  [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail()         --
+	--  [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248()     --
 	------------------------------------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(48)
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp248AddTail", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameEffect" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameEffect" end,
-			},
-		}),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail"), {[[
+		mov rdx, rbx
+		mov rcx, rdi
+		call #L(EEex::Opcode_Hook_OnOp248AddTail)
+	]]})
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee"), EEex_FlattenTable({
 		{[[
@@ -90,6 +77,8 @@
 
 	------------------------------------------------------------
 	-- Opcode #249 (Special BIT0 allows .EFF to bypass op120) --
+	--  [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail()         --
+	--  [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249()     --
 	------------------------------------------------------------
 
 	local op249SavedEffect = EEex_Malloc(EEex_PtrSize)
@@ -98,24 +87,11 @@
 		mov qword ptr ds:[#$(1)], rcx
 	]], {op249SavedEffect}})
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(48)
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp249AddTail", {
-			["args"] = {
-				function(rspOffset) return {[[
-					mov rax, qword ptr ss:[#$(1)]
-					mov qword ptr ss:[rsp+#$(2)], rax
-				]], {op249SavedEffect, rspOffset}}, "CGameEffect" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameEffect" end,
-			},
-		}),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), {[[
+		mov rdx, rbx
+		mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ #ENDL
+		call #L(EEex::Opcode_Hook_OnOp249AddTail)
+	]]})
 
 	EEex_HookRelativeBranch(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
 		{[[
@@ -145,9 +121,10 @@
 		]]},
 	}))
 
-	--------------------------------------------------------------------------
-	-- Opcode #326 (Special BIT0 flips SPLPROT.2DA's "source" and "target") --
-	--------------------------------------------------------------------------
+	---------------------------------------------------------------------------------
+	-- Opcode #326 (Special BIT0 flips SPLPROT.2DA's "source" and "target")        --
+	--  [EEex.dll] EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget() --
+	---------------------------------------------------------------------------------
 
 	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 0, 7, 7, EEex_FlattenTable({
 		{[[
@@ -157,7 +134,7 @@
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-			mov rcx, rbx
+			mov rcx, rbx ; pEffect
 			call #L(EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget)
 
 			test rax, rax
@@ -174,9 +151,9 @@
 		]]},
 	}))
 
-	-----------------
-	-- New Opcodes --
-	-----------------
+	-----------------------------------
+	--          New Opcodes          --
+	-----------------------------------
 
 	local genOpcodeDecode = function(args)
 
@@ -286,76 +263,51 @@
 		return genDecode(writeConstructor(newvtbl))
 	end
 
-	--------------------------------------------
-	-- New Opcode #400 (SetTemporaryAIScript) --
-	--------------------------------------------
+	----------------------------------------------------------------------
+	-- New Opcode #400 (SetTemporaryAIScript)                           --
+	--  [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_ApplyEffect() --
+	--  [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_OnRemove()    --
+	----------------------------------------------------------------------
 
 	local EEex_SetTemporaryAIScript = genOpcodeDecode({
 
-		["ApplyEffect"] = EEex_FlattenTable({[[
-
+		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(48)
-
-			]], EEex_GenLuaCall("EEex_Opcode_Hook_SetTemporaryAIScript_ApplyEffect", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-			}), [[
-
-			call_error:
-			#DESTROY_SHADOW_SPACE
-			mov rax, 1
-			ret
-		]]}),
-
-		["OnRemove"] = EEex_FlattenTable({[[
-
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(48)
-
-			]], EEex_GenLuaCall("EEex_Opcode_Hook_SetTemporaryAIScript_OnRemove", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-			}), [[
-
-			call_error:
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_SetTemporaryAIScript_ApplyEffect)
 			#DESTROY_SHADOW_SPACE
 			ret
-		]]}),
+		]]},
+
+		["OnRemove"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_SetTemporaryAIScript_OnRemove)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
 	})
 
-	---------------------------------------
-	-- New Opcode #401 (SetExtendedStat) --
-	---------------------------------------
+	-----------------------------------------------------------------
+	-- New Opcode #401 (SetExtendedStat)                           --
+	--  [EEex.dll] EEex::Opcode_Hook_SetExtendedStat_ApplyEffect() --
+	-----------------------------------------------------------------
 
 	local EEex_SetExtendedStat = genOpcodeDecode({
 
-		["ApplyEffect"] = EEex_FlattenTable({[[
+		["ApplyEffect"] = {[[
 
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(48)
-
-			]], EEex_GenLuaCall("EEex_Opcode_Hook_ApplySetExtendedStat", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-			}), [[
-
-			call_error:
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_SetExtendedStat_ApplyEffect)
 			#DESTROY_SHADOW_SPACE
-			mov rax, 1
 			ret
-		]]}),
+		]]},
 	})
 
-	---------------------------------
-	-- New Opcode #402 (InvokeLua) --
-	---------------------------------
+	---------------------------------------
+	-- [JIT] New Opcode #402 (InvokeLua) --
+	---------------------------------------
 
 	local EEex_InvokeLua = genOpcodeDecode({
 
@@ -388,44 +340,36 @@
 		]]}),
 	})
 
-	-------------------------------------
-	-- New Opcode #403 (ScreenEffects) --
-	-------------------------------------
+	---------------------------------------------------------------
+	-- New Opcode #403 (ScreenEffects)                           --
+	--  [EEex.dll] EEex::Opcode_Hook_ScreenEffects_ApplyEffect() --
+	--  [EEex.dll] EEex::Opcode_Hook_OnCheckAdd()                --
+	---------------------------------------------------------------
 
 	local EEex_ScreenEffects = genOpcodeDecode({
 
-		["ApplyEffect"] = EEex_FlattenTable({[[
-
+		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(48)
-
-			]], EEex_GenLuaCall("EEex_Opcode_Hook_ApplyScreenEffects", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-			}), [[
-
-			call_error:
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_ScreenEffects_ApplyEffect)
 			#DESTROY_SHADOW_SPACE
-			mov rax, 1
 			ret
-		]]}),
+		]]},
 	})
 
 	local effectBlockedHack = EEex_Malloc(0x8)
 
 	EEex_HookJumpOnFail(EEex_Label("Hook-CGameEffect::CheckAdd()-LastProbabilityJmp"), 0, EEex_FlattenTable({[[
 
-		#MAKE_SHADOW_SPACE(56)
+		#MAKE_SHADOW_SPACE(8)
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
 
-		mov rcx, #L(Hardcoded_InternalLuaState)
-		mov rdx, rdi
-		mov r8, r14
+		mov rdx, r14 ; pSprite
+		mov rcx, rdi ; pEffect
 		call #L(EEex::Opcode_Hook_OnCheckAdd)
 
 		mov qword ptr ds:[#$(1)], rax ]], {{effectBlockedHack}}, [[ #ENDL
+
 		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE
 		test rax, rax
@@ -437,59 +381,41 @@
 		jnz jmp_fail
 	]]})
 
-	-----------------------------------------
-	-- New Opcode #408 (ProjectileMutator) --
-	-----------------------------------------
+	-------------------------------------------------------------------
+	-- New Opcode #408 (ProjectileMutator)                           --
+	--  [EEex.dll] EEex::Opcode_Hook_ProjectileMutator_ApplyEffect() --
+	-------------------------------------------------------------------
 
 	local EEex_ProjectileMutator = genOpcodeDecode({
 
-		["ApplyEffect"] = EEex_FlattenTable({[[
-
+		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(48)
-
-			]], EEex_GenLuaCall("EEex_Opcode_Hook_ProjectileMutator_ApplyEffect", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-			}), [[
-
-			call_error:
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_ProjectileMutator_ApplyEffect)
 			#DESTROY_SHADOW_SPACE
-			mov rax, 1
 			ret
-		]]}),
+		]]},
 	})
 
-	--------------------------------------------
-	-- New Opcode #409 (EnableActionListener) --
-	--------------------------------------------
+	----------------------------------------------------------------------
+	-- New Opcode #409 (EnableActionListener)                           --
+	--  [EEex.dll] EEex::Opcode_Hook_EnableActionListener_ApplyEffect() --
+	----------------------------------------------------------------------
 
 	local EEex_EnableActionListener = genOpcodeDecode({
 
-		["ApplyEffect"] = EEex_FlattenTable({[[
-
+		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(48)
-
-			]], EEex_GenLuaCall("EEex_Opcode_Hook_EnableActionListener_ApplyEffect", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-			}), [[
-
-			call_error:
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_EnableActionListener_ApplyEffect)
 			#DESTROY_SHADOW_SPACE
-			mov rax, 1
 			ret
-		]]}),
+		]]},
 	})
 
-	-------------------
-	-- Decode Switch --
-	-------------------
+	-------------------------
+	-- [JIT] Decode Switch --
+	-------------------------
 
 	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, EEex_FlattenTable({[[
 

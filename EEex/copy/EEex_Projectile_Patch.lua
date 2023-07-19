@@ -3,75 +3,51 @@
 
 	EEex_DisableCodeProtection()
 
-	-----------------------------------------
-	-- EEex_Projectile_Hook_OnBeforeDecode --
-	-----------------------------------------
+	-------------------------------------------------------
+	-- [EEex.dll] EEex::Projectile_Hook_OnBeforeDecode() --
+	-------------------------------------------------------
 
-	EEex_HookBeforeRestore(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(72)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		]]},
-		EEex_GenLuaCall("EEex_Projectile_Hook_OnBeforeDecode", {
-			["args"] = {
-				function(rspOffset) return {[[
-					and rcx, 0xFFFF
-					mov qword ptr ss:[rsp+#$(1)], rcx
-				]], {rspOffset}} end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
-				function(rspOffset) return {[[
-					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
-					mov qword ptr ss:[rsp+#$(1)], rax
-				]], {rspOffset}} end,
-			},
-			["returnType"] = EEex_LuaCallReturnType.Number,
-		}),
-		{[[
-			cmp rax, -1
-			je call_error
+	EEex_HookBeforeRestore(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, {[[
 
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rcx, rax
-			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-			jmp return
+		#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+		#MAKE_SHADOW_SPACE(16)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
-			call_error:
-			#RESUME_SHADOW_ENTRY
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)] ; pRetPtr
+		                                                   ; rdx is already pDecoder
+		                                                   ; rcx is already nProjectileType
+		call #L(EEex::Projectile_Hook_OnBeforeDecode)
 
-	----------------------------------------
-	-- EEex_Projectile_Hook_OnAfterDecode --
-	----------------------------------------
+		cmp ax, -1
+		je no_override
 
-	EEex_HookAfterCall(EEex_Label("Hook-CProjectile::DecodeProjectile()-LastCall"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(56)
-		]]},
-		EEex_GenLuaCall("EEex_Projectile_Hook_OnAfterDecode", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CProjectile", "EEex_Projectile_CastUT" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsi #ENDL", {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
-				function(rspOffset) return {[[
-					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(408)]
-					mov qword ptr ss:[rsp+#$(1)], rax
-				]], {rspOffset}} end,
-			},
-		}),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov cx, ax
+		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+		jmp return
 
-	------------------------------------------
-	-- EEex_Projectile_Hook_BeforeAddEffect --
-	------------------------------------------
+		no_override:
+		#RESUME_SHADOW_ENTRY
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
+	]]})
+
+	------------------------------------------------------
+	-- [EEex.dll] EEex::Projectile_Hook_OnAfterDecode() --
+	------------------------------------------------------
+
+	EEex_HookAfterCall(EEex_Label("Hook-CProjectile::DecodeProjectile()-LastCall"), {[[
+		mov r8, qword ptr ss:[rsp+408] ; pRetPtr
+		mov rdx, rsi                   ; pDecoder
+		mov rcx, rbx                   ; pProjectile
+		call #L(EEex::Projectile_Hook_OnAfterDecode)
+	]]})
+
+	----------------------------------------------------------
+	-- [EEex.dll] EEex::Projectile_Hook_OnBeforeAddEffect() --
+	----------------------------------------------------------
 
 	-- This is very ugly, but since CProjectile::AddEffect() isn't passed the
 	-- source aiBase, I have to go and manually define where the aiBase
@@ -80,8 +56,8 @@
 
 		#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 		#MAKE_SHADOW_SPACE(24)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], r8
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], r9
 
 		mov rax, #$(1) ]], {EEex_Label("Data-CGameAIBase::ForceSpell()-CProjectile::AddEffect()-RetPtr")}, [[       ; 0x14016CE36
 		cmp rcx, rax
@@ -181,39 +157,33 @@
 		mov rax, rsi
 
 		return:
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE
 		ret
 	]]})
 
-	EEex_HookBeforeRestore(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(24)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		]]},
-		{[[
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+	EEex_HookBeforeRestore(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, {[[
 
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
-			call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
-			mov r8, rax
+		#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+		#MAKE_SHADOW_SPACE(16)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
-			mov rcx, #L(Hardcoded_InternalLuaState)
-			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]   ; pRetPtr
+		mov r8, rdx                                          ; pEffect
 
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]
-			mov qword ptr ss:[rsp+32], rax
+		mov rcx, r9 ; pRetPtr
+		call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
+		mov rdx, rax                                         ; pDecoder
 
-			call #L(EEex::Projectile_Hook_BeforeAddEffect)
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)] ; pProjectile
+		call #L(EEex::Projectile_Hook_OnBeforeAddEffect)
 
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
+	]]})
 
 	EEex_EnableCodeProtection()
 

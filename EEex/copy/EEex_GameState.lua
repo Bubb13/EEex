@@ -94,7 +94,7 @@ end
 -- Hooks --
 -----------
 
-function EEex_GameState_Hook_OnInitialized()
+function EEex_GameState_LuaHook_OnInitialized()
 	for _, listener in ipairs(EEex_GameState_InitializedListeners) do
 		listener()
 	end

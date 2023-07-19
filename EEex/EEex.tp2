@@ -44,8 +44,9 @@ REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.
 		APPEND ~%data%.IDS~ ~%data_1% %data_2%~ UNLESS ~^[ %TAB%]*%data_1_escaped%[ %TAB%]+%data_2_escaped%[ %TAB%]*%MNL%*$~
 	END
 
-	COPY ~EEex/loader~ ~.~ IF_EXISTS
-	COPY ~EEex/copy~ ~override~ IF_EXISTS
+	COPY ~EEex/loader~ ~.~
+	COPY ~EEex/loader/Lua52~ ~.~
+	COPY ~EEex/copy~ ~override~
 
 
 BEGIN ~Enable effect menu module - LShift-on-hover to view spells affecting creature~
