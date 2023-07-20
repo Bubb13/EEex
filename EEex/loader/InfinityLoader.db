@@ -1375,6 +1375,10 @@ Operations=ADD 35
 Pattern=418D4D37
 Operations=ADD 4
 
+[Hook-CImmunitiesEffect::OnList()-Entry]
+Pattern=488B7108488BFA4885F6
+Operations=ADD -15
+
 [Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving]
 Pattern=488B88901000007402
 

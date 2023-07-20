@@ -218,6 +218,14 @@ function EEex_Opcode_Hook_OnOp333CopiedSelf(effect)
 	end
 end
 
+----------------------------------------------------
+-- Allow saving throw BIT23 to bypass opcode #101 --
+----------------------------------------------------
+
+function EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101(effect)
+	return EEex_IsBitSet(effect.m_savingThrow, 23)
+end
+
 --------------------------------------------
 -- New Opcode #400 (SetTemporaryAIScript) --
 --------------------------------------------
