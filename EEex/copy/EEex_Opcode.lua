@@ -219,7 +219,7 @@ function EEex_Opcode_Hook_OnOp333CopiedSelf(effect)
 end
 
 ----------------------------------------------------
--- Allow saving_throw BIT23 to bypass opcode #101 --
+-- Allow saving throw BIT23 to bypass opcode #101 --
 ----------------------------------------------------
 
 function EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101(effect)

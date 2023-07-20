@@ -384,10 +384,10 @@
 	}))
 
 	----------------------------------------------------
-	-- Allow saving_throw BIT23 to bypass opcode #101 --
+	-- Allow saving throw BIT23 to bypass opcode #101 --
 	----------------------------------------------------
 
-	EEex_HookBeforeRestore(0x1401f8bd0, 0, 5, 5, EEex_FlattenTable({
+	EEex_HookBeforeRestore(EEex_Label("Hook-CImmunitiesEffect::OnList()-Entry"), 0, 5, 5, EEex_FlattenTable({
 		{[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE(56)
