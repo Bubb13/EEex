@@ -9,7 +9,7 @@
 
 	EEex_HookBeforeRestore(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, {[[
 
-		#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+		#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
 		#MAKE_SHADOW_SPACE(16)
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
@@ -165,7 +165,7 @@
 
 	EEex_HookBeforeRestore(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, {[[
 
-		#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+		#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
 		#MAKE_SHADOW_SPACE(16)
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx

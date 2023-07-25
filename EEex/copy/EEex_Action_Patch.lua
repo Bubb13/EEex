@@ -21,7 +21,7 @@
 
 		mov esi, eax
 		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-		jmp #L(Hook-CGameAIBase::ExecuteAction()-NormalBranch)
+		jmp #L(Hook-CGameAIBase::ExecuteAction()-NormalBranch) ; TODO
 
 		call_error:
 		#RESUME_SHADOW_ENTRY

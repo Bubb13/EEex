@@ -7,7 +7,7 @@
 	-- [Lua] EEex_Menu_Hook_BeforeMenuStackSave() --
 	------------------------------------------------
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-uiRefreshMenu()-saveMenuStack()"), EEex_FlattenTable({
+	EEex_HookRelativeCall(EEex_Label("Hook-uiRefreshMenu()-saveMenuStack()"), EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(32)
 		]]},
@@ -16,7 +16,6 @@
 			call_error:
 			call #L(original)
 			#DESTROY_SHADOW_SPACE
-			jmp #L(return)
 		]]},
 	}))
 
@@ -24,25 +23,31 @@
 	-- [Lua] EEex_Menu_Hook_AfterMenuStackRestore() --
 	--------------------------------------------------
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-uiRefreshMenu()-restoreMenuStack()"), EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; The stack wasn't aligned to begin with
-			#MAKE_SHADOW_SPACE(32)
-			call #L(original)
-		]]},
-		EEex_GenLuaCall("EEex_Menu_Hook_AfterMenuStackRestore"),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-			ret
-		]]},
-	}))
+	EEex_HookRelativeJmpWithLabels(EEex_Label("Hook-uiRefreshMenu()-restoreMenuStack()"), {
+		{"stack_mod", 8},
+		{"manual_continue", true}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(32)
+				call #L(original)
+			]]},
+			EEex_GenLuaCall("EEex_Menu_Hook_AfterMenuStackRestore"),
+			{[[
+				call_error:
+				#DESTROY_SHADOW_SPACE
+			]]},
+			EEex_IntegrityCheck_HookExit,
+			{[[
+				ret
+			]]},
+		})
+	)
 
 	------------------------------------------------
 	-- [Lua] EEex_Menu_Hook_AfterMainFileLoaded() --
 	------------------------------------------------
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), EEex_FlattenTable({
+	EEex_HookRelativeCall(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), EEex_FlattenTable({
 		{[[
 			call #L(original)
 			#MAKE_SHADOW_SPACE(32)
@@ -51,7 +56,6 @@
 		{[[
 			call_error:
 			#DESTROY_SHADOW_SPACE
-			jmp #L(return)
 		]]},
 	}))
 

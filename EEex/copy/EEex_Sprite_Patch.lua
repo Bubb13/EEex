@@ -7,7 +7,7 @@
 	-- [Lua] EEex_Sprite_Hook_CheckSuppressTooltip() --
 	---------------------------------------------------
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CGameSprite::SetCursor()-SetCharacterToolTip()"), EEex_FlattenTable({
+	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::SetCursor()-SetCharacterToolTip()"), EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(40)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
@@ -25,9 +25,8 @@
 			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE
 			test rax, rax
-			jnz #L(return)
+			jnz return
 			call #L(original)
-			jmp #L(return)
 		]]},
 	}))
 
@@ -84,7 +83,7 @@
 
 	EEex_HookBeforeRestore(EEex_Label("Hook-CGameSprite::CheckQuickLists()-CallListeners"), 0, 5, 5, EEex_FlattenTable({
 		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE(88)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
@@ -137,11 +136,10 @@
 	local CGameEffectList_Marshal_SavedSpritePtrMem = EEex_Malloc(EEex_PtrSize * 2)
 	EEex_WritePtr(CGameEffectList_Marshal_SavedSpritePtrMem, 0x0)
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()"), {[[
+	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()"), {[[
 		mov qword ptr ds:[#$(1)], r13 ]], {CGameEffectList_Marshal_SavedSpritePtrMem}, [[ #ENDL
 		call #L(original)
 		mov qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Marshal_SavedSpritePtrMem}, [[ #ENDL
-		jmp #L(return)
 	]]})
 
 	-------------------------------------------------------
@@ -151,11 +149,10 @@
 	local CGameEffectList_Unmarshal_SavedSpritePtrMem = CGameEffectList_Marshal_SavedSpritePtrMem + EEex_PtrSize
 	EEex_WritePtr(CGameEffectList_Unmarshal_SavedSpritePtrMem, 0x0)
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"), {[[
+	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"), {[[
 		mov qword ptr ds:[#$(1)], rbx ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
 		call #L(original)
 		mov qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-		jmp #L(return)
 	]]})
 
 	------------------------------------------------------------------
@@ -228,7 +225,7 @@
 	-- [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal() --
 	-----------------------------------------------------------
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), EEex_FlattenTable({
+	EEex_HookRelativeCall(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), EEex_FlattenTable({
 		{[[
 			cmp qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
 			jz dont_do_anything
@@ -238,7 +235,7 @@
 
 			dont_do_anything:
 			call #L(original)
-			jmp #L(return)
+			jmp return
 
 			handle_EEex_binary:
 			#MAKE_SHADOW_SPACE(48)
@@ -257,6 +254,9 @@
 		{[[
 			call_error:
 			#DESTROY_SHADOW_SPACE
+		]]},
+		EEex_IntegrityCheck_HookExit,
+		{[[
 			jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
 		]]},
 	}))
@@ -302,7 +302,7 @@
 			cmp byte ptr ss:[#$(1)], 0 ]], {EEex_Sprite_Private_RunCustomConcentrationCheckMem}, [[ #ENDL
 			jz return
 
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE(40)
 		]]},
 		EEex_GenLuaCall("EEex_Sprite_Hook_OnCheckConcentration", {
@@ -319,7 +319,7 @@
 
 			no_error:
 			#DESTROY_SHADOW_SPACE
-			ret
+			ret ; TODO
 		]]},
 	}))
 

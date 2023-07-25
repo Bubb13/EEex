@@ -77,13 +77,13 @@
 		normal_return:
 		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-		jmp #L(Hook-CAIObjectType::Decode()-NormalBranch)
+		jmp #L(Hook-CAIObjectType::Decode()-NormalBranch) ; TODO
 
 		done_return:
 		#RESUME_SHADOW_ENTRY
 		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-		jmp #L(Hook-CAIObjectType::Decode()-ReturnBranch)
+		jmp #L(Hook-CAIObjectType::Decode()-ReturnBranch) ; TODO
 
 		unhandled_return:
 		#RESUME_SHADOW_ENTRY

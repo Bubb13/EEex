@@ -53,7 +53,7 @@ EEex_Debug_LogActions = false
 
 		EEex_DisableCodeProtection()
 
-		EEex_HookRelativeBranch(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), EEex_FlattenTable({
+		EEex_HookRelativeJmp(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(56)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], r8
@@ -70,7 +70,6 @@ EEex_Debug_LogActions = false
 				call_error:
 				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 				#DESTROY_SHADOW_SPACE
-				jmp #L(original)
 			]]},
 		}))
 

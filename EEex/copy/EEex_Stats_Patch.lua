@@ -86,7 +86,7 @@
 
 	EEex_HookJumpOnSuccess(EEex_Label("Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp"), 0, EEex_FlattenTable({
 		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
 
 			lea rdx, qword ptr ds:[rax+1] ; nStatId
@@ -94,7 +94,7 @@
 			call #L(EEex::Stats_Hook_OnGettingUnknown)
 
 			#DESTROY_SHADOW_SPACE
-			ret
+			ret ; TODO
 		]]},
 	}))
 

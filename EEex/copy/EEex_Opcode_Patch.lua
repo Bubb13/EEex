@@ -93,7 +93,7 @@
 		call #L(EEex::Opcode_Hook_OnOp249AddTail)
 	]]})
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
+	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(64)
 			call #L(original)
@@ -112,8 +112,10 @@
 			#DESTROY_SHADOW_SPACE
 
 			test rax, rax
-			jz #L(return)
-
+			jz return
+		]]},
+		EEex_IntegrityCheck_HookExit,
+		{[[
 			; The consequence of not running the else block is that this boilerplate is not executed
 			mov rsi, qword ptr ss:[rsp+0x70]
 			lea r13, qword ptr ds:[r15+0xC]

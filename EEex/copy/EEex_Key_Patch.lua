@@ -40,17 +40,17 @@
 		]]},
 	}))
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1"), {[[
+	EEex_HookRelativeCall(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1"), {[[
 		call #L(original)
 		call ]], afterEventsPollHook, [[ #ENDL
-		jmp #L(return)
 	]]})
+	EEex_IntegrityCheck_IgnoreStackSize(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1"), 0x68, SDL_Event.sizeof)
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2"), {[[
+	EEex_HookRelativeCall(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2"), {[[
 		call #L(original)
 		call ]], afterEventsPollHook, [[ #ENDL
-		jmp #L(return)
 	]]})
+	EEex_IntegrityCheck_IgnoreStackSize(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2"), 0x68, SDL_Event.sizeof)
 
 	EEex_EnableCodeProtection()
 

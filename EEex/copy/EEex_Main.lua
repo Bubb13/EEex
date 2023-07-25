@@ -73,6 +73,7 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 
 	-- Contains EEex's C++ functionality
 	EEex_LoadLuaBindings("EEex")
+	EEex_DoFile("EEex_IntegrityCheck")
 
 	-- Contains some assembly functions for EEex_Assembly.lua
 	EEex_DoFile("EEex_Assembly_Patch")

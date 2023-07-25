@@ -7,13 +7,16 @@
 	-- [Lua] EEex_Actionbar_Hook_StateUpdating() --
 	-----------------------------------------------
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {[[
+	EEex_HookRelativeCall(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {[[
 		mov dword ptr ds:[rsp+70h], r15d
 		call #L(original)
-		jmp #L(return)
 	]]})
+	EEex_IntegrityCheck_IgnoreStackSizes(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {
+		{0x20, CResRef.sizeof},
+		{0x70, 4},
+	})
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()"), EEex_FlattenTable({
+	EEex_HookRelativeCall(EEex_Label("Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()"), EEex_FlattenTable({
 		{[[
 			mov eax, dword ptr ds:[rsp+70h]
 			dec eax
@@ -44,7 +47,6 @@
 			#DESTROY_SHADOW_SPACE
 			mov rcx, r14
 			call #L(original)
-			jmp #L(return)
 		]]},
 	}))
 
@@ -117,7 +119,7 @@
 	-- [Lua Global] EEex_Actionbar_HookGlobal_IsThievingHotkeyOpeningSpecialAbilities --
 	------------------------------------------------------------------------------------
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall"), {[[
+	EEex_HookRelativeCall(EEex_Label("Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall"), {[[
 
 		#MAKE_SHADOW_SPACE(16)
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
@@ -144,7 +146,6 @@
 
 		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE
-		jmp #L(return)
 	]]})
 
 	EEex_EnableCodeProtection()
