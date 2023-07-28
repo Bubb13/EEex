@@ -402,7 +402,7 @@ end
 function EEex_Label(label)
 	local value = EEex_GlobalAssemblyLabels[label]
 	if not value then
-		EEex_Error("Label \""..label.."\" is not defined in the global scope!")
+		EEex_Error(string.format("Label \"#L(%s)\" not defined", label))
 	end
 	return EEex_GlobalAssemblyLabels[label]
 end
@@ -442,10 +442,16 @@ function EEex_StoreBytesAssembly(startAddress, size)
 	return bytes
 end
 
-function EEex_HookRelativeCallInternal(address, labelPairs, assemblyT)
+function EEex_ReplaceCall(address, newTarget)
+	local opcode = EEex_ReadU8(address)
+	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+	EEex_JITAt(address, {"call short ", EEex_JITNear({"jmp ", newTarget, "#ENDL"}), "#ENDL"})
+end
+
+function EEex_HookRemoveCallInternal(address, labelPairs, assemblyT)
 
 	local opcode = EEex_ReadU8(address)
-	if opcode ~= 0xE8 then EEex_Error("Not disp32 relative: "..EEex_ToHex(opcode)) end
+	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
 
 	local afterCall = address + 5
 	local target = afterCall + EEex_Read32(address + 1)
@@ -457,20 +463,15 @@ function EEex_HookRelativeCallInternal(address, labelPairs, assemblyT)
 			{"original", target},
 			{"return", manualReturn and afterCall or nil}},
 			function()
-				if not manualReturn then
-					return EEex_JITNear(EEex_FlattenTable({
-						EEex_IntegrityCheck_HookEnter,
-						assemblyT,
-						{"return: #ENDL"},
-						EEex_IntegrityCheck_HookExit,
-						{"jmp ", afterCall, "#ENDL"},
-					}))
-				else
-					return EEex_JITNear(EEex_FlattenTable({
-						EEex_IntegrityCheck_HookEnter,
-						assemblyT,
-					}))
-				end
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+					#IF ]], not manualReturn, [[ {
+						return: #ENDL ]],
+						EEex_IntegrityCheck_HookExit, [[
+						jmp ]], afterCall, [[
+					}
+				]]}))
 			end
 		)
 	end)
@@ -478,18 +479,18 @@ function EEex_HookRelativeCallInternal(address, labelPairs, assemblyT)
 	EEex_JITAt(address, {"jmp short "..hookAddress})
 end
 
-function EEex_HookRelativeCall(address, assemblyT)
-	EEex_HookRelativeCallInternal(address, {}, assemblyT)
+function EEex_HookRemoveCall(address, assemblyT)
+	EEex_HookRemoveCallInternal(address, {}, assemblyT)
 end
 
-function EEex_HookRelativeCallWithLabels(address, labelPairs, assemblyT)
-	EEex_HookRelativeCallInternal(address, labelPairs, assemblyT)
+function EEex_HookRemoveCallWithLabels(address, labelPairs, assemblyT)
+	EEex_HookRemoveCallInternal(address, labelPairs, assemblyT)
 end
 
 function EEex_HookRelativeJmpInternal(address, labelPairs, assemblyT)
 
 	local opcode = EEex_ReadU8(address)
-	if opcode ~= 0xE9 then EEex_Error("Not disp32 relative: "..EEex_ToHex(opcode)) end
+	if opcode ~= 0xE9 then EEex_Error("Not disp32 jmp: "..EEex_ToHex(opcode)) end
 
 	local afterCall = address + 5
 	local target = afterCall + EEex_Read32(address + 1)
@@ -500,20 +501,15 @@ function EEex_HookRelativeJmpInternal(address, labelPairs, assemblyT)
 			{"hook_address", address},
 			{"original", manualContinue and target or nil}},
 			function()
-				if not manualContinue then
-					return EEex_JITNear(EEex_FlattenTable({
-						EEex_IntegrityCheck_HookEnter,
-						assemblyT,
-						{"original: #ENDL"},
-						EEex_IntegrityCheck_HookExit,
-						{"jmp ", target, "#ENDL"},
-					}))
-				else
-					return EEex_JITNear(EEex_FlattenTable({
-						EEex_IntegrityCheck_HookEnter,
-						assemblyT,
-					}))
-				end
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+					#IF ]], not manualContinue, [[ {
+						original: #ENDL ]],
+						EEex_IntegrityCheck_HookExit, [[
+						jmp ]], target, [[
+					}
+				]]}))
 			end
 		)
 	end)
@@ -529,34 +525,117 @@ function EEex_HookRelativeJmpWithLabels(address, labelPairs, assemblyT)
 	EEex_HookRelativeJmpInternal(address, labelPairs, assemblyT)
 end
 
-function EEex_HookBeforeCall(address, assemblyT)
+function EEex_HookCallInternal(address, labelPairs, assemblyT, after)
+
 	local opcode = EEex_ReadU8(address)
 	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+
 	local afterCall = address + 5
-	EEex_DefineAssemblyLabel("return", afterCall)
 	local target = afterCall + EEex_Read32(address + 1)
-	local hookAddress = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{"call #$(1) #ENDL", {target}},
-		{"jmp #$(1) #ENDL", {afterCall}},
-	}))
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		local hasHookExit = EEex_IntegrityCheck_HookExit[1] ~= nil
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return", not hasHookExit and afterCall or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable(
+					not after
+					and {[[
+						#IF ]], not after, "{",
+							EEex_IntegrityCheck_HookEnter,
+							assemblyT,
+							EEex_IntegrityCheck_HookExit, [[
+							call ]], target, [[ #ENDL
+							jmp ]], afterCall, [[ #ENDL
+
+							#IF ]], hasHookExit and EEex_TryLabel("uses_early_return") == true, [[ {
+								return: #ENDL ]],
+								EEex_IntegrityCheck_HookExit, [[
+								jmp ]], afterCall, [[ #ENDL
+							}
+						}
+					]]}
+					or {[[
+						#IF ]], after, [[ {
+							call ]], target, "#ENDL",
+							EEex_IntegrityCheck_HookEnter,
+							assemblyT, [[
+							#IF ]], hasHookExit, [[ {
+								return: #ENDL ]],
+								EEex_IntegrityCheck_HookExit, [[
+							}
+							jmp ]], afterCall, [[ #ENDL
+						}
+					]]}
+				))
+			end
+		)
+	end)
+
 	EEex_JITAt(address, {"jmp short "..hookAddress})
-	EEex_ClearAssemblyLabel("return")
+end
+
+function EEex_HookBeforeCall(address, assemblyT)
+	EEex_HookCallInternal(address, {}, assemblyT, false)
+end
+
+function EEex_HookBeforeCallWithLabels(address, labelPairs, assemblyT)
+	EEex_HookCallInternal(address, labelPairs, assemblyT, false)
 end
 
 function EEex_HookAfterCall(address, assemblyT)
+	EEex_HookCallInternal(address, {}, assemblyT, true)
+end
+
+function EEex_HookAfterCallWithLabels(address, labelPairs, assemblyT)
+	EEex_HookCallInternal(address, labelPairs, assemblyT, true)
+end
+
+function EEex_HookBeforeAndAfterCallInternal(address, labelPairs, beforeAssemblyT, afterAssemblyT)
+
 	local opcode = EEex_ReadU8(address)
 	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+
 	local afterCall = address + 5
-	EEex_DefineAssemblyLabel("return", afterCall)
 	local target = afterCall + EEex_Read32(address + 1)
-	local hookAddress = EEex_JITNear(EEex_FlattenTable({
-		{"call #$(1) #ENDL", {target}},
-		assemblyT,
-		{"jmp #$(1) #ENDL", {afterCall}},
-	}))
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		local hasHookExit = EEex_IntegrityCheck_HookExit[1] ~= nil
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return", not hasHookExit and afterCall or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+
+					EEex_IntegrityCheck_HookEnter,
+					beforeAssemblyT,
+					EEex_IntegrityCheck_HookExit, [[
+
+					call ]], target, "#ENDL",
+
+					EEex_IntegrityCheck_HookEnter,
+					afterAssemblyT, [[
+					#IF ]], hasHookExit, [[ {
+						return:
+					} ]],
+					EEex_IntegrityCheck_HookExit, [[
+
+					jmp ]], afterCall, "#ENDL",
+				}))
+			end
+		)
+	end)
+
 	EEex_JITAt(address, {"jmp short "..hookAddress})
-	EEex_ClearAssemblyLabel("return")
+end
+
+function EEex_HookBeforeAndAfterCall(address, beforeAssemblyT, afterAssemblyT)
+	EEex_HookBeforeAndAfterCallInternal(address, {}, beforeAssemblyT, afterAssemblyT)
+end
+
+function EEex_HookBeforeAndAfterCallWithLabels(address, labelPairs, beforeAssemblyT, afterAssemblyT)
+	EEex_HookBeforeAndAfterCallInternal(address, labelPairs, beforeAssemblyT, afterAssemblyT)
 end
 
 function EEex_GetJmpInfo(address)
@@ -1433,52 +1512,75 @@ function EEex_FindClosing(str, openStr, endStr, curLevel)
 	return false, curLevel
 end
 
+EEex_DebugPreprocessAssembly = false
+
 function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 
 	local advanceCount = 1
 
 	-- #IF
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#IF(.*)", function(match)
-		if EEex_FindPattern(match.groups[1], "[^%s]") then EEex_Error("Text between #IF and immediate condition") end
+
+		if EEex_FindPattern(match.groups[1], "[^%s]") then
+			EEex_Error("Text between #IF and immediate condition")
+		end
+
 		advanceCount = 2
 		local conditionV = assemblyT[curI + 1]
+
 		if type(conditionV) == "boolean" then
+
 			local hadBody = false
 			local bodyI = curI + 2
 			local bodyV = assemblyT[bodyI]
+
 			if type(bodyV) == "string" then
+
+				-- Find and remove the opening "{"
 				local hadOpen = false
-				bodyV = EEex_ReplacePattern(bodyV, "^%s*{(.*)", function(bodyMatch)
+				bodyV = EEex_ReplacePattern(bodyV, "^%s-{(.*)", function(bodyMatch)
 					hadOpen = true
 					return bodyMatch.groups[1], true
 				end)
-				assemblyT[bodyI] = bodyV
+
 				if hadOpen then
+
+					assemblyT[bodyI] = bodyV
+
 					local curLevel = 1
-					while true do
+					repeat
+						-- Look for closing "}"
 						if type(bodyV) == "string" then
+
+							local findV -- curLevel if not hadBody, else found closingI
 							hadBody, findV = EEex_FindClosing(bodyV, "{", "}", curLevel)
+
 							if hadBody then
-								if conditionV and findV > 1 then
-									assemblyT[bodyI] = bodyV:sub(1, findV - 1)..bodyV:sub(findV + 1)
-								else
-									assemblyT[bodyI] = bodyV:sub(findV + 1)
-								end
+								-- Save contents before and after the "}" if condition was true,
+								-- else only save contents after the "}"
+								assemblyT[bodyI] = conditionV and findV > 1
+									and bodyV:sub(1, findV - 1)..bodyV:sub(findV + 1)
+									or  bodyV:sub(findV + 1)
 								break
 							end
 							curLevel = findV
 						end
+
+						-- Skip every assemblyT value until "}" is found
 						if not conditionV then
 							advanceCount = advanceCount + 1
 						end
+
 						bodyI = bodyI + 1
 						bodyV = assemblyT[bodyI]
-						if bodyV == nil then break end
-						curLevel = findV
-					end
+
+					until bodyV == nil
 				end
 			end
-			if not hadBody then EEex_Error("#IF has no immediate body") end
+
+			if not hadBody then
+				EEex_Error("#IF has no immediate body")
+			end
 		else
 			EEex_Error("#IF has no immediate condition")
 		end
@@ -1502,10 +1604,12 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 
 	-- #L
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#L(%b())", function(match)
-		return EEex_ToDecStr(EEex_Label(match.groups[1]:sub(2, -2)))
+		local labelName = match.groups[1]:sub(2, -2)
+		local labelAddress = EEex_TryLabel(labelName)
+		return labelAddress and EEex_ToDecStr(labelAddress) or labelName
 	end)
 
-	--#REPEAT
+	-- #REPEAT
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#REPEAT(%b())", function(match)
 
 		local toBuild = {}
@@ -1659,8 +1763,26 @@ function EEex_PreprocessAssembly(assemblyT)
 	toReturn = EEex_ReplacePattern(toReturn, "\n+", "\n")      -- Merge newlines
 	toReturn = EEex_ReplacePattern(toReturn, "\n[ \t]+", "\n") -- Remove whitespace after newlines, (indentation)
 	toReturn = EEex_ReplacePattern(toReturn, "^[ \t]+", "")    -- Remove initial indent
+	toReturn = EEex_ReplacePattern(toReturn, "[ \t]+;", " ;")  -- Remove indentation before comments
 
-	--print("EEex_PreprocessAssembly returning:\n\n"..toReturn.."\n")
+	if EEex_DebugPreprocessAssembly then
+		print("EEex_PreprocessAssembly returning:\n\n"..toReturn.."\n")
+	end
+
+	-- Validate labels to prevent subtle bug where zero-offset branch instructions are written for non-existing labels
+	local seenLabels = {}
+	EEex_IterateRegex(toReturn, "^\\s*(\\S+):", function(pos, endPos, matchedStr, groups)
+		seenLabels[groups[1]] = true
+	end)
+
+	local branchUsingLabel = "^\\s*(?:call|ja|jae|jb|jbe|jc|je|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|loope|loopne|loopnz|loopz)\\s+([^0-9]\\S*)\\s*$"
+	EEex_IterateRegex(toReturn, branchUsingLabel, function(pos, endPos, matchedStr, groups)
+		local expectedLabel = groups[1]
+		if not seenLabels[expectedLabel] then
+			EEex_Error(string.format("Label \"%s\" not defined. Did you mean to use \"#L(%s)\"?", expectedLabel, expectedLabel))
+		end
+	end)
+
 	return toReturn
 end
 

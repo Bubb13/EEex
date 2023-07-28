@@ -15,9 +15,8 @@
 	-- [Lua] EEex_GameState_Hook_OnDestroyed() --
 	---------------------------------------------
 
-	EEex_HookRelativeCall(EEex_Label("Hook-CInfGame::DestroyGame()-LastCall"), EEex_FlattenTable({
+	EEex_HookAfterCall(EEex_Label("Hook-CInfGame::DestroyGame()-LastCall"), EEex_FlattenTable({
 		{[[
-			call #L(original)
 			#MAKE_SHADOW_SPACE(32)
 		]]},
 		EEex_GenLuaCall("EEex_GameState_Hook_OnDestroyed"),

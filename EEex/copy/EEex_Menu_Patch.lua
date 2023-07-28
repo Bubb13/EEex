@@ -7,14 +7,13 @@
 	-- [Lua] EEex_Menu_Hook_BeforeMenuStackSave() --
 	------------------------------------------------
 
-	EEex_HookRelativeCall(EEex_Label("Hook-uiRefreshMenu()-saveMenuStack()"), EEex_FlattenTable({
+	EEex_HookBeforeCall(EEex_Label("Hook-uiRefreshMenu()-saveMenuStack()"), EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(32)
 		]]},
 		EEex_GenLuaCall("EEex_Menu_Hook_BeforeMenuStackSave"),
 		{[[
 			call_error:
-			call #L(original)
 			#DESTROY_SHADOW_SPACE
 		]]},
 	}))
@@ -47,9 +46,8 @@
 	-- [Lua] EEex_Menu_Hook_AfterMainFileLoaded() --
 	------------------------------------------------
 
-	EEex_HookRelativeCall(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), EEex_FlattenTable({
+	EEex_HookAfterCall(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), EEex_FlattenTable({
 		{[[
-			call #L(original)
 			#MAKE_SHADOW_SPACE(32)
 		]]},
 		EEex_GenLuaCall("EEex_Menu_Hook_AfterMainFileLoaded"),

@@ -3,7 +3,7 @@
 
 	EEex_DisableCodeProtection()
 
-	EEex_HookRelativeCall(0x1401364D6, {[[
+	EEex_HookRemoveCall(0x1401364D6, {[[
 		mov rax, #L(Hardcoded_InternalLuaState)
 	]]})
 
@@ -129,21 +129,10 @@
 	redirect("luaopen_string")
 	redirect("luaopen_table")
 
-	EEex_HookRelativeCall(0x140408421, {[[
-		call #$(1) ]], {EEex_GetLuaLibraryProc("wrapper_wfopen")}, [[ #ENDL
-	]]})
-
-	EEex_HookRelativeCall(0x1403CD696, {[[
-		call #$(1) ]], {EEex_GetLuaLibraryProc("wrapper_fprintf")}, [[ #ENDL
-	]]})
-
-	EEex_HookRelativeCall(0x140408781, {[[
-		call #$(1) ]], {EEex_GetLuaLibraryProc("wrapper_fclose")}, [[ #ENDL
-	]]})
-
-	EEex_HookRelativeCall(0x1404084E5, {[[
-		call #$(1) ]], {EEex_GetLuaLibraryProc("luaL_loadfilexptr")}, [[ #ENDL
-	]]})
+	EEex_ReplaceCall(0x140408421, EEex_GetLuaLibraryProc("wrapper_wfopen"))
+	EEex_ReplaceCall(0x1403CD696, EEex_GetLuaLibraryProc("wrapper_fprintf"))
+	EEex_ReplaceCall(0x140408781, EEex_GetLuaLibraryProc("wrapper_fclose"))
+	EEex_ReplaceCall(0x1404084E5, EEex_GetLuaLibraryProc("luaL_loadfilexptr"))
 
 	for _, address in ipairs({
 		0x1400d5153, 0x1400d6f8f, 0x1400d7a80, 0x1400d7c01, 0x1400d9101, 0x1400d91a7, 0x1400d93fa,0x1400d9481, 0x1400d9cf2,

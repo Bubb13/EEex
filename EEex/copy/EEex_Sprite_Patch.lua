@@ -7,28 +7,30 @@
 	-- [Lua] EEex_Sprite_Hook_CheckSuppressTooltip() --
 	---------------------------------------------------
 
-	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::SetCursor()-SetCharacterToolTip()"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(40)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-		]]},
-		EEex_GenLuaCall("EEex_Sprite_Hook_CheckSuppressTooltip", {
-			["returnType"] = EEex_LuaCallReturnType.Boolean,
-		}),
-		{[[
-			jmp no_error
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::SetCursor()-SetCharacterToolTip()"), {
+		{"uses_early_return", true}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(40)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			]]},
+			EEex_GenLuaCall("EEex_Sprite_Hook_CheckSuppressTooltip", {
+				["returnType"] = EEex_LuaCallReturnType.Boolean,
+			}),
+			{[[
+				jmp no_error
 
-			call_error:
-			xor rax, rax
+				call_error:
+				xor rax, rax
 
-			no_error:
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-			test rax, rax
-			jnz return
-			call #L(original)
-		]]},
-	}))
+				no_error:
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				test rax, rax
+				jnz #L(return)
+			]]},
+		})
+	)
 
 	------------------------------------------
 	-- [Lua] EEex_Sprite_Hook_OnConstruct() --
@@ -136,11 +138,10 @@
 	local CGameEffectList_Marshal_SavedSpritePtrMem = EEex_Malloc(EEex_PtrSize * 2)
 	EEex_WritePtr(CGameEffectList_Marshal_SavedSpritePtrMem, 0x0)
 
-	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()"), {[[
-		mov qword ptr ds:[#$(1)], r13 ]], {CGameEffectList_Marshal_SavedSpritePtrMem}, [[ #ENDL
-		call #L(original)
-		mov qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Marshal_SavedSpritePtrMem}, [[ #ENDL
-	]]})
+	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()"),
+		{"mov qword ptr ds:[#$(1)], r13 #ENDL", {CGameEffectList_Marshal_SavedSpritePtrMem}},
+		{"mov qword ptr ds:[#$(1)], 0 #ENDL", {CGameEffectList_Marshal_SavedSpritePtrMem}}
+	)
 
 	-------------------------------------------------------
 	-- [JIT] CGameEffectList_Unmarshal_SavedSpritePtrMem --
@@ -149,11 +150,10 @@
 	local CGameEffectList_Unmarshal_SavedSpritePtrMem = CGameEffectList_Marshal_SavedSpritePtrMem + EEex_PtrSize
 	EEex_WritePtr(CGameEffectList_Unmarshal_SavedSpritePtrMem, 0x0)
 
-	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"), {[[
-		mov qword ptr ds:[#$(1)], rbx ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-		call #L(original)
-		mov qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-	]]})
+	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"),
+		{"mov qword ptr ds:[#$(1)], rbx #ENDL", {CGameEffectList_Unmarshal_SavedSpritePtrMem}},
+		{"mov qword ptr ds:[#$(1)], 0 #ENDL", {CGameEffectList_Unmarshal_SavedSpritePtrMem}}
+	)
 
 	------------------------------------------------------------------
 	-- [Lua] EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize() --
@@ -225,7 +225,7 @@
 	-- [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal() --
 	-----------------------------------------------------------
 
-	EEex_HookRelativeCall(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), EEex_FlattenTable({
+	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"),
 		{[[
 			cmp qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
 			jz dont_do_anything
@@ -234,32 +234,35 @@
 			je handle_EEex_binary
 
 			dont_do_anything:
-			call #L(original)
-			jmp return
+		]]},
+		EEex_FlattenTable({
+			{[[
+				jmp #L(return)
 
-			handle_EEex_binary:
-			#MAKE_SHADOW_SPACE(48)
-		]]},
-		EEex_GenLuaCall("EEex_Sprite_Hook_ReadExtraEffectListUnmarshal", {
-			["args"] = {
-				-- sprite
-				function(rspOffset) return {[[
-					mov rax, qword ptr ss:[#$(1)] ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
-				]]}, "CGameSprite" end,
-				-- memory
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"} end,
-			},
-		}),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-		EEex_IntegrityCheck_HookExit,
-		{[[
-			jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
-		]]},
-	}))
+				handle_EEex_binary:
+				#MAKE_SHADOW_SPACE(48)
+			]]},
+			EEex_GenLuaCall("EEex_Sprite_Hook_ReadExtraEffectListUnmarshal", {
+				["args"] = {
+					-- sprite
+					function(rspOffset) return {[[
+						mov rax, qword ptr ss:[#$(1)] ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
+						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+					]]}, "CGameSprite" end,
+					-- memory
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"} end,
+				},
+			}),
+			{[[
+				call_error:
+				#DESTROY_SHADOW_SPACE
+			]]},
+			EEex_IntegrityCheck_HookExit,
+			{[[
+				jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
+			]]},
+		})
+	)
 
 	-----------------------------------------------------------
 	-- [Lua] EEex_Sprite_Hook_OnLoadConcentrationCheckMode() --

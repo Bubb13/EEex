@@ -93,10 +93,9 @@
 		call #L(EEex::Opcode_Hook_OnOp249AddTail)
 	]]})
 
-	EEex_HookRelativeCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(64)
-			call #L(original)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
 		]]},
 		EEex_GenLuaCall("EEex_Opcode_Hook_OnAfterSwingCheckedOp249", {
@@ -112,7 +111,7 @@
 			#DESTROY_SHADOW_SPACE
 
 			test rax, rax
-			jz return
+			jz #L(return)
 		]]},
 		EEex_IntegrityCheck_HookExit,
 		{[[
