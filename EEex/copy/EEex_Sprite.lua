@@ -1043,7 +1043,7 @@ function EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item, damR, damL, th
 
 	if ignore then
 
-		local weaponStyleBonuses = EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_ruleTables.m_tWeaponStyleBonus
+		local weaponStyleBonuses = 0
 		local default = tonumber(weaponStyleBonuses.m_default.m_pchData:get(), 10) or 0
 
 		local writeDefault = function(ptr)
