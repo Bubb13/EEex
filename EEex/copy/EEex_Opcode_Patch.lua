@@ -383,25 +383,39 @@
 		]]},
 	}))
 
-	-------------------------------------------------------------------------------------------------
-	-- Opcode #178 --
-	-- Param3 checks for currently selected weapon slot --
-	-- Param4 checks for currently selected weapon category --
-	-------------------------------------------------------------------------------------------------
+	----------------------------------------------------
+	-- Allow saving throw BIT23 to bypass opcode #101 --
+	----------------------------------------------------
 
-	EEex_HookAfterCall(0x1401c4cda, EEex_FlattenTable({
+	EEex_HookBeforeRestore(EEex_Label("Hook-CImmunitiesEffect::OnList()-Entry"), 0, 5, 5, EEex_FlattenTable({
 		{[[
-			#MAKE_SHADOW_SPACE(48)
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(56)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp178WeaponSlotWeaponCategory", {
+		EEex_GenLuaCall("EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101", {
 			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsp", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameEffect" end,
 			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
 		}),
 		{[[
+			jmp no_error
+
 			call_error:
+			xor rax, rax
+
+			no_error:
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE
+
+			test rax, rax
+			jz no_bypass
+			xor rax, rax
+			ret
+			no_bypass:
 		]]},
 	}))
 

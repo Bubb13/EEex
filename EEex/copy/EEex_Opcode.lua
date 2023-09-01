@@ -218,32 +218,12 @@ function EEex_Opcode_Hook_OnOp333CopiedSelf(effect)
 	end
 end
 
--------------------------------------------------------------------------------------------------
--- Opcode #178 --
--- Param3 checks for currently selected weapon slot --
--- Param4 checks for currently selected weapon category --
--------------------------------------------------------------------------------------------------
+----------------------------------------------------
+-- Allow saving throw BIT23 to bypass opcode #101 --
+----------------------------------------------------
 
-function EEex_Opcode_Hook_OnOp178WeaponSlotWeaponCategory(effect, sprite)
-	local weapon_slot = effect.m_effectAmount2
-	local weapon_category = effect.m_effectAmount3
-	local retVal
-
-	-- param3 (currently selected weapon slot) check
-	if weapon_slot == 1 then
-		retVal = sprite.m_equipment.m_selectedWeapon
-	elseif weapon_slot == 2 then
-		retVal = 9
-	elseif weapon_slot ~= 3 then
-		retVal = effect.m_slotNum
-	else
-		return
-	end
-
-	-- param4 (currently selected weapon category) check
-	if weapon_category == sprite.m_derivedStats.m_cSelectiveWeaponTypeList then
-		retVal = sprite.m_derivedStats.m_cSelectiveWeaponTypeList
-	end
+function EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101(effect)
+	return EEex_IsBitSet(effect.m_savingThrow, 23)
 end
 
 --------------------------------------------
