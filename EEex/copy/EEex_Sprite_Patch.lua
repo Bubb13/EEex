@@ -396,6 +396,123 @@
 		]]},
 	}))
 
+	--------------------------------------------------------------------------------------------
+	-- Allow ITM header flag BIT18 to ignore weapon styles (as if the item were in SLOT_FIST) --
+	--------------------------------------------------------------------------------------------
+
+	local getProfBonusesItemHack = EEex_Malloc(EEex_PtrSize)
+	EEex_WritePtr(getProfBonusesItemHack, 0)
+
+	-- CheckCombatStats()
+
+	EEex_HookAfterCall(0x14034C00A, {[[
+		mov qword ptr ds:[#$(1)], rbx ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- GetMaxDamage()
+
+	EEex_HookBeforeCall(0x1403564A9, {[[
+		mov qword ptr ds:[#$(1)], r13 ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- GetMinDamage()
+
+	EEex_HookBeforeCall(0x140356DB4, {[[
+		mov qword ptr ds:[#$(1)], r13 ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- GetStatBreakdown()
+
+	EEex_HookBeforeCall(0x14035C3B8, {[[
+		mov qword ptr ds:[#$(1)], r14 ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- GetStyleBonus()
+
+	EEex_HookAfterCall(0x14039C549, {[[
+		mov qword ptr ds:[#$(1)], rdi ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- EquipMostDamagingMelee()
+
+	EEex_HookAfterCall(0x1403930A8, {[[
+		mov qword ptr ds:[#$(1)], rdi ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- Main hook: GetProfBonuses()
+
+	EEex_HookBeforeRestore(0x1402451D0, 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(136)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], edx
+			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8d
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles", {
+			["args"] = {
+				function(rspOffset) return {[[
+					mov rax, qword ptr ds:[#$(1)] ]], {getProfBonusesItemHack}, [[ ; Global hack (item)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]}, "CItem" end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)] ; Register arg 4 (damR)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(40)] ; Stack arg 1 (damL)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(48)] ; Stack arg 2 (thacR)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(56)] ; Stack arg 3 (thacL)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(64)] ; Stack arg 4 (ACB)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(72)] ; Stack arg 5 (ACM)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(80)] ; Stack arg 6 (speed)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(88)] ; Stack arg 7 (crit)
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+			jz do_not_ignore_weapon_styles
+
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			ret
+
+			do_not_ignore_weapon_styles:
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8d, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov edx, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
 	EEex_EnableCodeProtection()
 
 end)()

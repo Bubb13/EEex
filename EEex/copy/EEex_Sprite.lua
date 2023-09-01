@@ -1032,3 +1032,37 @@ function EEex_Sprite_Hook_OnSetCurrAction(sprite)
 	spriteAux["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 0
 	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
 end
+
+--------------------------------------------------------------------------------------------
+-- Allow ITM header flag BIT18 to ignore weapon styles (as if the item were in SLOT_FIST) --
+--------------------------------------------------------------------------------------------
+
+function EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item, damR, damL, thacR, thacL, ACB, ACM, speed, crit)
+
+	local ignore = EEex_IsBitSet(item.pRes.pHeader.itemFlags, 18)
+
+	if ignore then
+
+		local weaponStyleBonuses = EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_ruleTables.m_tWeaponStyleBonus
+		local default = tonumber(weaponStyleBonuses.m_default.m_pchData:get(), 10) or 0
+
+		local writeDefault = function(ptr)
+			if ptr ~= 0x0 then
+				EEex_Write32(ptr, default)
+			end
+		end
+
+		writeDefault(damR)
+		writeDefault(damL)
+		writeDefault(thacR)
+		writeDefault(thacL)
+		writeDefault(ACB)
+		writeDefault(ACM)
+		writeDefault(speed)
+		writeDefault(crit)
+
+		return true
+	end
+
+	return false
+end
