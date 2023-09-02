@@ -221,6 +221,10 @@ Operations=ADD -33
 Pattern=5657488D6C2480
 Operations=ADD -6
 
+[CGameSprite::SpellPoint]
+Pattern=41554157488D6C24D0
+Operations=ADD -4
+
 [CGameSprite::UpdateTarget]
 Pattern=488BD94885D2740F
 Operations=ADD -13
