@@ -1244,6 +1244,10 @@ Operations=ADD 4
 Pattern=740A488B4C2448
 Operations=ADD 7
 
+[Hook-CGameSprite::CheckCombatStats()-GetProfBonuses-SaveItem]
+Pattern=48894DEF48894DE7
+Operations=ADD 17
+
 [Hook-CGameSprite::CheckQuickLists()-CallListeners]
 Pattern=405557415441554156488D6C24D1
 
@@ -1263,9 +1267,29 @@ Operations=ADD 31
 Pattern=75DA4C8DB358490000
 Operations=ADD 12
 
+[Hook-CGameSprite::EquipMostDamagingMelee()-GetProfBonuses-SaveItem]
+Pattern=24024885DB
+Operations=ADD -5
+
 [Hook-CGameSprite::ExecuteAction()-DefaultJmp]
 Pattern=81F9D7010000
 Operations=ADD 6
+
+[Hook-CGameSprite::GetActiveWeaponStyleAndLevel()-GetProfBonuses-SaveItem]
+Pattern=747C483BFD
+Operations=ADD -8
+
+[Hook-CGameSprite::GetMaxDamage()-GetProfBonuses-SaveItem]
+Pattern=03457F8B4DDB
+Operations=ADD -8
+
+[Hook-CGameSprite::GetMinDamage()-GetProfBonuses-SaveItem]
+Pattern=03457F894577
+Operations=ADD -8
+
+[Hook-CGameSprite::GetStatBreakdown()-GetProfBonuses-SaveItem]
+Pattern=498BCE48894590
+Operations=ADD 7
 
 [Hook-CGameSprite::IsOver()-B3Invis]
 Pattern=3843387627
@@ -1401,6 +1425,10 @@ Operations=ADD -5
 [Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt]
 Pattern=663BBD58030000
 Operations=ADD 35
+
+[Hook-CRuleTables::GetProfBonuses()-IgnoreWeaponStyles]
+Pattern=48897C241055488BEC4883EC30
+Operations=ADD -5
 
 [Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall]
 Pattern=3CFF7484
