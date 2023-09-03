@@ -133,6 +133,10 @@ Pattern=81FA000100007320
 [CGameAIBase::ApplyEffectToParty]
 Pattern=405355415641574883EC28
 
+[CGameAIBase::ForceSpellPoint]
+Pattern=5741564157488D6C24F0
+Operations=ADD -7
+
 [CGameAIBase::GetTargetShare]
 Pattern=4883EC20488BF94533C0
 Operations=ADD -6
