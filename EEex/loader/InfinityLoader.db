@@ -141,6 +141,14 @@ Operations=ADD -7
 Pattern=4883EC20488BF94533C0
 Operations=ADD -6
 
+[CGameAIBase::GetTargetShareType1]
+Pattern=56574883EC20488BC2
+Operations=ADD -6
+
+[CGameAIBase::GetTargetShareType2]
+Pattern=4889742420574883EC200FB6F2
+Operations=ADD -5
+
 [CGameArea::AdjustTarget]
 Pattern=48895C240844884C2420
 
