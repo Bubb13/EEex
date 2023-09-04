@@ -254,6 +254,94 @@ function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
 		targetTable[curAction.m_string1.m_pchData:get()] = target and target.m_id or nil
 
 		return EEex_Action_ReturnType.ACTION_DONE
+
+	elseif actionID == 475 then -- EEex_SpellObjectOffset
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if aiBase:isSprite(true) and target ~= nil then
+			curAction.m_actionID = 95
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:SpellPoint()
+		end
+
+	elseif actionID == 476 then -- EEex_SpellObjectOffsetRES
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if aiBase:isSprite(true) and target ~= nil then
+			curAction.m_actionID = 95
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:SpellPoint()
+		end
+
+	elseif actionID == 477 then -- EEex_SpellObjectOffsetNoDec
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if aiBase:isSprite(true) and target ~= nil then
+			curAction.m_actionID = 192
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:SpellPoint()
+		end
+
+	elseif actionID == 478 then -- EEex_SpellObjectOffsetNoDecRES
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if aiBase:isSprite(true) and target ~= nil then
+			curAction.m_actionID = 192
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:SpellPoint()
+		end
+
+	elseif actionID == 479 then -- EEex_ForceSpellObjectOffset
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if target ~= nil then
+			curAction.m_actionID = 114
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:ForceSpellPoint()
+		end
+
+	elseif actionID == 480 then -- EEex_ForceSpellObjectOffsetRES
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if target ~= nil then
+			curAction.m_actionID = 114
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:ForceSpellPoint()
+		end
+
+	elseif actionID == 481 then -- EEex_ReallyForceSpellObjectOffset
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if target ~= nil then
+			curAction.m_actionID = 337
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:ForceSpellPoint()
+		end
+
+	elseif actionID == 482 then -- EEex_ReallyForceSpellObjectOffsetRES
+
+		local target = EEex_GameObject_CastUserType(aiBase:GetTargetShareType2(CGameObjectType.AIBASE))
+
+		if target ~= nil then
+			curAction.m_actionID = 337
+			curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+			curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+			return aiBase:ForceSpellPoint()
+		end
 	end
 
 	return EEex_Action_ReturnType.ACTION_ERROR
