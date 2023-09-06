@@ -226,12 +226,27 @@ end
 -- Hooks --
 -----------
 
-function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
+function EEex_Action_Private_SpellObjectOffset(aiBase, curAction, bOnlySprite, realActionID, realActionFunc)
 
-	local curAction = aiBase.m_curAction
-	local actionID = curAction.m_actionID
+	if bOnlySprite and not aiBase:isSprite(true) then
+		return
+	end
 
-	if actionID == 472 then -- EEex_LuaAction
+	local target = aiBase:GetTargetShareType2(CGameObjectType.AIBASE)
+	if target == nil then
+		return
+	end
+
+	curAction.m_actionID = realActionID
+	curAction.m_dest.x = target.m_pos.x + curAction.m_dest.x
+	curAction.m_dest.y = target.m_pos.y + curAction.m_dest.y
+	return realActionFunc(aiBase)
+end
+
+EEex_Action_Private_Switch = {
+
+	-- EEex_LuaAction
+	[472] = function(aiBase, curAction)
 
 		EEex_LuaAction_Object = aiBase
 
@@ -239,21 +254,58 @@ function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
 		if success then
 			return retVal ~= nil and retVal or EEex_Action_ReturnType.ACTION_DONE
 		end
+	end,
 
-	elseif actionID == 473 then -- EEex_MatchObject / EEex_MatchObjectEx
+	-- EEex_MatchObject / EEex_MatchObjectEx
+	[473] = function(aiBase, curAction)
 
 		EEex_GetUDAux(aiBase)["EEex_MatchObject"] = EEex.MatchObject(aiBase, curAction.m_string1.m_pchData:get(),
 			curAction.m_specificID, curAction.m_specificID2, curAction.m_specificID3)
 
 		return EEex_Action_ReturnType.ACTION_DONE
+	end,
 
-	elseif actionID == 474 then -- EEex_SetTarget
+	-- EEex_SetTarget
+	[474] = function(aiBase, curAction)
 
 		local target = aiBase:GetTargetShare()
 		local targetTable = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(aiBase), "EEex_Target")
 		targetTable[curAction.m_string1.m_pchData:get()] = target and target.m_id or nil
 
 		return EEex_Action_ReturnType.ACTION_DONE
+	end,
+
+	-- EEex_SpellObjectOffset / EEex_SpellObjectOffsetRES
+	[475] = function(aiBase, curAction)
+		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, true, 95, CGameSprite.SpellPoint)
+	end,
+
+	-- EEex_SpellObjectOffsetNoDec / EEex_SpellObjectOffsetNoDecRES
+	[476] = function(aiBase, curAction)
+		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, true, 192, CGameSprite.SpellPoint)
+	end,
+
+	-- EEex_ForceSpellObjectOffset / EEex_ForceSpellObjectOffsetRES
+	[477] = function(aiBase, curAction)
+		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, false, 114, CGameAIBase.ForceSpellPoint)
+	end,
+
+	-- EEex_ReallyForceSpellObjectOffset / EEex_ReallyForceSpellObjectOffsetRES
+	[478] = function(aiBase, curAction)
+		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, false, 337, CGameAIBase.ForceSpellPoint)
+	end,
+}
+
+function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
+
+	local curAction = aiBase.m_curAction
+	local handler = EEex_Action_Private_Switch[curAction.m_actionID]
+
+	if handler then
+		local result = handler(aiBase, curAction)
+		if result ~= nil then
+			return result
+		end
 	end
 
 	return EEex_Action_ReturnType.ACTION_ERROR
