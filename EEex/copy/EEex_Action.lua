@@ -276,22 +276,22 @@ EEex_Action_Private_Switch = {
 	end,
 
 	-- EEex_SpellObjectOffset / EEex_SpellObjectOffsetRES
-	[475] = function(aiBase, curAction)
+	[476] = function(aiBase, curAction)
 		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, true, 95, CGameSprite.SpellPoint)
 	end,
 
 	-- EEex_SpellObjectOffsetNoDec / EEex_SpellObjectOffsetNoDecRES
-	[476] = function(aiBase, curAction)
+	[477] = function(aiBase, curAction)
 		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, true, 192, CGameSprite.SpellPoint)
 	end,
 
 	-- EEex_ForceSpellObjectOffset / EEex_ForceSpellObjectOffsetRES
-	[477] = function(aiBase, curAction)
+	[478] = function(aiBase, curAction)
 		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, false, 114, CGameAIBase.ForceSpellPoint)
 	end,
 
 	-- EEex_ReallyForceSpellObjectOffset / EEex_ReallyForceSpellObjectOffsetRES
-	[478] = function(aiBase, curAction)
+	[479] = function(aiBase, curAction)
 		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, false, 337, CGameAIBase.ForceSpellPoint)
 	end,
 }
