@@ -127,8 +127,18 @@ Pattern=48895C2420565741564883EC30
 Pattern=3DC9000000
 Operations=ADD -5
 
+[CDerivedStats::GetAverageLevel]
+Pattern=83F8147776
+Operations=ADD -8
+
+[CDerivedStats::GetPriestLevelCast]
+Pattern=48895C240855488BEC4883EC20
+
 [CDerivedStats::GetSpellState]
 Pattern=81FA000100007320
+
+[CDerivedStats::GetWizardLevelCast]
+Pattern=40534883EC200FB6C2488BD9FFC8
 
 [CGameAIBase::ApplyEffectToParty]
 Pattern=405355415641574883EC28
@@ -205,6 +215,18 @@ Pattern=4056415641574883EC50
 [CGameSprite::GetKitMask]
 Pattern=84C87476
 Operations=ADD -39
+
+[CGameSprite::GetKnownSpellInnate]
+Pattern=4881C1480B0000
+Operations=ADD -7
+
+[CGameSprite::GetKnownSpellMage]
+Pattern=4881C150090000
+Operations=ADD -7
+
+[CGameSprite::GetKnownSpellPriest]
+Pattern=4881C1C8070000
+Operations=ADD -7
 
 [CGameSprite::GetLauncherSlot]
 Pattern=574883EC20480FBFC2

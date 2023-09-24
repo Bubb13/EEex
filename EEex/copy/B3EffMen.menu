@@ -22,11 +22,11 @@ menu
 		rectangle 5
 		rectangle opacity 750
 	}
-	
+
 	list
 	{
-		column 
-		{ 
+		column
+		{
 			width 20
 			label
 			{
@@ -34,8 +34,8 @@ menu
 				bam lua "B3EffectMenu_Menu_List_Table[rowNumber].bam"
 			}
 		}
-		column 
-		{ 
+		column
+		{
 			width 70
 			label
 			{

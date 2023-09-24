@@ -168,6 +168,249 @@ function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
 	end
 end
 
+---------------
+-- Iterators --
+---------------
+
+-- Expects - {itr[1], itr[2], ..., itr[n]}
+-- Returns - Itr such that:
+--             -> itr[1]()..., itr[2]()..., ..., itr[n]()...
+function EEex_Utility_ChainIteratorsTable(iterators)
+
+	local curItr = iterators[1]
+	if curItr == nil then
+		return function()
+			return nil
+		end
+	end
+	local i = 1
+
+	return function()
+		while true do
+			local values = {curItr()}
+			if values[1] ~= nil then
+				return table.unpack(values)
+			else
+				i = i + 1
+				curItr = iterators[i]
+				if curItr == nil then
+					return nil
+				end
+			end
+		end
+	end
+end
+EEex_Utility_ChainItrsTable = EEex_Utility_ChainIteratorsTable
+EEex_Utility_ChainItrsT = EEex_Utility_ChainIteratorsTable
+EEex_Utility_ChainIteratorsT = EEex_Utility_ChainIteratorsTable
+
+-- Expects - <itr[1], itr[2], ..., itr[n]>
+-- Returns - Itr such that:
+--             -> itr[1]()..., itr[2]()..., ..., itr[n]()...
+function EEex_Utility_ChainIterators(...)
+	return EEex_Utility_ChainIteratorsTable({...})
+end
+EEex_Utility_ChainItrs = EEex_Utility_ChainIterators
+
+-- Expects - {itrGen[1], itrGen[2], ..., itrGen[n]}
+-- Returns - Itr such that:
+--             -> [itrGen[1]()...]..., [itrGen[2]()...]..., ..., [itrGen[n]()...]...
+function EEex_Utility_ChainIteratorGeneratorsTable(generators)
+
+	local curGenerator = generators[1]
+	if curGenerator == nil then
+		return function()
+			return nil
+		end
+	end
+	local i = 1
+
+	local curItr
+	local nextItr = function()
+		while true do
+			curItr = curGenerator()
+			if curItr ~= nil then
+				return true
+			end
+			i = i + 1
+			curGenerator = generators[i]
+			if curGenerator == nil then
+				return false
+			end
+		end
+	end
+	if not nextItr() then
+		return function()
+			return nil
+		end
+	end
+
+	return function()
+		while true do
+			local values = {curItr()}
+			if values[1] ~= nil then
+				return table.unpack(values)
+			elseif not nextItr() then
+				return nil
+			end
+		end
+	end
+end
+EEex_Utility_ChainItrGeneratorsTable = EEex_Utility_ChainIteratorGeneratorsTable
+EEex_Utility_ChainItrGeneratorsT = EEex_Utility_ChainIteratorGeneratorsTable
+EEex_Utility_ChainItrGensTable = EEex_Utility_ChainIteratorGeneratorsTable
+EEex_Utility_ChainItrGensT = EEex_Utility_ChainIteratorGeneratorsTable
+EEex_Utility_ChainIteratorGensTable = EEex_Utility_ChainIteratorGeneratorsTable
+EEex_Utility_ChainIteratorGensT = EEex_Utility_ChainIteratorGeneratorsTable
+
+-- Expects - <itrGen[1], itrGen[2], ..., itrGen[n]>
+-- Returns - Itr such that:
+--             -> [itrGen[1]()...]..., [itrGen[2]()...]..., ..., [itrGen[n]()...]...
+function EEex_Utility_ChainIteratorGenerators(...)
+	return EEex_Utility_ChainIteratorGeneratorsTable({...})
+end
+EEex_Utility_ChainItrGenerators = EEex_Utility_ChainIteratorGenerators
+EEex_Utility_ChainItrGens = EEex_Utility_ChainIteratorGenerators
+EEex_Utility_ChainIteratorGens = EEex_Utility_ChainIteratorGenerators
+
+-- Expects - <i, itr>
+-- Returns - Itr such that:
+--              * n = <number of itr elements>
+--             -> select(i, itr[1]), select(i, itr[2]), ..., select(i, itr[n])
+function EEex_Utility_SelectIterator(i, iterator)
+	return function()
+		return select(i, iterator())
+	end
+end
+EEex_Utility_SelectItr = EEex_Utility_SelectIterator
+
+-- Expects - <table>
+-- Returns - Itr such that:
+--              * n = <number of table elements>
+--             -> t[1], t[2], ..., t[n]
+function EEex_Utility_TableIterator(t)
+	local i = 0
+	return function()
+		i = i + 1
+		local v = t[i]
+		if v == nil then
+			return nil
+		end
+		return v
+	end
+end
+EEex_Utility_TableItr = EEex_Utility_TableIterator
+
+-- Expects - <v[1], v[2], ..., v[n]>
+-- Returns - Itr such that:
+--             -> v[1], v[2], ..., v[n]
+function EEex_Utility_ValuesIterator(...)
+	return EEex_Utility_TableIterator({...})
+end
+EEex_Utility_ValuesItr = EEex_Utility_ValuesIterator
+
+-- Expects - <itr, func>
+-- Returns - Itr such that:
+--              * n = <number of itr elements>
+--             -> func(itr[1]), func(itr[2]), ..., func(itr[n])
+function EEex_Utility_ApplyIterator(iterator, func)
+	return function()
+		local values = {iterator()}
+		if values[1] == nil then
+			return nil
+		end
+		return func(table.unpack(values))
+	end
+end
+EEex_Utility_ApplyItr = EEex_Utility_ApplyIterator
+
+-- Expects - <itr, func>
+-- Returns - Itr such that:
+--              * n = <number of itr elements>
+--              * Executes func(itr[1]), func(itr[2]), ..., func(itr[n])
+--             -> itr[1], itr[2], ..., itr[n]
+function EEex_Utility_MutateIterator(iterator, func)
+	return function()
+		local values = {iterator()}
+		if values[1] == nil then
+			return nil
+		end
+		func(table.unpack(values))
+		return table.unpack(values)
+	end
+end
+EEex_Utility_ApplyItr = EEex_Utility_ApplyIterator
+
+-- Expects - <lowerBound, upperBound, [stepFunc], [startI]>
+-- Returns - Itr such that:
+--              * if stepFunc == nil then stepFunc = function(i) return i + 1 end
+--              * i = startI if startI ~= nil else lowerBound
+--             -> i, i = stepFunc(i), i = stepFunc(i), ... until i < lowerBound or i > upperBound
+function EEex_Utility_RangeIterator(lowerBound, upperBound, stepFunc, startI)
+	local i = startI or lowerBound
+	if stepFunc == nil then
+		stepFunc = function(i)
+			return i + 1
+		end
+	end
+	return function()
+		if i < lowerBound or i > upperBound then
+			return nil
+		end
+		local toReturn = i
+		i = stepFunc(i)
+		return toReturn
+	end
+end
+EEex_Utility_RangeItr = EEex_Utility_RangeIterator
+
+-- Expects - <itr, filterFunc>
+-- Returns - Itr such that:
+--              * n = <number of itr elements>
+--             -> itr[1] if filterFunc(itr[1]) == true, itr[2] if filterFunc(itr[2]) == true, ...,
+--                itr[n] if filterFunc(itr[n]) == true
+function EEex_Utility_FilterIterator(iterator, filterFunc)
+	return function()
+		while true do
+			local values = {iterator()}
+			if values[1] == nil then
+				return nil
+			end
+			if filterFunc(table.unpack(values)) then
+				return table.unpack(values)
+			end
+		end
+	end
+end
+EEex_Utility_FilterItr = EEex_Utility_FilterIterator
+
+--[[
+function EEex_Utility_AugmentIterator(inputItr, augStart, augLength, mainItrGen, augmentFunc)
+
+	local inputValues
+	inputItr = EEex_Utility_MutateIterator(inputItr, function(...)
+		inputValues = {...}
+	end)
+
+	local mainItr = mainItrGen(inputItr)
+	if mainItr == nil then
+		return function()
+			return nil
+		end
+	end
+
+	return function()
+		local mainValues = {mainItr()}
+		if mainValues[1] == nil then
+			return nil
+		end
+		augmentFunc(EEex_SelectFromTables(augStart, augLength, inputValues, 1, -1, mainValues))
+		return table.unpack(mainValues)
+	end
+end
+EEex_Utility_AugmentItr = EEex_Utility_AugmentIterator
+--]]
+
 --------------------
 -- Listeners Init --
 --------------------

@@ -71,7 +71,7 @@ function B3EffectMenu_LaunchInfo()
 
 	B3EffectMenu_Menu_List_Table = {}
 	local sprite = EEex_GameObject_Get(B3EffectMenu_CurrentActorID)
-	
+
 	local pos = sprite.m_pos
 	local screenX, screenY = EEex_Menu_TranslateXYFromGame(pos.x, pos.y)
 	Infinity_SetOffset("B3EffectMenu_Menu", screenX, screenY)

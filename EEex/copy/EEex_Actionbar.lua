@@ -360,6 +360,46 @@ function EEex_Actionbar_RunWithListenersSuppressed(func)
 	return toReturn
 end
 
+-- <string, Spell_Header_st, Spell_ability_st>
+function EEex_Actionbar_GetSpellButtonData(spellResRef, spellHeader, spellAbility)
+	local buttonData = EEex_NewUD("CButtonData")
+	buttonData.m_icon:set(spellAbility.quickSlotIcon:get())
+	buttonData.m_name = spellHeader.genericName
+	buttonData.m_launcherIcon:set("")
+	buttonData.m_launcherName = 0xFFFFFFFF
+	buttonData.m_count = 1
+	local abilityId = buttonData.m_abilityId
+	abilityId.m_itemType = 3
+	abilityId.m_itemNum = -1
+	abilityId.m_abilityNum = -1
+	abilityId.m_res:set(spellResRef)
+	abilityId.m_targetType = spellAbility.actionType
+	abilityId.m_targetCount = spellAbility.actionCount
+	abilityId.m_toolTip = spellHeader.genericName
+	buttonData.m_bDisabled = false
+	buttonData.m_bDisplayCount = 0
+	return buttonData
+end
+
+-- spellIterator is expected to return <string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+-- Iterator returns <CButtonData>
+function EEex_Actionbar_GetSpellButtonDataIterator(spellIterator)
+	return EEex_Utility_ApplyItr(spellIterator, EEex_Actionbar_GetSpellButtonData)
+end
+EEex_Actionbar_GetSpellButtonDataItr = EEex_Actionbar_GetSpellButtonDataIterator
+
+-- spellIterator is expected to return <string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+-- Iterator returns <CButtonData>
+function EEex_Actionbar_GetOp214ButtonDataIterator(spellIterator)
+	return EEex_Actionbar_GetSpellButtonDataItr(EEex_Utility_FilterItr(spellIterator,
+		function(spellResRef, spellHeader, spellAbility)
+			-- NOT Identify / Nahal's Reckless Dweomer
+			return spellResRef ~= "SPWI110" and spellResRef ~= "SPWI124"
+		end
+	))
+end
+EEex_Actionbar_GetOp214ButtonDataItr = EEex_Actionbar_GetOp214ButtonDataIterator
+
 -----------
 -- Hooks --
 -----------
