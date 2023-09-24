@@ -419,6 +419,35 @@
 		]]},
 	}))
 
+	--------------------------------------------
+	-- Fix a regression affecting opcode #206 --
+	--------------------------------------------
+
+	EEex_HookAfterRestore(0x1401CCB44, 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(48)
+		]]},
+		EEex_GenLuaCall("EEex_Fix_Hook_ShouldTransformSpellImmunityStrref", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameEffect" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r12 #ENDL", {rspOffset}}, "CImmunitySpell" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+			#DESTROY_SHADOW_SPACE
+			jnz 0x1401CCE01 ; body
+			jmp 0x1401CCB68 ; else
+		]]},
+	}))
+
 	-----------------
 	-- New Opcodes --
 	-----------------

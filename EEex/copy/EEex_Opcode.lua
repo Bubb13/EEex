@@ -227,6 +227,16 @@ function EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101(effect)
 end
 
 --------------------------------------------
+-- Fix a regression affecting opcode #206 --
+--------------------------------------------
+
+function EEex_Fix_Hook_ShouldTransformSpellImmunityStrref(effect, immunitySpell)
+	local sourceResRef = effect.m_sourceRes:get()
+	local errorStrref = immunitySpell.m_error
+	return sourceResRef == "" and (errorStrref == 0xF00074 or errorStrref == 0xF00080)
+end
+
+--------------------------------------------
 -- New Opcode #400 (SetTemporaryAIScript) --
 --------------------------------------------
 
