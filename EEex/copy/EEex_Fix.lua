@@ -44,3 +44,15 @@ end
 function EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow(sprite)
 	EEex_GetUDAux(sprite)["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 1
 end
+
+-------------------------------------------------------------------------------------------
+-- Fix several regressions in v2.6 where:                                                --
+--   1) op206's param1 only works for values 0xF00074 and 0xF00080.                      --
+--   2) op232 and op256's "you cannot cast multiple instances" message fails to display. --
+-------------------------------------------------------------------------------------------
+
+function EEex_Fix_Hook_ShouldTransformSpellImmunityStrref(effect, immunitySpell)
+	local sourceResRef = effect.m_sourceRes:get()
+	local errorStrref = immunitySpell.m_error
+	return sourceResRef == "" and (errorStrref == 0xF00074 or errorStrref == 0xF00080)
+end
