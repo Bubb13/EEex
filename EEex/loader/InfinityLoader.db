@@ -1160,6 +1160,18 @@ Operations=ADD 31
 Pattern=6689B3BA040000
 Operations=ADD -5
 
+[Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrref]
+Pattern=448D7E01BBFFFFFFFF
+Operations=ADD 4
+
+[Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefBody]
+Pattern=4C8B642458EB1B
+Operations=ADD 12
+
+[Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefElse]
+Pattern=448D7E01BBFFFFFFFF
+Operations=ADD 40
+
 [Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing]
 Pattern=7558498B5500
 
