@@ -49,6 +49,47 @@
 		]]},
 	}))
 
+	--+--------------------------------------------------------------------------------+
+	--| Opcode #214                                                                    |
+	--+--------------------------------------------------------------------------------+
+	--| param2 == 3 -> Call Lua function in resource field to get CButtonData iterator |
+	--+--------------------------------------------------------------------------------+
+	--| Hook return:                                                                   |
+	--|     false -> Effect not handled                                                |
+	--|     true  -> Effect handled (skip normal code)                                 |
+	--+--------------------------------------------------------------------------------+
+
+	EEex_HookBeforeRestore(EEex_Label("Hook-CGameEffectSecondaryCastList::ApplyEffect()"), 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(64)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp214ApplyEffect", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			mov rax, 1
+
+			no_error:
+			test rax, rax
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			jz return
+			mov eax, 1
+			ret
+		]]},
+	}))
+
 	------------------------------------------------------------
 	-- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
 	------------------------------------------------------------

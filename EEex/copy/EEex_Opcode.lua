@@ -125,6 +125,34 @@ function EEex_Opcode_Hook_AfterListsResolved(sprite)
 	end
 end
 
+--+--------------------------------------------------------------------------------+
+--| Opcode #214                                                                    |
+--+--------------------------------------------------------------------------------+
+--| param2 == 3 -> Call Lua function in resource field to get CButtonData iterator |
+--+--------------------------------------------------------------------------------+
+--| Hook return:                                                                   |
+--|     false -> Effect not handled                                                |
+--|     true  -> Effect handled (skip normal code)                                 |
+--+--------------------------------------------------------------------------------+
+
+function EEex_Opcode_Hook_OnOp214ApplyEffect(effect, sprite)
+
+	local param2 = effect.m_dWFlags
+	if param2 ~= 3 then
+		return false
+	end
+
+	effect.m_done = true
+
+	local func = _G[effect.m_res:get()]
+	if func == nil then
+		return false
+	end
+
+	sprite:openOp214Interface(func(effect, sprite))
+	return true
+end
+
 ------------------------------------------------------------
 -- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
 ------------------------------------------------------------

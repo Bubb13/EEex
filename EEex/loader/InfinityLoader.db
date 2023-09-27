@@ -1271,6 +1271,9 @@ Operations=ADD -43
 Pattern=488D8FC81C0000
 Operations=ADD 20
 
+[Hook-CGameEffectSecondaryCastList::ApplyEffect()]
+Pattern=48895C24185556574154415541564157488D6C24D94881EC00010000
+
 [Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call]
 Pattern=FF50088B9350010000
 
