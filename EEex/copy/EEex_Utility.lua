@@ -339,7 +339,7 @@ function EEex_Utility_MutateIterator(iterator, func)
 		return table.unpack(values)
 	end
 end
-EEex_Utility_ApplyItr = EEex_Utility_ApplyIterator
+EEex_Utility_MutateItr = EEex_Utility_MutateIterator
 
 -- Expects - <lowerBound, upperBound, [stepFunc], [startI]>
 -- Returns - Itr such that:
@@ -383,6 +383,62 @@ function EEex_Utility_FilterIterator(iterator, filterFunc)
 	end
 end
 EEex_Utility_FilterItr = EEex_Utility_FilterIterator
+
+-- Expects - <itr, func>
+-- Calls func with {itr[1]}, {itr[2]}, ..., {itr[n]}
+function EEex_Utility_ProcessIteratorValues(iterator, func)
+	while true do
+		local values = {iterator()}
+		if values[1] == nil then
+			return
+		end
+		func(values)
+	end
+end
+EEex_Utility_ProcessItrValues = EEex_Utility_ProcessIteratorValues
+
+-- Expects - <itr>
+-- Returns - table that collects all values returned by itr such that:
+--             * n = <number of itr elements>
+--             -> t[1] = {itr[1]}, t[2] = {itr[2]}, ..., t[n] = {itr[n]}
+function EEex_Utility_CollectIteratorValues(iterator)
+	local t = {}
+	local insertI = 1
+	EEex_Utility_ProcessIteratorValues(iterator, function(t2)
+		t[insertI] = t2
+		insertI = insertI + 1
+	end)
+	return t
+end
+EEex_Utility_CollectItrValues = EEex_Utility_CollectIteratorValues
+
+-- Expects - <i, itr>
+-- Returns - table that collects a specific value returned by itr such that:
+--             * n = <number of itr elements>
+--             -> t[1] = select(i, itr[1]), t[2] = select(i, itr[2]), ..., t[n] = select(i, itr[n])
+function EEex_Utility_CollectIteratorValue(i, iterator)
+	local t = {}
+	local insertI = 1
+	for value in EEex_Utility_SelectItr(i, iterator) do
+		t[insertI] = value
+		insertI = insertI + 1
+	end
+	return t
+end
+EEex_Utility_CollectItrValue = EEex_Utility_CollectIteratorValue
+
+-- Expects - <i, itr>
+-- Returns - table that maps all values returned by itr such that:
+--             * n = <number of itr elements>
+--             -> t[select(i, itr[1])] = {itr[1]}, t[select(i, itr[2])] = {itr[2]}, ..., t[select(i, itr[n])] = {itr[n]}
+function EEex_Utility_MapIteratorValues(i, iterator)
+	local t = {}
+	EEex_Utility_ProcessIteratorValues(iterator, function(t2)
+		t[t2[i]] = t2
+	end)
+	return t
+end
+EEex_Utility_MapItrValues = EEex_Utility_MapIteratorValues
 
 --[[
 function EEex_Utility_AugmentIterator(inputItr, augStart, augLength, mainItrGen, augmentFunc)

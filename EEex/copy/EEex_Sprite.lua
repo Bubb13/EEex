@@ -667,6 +667,31 @@ EEex_Sprite_GetValidKnownInnateSpellsItr = EEex_Sprite_GetValidKnownInnateSpells
 CGameSprite.getValidKnownInnateSpellsIterator = EEex_Sprite_GetValidKnownInnateSpellsItr
 CGameSprite.getValidKnownInnateSpellsItr = EEex_Sprite_GetValidKnownInnateSpellsItr
 
+-- validSpellsIterator is expected to return <string spellResRef, Spell_Header_st spellHeader>
+-- Iterator returns <string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_GetSpellsWithAbilityIterator(sprite, validSpellsIterator)
+	return function()
+		for spellResRef, spellHeader in validSpellsIterator do
+			local spellAbility = spellHeader:getAbilityForLevel(sprite:getCasterLevelForSpell(spellResRef, true))
+			if spellAbility ~= nil then
+				return spellResRef, spellHeader, spellAbility
+			end
+		end
+	end
+end
+EEex_Sprite_GetSpellsWithAbilityItr = EEex_Sprite_GetSpellsWithAbilityIterator
+CGameSprite.getSpellsWithAbilityIterator = EEex_Sprite_GetSpellsWithAbilityItr
+CGameSprite.getSpellsWithAbilityItr = EEex_Sprite_GetSpellsWithAbilityItr
+
+-- spellResRefIterator is expected to return <string spellResRef>
+-- Iterator returns <string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_GetValidSpellsWithAbilityIterator(sprite, spellResRefIterator)
+	return sprite:getSpellsWithAbilityIterator(EEex_Resource_GetValidSpellsIterator(spellResRefIterator))
+end
+EEex_Sprite_GetValidSpellsWithAbilityItr = EEex_Sprite_GetValidSpellsWithAbilityIterator
+CGameSprite.getValidSpellsWithAbilityIterator = EEex_Sprite_GetValidSpellsWithAbilityItr
+CGameSprite.getValidSpellsWithAbilityItr = EEex_Sprite_GetValidSpellsWithAbilityItr
+
 -- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
 function EEex_Sprite_Private_GetValidKnownSpellsWithAbilityIterator(sprite, validKnownSpellsIterator)
 	return function()
