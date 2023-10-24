@@ -370,6 +370,10 @@ Operations=ADD -10
 [CompareCResByTypeThenName]
 Pattern=488B09488B12
 
+[OpenIniFile]
+Pattern=4889842450040000488BD9
+Operations=ADD -23
+
 [SDL_GetKeyFromName]
 Pattern=488BD94885C90F84F2000000
 Operations=ADD -10
@@ -464,6 +468,10 @@ Operations=ADD -6, PUSH, READ DWORD, ADD, ADD 4
 [numMenus]
 Pattern=41B800700000
 Operations=ADD 59, PUSH, READ DWORD, ADD, ADD 4
+
+[optionsHaveChanged]
+Pattern=4885C00F85DA000000
+Operations=ADD 219, PUSH, READ DWORD, ADD, ADD 8
 
 [resources]
 Pattern=488B1CFB4885DB745B
@@ -702,6 +710,11 @@ Operations=ADD 48
 Pattern=40554883EC30488D6C2430
 Operations=ADD 13, PUSH, READ DWORD, ADD, ADD 5
 
+[Data-LUA_REGISTRYINDEX]
+Pattern=BAD8B9F0FF
+Operations=ADD 1
+Type=LIST
+
 ;----------------------
 ;-- Engine Functions --
 ;----------------------
@@ -726,9 +739,28 @@ Operations=ADD -10
 Pattern=488BF24889542468
 Operations=ADD -49
 
+[Chitin_GetSectionCallback]
+Pattern=4889742418574883EC20BA01000000
+Operations=ADD -10
+
+[bootstrapLua]
+Pattern=B918190000
+Operations=ADD -31, PUSH, READ DWORD, ADD, ADD 4
+
+[chWriteInifile]
+Pattern=4889742418574883EC20498BF1498BE8
+Operations=ADD 32, PUSH, READ DWORD, ADD, ADD 4
+
+[l_log_print]
+Pattern=BB010000008BF0
+Operations=ADD -23
+
 [operator_new]
 Pattern=488BD9EB0F
 Operations=ADD -6
+
+[panic]
+Pattern=4883EC284533C0418D50FF
 
 ;---------------------
 ;-- Engine VFTables --
@@ -845,6 +877,10 @@ Operations=ADD -14
 [Hardcoded_luaL_ref]
 Pattern=488B4910488D41F0
 Operations=ADD -26
+
+[Hardcoded_lua_atpanic]
+Pattern=498B8000010000
+Operations=ADD -4
 
 [Hardcoded_lua_callk]
 Pattern=48895C2408574883EC204C8B5110
@@ -1472,6 +1508,10 @@ Operations=ADD 17
 Pattern=488BD0488BC8
 Operations=ADD 182
 
+[Hook-OpenIniFile()-_wfopen()]
+Pattern=488BC3488B8C2450040000
+Operations=ADD -41
+
 [Hook-RenderListCallback()-drawItem()]
 Pattern=448BCB4C896C2420
 Operations=ADD 27
@@ -1483,6 +1523,18 @@ Operations=ADD 28
 [Hook-SDL_main()-CLUAConsole::LuaInit()]
 Pattern=C7804010000001000000
 Operations=ADD 10
+
+[Hook-chReadIniFile()-CheckDoBackupProcessingJmp]
+Pattern=33F685C07524
+Operations=ADD 63
+
+[Hook-chReadIniFile()-luaL_loadfilexptr()]
+Pattern=33F685C07524
+Operations=ADD -5
+
+[Hook-dimmInit()-uiLoadFunctions()]
+Pattern=488B18EB03
+Operations=ADD 67
 
 [Hook-dimmInit()-uiLoadMenu()]
 ExeSwitch=1

@@ -86,13 +86,13 @@ EEex_IntegrityCheck_Load = false
 	]]})
 
 	EEex_IntegrityCheck_HookEnter = {[[
-        #MAKE_SHADOW_SPACE(16)
-        mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-        mov rax, #L(hook_address)
-        mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
-        mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-        call ]], EEex_IntegrityCheck_Enter, [[ #ENDL
-        #DESTROY_SHADOW_SPACE
+		#MAKE_SHADOW_SPACE(16)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+		mov rax, #L(hook_address)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		call ]], EEex_IntegrityCheck_Enter, [[ #ENDL
+		#DESTROY_SHADOW_SPACE
 	]]}
 
 	EEex_IntegrityCheck_HookExit = {[[

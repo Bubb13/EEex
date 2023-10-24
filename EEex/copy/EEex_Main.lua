@@ -1,4 +1,8 @@
 
+-- This is the main startup file for EEex. InfinityLoader redirects control flow after the CALL instruction
+-- located at [Hardcoded_InternalPatchLocation] in order to (potentially) initialize Lua, initialize
+-- hardcoded EEex state, and call this file.
+
 -------------
 -- Options --
 -------------
@@ -65,18 +69,15 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 	EEex_DoFile("EEex_Assembly")
 
 	-- Contains Lua bindings that map engine structures to Lua
-	EEex_LoadLuaBindings("LuaBindings-v2.6.6.0", function()
+	EEex_OpenLuaBindings("LuaBindings-v2.6.6.0", function()
 		-- Patches in-engine tolua functions with EEex versions.
 		-- These are required for proper bindings operation.
 		EEex_DoFile("EEex_LuaBindings_Patch")
 	end)
 
 	-- Contains EEex's C++ functionality
-	EEex_LoadLuaBindings("EEex")
+	EEex_OpenLuaBindings("EEex")
 	EEex_DoFile("EEex_IntegrityCheck")
-
-	-- Contains some assembly functions for EEex_Assembly.lua
-	EEex_DoFile("EEex_Assembly_Patch")
 
 	-- Defines information about usertypes for the EEex_MemoryManager helper
 	EEex_DoFile("EEex_MemoryManagerDefinitions")

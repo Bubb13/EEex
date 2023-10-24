@@ -1,7 +1,7 @@
 
--- This file runs when LuaPatchMode=REPLACE_INTERNAL_WITH_EXTERNAL.
--- It is used to replace in-engine Lua functions before they can
--- be used.
+-- This is the early startup file for EEex. InfinityLoader calls this file before the game is
+-- resumed when [General].LuaPatchMode = REPLACE_INTERNAL_WITH_EXTERNAL. This file replaces
+-- in-engine Lua functions before they are used.
 
 (function()
 	-- Contains most of the code editing functions. This file is the core of EEex.

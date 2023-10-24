@@ -374,7 +374,7 @@
 		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 		#DESTROY_SHADOW_SPACE
 		test rax, rax
-		jnz #L(Hook-CGameEffect::CheckAdd()-ProbabilityFailed)
+		jnz #L(Hook-CGameEffect::CheckAdd()-ProbabilityFailed) ; TODO
 	]]}))
 
 	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameSprite::AddEffect()-noSave-Override"), 3, {[[

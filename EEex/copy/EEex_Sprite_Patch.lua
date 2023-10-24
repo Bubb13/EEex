@@ -162,7 +162,7 @@
 	local CGameEffectList_Marshal_OriginalMarshalSize = EEex_Malloc(EEex_PtrSize)
 	EEex_WritePtr(CGameEffectList_Marshal_OriginalMarshalSize, 0x0)
 
-	EEex_HookJump(EEex_Label("Hook-CGameEffectList::Marshal()-OverrideSize"), 0, EEex_FlattenTable({
+	EEex_HookBeforeConditionalJump(EEex_Label("Hook-CGameEffectList::Marshal()-OverrideSize"), 0, EEex_FlattenTable({
 		{[[
 			cmp qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Marshal_SavedSpritePtrMem}, [[ #ENDL
 			jz jmp
@@ -190,6 +190,7 @@
 			add rbx, rax
 
 			#DESTROY_SHADOW_SPACE
+			jmp:
 		]]},
 	}))
 

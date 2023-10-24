@@ -22,7 +22,7 @@
 	-- [Lua] EEex_Menu_Hook_AfterMenuStackRestore() --
 	--------------------------------------------------
 
-	EEex_HookRelativeJmpWithLabels(EEex_Label("Hook-uiRefreshMenu()-restoreMenuStack()"), {
+	EEex_HookRelativeJumpWithLabels(EEex_Label("Hook-uiRefreshMenu()-restoreMenuStack()"), {
 		{"stack_mod", 8},
 		{"manual_continue", true}},
 		EEex_FlattenTable({

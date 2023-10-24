@@ -373,7 +373,7 @@ end
 ------------------------------
 
 -- This table is stored in the Lua registry. InfinityLoader automatically
--- updates it when new patterns are added by EEex_LoadLuaBindings() DLLs.
+-- updates it when new patterns are added by Lua bindings DLLs.
 EEex_GlobalAssemblyLabels = EEex_GetPatternMap()
 
 function EEex_DefineAssemblyLabel(label, value)
@@ -487,7 +487,7 @@ function EEex_HookRemoveCallWithLabels(address, labelPairs, assemblyT)
 	EEex_HookRemoveCallInternal(address, labelPairs, assemblyT)
 end
 
-function EEex_HookRelativeJmpInternal(address, labelPairs, assemblyT)
+function EEex_HookRelativeJumpInternal(address, labelPairs, assemblyT)
 
 	local opcode = EEex_ReadU8(address)
 	if opcode ~= 0xE9 then EEex_Error("Not disp32 jmp: "..EEex_ToHex(opcode)) end
@@ -517,12 +517,12 @@ function EEex_HookRelativeJmpInternal(address, labelPairs, assemblyT)
 	EEex_JITAt(address, {"jmp short "..hookAddress})
 end
 
-function EEex_HookRelativeJmp(address, assemblyT)
-	EEex_HookRelativeJmpInternal(address, {}, assemblyT)
+function EEex_HookRelativeJump(address, assemblyT)
+	EEex_HookRelativeJumpInternal(address, {}, assemblyT)
 end
 
-function EEex_HookRelativeJmpWithLabels(address, labelPairs, assemblyT)
-	EEex_HookRelativeJmpInternal(address, labelPairs, assemblyT)
+function EEex_HookRelativeJumpWithLabels(address, labelPairs, assemblyT)
+	EEex_HookRelativeJumpInternal(address, labelPairs, assemblyT)
 end
 
 function EEex_HookCallInternal(address, labelPairs, assemblyT, after)
@@ -541,32 +541,28 @@ function EEex_HookCallInternal(address, labelPairs, assemblyT, after)
 			function()
 				return EEex_JITNear(EEex_FlattenTable(
 					not after
-					and {[[
-						#IF ]], not after, "{",
-							EEex_IntegrityCheck_HookEnter,
-							assemblyT,
-							EEex_IntegrityCheck_HookExit, [[
-							call ]], target, [[ #ENDL
-							jmp ]], afterCall, [[ #ENDL
+					and {
+						EEex_IntegrityCheck_HookEnter,
+						assemblyT,
+						EEex_IntegrityCheck_HookExit, [[
+						call ]], target, [[ #ENDL
+						jmp ]], afterCall, [[ #ENDL
 
-							#IF ]], hasHookExit and EEex_TryLabel("uses_early_return") == true, [[ {
-								return: #ENDL ]],
-								EEex_IntegrityCheck_HookExit, [[
-								jmp ]], afterCall, [[ #ENDL
-							}
+						#IF ]], hasHookExit and EEex_TryLabel("uses_early_return") == true, [[ {
+							return: #ENDL ]],
+							EEex_IntegrityCheck_HookExit, [[
+							jmp ]], afterCall, [[ #ENDL
 						}
 					]]}
 					or {[[
-						#IF ]], after, [[ {
-							call ]], target, "#ENDL",
-							EEex_IntegrityCheck_HookEnter,
-							assemblyT, [[
-							#IF ]], hasHookExit, [[ {
-								return: #ENDL ]],
-								EEex_IntegrityCheck_HookExit, [[
-							}
-							jmp ]], afterCall, [[ #ENDL
+						call ]], target, "#ENDL",
+						EEex_IntegrityCheck_HookEnter,
+						assemblyT, [[
+						#IF ]], hasHookExit, [[ {
+							return: #ENDL ]],
+							EEex_IntegrityCheck_HookExit, [[
 						}
+						jmp ]], afterCall, [[ #ENDL
 					]]}
 				))
 			end
@@ -713,35 +709,75 @@ function EEex_GetJmpInfo(address)
 	return entry[1], afterInst + readFunc(curAddress), afterInst - address, afterInst
 end
 
-function EEex_HookJump(address, restoreSize, assemblyT)
+function EEex_ForceJump(address)
+	local _, jmpDest, instructionLength, _ = EEex_GetJmpInfo(address)
+	EEex_JITAt(address, {[[
+		jmp short ]], jmpDest, [[ #ENDL
+		#REPEAT(#$(1),nop #ENDL) ]], {instructionLength - 5}
+	})
+end
+
+function EEex_HookBeforeConditionalJumpInternal(address, restoreSize, labelPairs, assemblyT)
 
 	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
 
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
 
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		local hasHookExit = EEex_IntegrityCheck_HookExit[1] ~= nil
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"jmp_success", not hasHookExit and jmpDest or nil},
+			{"jmp_fail", (not hasHookExit and restoreSize <= 0) and jmpFailDest or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{[[
-			jmp:
-		]]},
-		{
-			jmpMnemonic, " ", jmpDest, [[ #ENDL
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-	}))
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+
+					#IF ]], hasHookExit, "{",
+
+						jmpMnemonic, [[ jmp_success
+
+						jmp_fail: #ENDL ]],
+						EEex_IntegrityCheck_HookExit,
+						restoreBytes, [[
+						jmp ]], jmpFailDest, [[ #ENDL
+
+						jmp_success: #ENDL ]],
+						EEex_IntegrityCheck_HookExit, [[
+						jmp ]], jmpDest, [[ #ENDL
+					}
+
+					#IF ]], not hasHookExit, "{",
+
+						jmpMnemonic, " ", jmpDest, [[ #ENDL
+
+						#IF ]], restoreSize > 0, [[ {
+							jmp_fail: #ENDL ]],
+							restoreBytes, [[
+						}
+
+						jmp ]], jmpFailDest, [[ #ENDL
+					} ]],
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
-	EEex_ClearAssemblyLabel("jmp_success")
+end
+
+function EEex_HookBeforeConditionalJump(address, restoreSize, assemblyT)
+	EEex_HookBeforeConditionalJumpInternal(address, restoreSize, {}, assemblyT)
+end
+
+function EEex_HookBeforeConditionalJumpWithLabels(address, restoreSize, labelPairs, assemblyT)
+	EEex_HookBeforeConditionalJumpInternal(address, restoreSize, labelPairs, assemblyT)
 end
 
 function EEex_HookJumpOnFail(address, restoreSize, assemblyT)
@@ -1915,4 +1951,6 @@ end
 	EEex_IntegrityCheck_HookExit = {}
 	EEex_IntegrityCheck_IgnoreStackSize = function() end
 	EEex_IntegrityCheck_IgnoreStackSizes = function() end
+	-- Contains some assembly functions for EEex_Assembly.lua
+	EEex_DoFile("EEex_Assembly_Patch")
 end)()

@@ -53,7 +53,7 @@ EEex_Debug_LogActions = false
 
 		EEex_DisableCodeProtection()
 
-		EEex_HookRelativeJmp(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), EEex_FlattenTable({
+		EEex_HookRelativeJump(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(56)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], r8
@@ -73,7 +73,7 @@ EEex_Debug_LogActions = false
 			]]},
 		}))
 
-		EEex_HookJump(EEex_Label("Hook-CGameSprite::ExecuteAction()-DefaultJmp"), 0, EEex_FlattenTable({
+		EEex_HookBeforeConditionalJump(EEex_Label("Hook-CGameSprite::ExecuteAction()-DefaultJmp"), 0, EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(72)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
