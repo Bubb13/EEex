@@ -3,6 +3,14 @@
 ;-- Bound Engine Functions --
 ;----------------------------
 
+[!ExeSwitch-Baldur.exe-OpenIniFile]
+Pattern=4889842450040000488BD9
+Operations=ADD -23
+
+[!ExeSwitch-icewind.exe-OpenIniFile]
+Pattern=4889842450040000488BD9
+Operations=ADD -36
+
 [C2DArray::Construct]
 Pattern=488D542420488937
 Operations=ADD -51
@@ -371,8 +379,8 @@ Operations=ADD -10
 Pattern=488B09488B12
 
 [OpenIniFile]
-Pattern=4889842450040000488BD9
-Operations=ADD -23
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [SDL_GetKeyFromName]
 Pattern=488BD94885C90F84F2000000
@@ -1186,9 +1194,17 @@ Operations=ADD -37
 ;-- Hooks --
 ;-----------
 
+[!ExeSwitch-Baldur.exe-Hook-OpenIniFile()-_wfopen()]
+Pattern=488BC3488B8C2450040000
+Operations=ADD -41
+
 [!ExeSwitch-Baldur.exe-Hook-dimmInit()-uiLoadMenu()]
 Pattern=74034C8B30
 Operations=ADD 34
+
+[!ExeSwitch-icewind.exe-Hook-OpenIniFile()-_wfopen()]
+Pattern=488BC3488B8C2450040000
+Operations=ADD -43
 
 [!ExeSwitch-icewind.exe-Hook-dimmInit()-uiLoadMenu()]
 Pattern=74034C8B30
@@ -1509,8 +1525,8 @@ Pattern=488BD0488BC8
 Operations=ADD 182
 
 [Hook-OpenIniFile()-_wfopen()]
-Pattern=488BC3488B8C2450040000
-Operations=ADD -41
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [Hook-RenderListCallback()-drawItem()]
 Pattern=448BCB4C896C2420
