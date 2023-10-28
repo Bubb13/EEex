@@ -7,32 +7,33 @@
 	-- [EEex.dll] EEex::Projectile_Hook_OnBeforeDecode() --
 	-------------------------------------------------------
 
-	EEex_HookBeforeRestore(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, {[[
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, {
+		{"stack_mod", 8}},
+		{[[
+			#MAKE_SHADOW_SPACE(16)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
-		#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
-		#MAKE_SHADOW_SPACE(16)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)] ; pRetPtr
+															   ; rdx is already pDecoder
+															   ; rcx is already nProjectileType
+			call #L(EEex::Projectile_Hook_OnBeforeDecode)
 
-		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)] ; pRetPtr
-		                                                   ; rdx is already pDecoder
-		                                                   ; rcx is already nProjectileType
-		call #L(EEex::Projectile_Hook_OnBeforeDecode)
+			cmp ax, -1
+			je no_override
 
-		cmp ax, -1
-		je no_override
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov cx, ax
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			jmp #L(return)
 
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov cx, ax
-		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-		jmp return
-
-		no_override:
-		#RESUME_SHADOW_ENTRY
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE
-	]]})
+			no_override:
+			#RESUME_SHADOW_ENTRY
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
 
 	------------------------------------------------------
 	-- [EEex.dll] EEex::Projectile_Hook_OnAfterDecode() --
@@ -163,27 +164,28 @@
 		ret
 	]]})
 
-	EEex_HookBeforeRestore(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, {[[
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, {
+		{"stack_mod", 8}},
+		{[[
+			#MAKE_SHADOW_SPACE(16)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
-		#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
-		#MAKE_SHADOW_SPACE(16)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]   ; pRetPtr
+			mov r8, rdx                                          ; pEffect
 
-		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]   ; pRetPtr
-		mov r8, rdx                                          ; pEffect
+			mov rcx, r9 ; pRetPtr
+			call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
+			mov rdx, rax                                         ; pDecoder
 
-		mov rcx, r9 ; pRetPtr
-		call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
-		mov rdx, rax                                         ; pDecoder
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)] ; pProjectile
+			call #L(EEex::Projectile_Hook_OnBeforeAddEffect)
 
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)] ; pProjectile
-		call #L(EEex::Projectile_Hook_OnBeforeAddEffect)
-
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE
-	]]})
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
 
 	EEex_EnableCodeProtection()
 

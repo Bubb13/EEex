@@ -148,7 +148,7 @@
 	--  [Lua] EEex_Menu_Hook_CheckSaveMenuItem()                     --
 	-------------------------------------------------------------------
 
-	EEex_HookJumpOnFail(EEex_Label("Hook-saveMenus()-CheckItemSave"), 5, EEex_FlattenTable({
+	EEex_HookConditionalJumpOnFail(EEex_Label("Hook-saveMenus()-CheckItemSave"), 5, EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(56)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
@@ -223,7 +223,7 @@
 	-- [Lua] EEex_Menu_Hook_CheckForceScrollbarRender() --
 	------------------------------------------------------
 
-	EEex_HookJumpOnSuccess(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, EEex_FlattenTable({
+	EEex_HookConditionalJumpOnSuccess(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(40)
 		]]},
@@ -243,7 +243,7 @@
 			test rax, rax
 
 			#DESTROY_SHADOW_SPACE
-			jnz jmp_fail
+			jnz #L(jmp_fail)
 		]]},
 	}))
 

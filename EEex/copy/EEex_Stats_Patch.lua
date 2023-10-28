@@ -84,19 +84,24 @@
 	-- [EEex.dll] EEex::Stats_Hook_OnGettingUnknown() --
 	----------------------------------------------------
 
-	EEex_HookJumpOnSuccess(EEex_Label("Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp"), 0, EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; TODO This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE
+	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp"), 0, {
+		{"stack_mod", 8}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE
 
-			lea rdx, qword ptr ds:[rax+1] ; nStatId
-			                              ; rcx already pStats
-			call #L(EEex::Stats_Hook_OnGettingUnknown)
+				lea rdx, qword ptr ds:[rax+1] ; nStatId
+											  ; rcx already pStats
+				call #L(EEex::Stats_Hook_OnGettingUnknown)
 
-			#DESTROY_SHADOW_SPACE
-			ret ; TODO
-		]]},
-	}))
+				#DESTROY_SHADOW_SPACE
+			]]},
+			EEex_IntegrityCheck_HookExit,
+			{[[
+				ret
+			]]},
+		})
+	)
 
 	EEex_EnableCodeProtection()
 

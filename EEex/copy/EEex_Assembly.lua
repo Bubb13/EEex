@@ -780,176 +780,280 @@ function EEex_HookBeforeConditionalJumpWithLabels(address, restoreSize, labelPai
 	EEex_HookBeforeConditionalJumpInternal(address, restoreSize, labelPairs, assemblyT)
 end
 
-function EEex_HookJumpOnFail(address, restoreSize, assemblyT)
+function EEex_HookConditionalJumpOnFailInternal(address, restoreSize, labelPairs, assemblyT)
 
 	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
 
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
 
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		local hasHookExit = EEex_IntegrityCheck_HookExit[1] ~= nil
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"jmp_success", not hasHookExit and jmpDest or nil},
+			{"jmp_fail", (not hasHookExit and restoreSize <= 0) and jmpFailDest or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		{jmpMnemonic, " ", jmpDest, "#ENDL"},
-		assemblyT,
-		{[[
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-	}))
+					jmpMnemonic, " ", jmpDest, "#ENDL",
+
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+
+					#IF ]], hasHookExit, [[ {
+
+						jmp_fail: #ENDL ]],
+						EEex_IntegrityCheck_HookExit,
+						restoreBytes, [[
+						jmp ]], jmpFailDest, [[ #ENDL
+
+						jmp_success: #ENDL ]],
+						EEex_IntegrityCheck_HookExit, [[
+						jmp ]], jmpDest, [[ #ENDL
+					}
+
+					#IF ]], not hasHookExit, [[ {
+
+						#IF ]], restoreSize > 0, [[ {
+							jmp_fail: #ENDL ]],
+							restoreBytes, [[
+						}
+
+						jmp ]], jmpFailDest, [[ #ENDL
+					} ]],
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
-	EEex_ClearAssemblyLabel("jmp_success")
 end
 
-function EEex_HookJumpOnSuccess(address, restoreSize, assemblyT)
+function EEex_HookConditionalJumpOnFail(address, restoreSize, assemblyT)
+	EEex_HookConditionalJumpOnFailInternal(address, restoreSize, {}, assemblyT)
+end
+
+function EEex_HookConditionalJumpOnFailWithLabels(address, restoreSize, labelPairs, assemblyT)
+	EEex_HookConditionalJumpOnFailInternal(address, restoreSize, labelPairs, assemblyT)
+end
+
+function EEex_HookConditionalJumpOnSuccessInternal(address, restoreSize, labelPairs, assemblyT)
 
 	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
 
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
 
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		local hasHookExit = EEex_IntegrityCheck_HookExit[1] ~= nil
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"jmp_success", not hasHookExit and jmpDest or nil},
+			{"jmp_fail", (not hasHookExit and restoreSize <= 0) and jmpFailDest or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		{jmpMnemonic, [[ jmp_succeeded
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-		{[[
-			jmp_succeeded:
-		]]},
-		assemblyT,
-		{"jmp ", jmpDest, "#ENDL"},
-	}))
+					jmpMnemonic, " jmp_success_internal #ENDL",
+					restoreBytes, [[
+					jmp ]], jmpFailDest, [[ #ENDL
+
+					#IF ]], hasHookExit, [[ {
+
+						jmp_success_internal: #ENDL ]],
+						EEex_IntegrityCheck_HookEnter,
+
+						assemblyT, [[
+						jmp_success: #ENDL ]],
+						EEex_IntegrityCheck_HookExit, [[
+						jmp ]], jmpDest, [[ #ENDL
+
+						jmp_fail: #ENDL ]],
+						EEex_IntegrityCheck_HookExit,
+						restoreBytes, [[
+						jmp ]], jmpFailDest, [[ #ENDL
+					}
+
+					#IF ]], not hasHookExit, [[ {
+
+						jmp_success_internal: #ENDL ]],
+						assemblyT, [[
+						jmp ]], jmpDest, [[ #ENDL
+
+						#IF ]], restoreSize > 0, [[ {
+							jmp_fail: #ENDL ]],
+							restoreBytes, [[
+							jmp ]], jmpFailDest, [[ #ENDL
+						}
+					} ]],
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
-	EEex_ClearAssemblyLabel("jmp_success")
 end
 
-function EEex_HookJumpAuto(address, restoreSize, assemblyT, bAutoSuccess)
-
-	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
-
-	local jmpFailDest = afterInstruction + restoreSize
-	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
-
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
-
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{[[
-			#IF ]], bAutoSuccess, [[ {
-				jmp #L(jmp_success) ; TODO
-			}
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-	}))
-
-	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
-	})
-	EEex_ClearAssemblyLabel("jmp_success")
+function EEex_HookConditionalJumpOnSuccess(address, restoreSize, assemblyT)
+	EEex_HookConditionalJumpOnSuccessInternal(address, restoreSize, {}, assemblyT)
 end
 
-function EEex_HookJumpAutoFail(address, restoreSize, assemblyT)
-	EEex_HookJumpAuto(address, restoreSize, assemblyT, false)
+function EEex_HookConditionalJumpOnSuccessWithLabels(address, restoreSize, labelPairs, assemblyT)
+	EEex_HookConditionalJumpOnSuccessInternal(address, restoreSize, labelPairs, assemblyT)
 end
 
-function EEex_HookJumpAutoSucceed(address, restoreSize, assemblyT)
-	EEex_HookJumpAuto(address, restoreSize, assemblyT, true)
-end
-
-function EEex_HookBeforeRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+function EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
 
 	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
 	local returnAddress = address + returnDelay
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{[[
-			return:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], returnAddress, [[ #ENDL
-		]]},
-	}))
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+					return: #ENDL ]],
+					EEex_IntegrityCheck_HookExit,
+					restoreBytes, [[
+					jmp ]], returnAddress, "#ENDL"
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
+		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
+	})
+end
+
+function EEex_HookBeforeRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+	EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, returnDelay, {}, assemblyT)
+end
+
+function EEex_HookBeforeRestoreWithLabels(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+	EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+end
+
+function EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+
+	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
+	local returnAddress = address + returnDelay
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		local hasHookExit = EEex_IntegrityCheck_HookExit[1] ~= nil
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return", not hasHookExit and returnAddress or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					restoreBytes,
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+					#IF ]], hasHookExit, [[ {
+						return: #ENDL ]],
+						EEex_IntegrityCheck_HookExit, [[
+					}
+					jmp ]], returnAddress, "#ENDL"
+				}))
+			end
+		)
+	end)
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
 	})
 end
 
 function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
-
-	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
-	local returnAddress = address + returnDelay
-	EEex_DefineAssemblyLabel("return", returnAddress)
-
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		restoreBytes,
-		assemblyT,
-		{[[
-			jmp ]], returnAddress, [[ #ENDL
-		]]},
-	}))
-
-	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
-	})
-	EEex_ClearAssemblyLabel("return")
+	EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, returnDelay, {}, assemblyT)
 end
 
-function EEex_HookBetweenRestore(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, assemblyT)
+function EEex_HookAfterRestoreWithLabels(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+	EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+end
+
+function EEex_HookBetweenRestoreInternal(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, labelPairs, assemblyT)
 
 	local restoreBytes1 = EEex_StoreBytesAssembly(address + restoreDelay1, restoreSize1)
 	local restoreBytes2 = EEex_StoreBytesAssembly(address + restoreDelay2, restoreSize2)
 	local returnAddress = address + returnDelay
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		restoreBytes1,
-		assemblyT,
-		restoreBytes2,
-		{[[
-			return:
-			jmp ]], returnAddress, [[ #ENDL
-		]]},
-	}))
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					restoreBytes1,
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+					return: #ENDL ]],
+					EEex_IntegrityCheck_HookExit,
+					restoreBytes2, [[
+					jmp ]], returnAddress, "#ENDL"
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
 	})
 end
 
-function EEex_HookNOPs(address, nopCount, assemblyStr)
-	EEex_DefineAssemblyLabel("return", address + 5 + nopCount)
-	local hookAddress = EEex_JITNear(assemblyStr)
+function EEex_HookBetweenRestore(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, assemblyT)
+	EEex_HookBetweenRestoreInternal(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, {}, assemblyT)
+end
+
+function EEex_HookBetweenRestoreWithLabels(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, labelPairs, assemblyT)
+	EEex_HookBetweenRestoreInternal(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, labelPairs, assemblyT)
+end
+
+function EEex_HookNOPsInternal(address, nopCount, labelPairs, assemblyT)
+
+	local returnAddress = address + 5 + nopCount
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		local hasHookExit = EEex_IntegrityCheck_HookExit[1] ~= nil
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return", not hasHookExit and returnAddress or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_IntegrityCheck_HookEnter,
+					assemblyT, [[
+					#IF ]], hasHookExit, [[ {
+						return: #ENDL ]],
+						EEex_IntegrityCheck_HookExit, [[
+					}
+					jmp ]], returnAddress, "#ENDL"
+				}))
+			end
+		)
+	end)
+
 	EEex_JITAt(address, {[[
 		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {nopCount}
 	})
-	EEex_ClearAssemblyLabel("return")
+end
+
+function EEex_HookNOPs(address, nopCount, assemblyT)
+	EEex_HookNOPsInternal(address, nopCount, {}, assemblyT)
+end
+
+function EEex_HookNOPsWithLabels(address, nopCount, labelPairs, assemblyT)
+	EEex_HookNOPsInternal(address, nopCount, labelPairs, assemblyT)
 end
 
 EEex_LuaCallReturnType = {

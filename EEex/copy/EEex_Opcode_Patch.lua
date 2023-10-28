@@ -84,8 +84,8 @@
 	local op249SavedEffect = EEex_Malloc(EEex_PtrSize)
 
 	EEex_HookBeforeRestore(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()"), 0, 6, 6, {[[
-		mov qword ptr ds:[#$(1)], rcx
-	]], {op249SavedEffect}})
+		mov qword ptr ds:[#$(1)], rcx ]], {op249SavedEffect}, [[ #ENDL
+	]]})
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), {[[
 		mov rdx, rbx
@@ -360,26 +360,32 @@
 
 	local effectBlockedHack = EEex_Malloc(0x8)
 
-	EEex_HookJumpOnFail(EEex_Label("Hook-CGameEffect::CheckAdd()-LastProbabilityJmp"), 0, EEex_FlattenTable({[[
+	EEex_HookConditionalJumpOnFail(EEex_Label("Hook-CGameEffect::CheckAdd()-LastProbabilityJmp"), 0, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
 
-		#MAKE_SHADOW_SPACE(8)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
+			mov rdx, r14 ; pSprite
+			mov rcx, rdi ; pEffect
+			call #L(EEex::Opcode_Hook_OnCheckAdd)
 
-		mov rdx, r14 ; pSprite
-		mov rcx, rdi ; pEffect
-		call #L(EEex::Opcode_Hook_OnCheckAdd)
+			mov qword ptr ds:[#$(1)], rax ]], {effectBlockedHack}, [[ #ENDL
 
-		mov qword ptr ds:[#$(1)], rax ]], {{effectBlockedHack}}, [[ #ENDL
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			test rax, rax
 
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE
-		test rax, rax
-		jnz #L(Hook-CGameEffect::CheckAdd()-ProbabilityFailed) ; TODO
-	]]}))
+			jz #L(jmp_fail)
+		]]},
+		EEex_IntegrityCheck_HookExit,
+		{[[
+			jmp #L(Hook-CGameEffect::CheckAdd()-ProbabilityFailed)
+		]]},
+	}))
 
-	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameSprite::AddEffect()-noSave-Override"), 3, {[[
+	EEex_HookConditionalJumpOnSuccess(EEex_Label("Hook-CGameSprite::AddEffect()-noSave-Override"), 3, {[[
 		cmp qword ptr ds:[#$(1)], 0 ]], {effectBlockedHack}, [[ #ENDL
-		jnz jmp_fail
+		jnz #L(jmp_fail)
 	]]})
 
 	-------------------------------------------------------------------
@@ -418,12 +424,10 @@
 	-- [JIT] Decode Switch --
 	-------------------------
 
-	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, EEex_FlattenTable({[[
+	EEex_HookConditionalJumpOnSuccess(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, EEex_FlattenTable({[[
 
-		mov qword ptr ss:[rsp+60h], r15 ; save non-volatile register
-
-		cmp eax, 367
-		jbe jmp_fail
+		mov qword ptr ss:[rsp+60h], r15 ; save non-volatile register since I resume control flow from an EEex
+										; opcode to somewhere that expects this stack location to be filled
 
 		cmp eax, 400
 		jne _401

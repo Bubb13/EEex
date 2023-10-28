@@ -3,7 +3,7 @@
 
 	EEex_DisableCodeProtection()
 
-	EEex_HookJumpOnFail(EEex_Label("Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing"), 4, EEex_FlattenTable({
+	EEex_HookConditionalJumpOnFail(EEex_Label("Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing"), 4, EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(40)
 		]]},
@@ -82,7 +82,7 @@
 		]]},
 	}))
 
-	EEex_HookJumpOnFail(EEex_Label("Hook-CGameSprite::Spell()-CheckDirectionJmp"), 3, {[[
+	EEex_HookConditionalJumpOnFail(EEex_Label("Hook-CGameSprite::Spell()-CheckDirectionJmp"), 3, {[[
 		mov rdx, r14
 		mov rcx, rbx
 		call #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL
@@ -90,7 +90,7 @@
 		jnz #L(jmp_success)
 	]]})
 
-	EEex_HookJumpOnFail(EEex_Label("Hook-CGameSprite::SpellPoint()-CheckDirectionJmp"), 5, {[[
+	EEex_HookConditionalJumpOnFail(EEex_Label("Hook-CGameSprite::SpellPoint()-CheckDirectionJmp"), 5, {[[
 		lea rdx, qword ptr ss:[rsp+0x60]
 		mov rcx, rbx
 		call #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL

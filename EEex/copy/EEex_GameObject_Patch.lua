@@ -7,7 +7,7 @@
 	-- [Lua] EEex_GameObject_Hook_OnDeleting() --
 	---------------------------------------------
 
-	EEex_HookJumpOnSuccess(EEex_Label("Hook-CGameObjectArray::Delete()-DeleteJmp"), 5, EEex_FlattenTable({
+	EEex_HookConditionalJumpOnSuccess(EEex_Label("Hook-CGameObjectArray::Delete()-DeleteJmp"), 5, EEex_FlattenTable({
 		{[[
 			#MAKE_SHADOW_SPACE(40)
 		]]},

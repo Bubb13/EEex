@@ -28,7 +28,7 @@
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
 			mov rdx, #$(2) ]], entry, [[ ; pDstScript
-			                             ; rcx already pSrcScript
+										 ; rcx already pSrcScript
 			call #L(EEex::Script_Hook_OnCopy)
 
 			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
