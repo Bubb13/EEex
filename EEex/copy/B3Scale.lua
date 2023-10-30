@@ -48,12 +48,15 @@ end
 
 	EEex_DisableCodeProtection()
 
-	EEex_HookAfterCall(EEex_Label("Hook-CChitin::OnResizeWindow()-B3Scale"), EEex_FlattenTable({[[
-		#MAKE_SHADOW_SPACE(32)
-		]], EEex_GenLuaCall("B3Scale_Hook_DoSizeChange"), [[
-		call_error:
-		#DESTROY_SHADOW_SPACE
-	]]}))
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::OnResizeWindow()-B3Scale"), {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		EEex_FlattenTable({[[
+			#MAKE_SHADOW_SPACE(32)
+			]], EEex_GenLuaCall("B3Scale_Hook_DoSizeChange"), [[
+			call_error:
+			#DESTROY_SHADOW_SPACE
+		]]})
+	)
 
 	EEex_EnableCodeProtection()
 

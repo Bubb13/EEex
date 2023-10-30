@@ -53,50 +53,61 @@ EEex_Debug_LogActions = false
 
 		EEex_DisableCodeProtection()
 
-		EEex_HookRelativeJump(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(56)
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], r8
-			]]},
-			EEex_GenLuaCall("EEex_Debug_LogAction", {
-				["args"] = {
-					function(rspOffset) return {[[
-						mov qword ptr ss:[rsp+#$(1)], rbx
-					]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], 1", {rspOffset}, "#ENDL"} end,
-				},
-			}),
-			{[[
-				call_error:
-				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-				#DESTROY_SHADOW_SPACE
-			]]},
-		}))
+		EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), 0, {
+			{"integrity_ignore_registers", {
+				EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX,
+				EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+			}}},
+			EEex_FlattenTable({
+				{[[
+					#MAKE_SHADOW_SPACE(56)
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], r8
+				]]},
+				EEex_GenLuaCall("EEex_Debug_LogAction", {
+					["args"] = {
+						function(rspOffset) return {[[
+							mov qword ptr ss:[rsp+#$(1)], rbx
+						]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
+						function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], 1", {rspOffset}, "#ENDL"} end,
+					},
+				}),
+				{[[
+					call_error:
+					mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+					#DESTROY_SHADOW_SPACE
+				]]},
+			})
+		)
 
-		EEex_HookBeforeConditionalJump(EEex_Label("Hook-CGameSprite::ExecuteAction()-DefaultJmp"), 0, EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(72)
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r9
-			]]},
-			EEex_GenLuaCall("EEex_Debug_LogAction", {
-				["args"] = {
-					function(rspOffset) return {[[
-						mov qword ptr ss:[rsp+#$(1)], rdi
-					]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], 0", {rspOffset}, "#ENDL"} end,
-				},
-			}),
-			{[[
-				call_error:
-				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-				#DESTROY_SHADOW_SPACE
-				cmp ecx, 0x1D7
-			]]},
-		}))
+		EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::ExecuteAction()-DefaultJmp"), 0, {
+			{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R11}}},
+			EEex_FlattenTable({
+				{[[
+					#MAKE_SHADOW_SPACE(80)
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r9
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r10
+				]]},
+				EEex_GenLuaCall("EEex_Debug_LogAction", {
+					["args"] = {
+						function(rspOffset) return {[[
+							mov qword ptr ss:[rsp+#$(1)], rdi
+						]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
+						function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], 0", {rspOffset}, "#ENDL"} end,
+					},
+				}),
+				{[[
+					call_error:
+					mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+					mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+					mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+					#DESTROY_SHADOW_SPACE
+					cmp ecx, 0x1D7
+				]]},
+			})
+		)
 
 		EEex_EnableCodeProtection()
 	end

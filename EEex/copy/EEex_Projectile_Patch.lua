@@ -8,15 +8,19 @@
 	-------------------------------------------------------
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, {
-		{"stack_mod", 8}},
+		{"stack_mod", 8},
+		{"integrity_ignore_registers", {
+			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
+			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		}}},
 		{[[
 			#MAKE_SHADOW_SPACE(16)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
-			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)] ; pRetPtr
-															   ; rdx is already pDecoder
-															   ; rcx is already nProjectileType
+			mov r8, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)] ; pRetPtr
+														  ; rdx is already pDecoder
+														  ; rcx is already nProjectileType
 			call #L(EEex::Projectile_Hook_OnBeforeDecode)
 
 			cmp ax, -1
@@ -39,12 +43,15 @@
 	-- [EEex.dll] EEex::Projectile_Hook_OnAfterDecode() --
 	------------------------------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CProjectile::DecodeProjectile()-LastCall"), {[[
-		mov r8, qword ptr ss:[rsp+408] ; pRetPtr
-		mov rdx, rsi                   ; pDecoder
-		mov rcx, rbx                   ; pProjectile
-		call #L(EEex::Projectile_Hook_OnAfterDecode)
-	]]})
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CProjectile::DecodeProjectile()-LastCall"), {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{[[
+			mov r8, qword ptr ss:[rsp+408] ; pRetPtr
+			mov rdx, rsi                   ; pDecoder
+			mov rcx, rbx                   ; pProjectile
+			call #L(EEex::Projectile_Hook_OnAfterDecode)
+		]]}
+	)
 
 	----------------------------------------------------------
 	-- [EEex.dll] EEex::Projectile_Hook_OnBeforeAddEffect() --
@@ -165,13 +172,17 @@
 	]]})
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, {
-		{"stack_mod", 8}},
+		{"stack_mod", 8},
+		{"integrity_ignore_registers", {
+			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
+			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		}}},
 		{[[
 			#MAKE_SHADOW_SPACE(16)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
-			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(0)]   ; pRetPtr
+			mov r9, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]        ; pRetPtr
 			mov r8, rdx                                          ; pEffect
 
 			mov rcx, r9 ; pRetPtr

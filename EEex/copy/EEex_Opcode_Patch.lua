@@ -8,37 +8,45 @@
 	--  [EEex.dll] EEex::Opcode_Hook_OnDestruct() --
 	------------------------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameEffect::Destruct()_FirstCall"), {[[
-		mov rcx, rdi ; pEffect
-		call #L(EEex::Opcode_Hook_OnDestruct)
-	]]})
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffect::Destruct()_FirstCall"), {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{[[
+			mov rcx, rdi ; pEffect
+			call #L(EEex::Opcode_Hook_OnDestruct)
+		]]}
+	)
 
 	--------------------------------------------------
 	-- Copy CGameEffect extended CGameEffect values --
 	--  [EEex.dll] EEex::Opcode_Hook_OnCopy()       --
 	--------------------------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameEffect::CopyFromBase()-FirstCall"), {[[
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffect::CopyFromBase()-FirstCall"), {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{[[
+			; This is the only caller that isn't working with a CGameEffect.
+			mov rax, #$(1) ]], {EEex_Label("Data-CGameEffect::DecodeEffectFromBase()-After-CGameEffect::CopyFromBase()")}, [[ #ENDL
+			cmp qword ptr ss:[rsp+0x38], rax
+			je #L(return)
 
-		; This is the only caller that isn't working with a CGameEffect.
-		mov rax, #$(1) ]], {EEex_Label("Data-CGameEffect::DecodeEffectFromBase()-After-CGameEffect::CopyFromBase()")}, [[ #ENDL
-		cmp qword ptr ss:[rsp+0x38], rax
-		je #L(return)
-
-		mov rdx, rdi                                             ; pDstEffect
-		lea rcx, qword ptr ds:[rsi-#$(1)] ]], {EEex_PtrSize}, [[ ; pSrcEffect
-		call #L(EEex::Opcode_Hook_OnCopy)
-	]]})
+			mov rdx, rdi                                             ; pDstEffect
+			lea rcx, qword ptr ds:[rsi-#$(1)] ]], {EEex_PtrSize}, [[ ; pSrcEffect
+			call #L(EEex::Opcode_Hook_OnCopy)
+		]]}
+	)
 
 	-------------------------------------------------------
 	-- [EEex.dll] EEex::Opcode_Hook_AfterListsResolved() --
 	-- [Lua] EEex_Opcode_LuaHook_AfterListsResolved()    --
 	-------------------------------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), {[[
-		mov rcx, rsi ; pSprite
-		call #L(EEex::Opcode_Hook_AfterListsResolved)
-	]]})
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{[[
+			mov rcx, rsi ; pSprite
+			call #L(EEex::Opcode_Hook_AfterListsResolved)
+		]]}
+	)
 
 	--------------------------------------
 	--          Opcode Changes          --
@@ -50,11 +58,14 @@
 	--  [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248()     --
 	------------------------------------------------------------
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail"), {[[
-		mov rdx, rbx
-		mov rcx, rdi
-		call #L(EEex::Opcode_Hook_OnOp248AddTail)
-	]]})
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail"),  {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{[[
+			mov rdx, rbx
+			mov rcx, rdi
+			call #L(EEex::Opcode_Hook_OnOp248AddTail)
+		]]}
+	)
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee"), EEex_FlattenTable({
 		{[[
@@ -87,11 +98,14 @@
 		mov qword ptr ds:[#$(1)], rcx ]], {op249SavedEffect}, [[ #ENDL
 	]]})
 
-	EEex_HookAfterCall(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), {[[
-		mov rdx, rbx
-		mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ #ENDL
-		call #L(EEex::Opcode_Hook_OnOp249AddTail)
-	]]})
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{[[
+			mov rdx, rbx
+			mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ #ENDL
+			call #L(EEex::Opcode_Hook_OnOp249AddTail)
+		]]}
+	)
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
 		{[[
@@ -113,7 +127,7 @@
 			test rax, rax
 			jz #L(return)
 		]]},
-		EEex_IntegrityCheck_HookExit,
+		EEex_IntegrityCheck_HookExit(0),
 		{[[
 			; The consequence of not running the else block is that this boilerplate is not executed
 			mov rsi, qword ptr ss:[rsp+0x70]
@@ -127,30 +141,33 @@
 	--  [EEex.dll] EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget() --
 	---------------------------------------------------------------------------------
 
-	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 0, 7, 7, EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(32)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 0, 7, 7, {
+		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(32)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-			mov rcx, rbx ; pEffect
-			call #L(EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget)
+				mov rcx, rbx ; pEffect
+				call #L(EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget)
 
-			test rax, rax
-			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
-			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-			jz #L(return)
+				test rax, rax
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				jz #L(return)
 
-			mov rax, r8
-			mov r8, r9
-			mov r9, rax
-		]]},
-	}))
+				mov rax, r8
+				mov r8, r9
+				mov r9, rax
+			]]},
+		})
+	)
 
 	-----------------------------------
 	--          New Opcodes          --
@@ -295,9 +312,7 @@
 	-----------------------------------------------------------------
 
 	local EEex_SetExtendedStat = genOpcodeDecode({
-
 		["ApplyEffect"] = {[[
-
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
 			call #L(EEex::Opcode_Hook_SetExtendedStat_ApplyEffect)
@@ -348,7 +363,6 @@
 	---------------------------------------------------------------
 
 	local EEex_ScreenEffects = genOpcodeDecode({
-
 		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
@@ -360,28 +374,34 @@
 
 	local effectBlockedHack = EEex_Malloc(0x8)
 
-	EEex_HookConditionalJumpOnFail(EEex_Label("Hook-CGameEffect::CheckAdd()-LastProbabilityJmp"), 0, EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(8)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
+	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameEffect::CheckAdd()-LastProbabilityJmp"), 0, {
+		{"integrity_ignore_registers", {
+			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.R8,
+			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(8)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
 
-			mov rdx, r14 ; pSprite
-			mov rcx, rdi ; pEffect
-			call #L(EEex::Opcode_Hook_OnCheckAdd)
+				mov rdx, r14 ; pSprite
+				mov rcx, rdi ; pEffect
+				call #L(EEex::Opcode_Hook_OnCheckAdd)
 
-			mov qword ptr ds:[#$(1)], rax ]], {effectBlockedHack}, [[ #ENDL
+				mov qword ptr ds:[#$(1)], rax ]], {effectBlockedHack}, [[ #ENDL
 
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-			test rax, rax
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				test rax, rax
 
-			jz #L(jmp_fail)
-		]]},
-		EEex_IntegrityCheck_HookExit,
-		{[[
-			jmp #L(Hook-CGameEffect::CheckAdd()-ProbabilityFailed)
-		]]},
-	}))
+				jz #L(jmp_fail)
+			]]},
+			EEex_IntegrityCheck_HookExit(0),
+			{[[
+				jmp #L(Hook-CGameEffect::CheckAdd()-ProbabilityFailed)
+			]]},
+		})
+	)
 
 	EEex_HookConditionalJumpOnSuccess(EEex_Label("Hook-CGameSprite::AddEffect()-noSave-Override"), 3, {[[
 		cmp qword ptr ds:[#$(1)], 0 ]], {effectBlockedHack}, [[ #ENDL
@@ -394,7 +414,6 @@
 	-------------------------------------------------------------------
 
 	local EEex_ProjectileMutator = genOpcodeDecode({
-
 		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
@@ -410,7 +429,6 @@
 	----------------------------------------------------------------------
 
 	local EEex_EnableActionListener = genOpcodeDecode({
-
 		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
@@ -424,40 +442,47 @@
 	-- [JIT] Decode Switch --
 	-------------------------
 
-	EEex_HookConditionalJumpOnSuccess(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, EEex_FlattenTable({[[
+	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, {
+		{"integrity_ignore_registers", {
+			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
+			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		}}},
+		EEex_FlattenTable({[[
 
-		mov qword ptr ss:[rsp+60h], r15 ; save non-volatile register since I resume control flow from an EEex
-										; opcode to somewhere that expects this stack location to be filled
+			mov qword ptr ss:[rsp+60h], r15 ; save non-volatile register since I resume control flow from an EEex
+											; opcode to somewhere that expects this stack location to be filled
 
-		cmp eax, 400
-		jne _401
-		]], EEex_SetTemporaryAIScript, [[
+			cmp eax, 400
+			jne _401
+			]], EEex_SetTemporaryAIScript, [[
 
-		_401:
-		cmp eax, 401
-		jne _402
-		]], EEex_SetExtendedStat, [[
+			_401:
+			cmp eax, 401
+			jne _402
+			]], EEex_SetExtendedStat, [[
 
-		_402:
-		cmp eax, 402
-		jne _403
-		]], EEex_InvokeLua, [[
+			_402:
+			cmp eax, 402
+			jne _403
+			]], EEex_InvokeLua, [[
 
-		_403:
-		cmp eax, 403
-		jne _408
-		]], EEex_ScreenEffects, [[
+			_403:
+			cmp eax, 403
+			jne _408
+			]], EEex_ScreenEffects, [[
 
-		_408:
-		cmp eax, 408
-		jne _409
-		]], EEex_ProjectileMutator, [[
+			_408:
+			cmp eax, 408
+			jne _409
+			]], EEex_ProjectileMutator, [[
 
-		_409:
-		cmp eax, 409
-		jne #L(jmp_success)
-		]], EEex_EnableActionListener, [[
-	]]}))
+			_409:
+			cmp eax, 409
+			jne #L(jmp_success)
+			]], EEex_EnableActionListener, [[
+		]]})
+	)
+	EEex_IntegrityCheck_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})
 
 	EEex_EnableCodeProtection()
 
