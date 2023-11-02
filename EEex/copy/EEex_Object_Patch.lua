@@ -9,9 +9,10 @@
 	----------------------------------------------------------
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CAIObjectType::Decode()-TargetNameOverride"), 0, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -43,9 +44,9 @@
 	--------------------------------------------------
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CAIObjectType::Decode()-DefaultJmp"), 0, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -79,14 +80,12 @@
 
 				cmp rax, #$(1) ]], {EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.HANDLED_DONE}, [[ #ENDL
 				jne #L(jmp_success)
-			]]},
-			EEex_IntegrityCheck_HookExit(0),
-			{[[
+
+				#MANUAL_HOOK_EXIT(0)
 				jmp #L(Hook-CAIObjectType::Decode()-ReturnBranch)
+
 				normal_return:
-			]]},
-			EEex_IntegrityCheck_HookExit(0),
-			{[[
+				#MANUAL_HOOK_EXIT(0)
 				jmp #L(Hook-CAIObjectType::Decode()-NormalBranch)
 			]]},
 		})

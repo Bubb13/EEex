@@ -9,7 +9,7 @@
 	------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffect::Destruct()_FirstCall"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov rcx, rdi ; pEffect
 			call #L(EEex::Opcode_Hook_OnDestruct)
@@ -22,7 +22,7 @@
 	--------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffect::CopyFromBase()-FirstCall"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			; This is the only caller that isn't working with a CGameEffect.
 			mov rax, #$(1) ]], {EEex_Label("Data-CGameEffect::DecodeEffectFromBase()-After-CGameEffect::CopyFromBase()")}, [[ #ENDL
@@ -41,7 +41,7 @@
 	-------------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov rcx, rsi ; pSprite
 			call #L(EEex::Opcode_Hook_AfterListsResolved)
@@ -59,7 +59,7 @@
 	------------------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail"),  {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov rdx, rbx
 			mov rcx, rdi
@@ -99,7 +99,7 @@
 	]]})
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov rdx, rbx
 			mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ #ENDL
@@ -126,9 +126,8 @@
 
 			test rax, rax
 			jz #L(return)
-		]]},
-		EEex_IntegrityCheck_HookExit(0),
-		{[[
+
+			#MANUAL_HOOK_EXIT(0)
 			; The consequence of not running the else block is that this boilerplate is not executed
 			mov rsi, qword ptr ss:[rsp+0x70]
 			lea r13, qword ptr ds:[r15+0xC]
@@ -142,7 +141,9 @@
 	---------------------------------------------------------------------------------
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 0, 7, 7, {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11}}},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(32)
@@ -375,9 +376,9 @@
 	local effectBlockedHack = EEex_Malloc(0x8)
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameEffect::CheckAdd()-LastProbabilityJmp"), 0, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -395,9 +396,8 @@
 				test rax, rax
 
 				jz #L(jmp_fail)
-			]]},
-			EEex_IntegrityCheck_HookExit(0),
-			{[[
+
+				#MANUAL_HOOK_EXIT(0)
 				jmp #L(Hook-CGameEffect::CheckAdd()-ProbabilityFailed)
 			]]},
 		})
@@ -443,9 +443,10 @@
 	-------------------------
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({[[
 
@@ -482,7 +483,7 @@
 			]], EEex_EnableActionListener, [[
 		]]})
 	)
-	EEex_IntegrityCheck_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})
+	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})
 
 	EEex_EnableCodeProtection()
 

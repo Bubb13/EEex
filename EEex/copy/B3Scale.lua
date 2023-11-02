@@ -49,7 +49,7 @@ end
 	EEex_DisableCodeProtection()
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::OnResizeWindow()-B3Scale"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		EEex_FlattenTable({[[
 			#MAKE_SHADOW_SPACE(32)
 			]], EEex_GenLuaCall("B3Scale_Hook_DoSizeChange"), [[

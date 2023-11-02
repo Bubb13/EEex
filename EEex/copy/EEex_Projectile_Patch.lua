@@ -9,9 +9,9 @@
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, {
 		{"stack_mod", 8},
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
-			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
 			#MAKE_SHADOW_SPACE(16)
@@ -44,7 +44,7 @@
 	------------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CProjectile::DecodeProjectile()-LastCall"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov r8, qword ptr ss:[rsp+408] ; pRetPtr
 			mov rdx, rsi                   ; pDecoder
@@ -173,9 +173,9 @@
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("CProjectile::AddEffect"), 0, 8, 8, {
 		{"stack_mod", 8},
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
-			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
 			#MAKE_SHADOW_SPACE(16)

@@ -8,7 +8,7 @@
 	-------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CAIScript::Read()-OnRead"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov rdx, r14 ; bPlayerScript
 			mov rcx, rsi ; pScript
@@ -25,9 +25,9 @@
 		{"Hook-CAIScript::Construct()-OnCopy2", "rsi"}, })
 	do
 		EEex_HookBeforeCallWithLabels(EEex_Label(entry[1]), {
-			{"integrity_ignore_registers", {
-				EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
-				EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
 			}}},
 			{[[
 				#MAKE_SHADOW_SPACE(16)
@@ -50,7 +50,7 @@
 	-----------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CAIScript::Destruct()-OnDestruct"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov rcx, rsi ; pScript
 			call #L(EEex::Script_Hook_OnDestruct)

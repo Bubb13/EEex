@@ -8,9 +8,10 @@
 	--------------------------------------------------
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), 0, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -27,9 +28,7 @@
 			{[[
 				mov esi, eax
 				#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-			]]},
-			EEex_IntegrityCheck_HookExit(0),
-			{[[
+				#MANUAL_HOOK_EXIT(0)
 				jmp #L(Hook-CGameAIBase::ExecuteAction()-NormalBranch)
 
 				call_error:
@@ -44,7 +43,7 @@
 	---------------------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("CGameSprite::SetCurrAction()-LastCall"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			cmp word ptr ds:[r14], 0 ; Don't call the hook for NoAction() since the engine spams it
 			jz #L(return)

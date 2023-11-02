@@ -8,9 +8,9 @@
 	------------------------------------------------
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-uiRefreshMenu()-saveMenuStack()"), {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -31,9 +31,10 @@
 	EEex_HookRelativeJumpWithLabels(EEex_Label("Hook-uiRefreshMenu()-restoreMenuStack()"), {
 		{"stack_mod", 8},
 		{"manual_continue", true},
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -44,9 +45,7 @@
 			{[[
 				call_error:
 				#DESTROY_SHADOW_SPACE
-			]]},
-			EEex_IntegrityCheck_HookExit(0),
-			{[[
+				#MANUAL_HOOK_EXIT(0)
 				ret
 			]]},
 		})
@@ -57,7 +56,7 @@
 	------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(32)
@@ -76,9 +75,9 @@
 	--------------------------------------------------------------------------------------------
 
 	EEex_HookNOPsWithLabels(EEex_Label("Hook-Infinity_InstanceAnimation()-TemplateMenuOverride"), 7, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
 			#MAKE_SHADOW_SPACE(16)
@@ -127,9 +126,10 @@
 	--------------------------------------------------------------------------------------------
 
 	EEex_HookBetweenRestoreWithLabels(EEex_Label("Hook-Infinity_DestroyAnimation()-TemplateMenuOverride"), 0, 4, 4, 3, 7, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
 			#MAKE_SHADOW_SPACE(8)
@@ -172,9 +172,10 @@
 	-------------------------------------------------------------------
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-saveMenus()-CheckItemSave"), 5, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -212,7 +213,7 @@
 	----------------------------------------------------
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-RenderListCallback()-drawItem()"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11}}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(112)
@@ -256,9 +257,10 @@
 	------------------------------------------------------
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -294,7 +296,7 @@
 		EEex_Label("Hook-drawItem()-FixForcedScrollbarDivideByZero2") })
 	do
 		EEex_HookAfterRestoreWithLabels(address, 0, 11, 11, {
-			{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 			{[[
 				test eax, eax
 				jnz #L(return)

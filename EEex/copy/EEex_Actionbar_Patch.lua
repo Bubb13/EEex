@@ -10,12 +10,12 @@
 	EEex_HookBeforeCall(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {[[
 		mov dword ptr ds:[rsp+70h], r15d ; store it in unused spill space
 	]]})
-	EEex_IntegrityCheck_IgnoreStackSizes(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {{0x70, 4}})
+	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {{0x70, 4}})
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CInfButtonArray::SetState()-CInfButtonArray::UpdateButtons()"), {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
-			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -56,9 +56,9 @@
 	-------------------------------------------------
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving"), 0, 7, 11, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -99,7 +99,7 @@
 	-----------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CAIGroup::IsPartyLeader()-Override"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		EEex_FlattenTable({
 			{[[
 				test rax, rax
@@ -130,10 +130,11 @@
 	------------------------------------------------------------------------------------
 
 	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall"), {
-		{"integrity_ignore_registers_0", {
-			EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers_0", {
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}},
-		{"integrity_ignore_registers_1", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers_1", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			#MAKE_SHADOW_SPACE(16)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
@@ -151,8 +152,7 @@
 			#DESTROY_SHADOW_SPACE
 		]]},
 		{[[
-			#MAKE_SHADOW_SPACE(8)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+			#MAKE_SHADOW_SPACE
 
 			mov rdx, 0
 			mov rcx, #L(Hardcoded_InternalLuaState)
@@ -161,7 +161,6 @@
 			mov rcx, #L(Hardcoded_InternalLuaState)
 			call #L(Hardcoded_lua_setglobal)
 
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE
 		]]}
 	)

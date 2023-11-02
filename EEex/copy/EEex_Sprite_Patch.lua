@@ -8,9 +8,9 @@
 	---------------------------------------------------
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::SetCursor()-SetCharacterToolTip()"), {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
-			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -44,7 +44,7 @@
 		"Hook-CGameSprite::Construct2()-FirstCall"
 	}) do
 		EEex_HookAfterCallWithLabels(EEex_Label(labelName), {
-			{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 			EEex_FlattenTable({
 				{[[
 					#MAKE_SHADOW_SPACE(40)
@@ -69,7 +69,7 @@
 	-----------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Destruct()-FirstCall"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(40)
@@ -94,8 +94,8 @@
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::CheckQuickLists()-CallListeners"), 0, 5, 5, {
 		{"stack_mod", 8},
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -131,7 +131,7 @@
 	-----------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Rest()-OnResetQuickListCounts"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(40)
@@ -180,9 +180,10 @@
 	EEex_WritePtr(CGameEffectList_Marshal_OriginalMarshalSize, 0x0)
 
 	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameEffectList::Marshal()-OverrideSize"), 0, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RBX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX,
-			EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RBX, EEex_HookIntegrityWatchdogRegister.RCX,
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -249,9 +250,9 @@
 	-----------------------------------------------------------
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
-			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -277,18 +278,18 @@
 			{[[
 				call_error:
 				#DESTROY_SHADOW_SPACE
+
 				dont_process_effect:
-			]]},
-			EEex_IntegrityCheck_HookExit(1),
-			{[[
+				#MANUAL_HOOK_EXIT(1)
 				jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
 			]]},
 		})
 	)
 	-- Manually define the ignored registers for the unusual `dont_process_effect` branch above
-	EEex_IntegrityCheck_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), 1, {
-		EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-		EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
 	-----------------------------------------------------------
@@ -296,9 +297,9 @@
 	-----------------------------------------------------------
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt"), {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8, EEex_IntegrityRegister.R9,
-			EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -335,9 +336,9 @@
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::ConcentrationFailed()-CHECK_MODE-Redirect"), 0, 5, 5, {
 		{"stack_mod", 8},
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -360,17 +361,16 @@
 
 				no_error:
 				#DESTROY_SHADOW_SPACE
-			]]},
-			EEex_IntegrityCheck_HookExit(1),
-			{[[
+				#MANUAL_HOOK_EXIT(1)
 				ret
 			]]},
 		})
 	)
 	-- Manually define the ignored registers for the unusual `ret` above
-	EEex_IntegrityCheck_IgnoreRegistersForInstance(EEex_Label("Hook-CGameSprite::ConcentrationFailed()-CHECK_MODE-Redirect"), 1, {
-		EEex_IntegrityRegister.RAX, EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-		EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameSprite::ConcentrationFailed()-CHECK_MODE-Redirect"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
 	-----------------------------------------------------------------
@@ -378,9 +378,9 @@
 	-----------------------------------------------------------------
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectDamage::ApplyEffect()-StartingCalculations"), 0, 6, 6, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -413,9 +413,9 @@
 	-------------------------------------------------
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectDamage::ApplyEffect()-OnDone"), 0, 7, 7, {
-		{"integrity_ignore_registers", {
-			EEex_IntegrityRegister.RCX, EEex_IntegrityRegister.RDX, EEex_IntegrityRegister.R8,
-			EEex_IntegrityRegister.R9, EEex_IntegrityRegister.R10, EEex_IntegrityRegister.R11
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
@@ -448,7 +448,7 @@
 	----------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::SetCurrAction()-FirstCall"), {
-		{"integrity_ignore_registers", {EEex_IntegrityRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(40)

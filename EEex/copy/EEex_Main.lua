@@ -77,7 +77,7 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 
 	-- Contains EEex's C++ functionality
 	EEex_OpenLuaBindings("EEex")
-	EEex_DoFile("EEex_IntegrityCheck")
+	EEex_DoFile("EEex_HookIntegrityWatchdog")
 
 	-- Defines information about usertypes for the EEex_MemoryManager helper
 	EEex_DoFile("EEex_MemoryManagerDefinitions")

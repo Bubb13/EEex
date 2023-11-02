@@ -1,13 +1,13 @@
 
-EEex_IntegrityCheck_Load = false
+EEex_HookIntegrityWatchdog_Load = true
 
 (function()
 
-	if not EEex_IntegrityCheck_Load then
+	if not EEex_HookIntegrityWatchdog_Load then
 		return
 	end
 
-	local integrityCheckEnter = EEex_JITNear({[[
+	local hookIntegrityWatchdogEnter = EEex_JITNear({[[
 
 		#STACK_MOD(8)
 		#MAKE_SHADOW_SPACE(184)
@@ -24,7 +24,7 @@ EEex_IntegrityCheck_Load = false
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-168)], rcx
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-160)], rdx
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-152)], rbp
-		lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(56)]        ; 8<ret ptr> + 48<EEex_RoundUp(32<shadow space> + 16<local vars>, 16)>
+		mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(48)]        ; 8<ret ptr> + 32<shadow space> + 8<local vars[1]>
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-144)], rax ; rsp
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-136)], rsi
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-128)], rdi
@@ -37,10 +37,9 @@ EEex_IntegrityCheck_Load = false
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-72)], r14
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-64)], r15
 
-		lea r8, qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-184)]
-		mov rdx, qword ptr ds:[rsp+#LAST_FRAME_TOP(48)]        ; 8<ret ptr> + 32<shadow space> + 8<local vars[1]>
+		lea rdx, qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-184)]
 		mov rcx, qword ptr ss:[rsp+#LAST_FRAME_TOP(40)]        ; 8<ret ptr> + 32<shadow space> + 0<local vars[0]>
-		call #L(EEex::IntegrityCheckEnter)
+		call #L(EEex::HookIntegrityWatchdogEnter)
 
 		mov r11, qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-56)]
 		mov r10, qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
@@ -53,7 +52,7 @@ EEex_IntegrityCheck_Load = false
 		ret
 	]]})
 
-	local integrityCheckExit = EEex_JITNear({[[
+	local hookIntegrityWatchdogExit = EEex_JITNear({[[
 
 		#STACK_MOD(8)
 		#MAKE_SHADOW_SPACE(184)
@@ -70,7 +69,7 @@ EEex_IntegrityCheck_Load = false
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-168)], rcx
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-160)], rdx
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-152)], rbp
-		lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(56)]        ; 8<ret ptr> + 48<EEex_RoundUp(32<shadow space> + 16<local vars>, 16)>
+		mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(56)]        ; 8<ret ptr> + 32<shadow space> + 16<local vars[2]>
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-144)], rax ; rsp
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-136)], rsi
 		mov qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-128)], rdi
@@ -86,7 +85,7 @@ EEex_IntegrityCheck_Load = false
 		lea r8, qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-184)]
 		mov rdx, qword ptr ds:[rsp+#LAST_FRAME_TOP(48)]        ; 8<ret ptr> + 32<shadow space> + 8<local vars[1]>
 		mov rcx, qword ptr ss:[rsp+#LAST_FRAME_TOP(40)]        ; 8<ret ptr> + 32<shadow space> + 0<local vars[0]>
-		call #L(EEex::IntegrityCheckExit)
+		call #L(EEex::HookIntegrityWatchdogExit)
 
 		mov r11, qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-56)]
 		mov r10, qword ptr ds:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
@@ -99,72 +98,90 @@ EEex_IntegrityCheck_Load = false
 		ret
 	]]})
 
-	local cachedHookEnter = {}
-	EEex_IntegrityCheck_HookEnter = function(instance)
-		local cached = cachedHookEnter[instance]
-		if cached then return cached end
-		local t = {[[
-			#MAKE_SHADOW_SPACE(16)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-			mov rax, #L(hook_address)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], ]], instance, [[ #ENDL
-			call ]], integrityCheckEnter, [[ #ENDL
-			#DESTROY_SHADOW_SPACE
-		]]}
-		cachedHookEnter[instance] = t
-		return t
-	end
+	EEex_HookIntegrityWatchdog_HookEnter = {[[
+
+		#MAKE_SHADOW_SPACE(24)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+
+		lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
+
+		mov rax, #L(hook_address)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rax
+
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		call ]], hookIntegrityWatchdogEnter, [[ #ENDL
+		#DESTROY_SHADOW_SPACE
+	]]}
 
 	local cachedHookExit = {}
-	EEex_IntegrityCheck_HookExit = function(instance)
+	EEex_HookIntegrityWatchdog_HookExit = function(instance)
 		local cached = cachedHookExit[instance]
 		if cached then return cached end
 		local t = {[[
-			#MAKE_SHADOW_SPACE(16)
+
+			#MAKE_SHADOW_SPACE(32)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-			mov rax, #L(hook_address)
+
+			lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
+
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], ]], instance, [[ #ENDL
+
+			mov rax, #L(hook_address)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], rax
+
 			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], ]], instance, [[ #ENDL
-			call ]], integrityCheckExit, [[ #ENDL
+			call ]], hookIntegrityWatchdogExit, [[ #ENDL
 			#DESTROY_SHADOW_SPACE
 		]]}
 		cachedHookExit[instance] = t
 		return t
 	end
 
-	EEex_IntegrityCheck_IgnoreRegistersForInstance = function(address, instance, defaultRegisters)
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance = function(address, instance, defaultRegisters)
 		local ignoreFlags = EEex_Flags(defaultRegisters)
-		local ignoredRegisters = EEex_TryLabel("integrity_ignore_registers_"..instance)
+		local ignoredRegisters = EEex_TryLabel("hook_integrity_watchdog_ignore_registers_"..instance)
 		if ignoredRegisters then
 			ignoreFlags = EEex_BOr(ignoreFlags, EEex_Flags(ignoredRegisters))
 		end
-		EEex.IntegrityCheckIgnoreRegisters(address, instance, ignoreFlags)
+		EEex.HookIntegrityWatchdogIgnoreRegisters(address, instance, ignoreFlags)
 	end
 
-	EEex_IntegrityCheck_IgnoreRegisters = function(address, defaultRegisters)
+	EEex_HookIntegrityWatchdog_IgnoreRegisters = function(address, defaultRegisters)
 		local ignoreFlags = EEex_Flags(defaultRegisters)
-		local ignoredRegisters = EEex_TryLabel("integrity_ignore_registers")
+		local ignoredRegisters = EEex_TryLabel("hook_integrity_watchdog_ignore_registers")
 		if ignoredRegisters then
 			ignoreFlags = EEex_BOr(ignoreFlags, EEex_Flags(ignoredRegisters))
 		end
-		EEex.IntegrityCheckIgnoreRegisters(address, 0, ignoreFlags)
+		EEex.HookIntegrityWatchdogIgnoreRegisters(address, 0, ignoreFlags)
 	end
 
 	local ignoreStackSize = function(address, instance, offset, size)
-		EEex.IntegrityCheckIgnoreStackRange(address, instance, offset, offset + size - 1)
+		EEex.HookIntegrityWatchdogIgnoreStackRange(address, instance, offset, offset + size - 1)
 	end
 
-	EEex_IntegrityCheck_IgnoreStackSizesForInstance = function(address, instance, stackSizes)
+	EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance = function(address, instance)
+		-- Stack mod indicates that the hook isn't operating in the usual stack frame. None of
+		-- the stack should be ignored if stack_mod is defined, as the shadow space at the top
+		-- of the stack actually belongs to the called function that's being hooked.
+		if not EEex_TryLabel("stack_mod") then
+			ignoreStackSize(address, instance, 0, 32)
+		end
+	end
+
+	EEex_HookIntegrityWatchdog_DefaultIgnoreStack = function(address)
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance(address, 0)
+	end
+
+	EEex_HookIntegrityWatchdog_IgnoreStackSizesForInstance = function(address, instance, stackSizes)
 		for _, stackSize in ipairs(stackSizes) do
 			ignoreStackSize(address, instance, stackSize[1], stackSize[2])
 		end
 	end
 
-	EEex_IntegrityCheck_IgnoreStackSizes = function(address, stackSizes)
-		EEex_IntegrityCheck_IgnoreStackSizesForInstance(address, 0, stackSizes)
+	EEex_HookIntegrityWatchdog_IgnoreStackSizes = function(address, stackSizes)
+		EEex_HookIntegrityWatchdog_IgnoreStackSizesForInstance(address, 0, stackSizes)
 	end
 
 end)()
