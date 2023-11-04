@@ -46,7 +46,6 @@
 			call ]], afterEventsPollHook, [[ #ENDL
 		]]}
 	)
-	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1"), {{0x68, SDL_Event.sizeof}})
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
@@ -54,7 +53,6 @@
 			call ]], afterEventsPollHook, [[ #ENDL
 		]]}
 	)
-	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2"), {{0x68, SDL_Event.sizeof}})
 
 	EEex_EnableCodeProtection()
 

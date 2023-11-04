@@ -258,13 +258,13 @@
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {
-			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
-			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
-			EEex_HookIntegrityWatchdogRegister.R11
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(40)
+				#MAKE_SHADOW_SPACE(48)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
 			]]},
 			EEex_GenLuaCall("EEex_Menu_Hook_CheckForceScrollbarRender", {
 				["args"] = {
@@ -281,6 +281,7 @@
 				no_error:
 				test rax, rax
 
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 				#DESTROY_SHADOW_SPACE
 				jnz #L(jmp_fail)
 			]]},
