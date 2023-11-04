@@ -158,6 +158,21 @@ function EEex_Resource_GetSpellAbilityForLevel(spellHeader, casterLevel)
 end
 Spell_Header_st.getAbilityForLevel = EEex_Resource_GetSpellAbilityForLevel
 
+-- spellResRefIterator is expected to return <string spellResRef>
+-- Iterator returns <string spellResRef, Spell_Header_st spellHeader>
+function EEex_Resource_GetValidSpellsIterator(spellResRefIterator)
+	return function()
+		for spellResRef in spellResRefIterator do
+			local spellHeader = EEex_Resource_Demand(spellResRef, "SPL")
+			if spellHeader ~= nil then
+				return spellResRef, spellHeader
+			end
+		end
+		return nil
+	end
+end
+EEex_Resource_GetValidSpellsItr = EEex_Resource_GetValidSpellsIterator
+
 ---------
 -- 2DA --
 ---------
@@ -213,6 +228,7 @@ end
 C2DArray.findRowLabel = EEex_Resource_Find2DARowLabel
 
 function EEex_Resource_Free2DA(array)
+	EEex_SetUDGCFunc(array, nil)
 	array:Destruct()
 	EEex_FreeUD(array)
 end
@@ -302,8 +318,155 @@ function EEex_Resource_Load2DA(resref)
 		function(manager)
 			array:Load(manager:getUD("resref"))
 		end)
+	EEex_SetUDGCFunc(array, EEex_Resource_Free2DA)
 	return array
 end
+
+-- Iterator returns:
+--   bIncludeLabel == true : {array:getRowLabel(y), ...}
+--   else : {...}
+function EEex_Resource_Get2DARowTableIterator(array, bIncludeLabel)
+	local sizeX, sizeY = array:getDimensions()
+	sizeX = sizeX - 1
+	local y = 0
+	if bIncludeLabel then
+		return function()
+			while true do
+				if y >= sizeY then return nil end
+				local rowValues = {array:getRowLabel(y)}
+				for i = 1, sizeX do
+					rowValues[i + 1] = array:getAtPoint(i - 1, y)
+				end
+				y = y + 1
+				return rowValues
+			end
+		end
+	else
+		return function()
+			while true do
+				if y >= sizeY then return nil end
+				local rowValues = {}
+				for i = 1, sizeX do
+					rowValues[i] = array:getAtPoint(i - 1, y)
+				end
+				y = y + 1
+				return rowValues
+			end
+		end
+	end
+end
+EEex_Resource_Get2DARowTableItr = EEex_Resource_Get2DARowTableIterator
+C2DArray.getRowTableIterator = EEex_Resource_Get2DARowTableItr
+C2DArray.getRowTableItr = EEex_Resource_Get2DARowTableItr
+
+-- Iterator returns:
+--   bIncludeLabel == true : <array:getRowLabel(y), ...>
+--   else : <...>
+function EEex_Resource_Get2DARowValuesIterator(array, bIncludeLabel)
+	return EEex_Utility_ApplyItr(array:getRowTableItr(bIncludeLabel), function(t)
+		return table.unpack(t)
+	end)
+end
+EEex_Resource_Get2DARowValuesItr = EEex_Resource_Get2DARowValuesIterator
+C2DArray.getRowValuesIterator = EEex_Resource_Get2DARowValuesItr
+C2DArray.getRowValuesItr = EEex_Resource_Get2DARowValuesItr
+
+-- Iterator returns:
+--   labelI == nil : <...>
+--   else : <..., array:getRowLabel(y), ...>
+function EEex_Resource_Get2DARowColumnsIterator(array, labelI, ...)
+	local columnIndexes = {...}
+	local _, sizeY = array:getDimensions()
+	local y = 0
+	if labelI == nil then
+		return function()
+			while true do
+				if y >= sizeY then return nil end
+				local rowValues = {}
+				for i, columnIndex in ipairs(columnIndexes) do
+					rowValues[i] = array:getAtPoint(columnIndex, y)
+				end
+				y = y + 1
+				return table.unpack(rowValues)
+			end
+		end
+	else
+		return function()
+			while true do
+				if y >= sizeY then return nil end
+				local rowValues = {}
+				for i = 1, labelI - 1 do
+					rowValues[i] = array:getAtPoint(columnIndexes[i], y)
+				end
+				rowValues[labelI] = array:getRowLabel(y)
+				local i = labelI
+				while true do
+					local columnIndex = columnIndexes[i]
+					if columnIndex == nil then break end
+					i = i + 1
+					rowValues[i] = array:getAtPoint(columnIndex, y)
+				end
+				y = y + 1
+				return table.unpack(rowValues)
+			end
+		end
+	end
+end
+EEex_Resource_Get2DARowColumnsItr = EEex_Resource_Get2DARowColumnsIterator
+C2DArray.getRowColumnsIterator = EEex_Resource_Get2DARowColumnsItr
+C2DArray.getRowColumnsItr = EEex_Resource_Get2DARowColumnsItr
+
+-- Iterator returns:
+--   labelI == nil : <...>
+--   else : <..., array:getRowLabel(y), ...>
+function EEex_Resource_Get2DARowColumnsByLabelIterator(array, labelI, ...)
+	local columnIndexes = {}
+	local insertI = 1
+	while true do
+		local label = select(insertI, ...)
+		if label == nil then break end
+		columnIndexes[insertI] = array:findColumnLabel(label)
+		insertI = insertI + 1
+	end
+	local _, sizeY = array:getDimensions()
+	local y = 0
+	if labelI == nil then
+		return function()
+			while true do
+				if y >= sizeY then return nil end
+				local rowValues = {}
+				for i, columnIndex in ipairs(columnIndexes) do
+					rowValues[i] = array:getAtPoint(columnIndex, y)
+				end
+				y = y + 1
+				return table.unpack(rowValues)
+			end
+		end
+	else
+		return function()
+			while true do
+				if y >= sizeY then return nil end
+				local rowValues = {}
+				for i = 1, labelI - 1 do
+					rowValues[i] = array:getAtPoint(columnIndexes[i], y)
+				end
+				rowValues[labelI] = array:getRowLabel(y)
+				local i = labelI
+				while true do
+					local columnIndex = columnIndexes[i]
+					if columnIndex == nil then break end
+					i = i + 1
+					rowValues[i] = array:getAtPoint(columnIndex, y)
+				end
+				y = y + 1
+				return table.unpack(rowValues)
+			end
+		end
+	end
+end
+EEex_Resource_Get2DARowColumnsByLabelItr = EEex_Resource_Get2DARowColumnsByLabelIterator
+C2DArray.getRowColumnsByLabelIterator = EEex_Resource_Get2DARowColumnsByLabelItr
+C2DArray.getRowColumnsByLabelItr = EEex_Resource_Get2DARowColumnsByLabelItr
 
 ---------
 -- IDS --

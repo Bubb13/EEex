@@ -52,6 +52,49 @@
 	--          Opcode Changes          --
 	--------------------------------------
 
+	--[[
+	+--------------------------------------------------------------------------------+
+	| Opcode #214                                                                    |
+	+--------------------------------------------------------------------------------+
+	| param2 == 3 -> Call Lua function in resource field to get CButtonData iterator |
+	+--------------------------------------------------------------------------------+
+	| Hook return:                                                                   |
+	|     false -> Effect not handled                                                |
+	|     true  -> Effect handled (skip normal code)                                 |
+	+--------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestore(EEex_Label("Hook-CGameEffectSecondaryCastList::ApplyEffect()"), 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(64)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp214ApplyEffect", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			mov rax, 1
+
+			no_error:
+			test rax, rax
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			jz return
+			mov eax, 1
+			ret
+		]]},
+	}))
+
 	------------------------------------------------------------
 	-- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
 	--  [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail()         --
@@ -135,6 +178,182 @@
 		]]},
 	}))
 
+	-----------------------------------------------------------------------
+	-- Opcode #280                                                       --
+	--   param1  != 0 => Force wild surge number                         --
+	--   special != 0 => Suppress wild surge feedback string and visuals --
+	-----------------------------------------------------------------------
+
+	-- Store op280 param1 and special as stats
+	EEex_HookBeforeRestore(EEex_Label("Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction"), 0, 9, 9, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(64)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp280ApplyEffect", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+			},
+		}),
+		{[[
+			call_error:
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	-- Override wild surge number if op280 param1 is non-zero
+	EEex_HookBeforeRestore(EEex_Label("Hook-CGameSprite::WildSpell()-OverrideSurgeNumber"), 0, 9, 9, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(40)
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_OverrideWildSurgeNumber", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Number,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+			cmovnz r13d, eax
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	local checkSuppressVisual = EEex_JITNear(EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(40)
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_SuppressWildSurgeVisuals", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	}))
+
+	-- Suppress feedback string if op280 special is non-zero
+	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CGameSprite::Feedback()"), {[[
+
+		#MAKE_SHADOW_SPACE(32)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+		mov rcx, r14
+		call ]], checkSuppressVisual, [[ #ENDL
+		test rax, rax
+		jz normal
+
+		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+		jmp #L(return)
+
+		normal:
+		#RESUME_SHADOW_ENTRY
+		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
+	]]})
+
+	-- Suppress random visual effect if op280 special is non-zero
+	EEex_HookJumpOnFail(EEex_Label("Hook-CGameSprite::WildSpell()-SuppressVisualEffectJmp"), 0, {[[
+		mov rcx, r14
+		call ]], checkSuppressVisual, [[ #ENDL
+		test rax, rax
+		jnz #L(jmp_success)
+	]]})
+
+	-- Suppress adding SPFLESHS CVisualEffect object to the area if op280 special is non-zero
+	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CVisualEffect::Load()-SPFLESHS"), {[[
+
+		#MAKE_SHADOW_SPACE(32)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+		mov rcx, r14
+		call ]], checkSuppressVisual, [[ #ENDL
+		test rax, rax
+		jz normal
+
+		; This is normally done by the CVisualEffect::Load() call
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		call #L(CString::Destruct)
+
+		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+		jmp #L(return)
+
+		normal:
+		#RESUME_SHADOW_ENTRY
+		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
+	]]})
+
+	-- Make SPFLESHS message nullptr if op280 special is non-zero
+	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-operator_new()-SPFLESHS"), {[[
+
+		#MAKE_SHADOW_SPACE(8)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+
+		mov rcx, r14
+		call ]], checkSuppressVisual, [[ #ENDL
+		test rax, rax
+		jz normal
+
+		xor rax, rax
+
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+		jmp #L(return)
+
+		normal:
+		#RESUME_SHADOW_ENTRY
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
+	]]})
+
+	-- Only send SPFLESHS message if it is non-nullptr
+	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CMessageHandler::AddMessage()-SPFLESHS"), {[[
+		test rdx, rdx
+		jz #L(return)
+	]]})
+
 	---------------------------------------------------------------------------------
 	-- Opcode #326 (Special BIT0 flips SPLPROT.2DA's "source" and "target")        --
 	--  [EEex.dll] EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget() --
@@ -169,6 +388,65 @@
 			]]},
 		})
 	)
+
+	-------------------------------------------------------------------------------------------------
+	-- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
+	-------------------------------------------------------------------------------------------------
+
+	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call"), 0, 9, 9, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(56)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp333CopiedSelf", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax #ENDL", {rspOffset}}, "CGameEffect" end,
+			},
+		}),
+		{[[
+			call_error:
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	----------------------------------------------------
+	-- Allow saving throw BIT23 to bypass opcode #101 --
+	----------------------------------------------------
+
+	EEex_HookBeforeRestore(EEex_Label("Hook-CImmunitiesEffect::OnList()-Entry"), 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(56)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameEffect" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+
+			test rax, rax
+			jz no_bypass
+			xor rax, rax
+			ret
+			no_bypass:
+		]]},
+	}))
 
 	-----------------------------------
 	--          New Opcodes          --

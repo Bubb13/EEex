@@ -143,15 +143,37 @@ Operations=ADD -34
 Pattern=3DC9000000
 Operations=ADD -5
 
+[CDerivedStats::GetAverageLevel]
+Pattern=83F8147776
+Operations=ADD -8
+
+[CDerivedStats::GetPriestLevelCast]
+Pattern=48895C240855488BEC4883EC20
+
 [CDerivedStats::GetSpellState]
 Pattern=81FA000100007320
+
+[CDerivedStats::GetWizardLevelCast]
+Pattern=40534883EC200FB6C2488BD9FFC8
 
 [CGameAIBase::ApplyEffectToParty]
 Pattern=405355415641574883EC28
 
+[CGameAIBase::ForceSpellPoint]
+Pattern=5741564157488D6C24F0
+Operations=ADD -7
+
 [CGameAIBase::GetTargetShare]
 Pattern=4883EC20488BF94533C0
 Operations=ADD -6
+
+[CGameAIBase::GetTargetShareType1]
+Pattern=56574883EC20488BC2
+Operations=ADD -6
+
+[CGameAIBase::GetTargetShareType2]
+Pattern=4889742420574883EC200FB6F2
+Operations=ADD -5
 
 [CGameArea::AdjustTarget]
 Pattern=48895C240844884C2420
@@ -210,6 +232,18 @@ Pattern=4056415641574883EC50
 Pattern=84C87476
 Operations=ADD -39
 
+[CGameSprite::GetKnownSpellInnate]
+Pattern=4881C1480B0000
+Operations=ADD -7
+
+[CGameSprite::GetKnownSpellMage]
+Pattern=4881C150090000
+Operations=ADD -7
+
+[CGameSprite::GetKnownSpellPriest]
+Pattern=4881C1C8070000
+Operations=ADD -7
+
 [CGameSprite::GetLauncherSlot]
 Pattern=574883EC20480FBFC2
 Operations=ADD -10
@@ -236,6 +270,10 @@ Operations=ADD -33
 [CGameSprite::ReadySpell]
 Pattern=5657488D6C2480
 Operations=ADD -6
+
+[CGameSprite::SpellPoint]
+Pattern=41554157488D6C24D0
+Operations=ADD -4
 
 [CGameSprite::UpdateTarget]
 Pattern=488BD94885D2740F
@@ -1293,6 +1331,18 @@ Operations=ADD 31
 Pattern=6689B3BA040000
 Operations=ADD -5
 
+[Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrref]
+Pattern=448D7E01BBFFFFFFFF
+Operations=ADD 4
+
+[Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefBody]
+Pattern=4C8B642458EB1B
+Operations=ADD 12
+
+[Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefElse]
+Pattern=448D7E01BBFFFFFFFF
+Operations=ADD 40
+
 [Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing]
 Pattern=7558498B5500
 
@@ -1322,6 +1372,10 @@ Pattern=488BD84C8B7C2460
 Pattern=F6C301740DBA58010000
 Operations=ADD -5
 
+[Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-CheckRetVal]
+Pattern=6685C00F848E0000004885DB
+Operations=ADD 3
+
 [Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext]
 Pattern=4C8BCF8B5320
 Operations=ADD 9
@@ -1333,6 +1387,10 @@ Operations=ADD 23
 [Hook-CGameEffectDamage::ApplyEffect()-StartingCalculations]
 Pattern=3881F81000007407
 Operations=ADD 56
+
+[Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction]
+Pattern=898248130000
+Operations=ADD -3
 
 [Hook-CGameEffectList::Marshal()-OverrideSize]
 Pattern=488BCBFF504085C0
@@ -1362,6 +1420,12 @@ Operations=ADD -43
 Pattern=488D8FC81C0000
 Operations=ADD 20
 
+[Hook-CGameEffectSecondaryCastList::ApplyEffect()]
+Pattern=48895C24185556574154415541564157488D6C24D94881EC00010000
+
+[Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call]
+Pattern=FF50088B9350010000
+
 [Hook-CGameObjectArray::Clean()-DestructJmp]
 Pattern=6666660F1F840000000000480FBFC2
 Operations=ADD 32
@@ -1382,6 +1446,10 @@ Operations=ADD 4
 Pattern=740A488B4C2448
 Operations=ADD 7
 
+[Hook-CGameSprite::CheckCombatStats()-GetProfBonuses-SaveItem]
+Pattern=48894DEF48894DE7
+Operations=ADD 17
+
 [Hook-CGameSprite::CheckQuickLists()-CallListeners]
 Pattern=405557415441554156488D6C24D1
 
@@ -1401,9 +1469,29 @@ Operations=ADD 31
 Pattern=75DA4C8DB358490000
 Operations=ADD 12
 
+[Hook-CGameSprite::EquipMostDamagingMelee()-GetProfBonuses-SaveItem]
+Pattern=24024885DB
+Operations=ADD -5
+
 [Hook-CGameSprite::ExecuteAction()-DefaultJmp]
 Pattern=81F9D7010000
 Operations=ADD 6
+
+[Hook-CGameSprite::GetActiveWeaponStyleAndLevel()-GetProfBonuses-SaveItem]
+Pattern=747C483BFD
+Operations=ADD -8
+
+[Hook-CGameSprite::GetMaxDamage()-GetProfBonuses-SaveItem]
+Pattern=03457F8B4DDB
+Operations=ADD -8
+
+[Hook-CGameSprite::GetMinDamage()-GetProfBonuses-SaveItem]
+Pattern=03457F894577
+Operations=ADD -8
+
+[Hook-CGameSprite::GetStatBreakdown()-GetProfBonuses-SaveItem]
+Pattern=498BCE48894590
+Operations=ADD 7
 
 [Hook-CGameSprite::IsOver()-B3Invis]
 Pattern=3843387627
@@ -1489,6 +1577,34 @@ Operations=ADD 24
 Pattern=0FB6838B050000
 Operations=ADD 65
 
+[Hook-CGameSprite::WildSpell()-CGameSprite::Feedback()]
+Pattern=488D45C84533C9
+Operations=ADD 43
+
+[Hook-CGameSprite::WildSpell()-CMessageHandler::AddMessage()-SPFLESHS]
+Pattern=488B8DD0040000
+Operations=ADD -24
+
+[Hook-CGameSprite::WildSpell()-CVisualEffect::Load()-SPFLESHS]
+Pattern=C7442438FFFFFFFF41BC20000000
+Operations=ADD 40
+
+[Hook-CGameSprite::WildSpell()-OverrideSurgeNumber]
+Pattern=740D4183FFFF
+Operations=ADD 15
+
+[Hook-CGameSprite::WildSpell()-SuppressVisualEffectJmp]
+Pattern=488B4DE08B742440
+Operations=ADD 35
+
+[Hook-CGameSprite::WildSpell()-operator_new()-SPFLESHS]
+Pattern=418D4D37
+Operations=ADD 4
+
+[Hook-CImmunitiesEffect::OnList()-Entry]
+Pattern=488B7108488BFA4885F6
+Operations=ADD -15
+
 [Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving]
 Pattern=488B88901000007402
 
@@ -1511,6 +1627,10 @@ Operations=ADD -5
 [Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt]
 Pattern=663BBD58030000
 Operations=ADD 35
+
+[Hook-CRuleTables::GetProfBonuses()-IgnoreWeaponStyles]
+Pattern=48897C241055488BEC4883EC30
+Operations=ADD -5
 
 [Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall]
 Pattern=3CFF7484

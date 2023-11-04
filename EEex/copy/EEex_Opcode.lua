@@ -129,6 +129,36 @@ function EEex_Opcode_LuaHook_AfterListsResolved(sprite)
 	end
 end
 
+--[[
++--------------------------------------------------------------------------------+
+| Opcode #214                                                                    |
++--------------------------------------------------------------------------------+
+| param2 == 3 -> Call Lua function in resource field to get CButtonData iterator |
++--------------------------------------------------------------------------------+
+| Hook return:                                                                   |
+|     false -> Effect not handled                                                |
+|     true  -> Effect handled (skip normal code)                                 |
++--------------------------------------------------------------------------------+
+--]]
+
+function EEex_Opcode_Hook_OnOp214ApplyEffect(effect, sprite)
+
+	local param2 = effect.m_dWFlags
+	if param2 ~= 3 then
+		return false
+	end
+
+	effect.m_done = true
+
+	local func = _G[effect.m_res:get()]
+	if func == nil then
+		return false
+	end
+
+	sprite:openOp214Interface(func(effect, sprite))
+	return true
+end
+
 ------------------------------------------------------------
 -- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
 ------------------------------------------------------------
@@ -159,4 +189,53 @@ function EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite, targetSprite, bBlocke
 			)
 		end
 	end
+end
+
+-----------------------------------------------------------------------
+-- Opcode #280                                                       --
+--   param1  != 0 => Force wild surge number                         --
+--   special != 0 => Suppress wild surge feedback string and visuals --
+-----------------------------------------------------------------------
+
+function EEex_Opcode_Hook_OnOp280ApplyEffect(effect, sprite)
+	local statsAux = EEex_GetUDAux(sprite.m_derivedStats)
+	local t = EEex_Utility_GetOrCreateTable(statsAux, "EEex_Op280")
+	t.param1 = effect.m_effectAmount
+	t.special = effect.m_special
+end
+
+-- Return:
+--     0  => Don't override wild surge number
+--     !0 => Override wild surge number
+function EEex_Opcode_Hook_OverrideWildSurgeNumber(sprite)
+	local statsAux = EEex_GetUDAux(sprite:getActiveStats())
+	local t = statsAux["EEex_Op280"]
+	return t and t.param1 or 0
+end
+
+-- Return:
+--     false => Don't suppress wild surge feedback string and visuals
+--     true  => Suppress wild surge feedback string and visuals
+function EEex_Opcode_Hook_SuppressWildSurgeVisuals(sprite)
+	local statsAux = EEex_GetUDAux(sprite:getActiveStats())
+	local t = statsAux["EEex_Op280"]
+	return t and t.special ~= 0 or false
+end
+
+-------------------------------------------------------------------------------------------------
+-- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
+-------------------------------------------------------------------------------------------------
+
+function EEex_Opcode_Hook_OnOp333CopiedSelf(effect)
+	if EEex_IsBitSet(effect.m_effectAmount2, 0) then
+		effect.m_savingThrow = 0
+	end
+end
+
+----------------------------------------------------
+-- Allow saving throw BIT23 to bypass opcode #101 --
+----------------------------------------------------
+
+function EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101(effect)
+	return EEex_IsBitSet(effect.m_savingThrow, 23)
 end

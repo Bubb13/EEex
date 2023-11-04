@@ -465,6 +465,111 @@
 		})
 	)
 
+	--------------------------------------------------------------------------------------------
+	-- Allow ITM header flag BIT18 to ignore weapon styles (as if the item were in SLOT_FIST) --
+	--------------------------------------------------------------------------------------------
+
+	local getProfBonusesItemHack = EEex_Malloc(EEex_PtrSize)
+	EEex_WritePtr(getProfBonusesItemHack, 0)
+
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::CheckCombatStats()-GetProfBonuses-SaveItem"), {[[
+		mov qword ptr ds:[#$(1)], rbx ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::GetMaxDamage()-GetProfBonuses-SaveItem"), {[[
+		mov qword ptr ds:[#$(1)], r13 ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::GetMinDamage()-GetProfBonuses-SaveItem"), {[[
+		mov qword ptr ds:[#$(1)], r13 ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::GetStatBreakdown()-GetProfBonuses-SaveItem"), {[[
+		mov qword ptr ds:[#$(1)], r14 ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- Result saved for use in CGameSprite::GetStyleBonus()
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::GetActiveWeaponStyleAndLevel()-GetProfBonuses-SaveItem"), {[[
+		mov qword ptr ds:[#$(1)], rdi ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::EquipMostDamagingMelee()-GetProfBonuses-SaveItem"), {[[
+		mov qword ptr ds:[#$(1)], rdi ]], {getProfBonusesItemHack}, [[ #ENDL
+	]]})
+
+	-- Main hook
+	EEex_HookBeforeRestore(EEex_Label("Hook-CRuleTables::GetProfBonuses()-IgnoreWeaponStyles"), 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(136)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], edx
+			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8d
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles", {
+			["args"] = {
+				function(rspOffset) return {[[
+					mov rax, qword ptr ds:[#$(1)] ]], {getProfBonusesItemHack}, [[ ; Global hack [item]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]}, "CItem" end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)] ; Register arg 4 [damR]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(40)] ; Stack arg 1 [damL]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(48)] ; Stack arg 2 [thacR]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(56)] ; Stack arg 3 [thacL]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(64)] ; Stack arg 4 [ACB]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(72)] ; Stack arg 5 [ACM]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(80)] ; Stack arg 6 [speed]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(88)] ; Stack arg 7 [crit]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]} end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+			jz do_not_ignore_weapon_styles
+
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			ret
+
+			do_not_ignore_weapon_styles:
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8d, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov edx, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
 	EEex_EnableCodeProtection()
 
 end)()

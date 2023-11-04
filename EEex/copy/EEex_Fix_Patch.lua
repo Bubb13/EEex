@@ -156,6 +156,45 @@
 		)
 	end
 
+	--------------------------------------------------------------------------------------------------------------
+	-- Opcode #182 should consider -1 (instead of 0) the fail return value from CGameSprite::FindItemPersonal() --
+	--------------------------------------------------------------------------------------------------------------
+
+	EEex_HookJump(EEex_Label("Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-CheckRetVal"), 0, {[[
+		cmp ax, -1
+	]]})
+
+	-------------------------------------------------------------------------------------------
+	-- Fix several regressions in v2.6 where:                                                --
+	--   1) op206's param1 only works for values 0xF00074 and 0xF00080.                      --
+	--   2) op232 and op256's "you cannot cast multiple instances" message fails to display. --
+	-------------------------------------------------------------------------------------------
+
+	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrref"), 0, 5, 5, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(48)
+		]]},
+		EEex_GenLuaCall("EEex_Fix_Hook_ShouldTransformSpellImmunityStrref", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameEffect" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r12 #ENDL", {rspOffset}}, "CImmunitySpell" end,
+			},
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+			#DESTROY_SHADOW_SPACE
+			jnz #L(Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefBody)
+			jmp #L(Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefElse)
+		]]},
+	}))
+
 	EEex_EnableCodeProtection()
 
 end)()

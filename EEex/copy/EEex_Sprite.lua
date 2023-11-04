@@ -570,6 +570,236 @@ function EEex_Sprite_GetCasterLevelForSpell(sprite, spellResRef, includeWildMage
 end
 CGameSprite.getCasterLevelForSpell = EEex_Sprite_GetCasterLevelForSpell
 
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef>
+function EEex_Sprite_Private_GetKnownSpellsIterator(sprite, minLevel, maxLevel, getKnownSpellFunc)
+
+	minLevel = minLevel - 1
+	maxLevel = maxLevel - 1
+
+	local spellLevel = minLevel
+	local knownSpellIndex = 0
+
+	return function()
+
+		while spellLevel <= maxLevel do
+
+			while true do
+
+				local knownSpell = getKnownSpellFunc(sprite, spellLevel, knownSpellIndex)
+
+				if knownSpell == nil then
+					break
+				end
+
+				knownSpellIndex = knownSpellIndex + 1
+				return spellLevel, knownSpellIndex, knownSpell.m_knownSpellId:get()
+			end
+
+			spellLevel = spellLevel + 1
+			knownSpellIndex = 0
+		end
+	end
+end
+EEex_Sprite_Private_GetKnownSpellsItr = EEex_Sprite_Private_GetKnownSpellsIterator
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef>
+function EEex_Sprite_GetKnownMageSpellsIterator(sprite, minLevel, maxLevel)
+	minLevel = minLevel or 1
+	maxLevel = maxLevel or 9
+	if minLevel < 1 or minLevel > 9 or maxLevel < 1 or maxLevel > 9 then
+		EEex_Error("Spell level out-of-bounds (expected [1-9])")
+	end
+	return EEex_Sprite_Private_GetKnownSpellsItr(sprite, minLevel, maxLevel, CGameSprite.GetKnownSpellMage)
+end
+EEex_Sprite_GetKnownMageSpellsItr = EEex_Sprite_GetKnownMageSpellsIterator
+CGameSprite.getKnownMageSpellsIterator = EEex_Sprite_GetKnownMageSpellsItr
+CGameSprite.getKnownMageSpellsItr = EEex_Sprite_GetKnownMageSpellsItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef>
+function EEex_Sprite_GetKnownPriestSpellsIterator(sprite, minLevel, maxLevel)
+	minLevel = minLevel or 1
+	maxLevel = maxLevel or 7
+	if minLevel < 1 or minLevel > 7 or maxLevel < 1 or maxLevel > 7 then
+		EEex_Error("Spell level out-of-bounds (expected [1-7])")
+	end
+	return EEex_Sprite_Private_GetKnownSpellsItr(sprite, minLevel, maxLevel, CGameSprite.GetKnownSpellPriest)
+end
+EEex_Sprite_GetKnownPriestSpellsItr = EEex_Sprite_GetKnownPriestSpellsIterator
+CGameSprite.getKnownPriestSpellsIterator = EEex_Sprite_GetKnownPriestSpellsItr
+CGameSprite.getKnownPriestSpellsItr = EEex_Sprite_GetKnownPriestSpellsItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef>
+function EEex_Sprite_GetKnownInnateSpellsIterator(sprite)
+	return EEex_Sprite_Private_GetKnownSpellsItr(sprite, 1, 1, CGameSprite.GetKnownSpellInnate)
+end
+EEex_Sprite_GetKnownInnateSpellsItr = EEex_Sprite_GetKnownInnateSpellsIterator
+CGameSprite.getKnownInnateSpellsIterator = EEex_Sprite_GetKnownInnateSpellsItr
+CGameSprite.getKnownInnateSpellsItr = EEex_Sprite_GetKnownInnateSpellsItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader>
+function EEex_Sprite_Private_GetValidKnownSpellsIterator(knownSpellsIterator)
+	return function()
+		for spellLevel, knownSpellIndex, spellResRef in knownSpellsIterator do
+			local spellHeader = EEex_Resource_Demand(spellResRef, "SPL")
+			if spellHeader ~= nil then
+				return spellLevel, knownSpellIndex, spellResRef, spellHeader
+			end
+		end
+		return nil
+	end
+end
+EEex_Sprite_Private_GetValidKnownSpellsItr = EEex_Sprite_Private_GetValidKnownSpellsIterator
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader>
+function EEex_Sprite_GetValidKnownMageSpellsIterator(sprite, minLevel, maxLevel)
+	return EEex_Sprite_Private_GetValidKnownSpellsItr(sprite:getKnownMageSpellsIterator(minLevel, maxLevel))
+end
+EEex_Sprite_GetValidKnownMageSpellsItr = EEex_Sprite_GetValidKnownMageSpellsIterator
+CGameSprite.getValidKnownMageSpellsIterator = EEex_Sprite_GetValidKnownMageSpellsItr
+CGameSprite.getValidKnownMageSpellsItr = EEex_Sprite_GetValidKnownMageSpellsItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader>
+function EEex_Sprite_GetValidKnownPriestSpellsIterator(sprite, minLevel, maxLevel)
+	return EEex_Sprite_Private_GetValidKnownSpellsItr(sprite:getKnownPriestSpellsIterator(minLevel, maxLevel))
+end
+EEex_Sprite_GetValidKnownPriestSpellsItr = EEex_Sprite_GetValidKnownPriestSpellsIterator
+CGameSprite.getValidKnownPriestSpellsIterator = EEex_Sprite_GetValidKnownPriestSpellsItr
+CGameSprite.getValidKnownPriestSpellsItr = EEex_Sprite_GetValidKnownPriestSpellsItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader>
+function EEex_Sprite_GetValidKnownInnateSpellsIterator(sprite)
+	return EEex_Sprite_Private_GetValidKnownSpellsItr(sprite:getKnownInnateSpellsIterator())
+end
+EEex_Sprite_GetValidKnownInnateSpellsItr = EEex_Sprite_GetValidKnownInnateSpellsIterator
+CGameSprite.getValidKnownInnateSpellsIterator = EEex_Sprite_GetValidKnownInnateSpellsItr
+CGameSprite.getValidKnownInnateSpellsItr = EEex_Sprite_GetValidKnownInnateSpellsItr
+
+-- validSpellsIterator is expected to return <string spellResRef, Spell_Header_st spellHeader>
+-- Iterator returns <string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_GetSpellsWithAbilityIterator(sprite, validSpellsIterator)
+	return function()
+		for spellResRef, spellHeader in validSpellsIterator do
+			local spellAbility = spellHeader:getAbilityForLevel(sprite:getCasterLevelForSpell(spellResRef, true))
+			if spellAbility ~= nil then
+				return spellResRef, spellHeader, spellAbility
+			end
+		end
+	end
+end
+EEex_Sprite_GetSpellsWithAbilityItr = EEex_Sprite_GetSpellsWithAbilityIterator
+CGameSprite.getSpellsWithAbilityIterator = EEex_Sprite_GetSpellsWithAbilityItr
+CGameSprite.getSpellsWithAbilityItr = EEex_Sprite_GetSpellsWithAbilityItr
+
+-- spellResRefIterator is expected to return <string spellResRef>
+-- Iterator returns <string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_GetValidSpellsWithAbilityIterator(sprite, spellResRefIterator)
+	return sprite:getSpellsWithAbilityIterator(EEex_Resource_GetValidSpellsIterator(spellResRefIterator))
+end
+EEex_Sprite_GetValidSpellsWithAbilityItr = EEex_Sprite_GetValidSpellsWithAbilityIterator
+CGameSprite.getValidSpellsWithAbilityIterator = EEex_Sprite_GetValidSpellsWithAbilityItr
+CGameSprite.getValidSpellsWithAbilityItr = EEex_Sprite_GetValidSpellsWithAbilityItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_Private_GetValidKnownSpellsWithAbilityIterator(sprite, validKnownSpellsIterator)
+	return function()
+		for spellLevel, knownSpellIndex, spellResRef, spellHeader in validKnownSpellsIterator do
+			local spellAbility = spellHeader:getAbilityForLevel(sprite:getCasterLevelForSpell(spellResRef, true))
+			if spellAbility ~= nil then
+				return spellLevel, knownSpellIndex, spellResRef, spellHeader, spellAbility
+			end
+		end
+	end
+end
+EEex_Sprite_Private_GetValidKnownSpellsWithAbilityItr = EEex_Sprite_Private_GetValidKnownSpellsWithAbilityIterator
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_GetKnownMageSpellsWithAbilityIterator(sprite, minLevel, maxLevel)
+	return EEex_Sprite_Private_GetValidKnownSpellsWithAbilityItr(sprite, sprite:getValidKnownMageSpellsIterator(minLevel, maxLevel))
+end
+EEex_Sprite_GetKnownMageSpellsWithAbilityItr = EEex_Sprite_GetKnownMageSpellsWithAbilityIterator
+CGameSprite.getKnownMageSpellsWithAbilityIterator = EEex_Sprite_GetKnownMageSpellsWithAbilityItr
+CGameSprite.getKnownMageSpellsWithAbilityItr = EEex_Sprite_GetKnownMageSpellsWithAbilityItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_GetKnownPriestSpellsWithAbilityIterator(sprite, minLevel, maxLevel)
+	return EEex_Sprite_Private_GetValidKnownSpellsWithAbilityItr(sprite, sprite:getValidKnownPriestSpellsIterator(minLevel, maxLevel))
+end
+EEex_Sprite_GetKnownPriestSpellsWithAbilityItr = EEex_Sprite_GetKnownPriestSpellsWithAbilityIterator
+CGameSprite.getKnownPriestSpellsWithAbilityIterator = EEex_Sprite_GetKnownPriestSpellsWithAbilityItr
+CGameSprite.getKnownPriestSpellsWithAbilityItr = EEex_Sprite_GetKnownPriestSpellsWithAbilityItr
+
+-- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef, Spell_Header_st spellHeader, Spell_ability_st spellAbility>
+function EEex_Sprite_GetKnownInnateSpellsWithAbilityIterator(sprite)
+	return EEex_Sprite_Private_GetValidKnownSpellsWithAbilityItr(sprite, sprite:getValidKnownInnateSpellsIterator())
+end
+EEex_Sprite_GetKnownInnateSpellsWithAbilityItr = EEex_Sprite_GetKnownInnateSpellsWithAbilityIterator
+CGameSprite.getKnownInnateSpellsWithAbilityIterator = EEex_Sprite_GetKnownInnateSpellsWithAbilityItr
+CGameSprite.getKnownInnateSpellsWithAbilityItr = EEex_Sprite_GetKnownInnateSpellsWithAbilityItr
+
+-- Iterator returns <CButtonData>
+function EEex_Sprite_GetSpellButtonDataIteratorFrom2DA(sprite, resref)
+
+	local array = EEex_Resource_Load2DA(resref)
+	EEex_SetUDGCFunc(array, EEex_Resource_Free2DA)
+
+	local _, sizeY = array:getDimensions()
+	local y = -1
+
+	return EEex_Utility_ApplyItr(
+		function()
+			while true do
+				::continue::
+				y = y + 1
+				if y >= sizeY then return nil end
+				local spellResRef = array:getAtPoint(0, y)
+				local spellHeader = EEex_Resource_Demand(spellResRef, "SPL")
+				if spellHeader == nil then goto continue end
+				local spellAbility = spellHeader:getAbilityForLevel(sprite:getCasterLevelForSpell(spellResRef, true))
+				if spellAbility == nil then goto continue end
+				local castType = tonumber(array:getAtPoint(1, y)) or 3
+				return spellResRef, spellHeader, spellAbility, castType
+			end
+		end,
+		function(spellResRef, spellHeader, spellAbility, castType)
+			local buttonData = EEex_Actionbar_GetSpellButtonData(spellResRef, spellHeader, spellAbility)
+			buttonData.m_abilityId.m_itemType = castType
+			return buttonData
+		end
+	)
+end
+EEex_Sprite_GetSpellButtonDataItrFrom2DA = EEex_Sprite_GetSpellButtonDataIteratorFrom2DA
+CGameSprite.getSpellButtonDataIteratorFrom2DA = EEex_Sprite_GetSpellButtonDataItrFrom2DA
+CGameSprite.getSpellButtonDataItrFrom2DA = EEex_Sprite_GetSpellButtonDataItrFrom2DA
+
+-------------------------
+-- Sprite Manipulation --
+-------------------------
+
+-- buttonDataIterator is expected to return <CButtonData>
+function EEex_Sprite_OpenOp214Interface(sourceSprite, buttonDataIterator)
+
+	local sprite = EEex_Sprite_GetSelected()
+	if not sprite or not EEex_UDEqual(sprite, sourceSprite) then
+		return
+	end
+
+	local spellList = EEex_NewUD("CGameButtonList")
+	spellList:Construct(10) -- CTypedPtrList<CPtrList,CButtonData*>
+
+	for buttonData in buttonDataIterator do
+		spellList:AddTail(buttonData)
+	end
+
+	local internalButtonList = sprite.m_interalButtonList -- Typo in engine
+	if internalButtonList ~= nil then
+		internalButtonList:virtual_Destruct(true)
+	end
+
+	sprite.m_interalButtonList = spellList
+	EEex_Actionbar_SetState(111)
+end
+CGameSprite.openOp214Interface = EEex_Sprite_OpenOp214Interface
+
 ------------------------------
 -- / End Instance Functions --
 ------------------------------
@@ -1038,4 +1268,41 @@ function EEex_Sprite_Hook_OnSetCurrAction(sprite)
 	local spriteAux = EEex_GetUDAux(sprite)
 	spriteAux["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 0
 	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
+end
+
+--------------------------------------------------------------------------------------------
+-- Allow ITM header flag BIT18 to ignore weapon styles (as if the item were in SLOT_FIST) --
+--------------------------------------------------------------------------------------------
+
+function EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item, damR, damL, thacR, thacL, ACB, ACM, speed, crit)
+
+	local ignore = EEex_IsBitSet(item.pRes.pHeader.itemFlags, 18)
+
+	if ignore then
+
+		-- Uncomment these lines to use the 2DA's default value
+		--local weaponStyleBonuses = EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_ruleTables.m_tWeaponStyleBonus
+		--local default = tonumber(weaponStyleBonuses.m_default.m_pchData:get(), 10) or 0
+
+		local default = 0
+
+		local writeDefault = function(ptr)
+			if ptr ~= 0x0 then
+				EEex_Write32(ptr, default)
+			end
+		end
+
+		writeDefault(damR)
+		writeDefault(damL)
+		writeDefault(thacR)
+		writeDefault(thacL)
+		writeDefault(ACB)
+		writeDefault(ACM)
+		writeDefault(speed)
+		writeDefault(crit)
+
+		return true
+	end
+
+	return false
 end
