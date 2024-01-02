@@ -64,36 +64,50 @@
 	+--------------------------------------------------------------------------------+
 	--]]
 
-	EEex_HookBeforeRestore(EEex_Label("Hook-CGameEffectSecondaryCastList::ApplyEffect()"), 0, 5, 5, EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(64)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp214ApplyEffect", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-			},
-			["returnType"] = EEex_LuaCallReturnType.Boolean,
-		}),
-		{[[
-			jmp no_error
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectSecondaryCastList::ApplyEffect()"), 0, 5, 5, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(64)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_OnOp214ApplyEffect", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Boolean,
+			}),
+			{[[
+				jmp no_error
 
-			call_error:
-			mov rax, 1
+				call_error:
+				mov rax, 1
 
-			no_error:
-			test rax, rax
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-			jz return
-			mov eax, 1
-			ret
-		]]},
-	}))
+				no_error:
+				test rax, rax
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				jz return
+
+				mov eax, 1
+				#MANUAL_HOOK_EXIT(1)
+				ret
+			]]},
+		})
+	)
+	-- Manually define the ignored registers for the unusual `ret` above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectSecondaryCastList::ApplyEffect()"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
+	})
 
 	------------------------------------------------------------
 	-- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
@@ -185,26 +199,32 @@
 	-----------------------------------------------------------------------
 
 	-- Store op280 param1 and special as stats
-	EEex_HookBeforeRestore(EEex_Label("Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction"), 0, 9, 9, EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(64)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp280ApplyEffect", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-			},
-		}),
-		{[[
-			call_error:
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction"), 0, 9, 9, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(64)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_OnOp280ApplyEffect", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+			}),
+			{[[
+				call_error:
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
 
 	-- Override wild surge number if op280 param1 is non-zero
 	EEex_HookBeforeRestore(EEex_Label("Hook-CGameSprite::WildSpell()-OverrideSurgeNumber"), 0, 9, 9, EEex_FlattenTable({
@@ -284,12 +304,19 @@
 	]]})
 
 	-- Suppress random visual effect if op280 special is non-zero
-	EEex_HookJumpOnFail(EEex_Label("Hook-CGameSprite::WildSpell()-SuppressVisualEffectJmp"), 0, {[[
-		mov rcx, r14
-		call ]], checkSuppressVisual, [[ #ENDL
-		test rax, rax
-		jnz #L(jmp_success)
-	]]})
+	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-SuppressVisualEffectJmp"), 0, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			mov rcx, r14
+			call ]], checkSuppressVisual, [[ #ENDL
+			test rax, rax
+			jnz #L(jmp_success)
+		]]}
+	)
 
 	-- Suppress adding SPFLESHS CVisualEffect object to the area if op280 special is non-zero
 	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CVisualEffect::Load()-SPFLESHS"), {[[
@@ -416,37 +443,52 @@
 	-- Allow saving throw BIT23 to bypass opcode #101 --
 	----------------------------------------------------
 
-	EEex_HookBeforeRestore(EEex_Label("Hook-CImmunitiesEffect::OnList()-Entry"), 0, 5, 5, EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(56)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameEffect" end,
-			},
-			["returnType"] = EEex_LuaCallReturnType.Boolean,
-		}),
-		{[[
-			jmp no_error
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CImmunitiesEffect::OnList()-Entry"), 0, 5, 5, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(56)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameEffect" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Boolean,
+			}),
+			{[[
+				jmp no_error
 
-			call_error:
-			xor rax, rax
+				call_error:
+				xor rax, rax
 
-			no_error:
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
+				no_error:
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
 
-			test rax, rax
-			jz no_bypass
-			xor rax, rax
-			ret
-			no_bypass:
-		]]},
-	}))
+				test rax, rax
+				jz no_bypass
+
+				xor rax, rax
+				#MANUAL_HOOK_EXIT(1)
+				ret
+
+				no_bypass:
+			]]},
+		})
+	)
+	-- Manually define the ignored registers for the unusual `ret` above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CImmunitiesEffect::OnList()-Entry"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
+	})
 
 	-----------------------------------
 	--          New Opcodes          --

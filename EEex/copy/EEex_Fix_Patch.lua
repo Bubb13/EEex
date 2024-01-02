@@ -160,7 +160,7 @@
 	-- Opcode #182 should consider -1 (instead of 0) the fail return value from CGameSprite::FindItemPersonal() --
 	--------------------------------------------------------------------------------------------------------------
 
-	EEex_HookJump(EEex_Label("Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-CheckRetVal"), 0, {[[
+	EEex_HookBeforeConditionalJump(EEex_Label("Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-CheckRetVal"), 0, {[[
 		cmp ax, -1
 	]]})
 

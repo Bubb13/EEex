@@ -1814,7 +1814,7 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 	return assemblyStr, advanceCount
 end
 
-function EEex_PreprocessAssembly(assemblyT)
+function EEex_PreprocessAssembly(assemblyT, state)
 
 	local builtStr = {}
 	local insertI = 1
@@ -1854,25 +1854,30 @@ function EEex_PreprocessAssembly(assemblyT)
 		(#MANUAL_HOOK_EXIT(\d+)[15])[14]
 	--]]
 
-	local shadowSpaceStack = {}
-	local shadowSpaceStackTop = 0
-	local alignModStack = {}
-	local alignModStackTop = 0
-	local hintAccumulator = 0
+	if not state then
+		state = {
+			["shadowSpaceStack"] = {},
+			["shadowSpaceStackTop"] = 0,
+			["alignModStack"] = {},
+			["alignModStackTop"] = 0,
+			["hintAccumulator"] = 0,
+			["debug"] = false,
+		}
+	end
 
-	toReturn = EEex_ReplaceRegex(toReturn, "(?:#STACK_MOD\\s*\\((-{0,1}\\d+)\\))|(#MAKE_SHADOW_SPACE(?:\\s*\\((\\d+)\\)){0,1})|(#DESTROY_SHADOW_SPACE(?:(?!\\(.*?\\))|(?:\\((KEEP_ENTRY)\\))))|(#ALIGN_END)|(#ALIGN(?:\\s*\\((\\d+)\\)){0,1})|(#SHADOW_SPACE_BOTTOM\\s*\\((-{0,1}.+?)\\))|(#LAST_FRAME_TOP\\s*\\((-{0,1}.+?)\\))|(#RESUME_SHADOW_ENTRY)|(#MANUAL_HOOK_EXIT\\s*\\((\\d+)\\))", function(pos, endPos, str, groups)
+	toReturn = EEex_ReplaceRegex(toReturn, "(?:#STACK_MOD\\s*\\((-{0,1}\\d+)\\))|(#MAKE_SHADOW_SPACE(?:\\s*\\((\\d+)\\)){0,1})|(#DESTROY_SHADOW_SPACE(?:(?!\\(.*?\\))|(?:\\((KEEP_ENTRY)\\))))|(#ALIGN_END)|(#ALIGN(?:\\s*\\((\\d+)\\)){0,1})|(#SHADOW_SPACE_BOTTOM\\s*\\((-{0,1}.+?)\\))|(#LAST_FRAME_TOP\\s*\\((-{0,1}.+?)\\))|(#RESUME_SHADOW_ENTRY)|(#MANUAL_HOOK_EXIT\\s*\\((\\d+)\\))|(#DEBUG_ON)|(#DEBUG_OFF)", function(pos, endPos, str, groups)
 		if groups[1] then
 			--print("#STACK_MOD("..tonumber(groups[1])..")")
-			hintAccumulator = hintAccumulator + tonumber(groups[1])
+			state.hintAccumulator = state.hintAccumulator + tonumber(groups[1])
 		elseif groups[2] then
 			--print("#MAKE_SHADOW_SPACE")
 			local neededShadow = 32 + (groups[3] and tonumber(groups[3]) or 0)
-			if shadowSpaceStackTop > 0 and shadowSpaceStack[shadowSpaceStackTop].top == hintAccumulator then
-				local shadowEntry = shadowSpaceStack[shadowSpaceStackTop]
+			if state.shadowSpaceStackTop > 0 and state.shadowSpaceStack[state.shadowSpaceStackTop].top == state.hintAccumulator then
+				local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
 				if shadowEntry.sizeNoRounding < neededShadow then
 					print(debug.traceback("[!] #MAKE_SHADOW_SPACE redefined where original failed to provide enough space! Correct this by expanding "..(shadowEntry.sizeNoRounding - 32).." to "..(neededShadow - 32).."; continuing with suboptimal configuration."))
 					local sizeDiff = EEex_RoundUp(neededShadow, 16) - shadowEntry.size
-					hintAccumulator = hintAccumulator + sizeDiff
+					state.hintAccumulator = state.hintAccumulator + sizeDiff
 					shadowEntry.top = shadowEntry.top + sizeDiff
 					shadowEntry.size = shadowEntry.size + sizeDiff
 					shadowEntry.active = true
@@ -1881,11 +1886,19 @@ function EEex_PreprocessAssembly(assemblyT)
 					return string.format("sub rsp, %d #ENDL", sizeDiff)
 				end
 			else
-				local neededStack = EEex_DistanceToMultiple(hintAccumulator + neededShadow, 16) + neededShadow
-				hintAccumulator = hintAccumulator + neededStack
-				shadowSpaceStackTop = shadowSpaceStackTop + 1
-				shadowSpaceStack[shadowSpaceStackTop] = {
-					["top"] = hintAccumulator,
+				local neededStack = EEex_DistanceToMultiple(state.hintAccumulator + neededShadow, 16) + neededShadow
+
+				if state.debug then
+					print(string.format(
+						"[?] #MAKE_SHADOW_SPACE() with hintAccumulator = %d, need %d bytes for shadow space, allocating %d to maintain alignment",
+						state.hintAccumulator, neededShadow, neededStack
+					))
+				end
+
+				state.hintAccumulator = state.hintAccumulator + neededStack
+				state.shadowSpaceStackTop = state.shadowSpaceStackTop + 1
+				state.shadowSpaceStack[state.shadowSpaceStackTop] = {
+					["top"] = state.hintAccumulator,
 					["size"] = neededStack,
 					["sizeNoRounding"] = neededShadow,
 					["active"] = true,
@@ -1894,22 +1907,22 @@ function EEex_PreprocessAssembly(assemblyT)
 			end
 		elseif groups[4] then
 			--print("#DESTROY_SHADOW_SPACE")
-			local shadowEntry = shadowSpaceStack[shadowSpaceStackTop]
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
 			if not groups[5] then
-				shadowSpaceStackTop = shadowSpaceStackTop - 1
+				state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1
 			else
 				shadowEntry.active = false -- KEEP_ENTRY
 			end
-			hintAccumulator = hintAccumulator - shadowEntry.size
+			state.hintAccumulator = state.hintAccumulator - shadowEntry.size
 			-- LEA maintains flags (as opposed to SUB), which allows us to test a register
 			-- and restore it before calling #DESTROY_SHADOW_SPACE and still use the result
 			-- for a branch.
 			return string.format("lea rsp, qword ptr ss:[rsp+%d]", shadowEntry.size)
 		elseif groups[6] then
 			--print("#ALIGN_END")
-			local alignEntry = alignModStack[alignModStackTop]
-			if alignEntry.madeShadow then shadowSpaceStackTop = shadowSpaceStackTop - 1 end
-			alignModStackTop = alignModStackTop - 1
+			local alignEntry = state.alignModStack[state.alignModStackTop]
+			if alignEntry.madeShadow then state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1 end
+			state.alignModStackTop = state.alignModStackTop - 1
 			if alignEntry.popAmount > 0 then
 				return string.format("add rsp, %d #ENDL", tonumber(alignEntry.popAmount))
 			end
@@ -1917,18 +1930,18 @@ function EEex_PreprocessAssembly(assemblyT)
 			local pushedArgBytes = groups[8] and tonumber(groups[8]) or 0
 			--print("#ALIGN("..pushedArgBytes..")")
 			local neededShadow = 0
-			if shadowSpaceStackTop == 0 or shadowSpaceStack[shadowSpaceStackTop].top ~= hintAccumulator then
+			if state.shadowSpaceStackTop == 0 or state.shadowSpaceStack[state.shadowSpaceStackTop].top ~= state.hintAccumulator then
 				neededShadow = 32
-				shadowSpaceStackTop = shadowSpaceStackTop + 1
-				shadowSpaceStack[shadowSpaceStackTop] = {
-					["top"] = hintAccumulator,
+				state.shadowSpaceStackTop = state.shadowSpaceStackTop + 1
+				state.shadowSpaceStack[state.shadowSpaceStackTop] = {
+					["top"] = state.hintAccumulator,
 					["size"] = neededShadow,
 					["sizeNoRounding"] = neededShadow,
 				}
 			end
-			local neededStack = EEex_DistanceToMultiple(hintAccumulator + neededShadow + pushedArgBytes, 16) + neededShadow - pushedArgBytes
-			alignModStackTop = alignModStackTop + 1
-			alignModStack[alignModStackTop] = {
+			local neededStack = EEex_DistanceToMultiple(state.hintAccumulator + neededShadow + pushedArgBytes, 16) + neededShadow - pushedArgBytes
+			state.alignModStackTop = state.alignModStackTop + 1
+			state.alignModStack[state.alignModStackTop] = {
 				["popAmount"] = neededStack + pushedArgBytes,
 				["madeShadow"] = neededShadow > 0,
 			}
@@ -1942,7 +1955,7 @@ function EEex_PreprocessAssembly(assemblyT)
 				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
 				or 0
 			if adjust >= 0 then EEex_Error("#SHADOW_SPACE_BOTTOM must have a negative offset") end
-			return tostring(shadowSpaceStack[shadowSpaceStackTop].sizeNoRounding + adjust)
+			return tostring(state.shadowSpaceStack[state.shadowSpaceStackTop].sizeNoRounding + adjust)
 		elseif groups[11] then
 			--print("#LAST_FRAME_TOP")
 			local adjustStr = groups[12]
@@ -1950,25 +1963,31 @@ function EEex_PreprocessAssembly(assemblyT)
 				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
 				or 0
 			if adjust < 0 then EEex_Error("#LAST_FRAME_TOP must have a positive offset") end
-			return tostring(shadowSpaceStack[shadowSpaceStackTop].size + adjust)
+			return tostring(state.shadowSpaceStack[state.shadowSpaceStackTop].size + adjust)
 		elseif groups[13] then
 			--print("#RESUME_SHADOW_ENTRY")
-			local shadowEntry = shadowSpaceStack[shadowSpaceStackTop]
-			hintAccumulator = hintAccumulator + shadowEntry.size
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			state.hintAccumulator = state.hintAccumulator + shadowEntry.size
 			shadowEntry.active = true
 		elseif groups[14] then
 			--print("#MANUAL_HOOK_EXIT")
 			local hadActiveShadowSpace = false
-			for i = shadowSpaceStackTop, 1, -1 do
-				if shadowSpaceStack[shadowSpaceStackTop].active then
+			for i = state.shadowSpaceStackTop, 1, -1 do
+				if state.shadowSpaceStack[state.shadowSpaceStackTop].active then
 					hadActiveShadowSpace = true
 					break
 				end
 			end
-			if hadActiveShadowSpace or alignModStackTop ~= 0 then EEex_Error("#MANUAL_HOOK_EXIT cannot exit inside a stack frame") end
+			if hadActiveShadowSpace or state.alignModStackTop ~= 0 then EEex_Error("#MANUAL_HOOK_EXIT cannot exit inside a stack frame") end
 			local instance = tonumber(groups[15])
 			if instance == nil or instance < 0 then EEex_Error("#MANUAL_HOOK_EXIT has invalid instance") end
-			return EEex_PreprocessAssembly(EEex_HookIntegrityWatchdog_HookExit(instance))
+			return EEex_PreprocessAssembly(EEex_HookIntegrityWatchdog_HookExit(instance), state)
+		elseif groups[16] then
+			--print("#DEBUG_ON")
+			state.debug = true
+		elseif groups[17] then
+			--print("#DEBUG_OFF")
+			state.debug = false
 		end
 		return ""
 	end)
