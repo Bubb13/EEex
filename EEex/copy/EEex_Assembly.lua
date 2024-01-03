@@ -1883,7 +1883,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 					shadowEntry.active = true
 					-- Ideally this would be merged with the previous shadow space instruction, but abusing
 					-- regex like this doesn't help make that happen, (would require an additional pass)
-					return string.format("sub rsp, %d #ENDL", sizeDiff)
+					return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", sizeDiff)
 				end
 			else
 				local neededStack = EEex_DistanceToMultiple(state.hintAccumulator + neededShadow, 16) + neededShadow
@@ -1903,7 +1903,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 					["sizeNoRounding"] = neededShadow,
 					["active"] = true,
 				}
-				return string.format("sub rsp, %d #ENDL", neededStack)
+				return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", neededStack)
 			end
 		elseif groups[4] then
 			--print("#DESTROY_SHADOW_SPACE")
@@ -1914,7 +1914,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 				shadowEntry.active = false -- KEEP_ENTRY
 			end
 			state.hintAccumulator = state.hintAccumulator - shadowEntry.size
-			-- LEA maintains flags (as opposed to SUB), which allows us to test a register
+			-- LEA maintains flags (as opposed to ADD), which allows us to test a register
 			-- and restore it before calling #DESTROY_SHADOW_SPACE and still use the result
 			-- for a branch.
 			return string.format("lea rsp, qword ptr ss:[rsp+%d]", shadowEntry.size)
@@ -1924,7 +1924,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 			if alignEntry.madeShadow then state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1 end
 			state.alignModStackTop = state.alignModStackTop - 1
 			if alignEntry.popAmount > 0 then
-				return string.format("add rsp, %d #ENDL", tonumber(alignEntry.popAmount))
+				return string.format("lea rsp, qword ptr ss:[rsp+%d] #ENDL", tonumber(alignEntry.popAmount))
 			end
 		elseif groups[7] then
 			local pushedArgBytes = groups[8] and tonumber(groups[8]) or 0
@@ -1946,7 +1946,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 				["madeShadow"] = neededShadow > 0,
 			}
 			if neededStack > 0 then
-				return string.format("sub rsp, %d #ENDL", neededStack)
+				return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", neededStack)
 			end
 		elseif groups[9] then
 			--print("#SHADOW_SPACE_BOTTOM")

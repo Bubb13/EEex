@@ -100,17 +100,23 @@ EEex_HookIntegrityWatchdog_Load = true
 
 	EEex_HookIntegrityWatchdog_HookEnter = {[[
 
-		#MAKE_SHADOW_SPACE(24)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+		#MAKE_SHADOW_SPACE(32)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax  ; Save RAX
+		lahf                                                  ; Save status flags
+		mov byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], ah
 
-		lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
-
-		mov rax, #L(hook_address)
+		lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]        ; Save previous frame's rsp as second stack arg
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rax
 
-		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		mov rax, #L(hook_address)                             ; Save hook address as first stack arg
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], rax
+
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]  ; Restore RAX
 		call ]], hookIntegrityWatchdogEnter, [[ #ENDL
+
+		mov ah, byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]   ; Restore status flags
+		sahf
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]  ; Restore RAX (again)
 		#DESTROY_SHADOW_SPACE
 	]]}
 
@@ -120,19 +126,25 @@ EEex_HookIntegrityWatchdog_Load = true
 		if cached then return cached end
 		local t = {[[
 
-			#MAKE_SHADOW_SPACE(32)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+			#MAKE_SHADOW_SPACE(40)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax               ; Save RAX
+			lahf                                                               ; Save status flags
+			mov byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], ah
 
-			lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
+			lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]                     ; Save previous frame's rsp as third stack arg
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rax
 
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], ]], instance, [[ #ENDL
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], ]], instance, [[ ; Save instance as second stack arg
 
-			mov rax, #L(hook_address)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], rax
+			mov rax, #L(hook_address)                                          ; Save hook address as first stack arg
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], rax
 
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]               ; Restore RAX
 			call ]], hookIntegrityWatchdogExit, [[ #ENDL
+
+			mov ah, byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]                ; Restore status flags
+			sahf
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]               ; Restore RAX (again)
 			#DESTROY_SHADOW_SPACE
 		]]}
 		cachedHookExit[instance] = t
