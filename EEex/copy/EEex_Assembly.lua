@@ -1908,6 +1908,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 		elseif groups[4] then
 			--print("#DESTROY_SHADOW_SPACE")
 			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			if state.hintAccumulator ~= shadowEntry.top then EEex_Error("#DESTROY_SHADOW_SPACE() failed - stack top not where it should be") end
 			if not groups[5] then
 				state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1
 			else
@@ -1955,7 +1956,9 @@ function EEex_PreprocessAssembly(assemblyT, state)
 				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
 				or 0
 			if adjust >= 0 then EEex_Error("#SHADOW_SPACE_BOTTOM must have a negative offset") end
-			return tostring(state.shadowSpaceStack[state.shadowSpaceStackTop].sizeNoRounding + adjust)
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			local stackModAdj = state.hintAccumulator - shadowEntry.top -- For when #STACK_MOD() adjusts the stack after #MAKE_SHADOW_SPACE()
+			return tostring(shadowEntry.sizeNoRounding + stackModAdj + adjust)
 		elseif groups[11] then
 			--print("#LAST_FRAME_TOP")
 			local adjustStr = groups[12]
@@ -1963,7 +1966,9 @@ function EEex_PreprocessAssembly(assemblyT, state)
 				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
 				or 0
 			if adjust < 0 then EEex_Error("#LAST_FRAME_TOP must have a positive offset") end
-			return tostring(state.shadowSpaceStack[state.shadowSpaceStackTop].size + adjust)
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			local stackModAdj = state.hintAccumulator - shadowEntry.top -- For when #STACK_MOD() adjusts the stack after #MAKE_SHADOW_SPACE()
+			return tostring(shadowEntry.size + stackModAdj + adjust)
 		elseif groups[13] then
 			--print("#RESUME_SHADOW_ENTRY")
 			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]

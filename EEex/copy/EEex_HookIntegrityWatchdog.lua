@@ -102,8 +102,10 @@ EEex_HookIntegrityWatchdog_Load = true
 
 		#MAKE_SHADOW_SPACE(32)
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax  ; Save RAX
-		lahf                                                  ; Save status flags
-		mov byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], ah
+		pushfq #STACK_MOD(8)                                  ; Save status flags
+		pop rax #STACK_MOD(-8)
+		and rax, 0x8D5
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
 
 		lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]        ; Save previous frame's rsp as second stack arg
 		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rax
@@ -114,8 +116,11 @@ EEex_HookIntegrityWatchdog_Load = true
 		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]  ; Restore RAX
 		call ]], hookIntegrityWatchdogEnter, [[ #ENDL
 
-		mov ah, byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]   ; Restore status flags
-		sahf
+		pushfq #STACK_MOD(8)                                  ; Restore status flags
+		and qword ptr ss:[rsp], 0xFFFFFFFFFFFFF72A
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		or qword ptr ss:[rsp], rax
+		popfq #STACK_MOD(-8)
 		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]  ; Restore RAX (again)
 		#DESTROY_SHADOW_SPACE
 	]]}
@@ -128,8 +133,10 @@ EEex_HookIntegrityWatchdog_Load = true
 
 			#MAKE_SHADOW_SPACE(40)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax               ; Save RAX
-			lahf                                                               ; Save status flags
-			mov byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], ah
+			pushfq #STACK_MOD(8)                                               ; Save status flags
+			pop rax #STACK_MOD(-8)
+			and rax, 0x8D5
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rax
 
 			lea rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(0)]                     ; Save previous frame's rsp as third stack arg
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rax
@@ -142,8 +149,11 @@ EEex_HookIntegrityWatchdog_Load = true
 			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]               ; Restore RAX
 			call ]], hookIntegrityWatchdogExit, [[ #ENDL
 
-			mov ah, byte ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]                ; Restore status flags
-			sahf
+			pushfq #STACK_MOD(8)                                               ; Restore status flags
+			and qword ptr ss:[rsp], 0xFFFFFFFFFFFFF72A
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			or qword ptr ss:[rsp], rax
+			popfq #STACK_MOD(-8)
 			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]               ; Restore RAX (again)
 			#DESTROY_SHADOW_SPACE
 		]]}
