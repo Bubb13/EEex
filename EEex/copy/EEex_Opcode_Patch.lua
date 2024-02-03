@@ -192,11 +192,18 @@
 		]]},
 	}))
 
-	-----------------------------------------------------------------------
-	-- Opcode #280                                                       --
-	--   param1  != 0 => Force wild surge number                         --
-	--   special != 0 => Suppress wild surge feedback string and visuals --
-	-----------------------------------------------------------------------
+	--[[
+	+---------------------------------------------------------------------+
+	| Opcode #280                                                         |
+	+---------------------------------------------------------------------+
+	| param1  != 0 => Force wild surge number                             |
+	| special != 0 => Suppress wild surge feedback string and visuals     |
+	+---------------------------------------------------------------------+
+	| [EEex.dll] EEex::Opcode_Hook_Op280_BeforeApplyEffect()              |
+	| [EEex.dll] EEex::Opcode_Hook_Op280_GetForcedWildSurgeNumber()       |
+	| [EEex.dll] EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals() |
+	+---------------------------------------------------------------------+
+	--]]
 
 	-- Store op280 param1 and special as stats
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction"), 0, 9, 9, {
@@ -205,25 +212,20 @@
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
 			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
-		EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(64)
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-			]]},
-			EEex_GenLuaCall("EEex_Opcode_Hook_OnOp280ApplyEffect", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-			}),
-			{[[
-				call_error:
-				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-				#DESTROY_SHADOW_SPACE
-			]]},
-		})
+		{[[
+			#MAKE_SHADOW_SPACE(16)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+
+																  ; rdx already pSprite
+																  ; rcx already pEffect
+			call #L(EEex::Opcode_Hook_Op280_BeforeApplyEffect)
+
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
 	)
 
 	-- Override wild surge number if op280 param1 is non-zero
@@ -231,54 +233,16 @@
 		{"hook_integrity_watchdog_ignore_registers", {
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
 			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
-			EEex_HookIntegrityWatchdogRegister.R11
+			EEex_HookIntegrityWatchdogRegister.R11, EEex_HookIntegrityWatchdogRegister.R13
 		}}},
-		EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(40)
-			]]},
-			EEex_GenLuaCall("EEex_Opcode_Hook_OverrideWildSurgeNumber", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-				},
-				["returnType"] = EEex_LuaCallReturnType.Number,
-			}),
-			{[[
-				jmp no_error
+		{[[
+			mov rcx, r14						                      ; pSprite
+			call #L(EEex::Opcode_Hook_Op280_GetForcedWildSurgeNumber)
 
-				call_error:
-				xor rax, rax
-
-				no_error:
-				test rax, rax
-				cmovnz r13d, eax
-				#DESTROY_SHADOW_SPACE
-			]]},
-		})
+			test eax, eax
+			cmovnz r13d, eax
+		]]}
 	)
-
-	local checkSuppressVisual = EEex_JITNear(EEex_FlattenTable({
-		{[[
-			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-			#MAKE_SHADOW_SPACE(40)
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_SuppressWildSurgeVisuals", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-			},
-			["returnType"] = EEex_LuaCallReturnType.Boolean,
-		}),
-		{[[
-			jmp no_error
-
-			call_error:
-			xor rax, rax
-
-			no_error:
-			#DESTROY_SHADOW_SPACE
-			ret
-		]]},
-	}))
 
 	-- Suppress feedback string if op280 special is non-zero
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-CGameSprite::Feedback()"), {
@@ -290,9 +254,9 @@
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-			mov rcx, r14
-			call ]], checkSuppressVisual, [[ #ENDL
-			test rax, rax
+																			; rcx already pSprite
+			call #L(EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals)
+			test al, al
 
 			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
 			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
@@ -311,9 +275,9 @@
 			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
-			mov rcx, r14
-			call ]], checkSuppressVisual, [[ #ENDL
-			test rax, rax
+			mov rcx, r14                                                    ; pSprite
+			call #L(EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals)
+			test al, al
 			jnz #L(jmp_success)
 		]]}
 	)
@@ -328,9 +292,9 @@
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-			mov rcx, r14
-			call ]], checkSuppressVisual, [[ #ENDL
-			test rax, rax
+			mov rcx, r14                                                    ; pSprite
+			call #L(EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals)
+			test al, al
 			jz normal
 
 			; This is normally done by the CVisualEffect::Load() call
@@ -364,13 +328,16 @@
 			#MAKE_SHADOW_SPACE(8)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 
-			mov rcx, r14
-			call ]], checkSuppressVisual, [[ #ENDL
-			test rax, rax
+			mov rcx, r14                                                    ; pSprite
+			call #L(EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals)
+			test al, al
 
 			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE
-			jnz #L(return_skip)
+			jz #L(return)
+
+			xor rax, rax
+			jmp #L(return_skip)
 		]]}
 	)
 
