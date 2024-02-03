@@ -34,6 +34,7 @@
 				xor eax, eax
 
 				no_error:
+				; TODO - Integrity violation
 				mov esi, eax
 				#DESTROY_SHADOW_SPACE
 			]]},

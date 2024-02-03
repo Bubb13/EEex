@@ -94,7 +94,7 @@
 				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
 				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 				#DESTROY_SHADOW_SPACE
-				jz return
+				jz #L(return)
 
 				mov eax, 1
 				#MANUAL_HOOK_EXIT(1)
@@ -227,28 +227,35 @@
 	)
 
 	-- Override wild surge number if op280 param1 is non-zero
-	EEex_HookBeforeRestore(EEex_Label("Hook-CGameSprite::WildSpell()-OverrideSurgeNumber"), 0, 9, 9, EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(40)
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OverrideWildSurgeNumber", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14", {rspOffset}, "#ENDL"}, "CGameSprite" end,
-			},
-			["returnType"] = EEex_LuaCallReturnType.Number,
-		}),
-		{[[
-			jmp no_error
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-OverrideSurgeNumber"), 0, 9, 9, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(40)
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_OverrideWildSurgeNumber", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Number,
+			}),
+			{[[
+				jmp no_error
 
-			call_error:
-			xor rax, rax
+				call_error:
+				xor rax, rax
 
-			no_error:
-			test rax, rax
-			cmovnz r13d, eax
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+				no_error:
+				test rax, rax
+				cmovnz r13d, eax
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
 
 	local checkSuppressVisual = EEex_JITNear(EEex_FlattenTable({
 		{[[
@@ -274,34 +281,27 @@
 	}))
 
 	-- Suppress feedback string if op280 special is non-zero
-	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CGameSprite::Feedback()"), {[[
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-CGameSprite::Feedback()"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11}}},
+		{[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-		#MAKE_SHADOW_SPACE(32)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+			mov rcx, r14
+			call ]], checkSuppressVisual, [[ #ENDL
+			test rax, rax
 
-		mov rcx, r14
-		call ]], checkSuppressVisual, [[ #ENDL
-		test rax, rax
-		jz normal
-
-		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
-		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-		jmp #L(return)
-
-		normal:
-		#RESUME_SHADOW_ENTRY
-		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
-		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE
-	]]})
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			jnz #L(return_skip)
+		]]}
+	)
 
 	-- Suppress random visual effect if op280 special is non-zero
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-SuppressVisualEffectJmp"), 0, {
@@ -319,66 +319,65 @@
 	)
 
 	-- Suppress adding SPFLESHS CVisualEffect object to the area if op280 special is non-zero
-	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CVisualEffect::Load()-SPFLESHS"), {[[
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-CVisualEffect::Load()-SPFLESHS"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11}}},
+		{[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-		#MAKE_SHADOW_SPACE(32)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+			mov rcx, r14
+			call ]], checkSuppressVisual, [[ #ENDL
+			test rax, rax
+			jz normal
 
-		mov rcx, r14
-		call ]], checkSuppressVisual, [[ #ENDL
-		test rax, rax
-		jz normal
+			; This is normally done by the CVisualEffect::Load() call
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			call #L(CString::Destruct)
 
-		; This is normally done by the CVisualEffect::Load() call
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		call #L(CString::Destruct)
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			jmp #L(return_skip)
 
-		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
-		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-		jmp #L(return)
-
-		normal:
-		#RESUME_SHADOW_ENTRY
-		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
-		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE
-	]]})
+			normal:
+			#RESUME_SHADOW_ENTRY
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
 
 	-- Make SPFLESHS message nullptr if op280 special is non-zero
-	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-operator_new()-SPFLESHS"), {[[
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-operator_new()-SPFLESHS"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 
-		#MAKE_SHADOW_SPACE(8)
-		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov rcx, r14
+			call ]], checkSuppressVisual, [[ #ENDL
+			test rax, rax
 
-		mov rcx, r14
-		call ]], checkSuppressVisual, [[ #ENDL
-		test rax, rax
-		jz normal
-
-		xor rax, rax
-
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
-		jmp #L(return)
-
-		normal:
-		#RESUME_SHADOW_ENTRY
-		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-		#DESTROY_SHADOW_SPACE
-	]]})
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			jnz #L(return_skip)
+		]]}
+	)
 
 	-- Only send SPFLESHS message if it is non-nullptr
 	EEex_HookBeforeCall(EEex_Label("Hook-CGameSprite::WildSpell()-CMessageHandler::AddMessage()-SPFLESHS"), {[[
 		test rdx, rdx
-		jz #L(return)
+		jz #L(return_skip)
 	]]})
 
 	---------------------------------------------------------------------------------
@@ -410,6 +409,7 @@
 				jz #L(return)
 
 				mov rax, r8
+				; TODO - Integrity violated
 				mov r8, r9
 				mov r9, rax
 			]]},
@@ -420,24 +420,30 @@
 	-- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
 	-------------------------------------------------------------------------------------------------
 
-	EEex_HookAfterRestore(EEex_Label("Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call"), 0, 9, 9, EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(56)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnOp333CopiedSelf", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax #ENDL", {rspOffset}}, "CGameEffect" end,
-			},
-		}),
-		{[[
-			call_error:
-			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call"), 0, 9, 9, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(56)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_OnOp333CopiedSelf", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax #ENDL", {rspOffset}}, "CGameEffect" end,
+				},
+			}),
+			{[[
+				call_error:
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
 
 	----------------------------------------------------
 	-- Allow saving throw BIT23 to bypass opcode #101 --
@@ -473,13 +479,11 @@
 				#DESTROY_SHADOW_SPACE
 
 				test rax, rax
-				jz no_bypass
+				jz #L(return)
 
 				xor rax, rax
 				#MANUAL_HOOK_EXIT(1)
 				ret
-
-				no_bypass:
 			]]},
 		})
 	)

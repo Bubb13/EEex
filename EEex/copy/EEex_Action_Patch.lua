@@ -15,7 +15,7 @@
 		}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(48)
+				#MAKE_SHADOW_SPACE(40)
 			]]},
 			EEex_GenLuaCall("EEex_Action_Hook_OnEvaluatingUnknown", {
 				["args"] = {

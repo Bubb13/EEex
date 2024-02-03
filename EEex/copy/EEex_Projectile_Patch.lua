@@ -27,6 +27,7 @@
 			je no_override
 
 			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			; TODO - Integrity violated
 			mov cx, ax
 			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
 			jmp #L(return)
@@ -189,6 +190,9 @@
 			call #$(1) ]], {getAddEffectAIBase}, [[ #ENDL
 			mov rdx, rax                                         ; pDecoder
 
+																 ; r9 already pRetPtr
+																 ; r8 already pEffect
+																 ; rdx already pDecoder
 			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)] ; pProjectile
 			call #L(EEex::Projectile_Hook_OnBeforeAddEffect)
 

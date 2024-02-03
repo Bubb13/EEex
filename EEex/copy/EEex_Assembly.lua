@@ -561,7 +561,7 @@ function EEex_HookCallInternal(address, labelPairs, assemblyT, after)
 
 		return EEex_RunWithAssemblyLabels({
 			{"hook_address", address},
-			{"return_skip", not EEex_HookIntegrityWatchdog_Load and afterCall or nil}},
+			{"return_skip", (not EEex_HookIntegrityWatchdog_Load and not after) and afterCall or nil}},
 			function()
 				return EEex_JITNear(EEex_FlattenTable(
 					not after

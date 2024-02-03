@@ -75,12 +75,15 @@ EEex_Debug_LogActions = false
 					call_error:
 					mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 					#DESTROY_SHADOW_SPACE
+					cmp r8d, 0x1D5
 				]]},
 			})
 		)
 
 		EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::ExecuteAction()-DefaultJmp"), 0, {
-			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R11}}},
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R11
+			}}},
 			EEex_FlattenTable({
 				{[[
 					#MAKE_SHADOW_SPACE(80)

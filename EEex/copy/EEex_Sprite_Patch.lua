@@ -188,8 +188,12 @@
 		EEex_FlattenTable({
 			{[[
 				cmp qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Marshal_SavedSpritePtrMem}, [[ #ENDL
-				jz #L(return)
+				jnz continue
 
+				test ebx, ebx ; Recalculates flags for the jle instruction being returned to
+				jmp #L(return)
+
+				continue:
 				#MAKE_SHADOW_SPACE(40)
 			]]},
 			EEex_GenLuaCall("EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize", {
