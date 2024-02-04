@@ -424,28 +424,18 @@
 		}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(56)
+				#MAKE_SHADOW_SPACE(16)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-			]]},
-			EEex_GenLuaCall("EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameEffect" end,
-				},
-				["returnType"] = EEex_LuaCallReturnType.Boolean,
-			}),
-			{[[
-				jmp no_error
 
-				call_error:
-				xor rax, rax
+				mov rcx, rdx                                                ; pEffect
+				call #L(EEex::Opcode_Hook_Op101_ShouldEffectBypassImmunity)
 
-				no_error:
 				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
 				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 				#DESTROY_SHADOW_SPACE
 
-				test rax, rax
+				test al, al
 				jz #L(return)
 
 				xor rax, rax

@@ -200,11 +200,3 @@ function EEex_Opcode_Hook_OnOp333CopiedSelf(effect)
 		effect.m_savingThrow = 0
 	end
 end
-
-----------------------------------------------------
--- Allow saving throw BIT23 to bypass opcode #101 --
-----------------------------------------------------
-
-function EEex_Opcode_Hook_CImmunitiesEffect_BypassOp101(effect)
-	return EEex_IsBitSet(effect.m_savingThrow, 23)
-end
