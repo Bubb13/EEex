@@ -1966,6 +1966,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
 				or 0
 			if adjust < 0 then EEex_Error("#LAST_FRAME_TOP must have a positive offset") end
+			if state.shadowSpaceStackTop == 0 then return adjust end
 			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
 			local stackModAdj = state.hintAccumulator - shadowEntry.top -- For when #STACK_MOD() adjusts the stack after #MAKE_SHADOW_SPACE()
 			return tostring(shadowEntry.size + stackModAdj + adjust)

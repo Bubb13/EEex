@@ -3,38 +3,28 @@
 
 	EEex_DisableCodeProtection()
 
+	--[[
+	+-------------------------------------------------------------------------+
+	| BUG: v2.6.6.0 - op206/318/324 incorrectly indexes source object's items |
+	| list if the incoming effect's source spell has a name strref of -1      |
+	| without first checking if the source was a sprite.                      |
+	+-------------------------------------------------------------------------+
+	| [EEex.dll] EEex::Fix_Hook_SpellImmunityShouldSkipItemIndexing()         |
+	+-------------------------------------------------------------------------+
+	--]]
+
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing"), 4, {
 		{"hook_integrity_watchdog_ignore_registers", {
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
 			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
 			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
-		EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(40)
-			]]},
-			EEex_GenLuaCall("EEex_Fix_Hook_SpellImmunityShouldSkipItemIndexing", {
-				["args"] = {
-					function(rspOffset) return {[[
-						mov rax, qword ptr ds:[rsp+#LAST_FRAME_TOP(50h)]
-						mov qword ptr ss:[rsp+#$(1)], rax
-					]], {rspOffset}, "#ENDL"}, "CGameObject" end,
-				},
-				["returnType"] = EEex_LuaCallReturnType.Boolean,
-			}),
-			{[[
-				jmp no_error
-
-				call_error:
-				xor rax, rax
-
-				no_error:
-				test rax, rax
-
-				#DESTROY_SHADOW_SPACE
-				jnz #L(jmp_success)
-			]]},
-		})
+		{[[
+			mov rcx, qword ptr ds:[rsp+#LAST_FRAME_TOP(50h)]            ; pGameObject
+			call #L(EEex::Fix_Hook_SpellImmunityShouldSkipItemIndexing)
+			test al, al
+			jnz #L(jmp_success)
+		]]}
 	)
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::AddSpecialAbility()-LastCall"), {
@@ -164,11 +154,15 @@
 		cmp ax, -1
 	]]})
 
-	-------------------------------------------------------------------------------------------
-	-- Fix several regressions in v2.6 where:                                                --
-	--   1) op206's param1 only works for values 0xF00074 and 0xF00080.                      --
-	--   2) op232 and op256's "you cannot cast multiple instances" message fails to display. --
-	-------------------------------------------------------------------------------------------
+	--[[
+	+---------------------------------------------------------------------------------------+
+	| Fix several regressions in v2.6 where:                                                |
+	|   1) op206's param1 only works for values 0xF00074 and 0xF00080.                      |
+	|   2) op232 and op256's "you cannot cast multiple instances" message fails to display. |
+	+---------------------------------------------------------------------------------------+
+	| [EEex.dll] EEex::Fix_Hook_ShouldTransformSpellImmunityStrref()                        |
+	+---------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrref"), 0, 5, 5, {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -176,31 +170,16 @@
 			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
 			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
-		EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(48)
-			]]},
-			EEex_GenLuaCall("EEex_Fix_Hook_ShouldTransformSpellImmunityStrref", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CGameEffect" end,
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r12 #ENDL", {rspOffset}}, "CImmunitySpell" end,
-				},
-				["returnType"] = EEex_LuaCallReturnType.Boolean,
-			}),
-			{[[
-				jmp no_error
+		{[[
+			mov rdx, r12                                                                   ; pImmunitySpell
+			mov rcx, rdi                                                                   ; pEffect
+			call #L(EEex::Fix_Hook_ShouldTransformSpellImmunityStrref)
+			test al, al
 
-				call_error:
-				xor rax, rax
-
-				no_error:
-				test rax, rax
-				#DESTROY_SHADOW_SPACE
-				#MANUAL_HOOK_EXIT(0)
-				jnz #L(Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefBody)
-				jmp #L(Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefElse)
-			]]},
-		})
+			#MANUAL_HOOK_EXIT(0)
+			jnz #L(Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefBody)
+			jmp #L(Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrrefElse)
+		]]}
 	)
 
 	EEex_EnableCodeProtection()
