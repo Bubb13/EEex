@@ -449,6 +449,7 @@ function EEex_Projectile_RegisterGlobalMutator(mutatorTableName)
 		EEex_Error("[EEex_Projectile_RegisterGlobalMutator] Invalid mutatorTableName parameter value")
 	end
 	table.insert(EEex_Projectile_Private_GlobalMutators, mutatorTableName)
+	EEex.Projectile_LuaHook_GlobalMutators_Enabled = true
 end
 
 -- @bubb_doc { EEex_Projectile_CastUserType / alias=EEex_Projectile_CastUT }
