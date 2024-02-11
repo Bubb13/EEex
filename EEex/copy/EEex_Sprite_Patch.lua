@@ -551,7 +551,7 @@
 	+----------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item: CItem, damR: number,  |
 	|             damL: number, thacR: number, thacL: number, ACB: number, ACM: number,      |
-	|             speed: number, crit: number)                                               |
+	|             speed: number, crit: number) -> boolean                                    |
 	|                                                                                        |
 	|       return:                                                                          |
 	|           false -> Don't alter engine behavior                                         |
