@@ -3,10 +3,19 @@
 
 	EEex_DisableCodeProtection()
 
-	----------------------------------------------------------
-	-- 117 EEex_Target                                      --
-	--  [Lua] EEex_Object_Hook_ForceIgnoreActorScriptName() --
-	----------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------+
+	| Prevent certain OBJECT.IDS entries from interpreting their string parameter as a script name |
+	+----------------------------------------------------------------------------------------------+
+	|   117 EEex_Target()                                                                          |
+	+----------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Object_Hook_ForceIgnoreActorScriptName(aiType: CAIObjectType) -> boolean        |
+	|       return:                                                                                |
+	|           false -> Don't alter engine behavior                                               |
+	|           true  -> Even though the script object was defined with a string parameter,        |
+	|                    this string should not be treated as a script name                        |
+	+----------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CAIObjectType::Decode()-TargetNameOverride"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -39,9 +48,23 @@
 		})
 	)
 
-	--------------------------------------------------
-	-- [Lua] EEex_Object_Hook_OnEvaluatingUnknown() --
-	--------------------------------------------------
+	--[[
+	+------------------------------------------------------------------------------------------------------------------------------+
+	| Implement new OBJECT.IDS entries                                                                                             |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	|   117 EEex_Target()                                                                                                          |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Object_Hook_OnEvaluatingUnknown(decodingAIType: CAIObjectType, caller CGameAIBase|EEex_GameObject_CastUT,       |
+	|                                              nSpecialCaseI: number, curAIType: CAIObjectType) -> number                      |
+	|       return:                                                                                                                |
+	|           -> EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.HANDLED_CONTINUE - Continue evaluating outer objects            |
+	|                                                                                                                              |
+	|           -> EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.HANDLED_DONE     - Halt OBJECT.IDS processing and use curAIType |
+	|                                                                                                                              |
+	|           -> EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.UNHANDLED        - Engine falls back to "Myself" and continues  |
+	|                                                                                 evaluating outer objects                     |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CAIObjectType::Decode()-DefaultJmp"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {

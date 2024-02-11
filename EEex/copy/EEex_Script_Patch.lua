@@ -3,22 +3,30 @@
 
 	EEex_DisableCodeProtection()
 
-	-------------------------------------------
-	-- [EEex.dll] EEex::Script_Hook_OnRead() --
-	-------------------------------------------
+	--[[
+	+-----------------------------------------------------------------------------------------------+
+	| Maintain EEex data that flags whether a CAIScript was loaded as `bPlayerScript` (.BS vs .BCS) |
+	+-----------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Script_Hook_OnRead(pScript: CAIScript*, bPlayerScript: bool)               |
+	+-----------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CAIScript::Read()-OnRead"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rdx, r14 ; bPlayerScript
-			mov rcx, rsi ; pScript
+			mov rdx, r14                      ; bPlayerScript
+			mov rcx, rsi                      ; pScript
 			call #L(EEex::Script_Hook_OnRead)
 		]]}
 	)
 
-	-------------------------------------------
-	-- [EEex.dll] EEex::Script_Hook_OnCopy() --
-	-------------------------------------------
+	--[[
+	+-----------------------------------------------------------------------------------------+
+	| Associate EEex data linked to a CAIScript instance with a new CAIScript instance (copy) |
+	+-----------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Script_Hook_OnCopy(pSrcScript: CAIScript*, pDstScript: CAIScript*)   |
+	+-----------------------------------------------------------------------------------------+
+	--]]
 
 	for _, entry in ipairs({
 		{"Hook-CAIScript::Construct()-OnCopy1", "rdi"},
@@ -34,8 +42,8 @@
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
-				mov rdx, #$(2) ]], entry, [[ ; pDstScript
-											 ; rcx already pSrcScript
+				mov rdx, #$(2) ]], entry, [[      ; pDstScript
+												  ; rcx already pSrcScript
 				call #L(EEex::Script_Hook_OnCopy)
 
 				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
@@ -45,14 +53,18 @@
 		)
 	end
 
-	-----------------------------------------------
-	-- [EEex.dll] EEex::Script_Hook_OnDestruct() --
-	-----------------------------------------------
+	--[[
+	+-----------------------------------------------------------------------+
+	| Clean up EEex data linked to a CAIScript instance after it is deleted |
+	+-----------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Script_Hook_OnDestruct(pScript: CAIScript*)        |
+	+-----------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CAIScript::Destruct()-OnDestruct"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rcx, rsi ; pScript
+			mov rcx, rsi                          ; pScript
 			call #L(EEex::Script_Hook_OnDestruct)
 		]]}
 	)

@@ -4,13 +4,15 @@
 	EEex_DisableCodeProtection()
 
 	--[[
-	+-------------------------------------------------------------------------+
-	| BUG: v2.6.6.0 - op206/318/324 incorrectly indexes source object's items |
-	| list if the incoming effect's source spell has a name strref of -1      |
-	| without first checking if the source was a sprite.                      |
-	+-------------------------------------------------------------------------+
-	| [EEex.dll] EEex::Fix_Hook_SpellImmunityShouldSkipItemIndexing()         |
-	+-------------------------------------------------------------------------+
+	+----------------------------------------------------------------------------------------------------+
+	| BUG: v2.6.6.0 - op206/318/324 incorrectly indexes the source object's item list if the incoming    |
+	| effect's source spell has a name strref of -1 without first checking if the source was a sprite    |
+	+----------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_SpellImmunityShouldSkipItemIndexing(pGameObject: CGameObject*) -> bool |
+	|       return:                                                                                      |
+	|           false -> Don't alter engine behavior                                                     |
+	|           true  -> Force the engine to skip its item list check                                    |
+	+----------------------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameEffect::CheckAdd()-FixSpellImmunityShouldSkipItemIndexing"), 4, {
@@ -26,6 +28,14 @@
 			jnz #L(jmp_success)
 		]]}
 	)
+
+	--[[
+	+------------------------------------------------------------------------------------------------------+
+	| Fix quick spell slots not updating when a special ability is added (for example, by op171 or act279) |
+	+------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Fix_Hook_OnAddSpecialAbility(sprite: CGameSprite, spell: CSpell)                        |
+	+------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::AddSpecialAbility()-LastCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
@@ -49,14 +59,24 @@
 		})
 	)
 
-	----------------------------------------------------------------------------------
-	-- Fix Spell() and SpellPoint() not being disruptable if the creature is facing --
-	-- SSW(1), SWW(3), NWW(5), NNW(7), NNE(9), NEE(11), SEE(13), or SSE(15)         --
-	----------------------------------------------------------------------------------
+	--[[
+	+--------------------------------------------------------------------------------------------------------------+
+	| Fix Spell() and SpellPoint() not being disruptable if the creature is facing SSW(1), SWW(3), NWW(5), NNW(7), |
+	| NNE(9), NEE(11), SEE(13), or SSE(15)                                                                         |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Fix_Hook_ShouldForceMainSpellActionCode(sprite: CGameSprite, point: CPoint) -> boolean          |
+	|       return:                                                                                                |
+	|           false -> Don't alter engine behavior                                                               |
+	|           true  -> Force the engine to run the main spell action code regardless of the sprite's orientation |
+	|                    (which includes spell disruption handling)                                                |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow(sprite: CGameSprite)                             |
+	+--------------------------------------------------------------------------------------------------------------+
+	--]]
 
-	--------------------------------------------------
-	-- EEex_Fix_Hook_ShouldForceMainSpellActionCode --
-	--------------------------------------------------
+	----------------------------------------------------------
+	-- [Lua] EEex_Fix_Hook_ShouldForceMainSpellActionCode() --
+	----------------------------------------------------------
 
 	local callShouldForceMainSpellActionCode = EEex_JITNear(EEex_FlattenTable({
 		{[[
@@ -89,8 +109,8 @@
 			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
-			mov rdx, r14
-			mov rcx, rbx
+			mov rdx, r14                                                  ; point
+			mov rcx, rbx                                                  ; sprite
 			call #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL
 			test rax, rax
 			jnz #L(jmp_success)
@@ -104,17 +124,17 @@
 			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
-			lea rdx, qword ptr ss:[rsp+0x60]
-			mov rcx, rbx
+			lea rdx, qword ptr ss:[rsp+0x60]                              ; point
+			mov rcx, rbx                                                  ; sprite
 			call #$(1) ]], {callShouldForceMainSpellActionCode}, [[ #ENDL
 			test rax, rax
 			jnz #L(jmp_success)
 		]]}
 	)
 
-	---------------------------------------------------------
-	-- EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow --
-	---------------------------------------------------------
+	-----------------------------------------------------------------
+	-- [Lua] EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow() --
+	-----------------------------------------------------------------
 
 	local callOnSpellOrSpellPointStartedCastingGlow = EEex_JITNear(EEex_FlattenTable({
 		{[[
@@ -140,28 +160,34 @@
 		EEex_HookAfterCallWithLabels(address, {
 			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 			{[[
-				mov rcx, rbx
+				mov rcx, rbx                                                         ; sprite
 				call #$(1) ]], {callOnSpellOrSpellPointStartedCastingGlow}, [[ #ENDL
 			]]}
 		)
 	end
 
-	--------------------------------------------------------------------------------------------------------------
-	-- Opcode #182 should consider -1 (instead of 0) the fail return value from CGameSprite::FindItemPersonal() --
-	--------------------------------------------------------------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------------------------+
+	| [JIT] Opcode #182 should consider -1 (instead of 0) the fail return value from CGameSprite::FindItemPersonal() |
+	+----------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookBeforeConditionalJump(EEex_Label("Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-CheckRetVal"), 0, {[[
 		cmp ax, -1
 	]]})
 
 	--[[
-	+---------------------------------------------------------------------------------------+
-	| Fix several regressions in v2.6 where:                                                |
-	|   1) op206's param1 only works for values 0xF00074 and 0xF00080.                      |
-	|   2) op232 and op256's "you cannot cast multiple instances" message fails to display. |
-	+---------------------------------------------------------------------------------------+
-	| [EEex.dll] EEex::Fix_Hook_ShouldTransformSpellImmunityStrref()                        |
-	+---------------------------------------------------------------------------------------+
+	+--------------------------------------------------------------------------------------------------------------------------------+
+	| Fix a couple of regressions in v2.6 regarding op206/op232/op256                                                                |
+	+--------------------------------------------------------------------------------------------------------------------------------+
+	|   1) op206's param1 only works for values 0xF00074 and 0xF00080                                                                |
+	|   2) op232 and op256's "you cannot cast multiple instances" message fails to display                                           |
+	+--------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_ShouldTransformSpellImmunityStrref(pEffect: CGameEffect*, pImmunitySpell: CImmunitySpell*) -> bool |
+	|       return:                                                                                                                  |
+	|           false -> Don't transform immunity strref                                                                             |
+	|           true  -> Transform immunity strref                                                                                   |
+	+--------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrref"), 0, 5, 5, {
@@ -169,10 +195,11 @@
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
 			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
 			EEex_HookIntegrityWatchdogRegister.R11
-		}}},
+		}},
+		{"manual_return", true}},
 		{[[
-			mov rdx, r12                                                                   ; pImmunitySpell
-			mov rcx, rdi                                                                   ; pEffect
+			mov rdx, r12                                               ; pImmunitySpell
+			mov rcx, rdi                                               ; pEffect
 			call #L(EEex::Fix_Hook_ShouldTransformSpellImmunityStrref)
 			test al, al
 

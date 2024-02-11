@@ -3,33 +3,45 @@
 
 	EEex_DisableCodeProtection()
 
-	-----------------------------------------------
-	-- [EEex.dll] EEex::Stats_Hook_OnConstruct() --
-	-----------------------------------------------
+	--[[
+	+-------------------------------------------------------------+
+	| Initialize EEex data linked to CDerivedStats instances      |
+	+-------------------------------------------------------------+
+	|   [EEex.dll] Stats_Hook_OnConstruct(pStats: CDerivedStats*) |
+	+-------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CDerivedStats::Construct()-FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rcx, rsi ; pStats
+			mov rcx, rsi                          ; pStats
 			call #L(EEex::Stats_Hook_OnConstruct)
 		]]}
 	)
 
-	----------------------------------------------
-	-- [EEex.dll] EEex::Stats_Hook_OnDestruct() --
-	----------------------------------------------
+	--[[
+	+------------------------------------------------------------------+
+	| Clean up EEex data linked to CDerivedStats instances             |
+	+------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Stats_Hook_OnDestruct(pStats: CDerivedStats*) |
+	+------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CDerivedStats::Destruct()-FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rcx, rdi ; pStats
+			mov rcx, rdi                         ; pStats
 			call #L(EEex::Stats_Hook_OnDestruct)
 		]]}
 	)
 
-	--------------------------------------------
-	-- [EEex.dll] EEex::Stats_Hook_OnReload() --
-	--------------------------------------------
+	--[[
+	+----------------------------------------------------------------+
+	| Reset EEex data linked to CDerivedStats instances              |
+	+----------------------------------------------------------------+
+	|   [EEex.dll] EEex::Stats_Hook_OnReload(pStats: CDerivedStats*) |
+	+----------------------------------------------------------------+
+	--]]
 
 	local statsReloadTemplate = function(spriteRegStr)
 		return {[[
@@ -74,22 +86,30 @@
 		statsReloadTemplate("rsi")
 	)
 
-	-----------------------------------------
-	-- [EEex.dll] EEex::Stats_Hook_OnEqu() --
-	-----------------------------------------
+	--[[
+	+-------------------------------------------------------------------------------------------------+
+	| Associate EEex data linked to a CDerivedStats instance with a new CDerivedStats instance (copy) |
+	+-------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Stats_Hook_OnEqu(pStats: CDerivedStats*, pOtherStats: CDerivedStats*)        |
+	+-------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CDerivedStats::operator_equ()-FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rdx, rsi ; pOtherStats
-			mov rcx, r14 ; pStats
+			mov rdx, rsi                    ; pOtherStats
+			mov rcx, r14                    ; pStats
 			call #L(EEex::Stats_Hook_OnEqu)
 		]]}
 	)
 
-	---------------------------------------------
-	-- [EEex.dll] EEex::Stats_Hook_OnPlusEqu() --
-	---------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------+
+	| Apply bonus EEex CDerivedStats data to the regular EEex CDerivedStats data                   |
+	+----------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Stats_Hook_OnPlusEqu(pStats: CDerivedStats*, pOtherStats: CDerivedStats*) |
+	+----------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CDerivedStats::operator_plus_equ()-FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -100,8 +120,8 @@
 			#MAKE_SHADOW_SPACE(8)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 
-			mov rdx, rdi ; pOtherStats
-			mov rcx, rbx ; pStats
+			mov rdx, rdi                        ; pOtherStats
+			mov rcx, rbx                        ; pStats
 			call #L(EEex::Stats_Hook_OnPlusEqu)
 
 			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
@@ -112,6 +132,18 @@
 	----------------------------------------------------
 	-- [EEex.dll] EEex::Stats_Hook_OnGettingUnknown() --
 	----------------------------------------------------
+
+	--[[
+	+------------------------------------------------------------------------------------------------+
+	| Allow engine to fetch extended stat values.                                                    |
+	|                                                                                                |
+	| Extended stats are those with ids outside of the vanilla range in STATS.IDS.                   |
+	| Extended stat minimums, maximums, and defaults are defined in X-STATS.2DA.                     |
+	+------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Stats_Hook_OnGettingUnknown(pStats: CDerivedStats*, nStatId: int) -> number |
+	|       return -> The value of the extended stat                                                 |
+	+------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CDerivedStats::GetAtOffset()-OutOfBoundsJmp"), 0, {
 		{"stack_mod", 8},
@@ -124,8 +156,8 @@
 			{[[
 				#MAKE_SHADOW_SPACE
 
-				lea rdx, qword ptr ds:[rax+1] ; nStatId
-											  ; rcx already pStats
+				lea rdx, qword ptr ds:[rax+1]              ; nStatId
+														   ; rcx already pStats
 				call #L(EEex::Stats_Hook_OnGettingUnknown)
 
 				#DESTROY_SHADOW_SPACE

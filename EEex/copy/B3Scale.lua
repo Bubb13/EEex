@@ -48,6 +48,14 @@ end
 
 	EEex_DisableCodeProtection()
 
+	--[[
+	+---------------------------------------------------+
+	| Tweak the UI scale whenever the window is resized |
+	+---------------------------------------------------+
+	|   [Lua] B3Scale_Hook_DoSizeChange()               |
+	+---------------------------------------------------+
+	--]]
+
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::OnResizeWindow()-B3Scale"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		EEex_FlattenTable({[[

@@ -53,6 +53,14 @@ EEex_Debug_LogActions = false
 
 		EEex_DisableCodeProtection()
 
+		--[[
+		+---------------------------------------------------------------------------------------------------------+
+		| Debug log details about a CGameAIBase's action before it is executed                                    |
+		+---------------------------------------------------------------------------------------------------------+
+		|   [Lua] EEex_Debug_LogAction(executingObject: CGameAIBase|EEex_GameObject_CastUT, bFromAIBase: boolean) |
+		+---------------------------------------------------------------------------------------------------------+
+		--]]
+
 		EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), 0, {
 			{"hook_integrity_watchdog_ignore_registers", {
 				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,

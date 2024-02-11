@@ -3,9 +3,13 @@
 
 	EEex_DisableCodeProtection()
 
-	---------------------------------------------
-	-- [Lua] EEex_GameObject_Hook_OnDeleting() --
-	---------------------------------------------
+	--[[
+	+---------------------------------------------------------------------+
+	| Clean up any EEex data linked to a game object before it is deleted |
+	+---------------------------------------------------------------------+
+	|   [Lua] EEex_GameObject_Hook_OnDeleting(objectID: number)           |
+	+---------------------------------------------------------------------+
+	--]]
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameObjectArray::Delete()-DeleteJmp"), 5, {
 		{"hook_integrity_watchdog_ignore_registers", {

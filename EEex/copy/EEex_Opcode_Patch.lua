@@ -3,23 +3,29 @@
 
 	EEex_DisableCodeProtection()
 
-	------------------------------------------------
-	-- Clean up extended CGameEffect values       --
-	--  [EEex.dll] EEex::Opcode_Hook_OnDestruct() --
-	------------------------------------------------
+	--[[
+	+--------------------------------------------------------------------------+
+	| Clean up EEex data linked to a CGameEffect instance before it is deleted |
+	+--------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OnDestruct(pEffect: CGameEffect*)         |
+	+--------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffect::Destruct()_FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rcx, rdi ; pEffect
+			mov rcx, rdi                          ; pEffect
 			call #L(EEex::Opcode_Hook_OnDestruct)
 		]]}
 	)
 
-	--------------------------------------------------
-	-- Copy CGameEffect extended CGameEffect values --
-	--  [EEex.dll] EEex::Opcode_Hook_OnCopy()       --
-	--------------------------------------------------
+	--[[
+	+---------------------------------------------------------------------------------------------+
+	| Associate EEex data linked to a CGameEffect instance with a new CGameEffect instance (copy) |
+	+---------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OnCopy(pSrcEffect: CGameEffect*, pDstEffect: CGameEffect*)   |
+	+---------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffect::CopyFromBase()-FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
@@ -35,15 +41,22 @@
 		]]}
 	)
 
-	-------------------------------------------------------
-	-- [EEex.dll] EEex::Opcode_Hook_AfterListsResolved() --
-	-- [Lua] EEex_Opcode_LuaHook_AfterListsResolved()    --
-	-------------------------------------------------------
+	--[[
+	+-------------------------------------------------------------------------------------+
+	| Call a hook immediately after sprites have had both of their effect lists evaluated |
+	+-------------------------------------------------------------------------------------+
+	|   Used to implement listeners that act as "final" operations on a sprite            |
+	+-------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_AfterListsResolved(pSprite: CGameSprite*)            |
+	+-------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_LuaHook_AfterListsResolved(sprite: CGameSprite)                 |
+	+-------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rcx, rsi ; pSprite
+			mov rcx, rsi                                  ; pSprite
 			call #L(EEex::Opcode_Hook_AfterListsResolved)
 		]]}
 	)
@@ -53,15 +66,21 @@
 	--------------------------------------
 
 	--[[
-	+--------------------------------------------------------------------------------+
-	| Opcode #214                                                                    |
-	+--------------------------------------------------------------------------------+
-	| param2 == 3 -> Call Lua function in resource field to get CButtonData iterator |
-	+--------------------------------------------------------------------------------+
-	| Hook return:                                                                   |
-	|     false -> Effect not handled                                                |
-	|     true  -> Effect handled (skip normal code)                                 |
-	+--------------------------------------------------------------------------------+
+	+--------------------------------------------------------------------------------------------------+
+	| Opcode #214                                                                                      |
+	+--------------------------------------------------------------------------------------------------+
+	|   param2 == 3 -> Call the global Lua function with the name in `resource` to get a CButtonData   |
+	|                  iterator. Then, use this iterator to determine which spells should be shown to  |
+	|                  the player. Note that the function name must be 8 characters or less, and be    |
+	|                  ALL UPPERCASE.                                                                  |
+	|                                                                                                  |
+	|   resource    -> Name of the global Lua function when `param2 == 3`                              |
+	+--------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_OnOp214ApplyEffect(effect: CGameEffect, sprite: CGameSprite) -> boolean |
+	|       return:                                                                                    |
+	|           false -> Effect not handled                                                            |
+	|           true  -> Effect handled (skip normal code)                                             |
+	+--------------------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectSecondaryCastList::ApplyEffect()"), 0, 5, 5, {
@@ -109,20 +128,34 @@
 		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
-	------------------------------------------------------------
-	-- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
-	--  [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail()         --
-	--  [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248()     --
-	------------------------------------------------------------
+	--[[
+	+---------------------------------------------------------------------------------------------------------------------+
+	| Opcode #248                                                                                                         |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   (special & 1) != 0 -> .EFF bypasses op120                                                                         |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail(pOp248: CGameEffect*, pExtraEffect: CGameEffect*)                     |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
+	+---------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	---------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail() --
+	---------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail"),  {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rdx, rbx
-			mov rcx, rdi
+			mov rdx, rbx                              ; pEffect
+			mov rcx, rdi                              ; pOp248
 			call #L(EEex::Opcode_Hook_OnOp248AddTail)
 		]]}
 	)
+
+	-------------------------------------------------------
+	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248() --
+	-------------------------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee"), EEex_FlattenTable({
 		{[[
@@ -143,11 +176,21 @@
 		]]},
 	}))
 
-	------------------------------------------------------------
-	-- Opcode #249 (Special BIT0 allows .EFF to bypass op120) --
-	--  [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail()         --
-	--  [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249()     --
-	------------------------------------------------------------
+	--[[
+	+---------------------------------------------------------------------------------------------------------------------+
+	| Opcode #249                                                                                                         |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   (special & 1) != 0 -> .EFF bypasses op120                                                                         |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail(pOp249: CGameEffect*, pExtraEffect: CGameEffect*)                     |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
+	+---------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	---------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail() --
+	---------------------------------------------------
 
 	local op249SavedEffect = EEex_Malloc(EEex_PtrSize)
 
@@ -158,11 +201,15 @@
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov rdx, rbx
-			mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ #ENDL
+			mov rdx, rbx                                             ; pEffect
+			mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ ; pOp249
 			call #L(EEex::Opcode_Hook_OnOp249AddTail)
 		]]}
 	)
+
+	-------------------------------------------------------
+	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249() --
+	-------------------------------------------------------
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
 		{[[
@@ -193,17 +240,27 @@
 	}))
 
 	--[[
-	+---------------------------------------------------------------------+
-	| Opcode #280                                                         |
-	+---------------------------------------------------------------------+
-	| param1  != 0 => Force wild surge number                             |
-	| special != 0 => Suppress wild surge feedback string and visuals     |
-	+---------------------------------------------------------------------+
-	| [EEex.dll] EEex::Opcode_Hook_Op280_BeforeApplyEffect()              |
-	| [EEex.dll] EEex::Opcode_Hook_Op280_GetForcedWildSurgeNumber()       |
-	| [EEex.dll] EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals() |
-	+---------------------------------------------------------------------+
+	+------------------------------------------------------------------------------------------------------+
+	| Opcode #280                                                                                          |
+	+------------------------------------------------------------------------------------------------------+
+	|   param1  != 0 -> Force wild surge number to param1                                                  |
+	|   special != 0 -> Suppress wild surge feedback string and visuals                                    |
+	+------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op280_BeforeApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) |
+	+------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op280_GetForcedWildSurgeNumber(pSprite: CGameSprite*) -> int          |
+	|       return -> Forced wild surge number                                                             |
+	+------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals(pSprite: CGameSprite*) -> bool   |
+	|       return:                                                                                        |
+	|           false -> Don't alter engine behavior                                                       |
+	|           true  -> Suppress wild surge feedback string and visuals                                   |
+	+------------------------------------------------------------------------------------------------------+
 	--]]
+
+	------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_Op280_BeforeApplyEffect() --
+	------------------------------------------------------------
 
 	-- Store op280 param1 and special as stats
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction"), 0, 9, 9, {
@@ -218,8 +275,8 @@
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 
 
-																  ; rdx already pSprite
-																  ; rcx already pEffect
+															   ; rdx already pSprite
+															   ; rcx already pEffect
 			call #L(EEex::Opcode_Hook_Op280_BeforeApplyEffect)
 
 			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
@@ -227,6 +284,10 @@
 			#DESTROY_SHADOW_SPACE
 		]]}
 	)
+
+	-------------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_Op280_GetForcedWildSurgeNumber() --
+	-------------------------------------------------------------------
 
 	-- Override wild surge number if op280 param1 is non-zero
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-OverrideSurgeNumber"), 0, 9, 9, {
@@ -243,6 +304,10 @@
 			cmovnz r13d, eax
 		]]}
 	)
+
+	-------------------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals() --
+	-------------------------------------------------------------------------
 
 	-- Suppress feedback string if op280 special is non-zero
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::WildSpell()-CGameSprite::Feedback()"), {
@@ -347,15 +412,24 @@
 		jz #L(return_skip)
 	]]})
 
-	---------------------------------------------------------------------------------
-	-- Opcode #326 (Special BIT0 flips SPLPROT.2DA's "source" and "target")        --
-	--  [EEex.dll] EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget() --
-	---------------------------------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------------------+
+	| Opcode #326                                                                                              |
+	+----------------------------------------------------------------------------------------------------------+
+	|   (special & 1) != 0 -> Flip what SPLPROT.2DA considers the "source" and "target" sprites                |
+	+----------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget(pEffect: CGameEffect*) -> int |
+	|       return:                                                                                            |
+	|            0 -> Don't alter engine behavior                                                              |
+	|           !0 -> Flip what SPLPROT.2DA considers the "source" and "target" sprites                        |
+	+----------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 0, 7, 7, {
 		{"hook_integrity_watchdog_ignore_registers", {
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
-		}}},
+		}},
+		{"manual_return", true}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(32)
@@ -364,7 +438,7 @@
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-				mov rcx, rbx ; pEffect
+				mov rcx, rbx                                                           ; pEffect
 				call #L(EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget)
 
 				test rax, rax
@@ -373,19 +447,35 @@
 				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
 				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 				#DESTROY_SHADOW_SPACE
-				jz #L(return)
+				jnz #L(flip)
 
+				#MANUAL_HOOK_EXIT(0)
+				jmp #L(return)
+
+				flip:
 				mov rax, r8
-				; TODO - Integrity violated
 				mov r8, r9
 				mov r9, rax
+				#MANUAL_HOOK_EXIT(1)
+				jmp #L(return)
 			]]},
 		})
 	)
+	-- Manually define the ignored registers for the "flip" branch above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+		EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+	})
 
-	-------------------------------------------------------------------------------------------------
-	-- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
-	-------------------------------------------------------------------------------------------------
+	--[[
+	+-----------------------------------------------------------------+
+	| Opcode #333                                                     |
+	+-----------------------------------------------------------------+
+	|   (param3 & 1) != 0 -> Only check saving throw once             |
+	+-----------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_OnOp333CopiedSelf(effect: CGameEffect) |
+	+-----------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call"), 0, 9, 9, {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -412,9 +502,16 @@
 		})
 	)
 
-	----------------------------------------------------
-	-- Allow saving throw BIT23 to bypass opcode #101 --
-	----------------------------------------------------
+	--[[
+	+------------------------------------------------------------------------------------------------+
+	| Allow saving throw BIT23 to bypass opcode #101                                                 |
+	+------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op101_ShouldEffectBypassImmunity(pEffect: CGameEffect*) -> bool |
+	|       return:                                                                                  |
+	|           false -> Don't alter engine behavior                                                 |
+	|           true  -> Bypass opcode #101                                                          |
+	+------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CImmunitiesEffect::OnList()-Entry"), 0, 5, 5, {
 		{"stack_mod", 8},
@@ -509,7 +606,7 @@
 				_2:
 				mov edx, 30h
 				mov rcx, rbp
-				call #L(Hardcoded_free)                             ; SDL_FreeRW
+				call #L(Hardcoded_free) ; SDL_FreeRW
 				test rsi, rsi
 				lea rdx, qword ptr ds:[rsi+8h]
 				mov rcx, rbx
@@ -529,14 +626,14 @@
 			return {[[
 				mov ecx, #$(1) ]], {CGameEffect.sizeof}, [[ #ENDL
 				call #L(operator_new)
-				mov rcx, rax                                     ; this
+				mov rcx, rax                                      ; this
 				test rax, rax
 				jz #L(Hook-CGameEffect::DecodeEffect()-Fail)
-				mov rax, qword ptr ds:[rsi]                      ; target
+				mov rax, qword ptr ds:[rsi]                       ; target
 				mov qword ptr [rsp+20h], rax
-				mov r9d, ebp                                     ; sourceID
-				mov r8, r14                                      ; source
-				mov rdx, rdi                                     ; effect
+				mov r9d, ebp                                      ; sourceID
+				mov r8, r14                                       ; source
+				mov rdx, rdi                                      ; effect
 				call #$(1) ]], {constructor}, [[ #ENDL
 				jmp #L(Hook-CGameEffect::DecodeEffect()-Success)
 			]]}
@@ -563,11 +660,24 @@
 		return genDecode(writeConstructor(newvtbl))
 	end
 
-	----------------------------------------------------------------------
-	-- New Opcode #400 (SetTemporaryAIScript)                           --
-	--  [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_ApplyEffect() --
-	--  [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_OnRemove()    --
-	----------------------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------------------------------+
+	| New Opcode #400 (SetTemporaryAIScript)                                                                               |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   Temporarily set a script level and restore the old script when the effect is removed.                              |
+	|   NOTE: This is dangerous! Script changes from any other mechanism will be lost when the effect expires.             |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   param2   -> Script level to set                                                                                    |
+	|   resource -> Script to set                                                                                          |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                                        |
+	|            0 -> Halt effect list processing                                                                          |
+	|           !0 -> Continue effect list processing                                                                      |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_OnRemove(pEffect: CGameEffect*, pSprite: CGameSprite*)           |
+	+----------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	local EEex_SetTemporaryAIScript = genOpcodeDecode({
 
@@ -588,10 +698,31 @@
 		]]},
 	})
 
-	-----------------------------------------------------------------
-	-- New Opcode #401 (SetExtendedStat)                           --
-	--  [EEex.dll] EEex::Opcode_Hook_SetExtendedStat_ApplyEffect() --
-	-----------------------------------------------------------------
+	--[[
+	+-----------------------------------------------------------------------------------------------------------------+
+	| New Opcode #401 (SetExtendedStat)                                                                               |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   Modify the value of an extended stat. All operations are clamped such that results outside of the stat's      |
+	|   range will resolve to the exceeded extrema.                                                                   |
+	|                                                                                                                 |
+	|   Extended stats are those with ids outside of the vanilla range in STATS.IDS.                                  |
+	|   Extended stat minimums, maximums, and defaults are defined in X-STATS.2DA.                                    |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   param1  -> Modification amount                                                                                |
+	|                                                                                                                 |
+	|   param2  -> Modification type:                                                                                 |
+	|                  0 -> Sum     - stat = stat + param1                                                            |
+	|                  1 -> Set     - stat = param1                                                                   |
+	|                  2 -> Percent - stat = stat * param1 / 100                                                      |
+	|                                                                                                                 |
+	|   special -> Extended stat id                                                                                   |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_SetExtendedStat_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                                   |
+	|            0 -> Halt effect list processing                                                                     |
+	|           !0 -> Continue effect list processing                                                                 |
+	+-----------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	local EEex_SetExtendedStat = genOpcodeDecode({
 		["ApplyEffect"] = {[[
@@ -603,9 +734,19 @@
 		]]},
 	})
 
-	---------------------------------------
-	-- [JIT] New Opcode #402 (InvokeLua) --
-	---------------------------------------
+	--[[
+	+-----------------------------------------------------------------------------------------------------------------+
+	| New Opcode #402 (InvokeLua)                                                                                     |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   Invoke a global Lua function. Note that the function name must be 8 characters or less, and be ALL UPPERCASE. |
+	|                                                                                                                 |
+	|   The function's signature is: FUNC(op402: CGameEffect, sprite: CGameSprite)                                    |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   resource -> Global Lua function name                                                                          |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   [JIT]                                                                                                         |
+	+-----------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	local EEex_InvokeLua = genOpcodeDecode({
 
@@ -638,11 +779,33 @@
 		]]}),
 	})
 
-	---------------------------------------------------------------
-	-- New Opcode #403 (ScreenEffects)                           --
-	--  [EEex.dll] EEex::Opcode_Hook_ScreenEffects_ApplyEffect() --
-	--  [EEex.dll] EEex::Opcode_Hook_OnCheckAdd()                --
-	---------------------------------------------------------------
+	--[[
+	+---------------------------------------------------------------------------------------------------------------+
+	| New Opcode #403 (ScreenEffects)                                                                               |
+	+---------------------------------------------------------------------------------------------------------------+
+	|   Register a global Lua function that is called whenever an effect is added to the target creature. If this   |
+	|   function returns `true` the effect being added is blocked. Note that the function name must be 8 characters |
+	|   or less, and be ALL UPPERCASE.                                                                              |
+	|                                                                                                               |
+	|   The function's signature is: FUNC(op403: CGameEffect, effect: CGameEffect, sprite: CGameSprite) -> boolean  |
+	+---------------------------------------------------------------------------------------------------------------+
+	|   resource -> Global Lua function name                                                                        |
+	+---------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_ScreenEffects_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                                 |
+	|            0 -> Halt effect list processing                                                                   |
+	|           !0 -> Continue effect list processing                                                               |
+	+---------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OnCheckAdd(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int                |
+	|       return:                                                                                                 |
+	|            0 -> Don't alter engine behavior                                                                   |
+	|           !0 -> Block effect                                                                                  |
+	+---------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	--------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_ScreenEffects_ApplyEffect() --
+	--------------------------------------------------------------
 
 	local EEex_ScreenEffects = genOpcodeDecode({
 		["ApplyEffect"] = {[[
@@ -653,6 +816,10 @@
 			ret
 		]]},
 	})
+
+	-----------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_OnCheckAdd() --
+	-----------------------------------------------
 
 	local effectBlockedHack = EEex_Malloc(0x8)
 
@@ -666,8 +833,8 @@
 				#MAKE_SHADOW_SPACE(8)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
 
-				mov rdx, r14 ; pSprite
-				mov rcx, rdi ; pEffect
+				mov rdx, r14                          ; pSprite
+				mov rcx, rdi                          ; pEffect
 				call #L(EEex::Opcode_Hook_OnCheckAdd)
 
 				mov qword ptr ds:[#$(1)], rax ]], {effectBlockedHack}, [[ #ENDL
@@ -675,7 +842,6 @@
 				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 				#DESTROY_SHADOW_SPACE
 				test rax, rax
-
 				jz #L(jmp_fail)
 
 				#MANUAL_HOOK_EXIT(0)
@@ -689,10 +855,68 @@
 		jnz #L(jmp_fail)
 	]]})
 
-	-------------------------------------------------------------------
-	-- New Opcode #408 (ProjectileMutator)                           --
-	--  [EEex.dll] EEex::Opcode_Hook_ProjectileMutator_ApplyEffect() --
-	-------------------------------------------------------------------
+	--[[
+	+-------------------------------------------------------------------------------------------------------------------+
+	| New Opcode #408 (ProjectileMutator)                                                                               |
+	+-------------------------------------------------------------------------------------------------------------------+
+	|   Register a global Lua table that (potentially) contains several different functions that mutate projectiles.    |
+	|   Note that the table name must be 8 characters or less, and be ALL UPPERCASE.                                    |
+	|                                                                                                                   |
+	|   The function signatures are:                                                                                    |
+	|                                                                                                                   |
+	|       typeMutator(context: table) -> number                                                                       |
+	|                                                                                                                   |
+	|           context:                                                                                                |
+	|                                                                                                                   |
+	|               decodeSource: EEex_Projectile_DecodeSource - The source of the hook	                                |
+	|                                                                                                                   |
+	|               originatingEffect: CGameEffect | nil - The op408 effect that registered the mutator table           |
+	|                                                                                                                   |
+	|               originatingSprite: CGameSprite | nil - The sprite that is decoding (creating) the projectile        |
+	|                                                                                                                   |
+	|               projectileType: number - The projectile type about to be decoded. This is equivalent to the value   |
+	|                                        at .SPL->Ability Header->[+0x26]. Subtract one from this value to get the  |
+	|                                        corresponding PROJECTL.IDS index.                                          |
+	|                                                                                                                   |
+	|           return -> The new projectile type, or nil if the type should not be overridden. This is equivalent to   |
+	|                     the value at .SPL->Ability Header->[+0x26]. Subtract one from this value to get the           |
+	|                     corresponding PROJECTL.IDS index.                                                             |
+	|                                                                                                                   |
+	|       projectileMutator(context: table)                                                                           |
+	|                                                                                                                   |
+	|           context:                                                                                                |
+	|                                                                                                                   |
+	|               decodeSource: EEex_Projectile_DecodeSource - The source of the hook                                 |
+	|                                                                                                                   |
+	|               originatingEffect: CGameEffect | nil - The op408 effect that registered the mutator table           |
+	|                                                                                                                   |
+	|               originatingSprite: CGameSprite | nil - The sprite that is decoding (creating) the projectile        |
+	|                                                                                                                   |
+	|               projectile: CProjectile - The projectile about to be returned from the decoding process             |
+	|                                                                                                                   |
+	|       effectMutator(context: table)                                                                               |
+	|                                                                                                                   |
+	|           context:                                                                                                |
+	|                                                                                                                   |
+	|               addEffectSource: EEex_Projectile_AddEffectSource - The source of the hook                           |
+	|                                                                                                                   |
+	|               effect: CGameEffect - The effect that is being added to projectile                                  |
+	|                                                                                                                   |
+	|               originatingEffect: CGameEffect | nil - The op408 effect that registered the mutator table           |
+	|                                                                                                                   |
+	|               originatingSprite: CGameSprite | nil - The sprite that decoded (created) the projectile             |
+	|                                                                                                                   |
+	|               projectile: CProjectile - The projectile that `effect` is being added to                            |
+	|                                                                                                                   |
+	+-------------------------------------------------------------------------------------------------------------------+
+	|   resource -> Global Lua table name                                                                               |
+	+-------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_ProjectileMutator_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                                     |
+	|            0 -> Don't alter engine behavior                                                                       |
+	|           !0 -> Block effect                                                                                      |
+	+-------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	local EEex_ProjectileMutator = genOpcodeDecode({
 		["ApplyEffect"] = {[[
@@ -704,10 +928,28 @@
 		]]},
 	})
 
-	----------------------------------------------------------------------
-	-- New Opcode #409 (EnableActionListener)                           --
-	--  [EEex.dll] EEex::Opcode_Hook_EnableActionListener_ApplyEffect() --
-	----------------------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------------------------------+
+	| New Opcode #409 (EnableActionListener)                                                                               |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   Enable an action listener previously registered by EEex_Action_AddEnabledSpriteStartedActionListener(). The action |
+	|   listener will then be called whenever the target sprite starts a new action. Note that the function name must be 8 |
+	|   characters or less, and be ALL UPPERCASE.                                                                          |
+	|                                                                                                                      |
+	|   The function's signature is: listener(sprite: CGameSprite, action: CAIAction, op409: CGameEffect)                  |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   param1:                                                                                                            |
+	|        0 -> Action listener disabled                                                                                 |
+	|       !0 -> Action listener enabled                                                                                  |
+	|                                                                                                                      |
+	|   resource -> The name of the function as registered by EEex_Action_AddEnabledSpriteStartedActionListener()          |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_EnableActionListener_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                                        |
+	|            0 -> Don't alter engine behavior                                                                          |
+	|           !0 -> Block effect                                                                                         |
+	+----------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	local EEex_EnableActionListener = genOpcodeDecode({
 		["ApplyEffect"] = {[[
@@ -719,9 +961,11 @@
 		]]},
 	})
 
-	-------------------------
-	-- [JIT] Decode Switch --
-	-------------------------
+	--[[
+	+-------------------------------------+
+	| [JIT] Decode switch for new opcodes |
+	+-------------------------------------+
+	--]]
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {

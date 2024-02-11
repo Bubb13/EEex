@@ -955,8 +955,11 @@ function EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, retu
 	local returnAddress = address + returnDelay
 
 	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
 		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
 		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+
+		local manualHookIntegrityExit = EEex_TryLabel("manual_hook_integrity_exit")
 		return EEex_RunWithAssemblyLabels({
 			{"hook_address", address}},
 			function()
@@ -964,7 +967,9 @@ function EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, retu
 					EEex_HookIntegrityWatchdog_HookEnter,
 					assemblyT, [[
 					return:
-					#MANUAL_HOOK_EXIT(0) ]],
+					#IF ]], not manualHookIntegrityExit, [[ {
+						#MANUAL_HOOK_EXIT(0)
+					} ]],
 					restoreBytes, [[
 					jmp ]], returnAddress, "#ENDL"
 				}))
@@ -992,21 +997,26 @@ function EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, retur
 	local returnAddress = address + returnDelay
 
 	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
 		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
 		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+
+		local manualReturn = EEex_TryLabel("manual_return")
 		return EEex_RunWithAssemblyLabels({
 			{"hook_address", address},
-			{"return", not EEex_HookIntegrityWatchdog_Load and returnAddress or nil}},
+			{"return", (not EEex_HookIntegrityWatchdog_Load or manualReturn) and returnAddress or nil}},
 			function()
 				return EEex_JITNear(EEex_FlattenTable({
 					restoreBytes,
 					EEex_HookIntegrityWatchdog_HookEnter,
 					assemblyT, [[
-					#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
-						return:
-						#MANUAL_HOOK_EXIT(0)
-					}
-					jmp ]], returnAddress, "#ENDL"
+					#IF ]], not manualReturn, [[ {
+						#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+							return:
+							#MANUAL_HOOK_EXIT(0)
+						}
+						jmp ]], returnAddress, [[ #ENDL
+					} ]]
 				}))
 			end
 		)

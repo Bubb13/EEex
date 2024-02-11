@@ -3,9 +3,16 @@
 
 	EEex_DisableCodeProtection()
 
-	-------------------------------------------
-	-- [Lua] EEex_Key_Hook_AfterEventsPoll() --
-	-------------------------------------------
+	--[[
+	+--------------------------------------------------------------------+
+	| React to input by intercepting SDL events                          |
+	+--------------------------------------------------------------------+
+	|   [Lua] EEex_Key_Hook_AfterEventsPoll(event: SDL_Event) -> boolean |
+	|       return:                                                      |
+	|           false -> Don't alter engine behavior                     |
+	|           true  -> Suppress event                                  |
+	+--------------------------------------------------------------------+
+	--]]
 
 	local afterEventsPollHook = EEex_JITNear(EEex_FlattenTable({
 		{[[

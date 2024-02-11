@@ -851,13 +851,13 @@ function EEex_Sprite_Hook_OnResetQuickListCounts(sprite)
 	end
 end
 
-function EEex_Sprite_Hook_OnConstruct(sprite)
+-- function EEex_Sprite_Hook_OnConstruct(sprite)
+--
+-- end
 
-end
-
-function EEex_Sprite_Hook_OnDestruct(sprite)
-
-end
+-- function EEex_Sprite_Hook_OnDestruct(sprite)
+--
+-- end
 
 EEex_Sprite_Private_MarshalHandlerFieldType = {
 	["TABLE_END"]   = 0,

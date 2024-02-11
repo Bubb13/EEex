@@ -3,9 +3,16 @@
 
 	EEex_DisableCodeProtection()
 
-	---------------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_CheckSuppressTooltip() --
-	---------------------------------------------------
+	--[[
+	+------------------------------------------------------------+
+	| Call a hook that allows tooltips to be suppressed          |
+	+------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_CheckSuppressTooltip() -> boolean |
+	|       return:                                              |
+	|           false -> Don't alter engine behavior             |
+	|           true  -> Suppress tooltip from being opened      |
+	+------------------------------------------------------------+
+	--]]
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::SetCursor()-SetCharacterToolTip()"), {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -35,62 +42,76 @@
 		})
 	)
 
-	------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_OnConstruct() --
-	------------------------------------------
+	--[[
+	+------------------------------------------------------------+
+	| [Unused] Call a hook whenever a CGameSprite is constructed |
+	+------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnConstruct(sprite: CGameSprite)  |
+	+------------------------------------------------------------+
+	--]]
 
-	for _, labelName in ipairs({
-		"Hook-CGameSprite::Construct1()-FirstCall",
-		"Hook-CGameSprite::Construct2()-FirstCall"
-	}) do
-		EEex_HookAfterCallWithLabels(EEex_Label(labelName), {
-			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
-			EEex_FlattenTable({
-				{[[
-					#MAKE_SHADOW_SPACE(40)
-				]]},
-				EEex_GenLuaCall("EEex_Sprite_Hook_OnConstruct", {
-					["args"] = {
-						function(rspOffset) return {[[
-							mov qword ptr ss:[rsp+#$(1)], rsi
-						]], {rspOffset}}, "CGameSprite" end,
-					},
-				}),
-				{[[
-					call_error:
-					#DESTROY_SHADOW_SPACE
-				]]},
-			})
-		)
-	end
+	-- for _, labelName in ipairs({
+	-- 	"Hook-CGameSprite::Construct1()-FirstCall",
+	-- 	"Hook-CGameSprite::Construct2()-FirstCall"
+	-- }) do
+	-- 	EEex_HookAfterCallWithLabels(EEex_Label(labelName), {
+	-- 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+	-- 		EEex_FlattenTable({
+	-- 			{[[
+	-- 				#MAKE_SHADOW_SPACE(40)
+	-- 			]]},
+	-- 			EEex_GenLuaCall("EEex_Sprite_Hook_OnConstruct", {
+	-- 				["args"] = {
+	-- 					function(rspOffset) return {[[
+	-- 						mov qword ptr ss:[rsp+#$(1)], rsi
+	-- 					]], {rspOffset}}, "CGameSprite" end,
+	-- 				},
+	-- 			}),
+	-- 			{[[
+	-- 				call_error:
+	-- 				#DESTROY_SHADOW_SPACE
+	-- 			]]},
+	-- 		})
+	-- 	)
+	-- end
 
-	-----------------------------------------
-	-- [Lua] EEex_Sprite_Hook_OnDestruct() --
-	-----------------------------------------
+	--[[
+	+-----------------------------------------------------------+
+	| [Unused] Call a hook whenever a CGameSprite is destructed |
+	+-----------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnDestruct(sprite: CGameSprite)  |
+	+-----------------------------------------------------------+
+	--]]
 
-	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Destruct()-FirstCall"), {
-		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
-		EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(40)
-			]]},
-			EEex_GenLuaCall("EEex_Sprite_Hook_OnDestruct", {
-				["args"] = {
-					function(rspOffset) return {[[
-						mov qword ptr ss:[rsp+#$(1)], rbx
-					]], {rspOffset}}, "CGameSprite" end,
-				},
-			}),
-			{[[
-				call_error:
-				#DESTROY_SHADOW_SPACE
-			]]},
-		})
-	)
+	-- EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Destruct()-FirstCall"), {
+	-- 	{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+	-- 	EEex_FlattenTable({
+	-- 		{[[
+	-- 			#MAKE_SHADOW_SPACE(40)
+	-- 		]]},
+	-- 		EEex_GenLuaCall("EEex_Sprite_Hook_OnDestruct", {
+	-- 			["args"] = {
+	-- 				function(rspOffset) return {[[
+	-- 					mov qword ptr ss:[rsp+#$(1)], rbx
+	-- 				]], {rspOffset}}, "CGameSprite" end,
+	-- 			},
+	-- 		}),
+	-- 		{[[
+	-- 			call_error:
+	-- 			#DESTROY_SHADOW_SPACE
+	-- 		]]},
+	-- 	})
+	-- )
 
-	------------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_OnCheckQuickLists() --
-	------------------------------------------------
+	--[[
+	+--------------------------------------------------------------------------------------------------------------+
+	| Call a hook whenever the engine changes the number of times a spell can be cast                              |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   Used to implement listeners that react to changes in a spell's castable count                              |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnCheckQuickLists(sprite: CGameSprite, abilityId: CAbilityId, changeAmount: number) |
+	+--------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::CheckQuickLists()-CallListeners"), 0, 5, 5, {
 		{"stack_mod", 8},
@@ -126,9 +147,15 @@
 		})
 	)
 
-	-----------------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_OnResetQuickListCounts() --
-	-----------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------+
+	| Call a hook whenever the engine changes resets the number of times a spell can be cast |
+	+----------------------------------------------------------------------------------------+
+	|   Used to implement listeners that react to changes in a spell's castable count        |
+	+----------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnResetQuickListCounts(sprite: CGameSprite)                   |
+	+----------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Rest()-OnResetQuickListCounts"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
@@ -147,6 +174,19 @@
 			]]},
 		})
 	)
+
+	--[[
+	+--------------------------------------------------------------------------------------------------------------------------+
+	| Implement custom creature-marshalling handlers that can store data about a sprite at the end of the sprite's effect list |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite: CGameSprite) -> number                              |
+	|       return -> The number of bytes required to store the extra data                                                     |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_WriteExtraEffectListMarshal(memory: number)                                                     |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite: CGameSprite, memory: number)                               |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	-----------------------------------------------------
 	-- [JIT] CGameEffectList_Marshal_SavedSpritePtrMem --
@@ -172,12 +212,16 @@
 		{"mov qword ptr ds:[#$(1)], 0 #ENDL", {CGameEffectList_Unmarshal_SavedSpritePtrMem}}
 	)
 
-	------------------------------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize() --
-	------------------------------------------------------------------
+	----------------------------------------------------------
+	-- [malloc] CGameEffectList_Marshal_OriginalMarshalSize --
+	----------------------------------------------------------
 
 	local CGameEffectList_Marshal_OriginalMarshalSize = EEex_Malloc(EEex_PtrSize)
 	EEex_WritePtr(CGameEffectList_Marshal_OriginalMarshalSize, 0x0)
+
+	------------------------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize() --
+	------------------------------------------------------------------
 
 	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameEffectList::Marshal()-OverrideSize"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -296,6 +340,29 @@
 		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
+	--[[
+	+------------------------------------------------------------------------------------------------------------------------------------------------+
+	| Implement custom CONCENTR.2DA[VALUE,CHECK_MODE] - EEex-LuaFunction=<function name>. When `EEex-LuaFunction=<function name>` is specified, call |
+	| <function name> and use the return value to determine whether the spell was disrupted, (instead of running the normal concentration code).     |
+	|                                                                                                                                                |
+	| The function's signature is: <function name>(sprite: CGameSprite, damageData: table) -> boolean                                                |
+	|                                                                                                                                                |
+	|     damageData:                                                                                                                                |
+	|                                                                                                                                                |
+	|         damageTaken: number - The number of hit points removed by the Opcode #12                                                               |
+	|         effect: CGameEffect - The Opcode #12 effect                                                                                            |
+	|         sourceSprite: CGameSprite - The source sprite of the Opcode #12 effect                                                                 |
+	|         targetSprite: CGameSprite - The target sprite of the Opcode #12 effect                                                                 |
+	+------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnLoadConcentrationCheckMode(checkMode: string)                                                                       |
+	+------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnCheckConcentration(sprite: CGameSprite) -> boolean                                                                  |
+	|       return:                                                                                                                                  |
+	|           false -> Spell NOT disrupted.                                                                                                        |
+	|           true  -> Spell disrupted.                                                                                                            |
+	+------------------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
 	-----------------------------------------------------------
 	-- [Lua] EEex_Sprite_Hook_OnLoadConcentrationCheckMode() --
 	-----------------------------------------------------------
@@ -325,15 +392,9 @@
 		})
 	)
 
-	----------------------------------------------------------------------------------
-	-- Call CONCENTR.2DA[VALUE,CHECK_MODE] EEex-LuaFunction=<function name>(sprite) --
-	-- instead of running the normal concentration code.                            --
-	-- Return:                                                                      --
-	--     false -> Spell NOT disrupted.                                            --
-	--     true  -> Spell disrupted.                                                --
-	--                                                                              --
-	--  [Lua] EEex_Sprite_Hook_OnCheckConcentration()                               --
-	----------------------------------------------------------------------------------
+	---------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_OnCheckConcentration() --
+	---------------------------------------------------
 
 	EEex_Sprite_Private_RunCustomConcentrationCheckMem = EEex_Malloc(1)
 	EEex_Write8(EEex_Sprite_Private_RunCustomConcentrationCheckMem, 0)
@@ -376,6 +437,17 @@
 		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
 		EEex_HookIntegrityWatchdogRegister.R11
 	})
+
+	--[[
+	+----------------------------------------------------------------------------------------------------------------------------------------+
+	| Track Opcode #12 effects that have been applied to a sprite since it started its action. This is used to implement custom spell        |
+	| disruption logic.                                                                                                                      |
+	+----------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnDamageEffectStartingCalculations(effect: CGameEffect, sourceSprite: CGameSprite, targetSprite: CGameSprite) |
+	+----------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnDamageEffectDone(effect: CGameEffect, sourceSprite: CGameSprite, targetSprite: CGameSprite)                 |
+	+----------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	-----------------------------------------------------------------
 	-- [Lua] EEex_Sprite_Hook_OnDamageEffectStartingCalculations() --
@@ -447,9 +519,13 @@
 		})
 	)
 
-	----------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_OnSetCurrAction() --
-	----------------------------------------------
+	--[[
+	+---------------------------------------------------------------------+
+	| On action change, clear EEex data associated with the ending action |
+	+---------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnSetCurrAction(sprite: CGameSprite)       |
+	+---------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::SetCurrAction()-FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
@@ -469,9 +545,19 @@
 		})
 	)
 
-	--------------------------------------------------------------------------------------------
-	-- Allow ITM header flag BIT18 to ignore weapon styles (as if the item were in SLOT_FIST) --
-	--------------------------------------------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------+
+	| Allow ITM header flag BIT18 to ignore weapon styles (as if the item were in SLOT_FIST) |
+	+----------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item: CItem, damR: number,  |
+	|             damL: number, thacR: number, thacL: number, ACB: number, ACM: number,      |
+	|             speed: number, crit: number)                                               |
+	|                                                                                        |
+	|       return:                                                                          |
+	|           false -> Don't alter engine behavior                                         |
+	|           true  -> Ignore weapon styles                                                |
+	+----------------------------------------------------------------------------------------+
+	--]]
 
 	local getProfBonusesItemHack = EEex_Malloc(EEex_PtrSize)
 	EEex_WritePtr(getProfBonusesItemHack, 0)
@@ -522,35 +608,35 @@
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]}, "CItem" end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)] ; Register arg 4 [damR]
+						mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]          ; Register arg 4 [damR]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(40)] ; Stack arg 1 [damL]
+						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(40)]                ; Stack arg 1 [damL]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(48)] ; Stack arg 2 [thacR]
+						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(48)]                ; Stack arg 2 [thacR]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(56)] ; Stack arg 3 [thacL]
+						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(56)]                ; Stack arg 3 [thacL]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(64)] ; Stack arg 4 [ACB]
+						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(64)]                ; Stack arg 4 [ACB]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(72)] ; Stack arg 5 [ACM]
+						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(72)]                ; Stack arg 5 [ACM]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(80)] ; Stack arg 6 [speed]
+						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(80)]                ; Stack arg 6 [speed]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(88)] ; Stack arg 7 [crit]
+						mov rax, qword ptr ss:[rsp+#LAST_FRAME_TOP(88)]                ; Stack arg 7 [crit]
 						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
 					]]} end,
 				},

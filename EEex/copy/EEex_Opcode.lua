@@ -191,9 +191,9 @@ function EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite, targetSprite, bBlocke
 	end
 end
 
--------------------------------------------------------------------------------------------------
--- Opcode #333 (param3 BIT0 allows "SPL" file not to terminate upon a successful saving throw) --
--------------------------------------------------------------------------------------------------
+--------------------------------------------------------------
+-- Opcode #333 (param3 BIT0 - only check saving throw once) --
+--------------------------------------------------------------
 
 function EEex_Opcode_Hook_OnOp333CopiedSelf(effect)
 	if EEex_IsBitSet(effect.m_effectAmount2, 0) then

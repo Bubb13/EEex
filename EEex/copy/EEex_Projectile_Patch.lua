@@ -3,16 +3,24 @@
 
 	EEex_DisableCodeProtection()
 
-	-------------------------------------------------------
-	-- [EEex.dll] EEex::Projectile_Hook_OnBeforeDecode() --
-	-------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	| Implement Opcode #408 (ProjectileMutator) `typeMutator` functionality                                                            |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Projectile_Hook_OnBeforeDecode(nProjectileType: ushort, pDecoder: CGameAIBase*, pRetPtr: uintptr_t) -> ushort |
+	|       return:                                                                                                                    |
+	|            -1 -> Don't alter engine behavior                                                                                     |
+	|           !-1 -> Override projectile type with the return value                                                                  |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("CProjectile::DecodeProjectile"), 0, 5, 5, {
 		{"stack_mod", 8},
 		{"hook_integrity_watchdog_ignore_registers", {
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
 			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
-		}}},
+		}},
+		{"manual_hook_integrity_exit", true}},
 		{[[
 			#MAKE_SHADOW_SPACE(16)
 			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
@@ -26,10 +34,11 @@
 			cmp ax, -1
 			je no_override
 
+			mov cx, ax ; Override projectile type
+
 			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-			; TODO - Integrity violated
-			mov cx, ax
 			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			#MANUAL_HOOK_EXIT(1)
 			jmp #L(return)
 
 			no_override:
@@ -37,30 +46,43 @@
 			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
 			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			#DESTROY_SHADOW_SPACE
+			#MANUAL_HOOK_EXIT(0)
 		]]}
 	)
+	-- Manually define the ignored registers for the "override" branch above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("CProjectile::DecodeProjectile"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8,
+		EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+	})
 
-	------------------------------------------------------
-	-- [EEex.dll] EEex::Projectile_Hook_OnAfterDecode() --
-	------------------------------------------------------
+	--[[
+	+-------------------------------------------------------------------------------------------------------------------------+
+	| Implement Opcode #408 (ProjectileMutator) `projectileMutator` functionality                                             |
+	+-------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Projectile_Hook_OnAfterDecode(pProjectile: CProjectile*, pDecoder: CGameAIBase*, pRetPtr: uintptr_t) |
+	+-------------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CProjectile::DecodeProjectile()-LastCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov r8, qword ptr ss:[rsp+408] ; pRetPtr
-			mov rdx, rsi                   ; pDecoder
-			mov rcx, rbx                   ; pProjectile
+			mov r8, qword ptr ss:[rsp+408]               ; pRetPtr
+			mov rdx, rsi                                 ; pDecoder
+			mov rcx, rbx                                 ; pProjectile
 			call #L(EEex::Projectile_Hook_OnAfterDecode)
 		]]}
 	)
 
-	----------------------------------------------------------
-	-- [EEex.dll] EEex::Projectile_Hook_OnBeforeAddEffect() --
-	----------------------------------------------------------
+	--[[
+	+----------------------------------------------------------------------------------------------------------------------------------------------------+
+	| Implement Opcode #408 (ProjectileMutator) `effectMutator` functionality                                                                            |
+	+----------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Projectile_Hook_OnBeforeAddEffect(pProjectile: CProjectile*, pDecoder: CGameAIBase*, pEffect: CGameEffect*, pRetPtr: uintptr_t) |
+	+----------------------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
 
-	-- This is very ugly, but since CProjectile::AddEffect() isn't passed the
-	-- source aiBase, I have to go and manually define where the aiBase
-	-- is currently saved for the given CProjectile::AddEffect() call.
+	-- This is very ugly, but since CProjectile::AddEffect() isn't passed the source aiBase, I have to go and
+	-- manually define where the aiBase is currently saved for the given CProjectile::AddEffect() call.
 	local getAddEffectAIBase = EEex_JITNear({[[
 
 		#STACK_MOD(8) ; This was called, the ret ptr broke alignment

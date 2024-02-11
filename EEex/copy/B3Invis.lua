@@ -24,6 +24,17 @@ end
 
 	EEex_DisableCodeProtection()
 
+	--[[
+	+----------------------------------------------------------------------------------------------------+
+	| Allow cursor to interact with invisible creatures if a selected creature has op193                 |
+	+----------------------------------------------------------------------------------------------------+
+	|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                                  |
+	|       return:                                                                                      |
+	|           false -> Don't alter engine behavior                                                     |
+	|           true  -> Allow the cursor to interact with the creature regardless of it being invisible |
+	+----------------------------------------------------------------------------------------------------+
+	--]]
+
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::IsOver()-B3Invis"), 7, {
 		{"hook_integrity_watchdog_ignore_registers", {
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
@@ -51,6 +62,17 @@ end
 			]]},
 		})
 	)
+
+	--[[
+	+-------------------------------------------------------------------------------------+
+	| Allow invisible creature markers to render if a selected creature has op193         |
+	+-------------------------------------------------------------------------------------+
+	|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                   |
+	|       return:                                                                       |
+	|           false -> Don't alter engine behavior                                      |
+	|           true  -> Force the creature's marker to not be hidden due to invisibility |
+	+-------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::RenderMarkers()-B3Invis1"), 7, {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -83,6 +105,17 @@ end
 
 	if B3Invis_RenderAsInvisible then
 
+		--[[
+		+---------------------------------------------------------------------------------------------------------------------+
+		| (Option #1) Render invisible creatures as transparent (like improved invisibility) if a selected creature has op193 |
+		+---------------------------------------------------------------------------------------------------------------------+
+		|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                                                   |
+		|       return:                                                                                                       |
+		|           false -> Don't alter engine behavior                                                                      |
+		|           true  -> Force the creature to be rendered as transparent                                                 |
+		+---------------------------------------------------------------------------------------------------------------------+
+		--]]
+
 		EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameSprite::Render()-B3Invis"), 6, {
 			{"hook_integrity_watchdog_ignore_registers", {
 				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
@@ -114,7 +147,18 @@ end
 			})
 		)
 	else
-		-- Force circle
+
+		--[[
+		+-------------------------------------------------------------------------------------------------------+
+		| (Option #2) Render invisible creatures with an always-visible marker if a selected creature has op193 |
+		+-------------------------------------------------------------------------------------------------------+
+		|   [Lua] B3Invis_Hook_ForceCircle(sprite: CGameSprite) -> boolean                                      |
+		|       return:                                                                                         |
+		|           false -> Don't alter engine behavior                                                        |
+		|           true  -> Force the creature's marker to render                                              |
+		+-------------------------------------------------------------------------------------------------------+
+		--]]
+
 		EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameSprite::RenderMarkers()-B3Invis2"), 0, 6, 6, {
 			{"hook_integrity_watchdog_ignore_registers", {
 				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
