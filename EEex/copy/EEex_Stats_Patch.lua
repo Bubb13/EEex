@@ -129,16 +129,12 @@
 		]]}
 	)
 
-	----------------------------------------------------
-	-- [EEex.dll] EEex::Stats_Hook_OnGettingUnknown() --
-	----------------------------------------------------
-
 	--[[
 	+------------------------------------------------------------------------------------------------+
-	| Allow engine to fetch extended stat values.                                                    |
-	|                                                                                                |
-	| Extended stats are those with ids outside of the vanilla range in STATS.IDS.                   |
-	| Extended stat minimums, maximums, and defaults are defined in X-STATS.2DA.                     |
+	| Allow engine to fetch extended stat values                                                     |
+	+------------------------------------------------------------------------------------------------+
+	|   * Extended stats are those with ids outside of the vanilla range in STATS.IDS                |
+	|   * Extended stat minimums, maximums, and defaults are defined in X-STATS.2DA                  |
 	+------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Stats_Hook_OnGettingUnknown(pStats: CDerivedStats*, nStatId: int) -> number |
 	|       return -> The value of the extended stat                                                 |
