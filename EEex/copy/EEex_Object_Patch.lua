@@ -11,9 +11,9 @@
 	+----------------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Object_Hook_ForceIgnoreActorScriptName(aiType: CAIObjectType) -> boolean        |
 	|       return:                                                                                |
-	|           false -> Don't alter engine behavior                                               |
-	|           true  -> Even though the script object was defined with a string parameter,        |
-	|                    this string should not be treated as a script name                        |
+	|           -> false - Don't alter engine behavior                                             |
+	|           -> true  - Even though the script object was defined with a string parameter,      |
+	|                      this string should not be treated as a script name                      |
 	+----------------------------------------------------------------------------------------------+
 	--]]
 

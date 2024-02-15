@@ -25,14 +25,14 @@ end
 	EEex_DisableCodeProtection()
 
 	--[[
-	+----------------------------------------------------------------------------------------------------+
-	| Allow cursor to interact with invisible creatures if a selected creature has op193                 |
-	+----------------------------------------------------------------------------------------------------+
-	|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                                  |
-	|       return:                                                                                      |
-	|           false -> Don't alter engine behavior                                                     |
-	|           true  -> Allow the cursor to interact with the creature regardless of it being invisible |
-	+----------------------------------------------------------------------------------------------------+
+	+------------------------------------------------------------------------------------------------------+
+	| Allow cursor to interact with invisible creatures if a selected creature has op193                   |
+	+------------------------------------------------------------------------------------------------------+
+	|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                                    |
+	|       return:                                                                                        |
+	|           -> false - Don't alter engine behavior                                                     |
+	|           -> true  - Allow the cursor to interact with the creature regardless of it being invisible |
+	+------------------------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::IsOver()-B3Invis"), 7, {
@@ -64,14 +64,14 @@ end
 	)
 
 	--[[
-	+-------------------------------------------------------------------------------------+
-	| Allow invisible creature markers to render if a selected creature has op193         |
-	+-------------------------------------------------------------------------------------+
-	|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                   |
-	|       return:                                                                       |
-	|           false -> Don't alter engine behavior                                      |
-	|           true  -> Force the creature's marker to not be hidden due to invisibility |
-	+-------------------------------------------------------------------------------------+
+	+---------------------------------------------------------------------------------------+
+	| Allow invisible creature markers to render if a selected creature has op193           |
+	+---------------------------------------------------------------------------------------+
+	|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                     |
+	|       return:                                                                         |
+	|           -> false - Don't alter engine behavior                                      |
+	|           -> true  - Force the creature's marker to not be hidden due to invisibility |
+	+---------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::RenderMarkers()-B3Invis1"), 7, {
@@ -111,8 +111,8 @@ end
 		+---------------------------------------------------------------------------------------------------------------------+
 		|   [Lua] B3Invis_Hook_CanSeeInvisible() -> boolean                                                                   |
 		|       return:                                                                                                       |
-		|           false -> Don't alter engine behavior                                                                      |
-		|           true  -> Force the creature to be rendered as transparent                                                 |
+		|           -> false - Don't alter engine behavior                                                                    |
+		|           -> true  - Force the creature to be rendered as transparent                                               |
 		+---------------------------------------------------------------------------------------------------------------------+
 		--]]
 
@@ -154,8 +154,8 @@ end
 		+-------------------------------------------------------------------------------------------------------+
 		|   [Lua] B3Invis_Hook_ForceCircle(sprite: CGameSprite) -> boolean                                      |
 		|       return:                                                                                         |
-		|           false -> Don't alter engine behavior                                                        |
-		|           true  -> Force the creature's marker to render                                              |
+		|           -> false - Don't alter engine behavior                                                      |
+		|           -> true  - Force the creature's marker to render                                            |
 		+-------------------------------------------------------------------------------------------------------+
 		--]]
 

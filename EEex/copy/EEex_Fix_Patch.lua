@@ -10,8 +10,8 @@
 	+----------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Fix_Hook_SpellImmunityShouldSkipItemIndexing(pGameObject: CGameObject*) -> bool |
 	|       return:                                                                                      |
-	|           false -> Don't alter engine behavior                                                     |
-	|           true  -> Force the engine to skip its item list check                                    |
+	|           -> false - Don't alter engine behavior                                                   |
+	|           -> true  - Force the engine to skip its item list check                                  |
 	+----------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -60,18 +60,18 @@
 	)
 
 	--[[
-	+--------------------------------------------------------------------------------------------------------------+
-	| Fix Spell() and SpellPoint() not being disruptable if the creature is facing SSW(1), SWW(3), NWW(5), NNW(7), |
-	| NNE(9), NEE(11), SEE(13), or SSE(15)                                                                         |
-	+--------------------------------------------------------------------------------------------------------------+
-	|   [Lua] EEex_Fix_Hook_ShouldForceMainSpellActionCode(sprite: CGameSprite, point: CPoint) -> boolean          |
-	|       return:                                                                                                |
-	|           false -> Don't alter engine behavior                                                               |
-	|           true  -> Force the engine to run the main spell action code regardless of the sprite's orientation |
-	|                    (which includes spell disruption handling)                                                |
-	+--------------------------------------------------------------------------------------------------------------+
-	|   [Lua] EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow(sprite: CGameSprite)                             |
-	+--------------------------------------------------------------------------------------------------------------+
+	+----------------------------------------------------------------------------------------------------------------------+
+	| Fix Spell() and SpellPoint() not being disruptable if the creature is facing SSW(1), SWW(3), NWW(5), NNW(7), NNE(9), |
+	| NEE(11), SEE(13), or SSE(15)                                                                                         |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Fix_Hook_ShouldForceMainSpellActionCode(sprite: CGameSprite, point: CPoint) -> boolean                  |
+	|       return:                                                                                                        |
+	|           -> false - Don't alter engine behavior                                                                     |
+	|           -> true  - Force the engine to run the main spell action code regardless of the sprite's orientation       |
+	|                      (which includes spell disruption handling)                                                      |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow(sprite: CGameSprite)                                     |
+	+----------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	----------------------------------------------------------
@@ -185,8 +185,8 @@
 	+--------------------------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Fix_Hook_ShouldTransformSpellImmunityStrref(pEffect: CGameEffect*, pImmunitySpell: CImmunitySpell*) -> bool |
 	|       return:                                                                                                                  |
-	|           false -> Don't transform immunity strref                                                                             |
-	|           true  -> Transform immunity strref                                                                                   |
+	|           -> false - Don't transform immunity strref                                                                           |
+	|           -> true  - Transform immunity strref                                                                                 |
 	+--------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 

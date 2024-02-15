@@ -9,8 +9,8 @@
 	+--------------------------------------------------------------------+
 	|   [Lua] EEex_Key_Hook_AfterEventsPoll(event: SDL_Event) -> boolean |
 	|       return:                                                      |
-	|           false -> Don't alter engine behavior                     |
-	|           true  -> Suppress event                                  |
+	|           -> false - Don't alter engine behavior                   |
+	|           -> true  - Suppress event                                |
 	+--------------------------------------------------------------------+
 	--]]
 

@@ -189,8 +189,8 @@
 	+---------------------------------------------------------------------------------+
 	|   [Lua] EEex_Menu_Hook_CheckSaveMenuItem(menu: uiMenu, item: uiItem) -> boolean |
 	|       return:                                                                   |
-	|           false -> Don't write item back to UI.MENU                             |
-	|           true  -> Write item back to UI.MENU                                   |
+	|           -> false - Don't write item back to UI.MENU                           |
+	|           -> true  - Write item back to UI.MENU                                 |
 	+---------------------------------------------------------------------------------+
 	--]]
 
@@ -287,8 +287,8 @@
 	+---------------------------------------------------------------+
 	|   [Lua] EEex_Menu_Hook_CheckForceScrollbarRender() -> boolean |
 	|       return:                                                 |
-	|           false -> Don't alter engine behavior                |
-	|           true  -> Force the list's scrollbar to render       |
+	|           -> false - Don't alter engine behavior              |
+	|           -> true  - Force the list's scrollbar to render     |
 	+---------------------------------------------------------------+
 	--]]
 

@@ -55,7 +55,7 @@ EEex_Debug_LogActions = false
 
 		--[[
 		+---------------------------------------------------------------------------------------------------------+
-		| Debug log details about a CGameAIBase's action before it is executed                                    |
+		| Debug-log details about a CGameAIBase's action before it is executed                                    |
 		+---------------------------------------------------------------------------------------------------------+
 		|   [Lua] EEex_Debug_LogAction(executingObject: CGameAIBase|EEex_GameObject_CastUT, bFromAIBase: boolean) |
 		+---------------------------------------------------------------------------------------------------------+

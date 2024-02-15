@@ -56,14 +56,14 @@
 	)
 
 	--[[
-	+------------------------------------------------------------------------------------------------+
-	| Make it possible to grant non-thieves full thieving capabilities                               |
-	+------------------------------------------------------------------------------------------------+
-	|   [Lua] EEex_Actionbar_Hook_HasFullThieving(sprite: CGameSprite) -> boolean                    |
-	|       return:                                                                                  |
-	|           false -> The creature is limited to pickpocketing (cannot pick locks / disarm traps) |
-	|           true  -> The creature can take all thieving actions                                  |
-	+------------------------------------------------------------------------------------------------+
+	+--------------------------------------------------------------------------------------------------+
+	| Make it possible to grant non-thieves full thieving capabilities                                 |
+	+--------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Actionbar_Hook_HasFullThieving(sprite: CGameSprite) -> boolean                      |
+	|       return:                                                                                    |
+	|           -> false - The creature is limited to pickpocketing (cannot pick locks / disarm traps) |
+	|           -> true  - The creature can take all thieving actions                                  |
+	+--------------------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CInfButtonArray::OnLButtonPressed()-HasFullThieving"), 0, 7, 11, {

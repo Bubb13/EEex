@@ -9,8 +9,8 @@
 	+------------------------------------------------------------+
 	|   [Lua] EEex_Sprite_Hook_CheckSuppressTooltip() -> boolean |
 	|       return:                                              |
-	|           false -> Don't alter engine behavior             |
-	|           true  -> Suppress tooltip from being opened      |
+	|           -> false - Don't alter engine behavior           |
+	|           -> true  - Suppress tooltip from being opened    |
 	+------------------------------------------------------------+
 	--]]
 
@@ -358,8 +358,8 @@
 	+------------------------------------------------------------------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Sprite_Hook_OnCheckConcentration(sprite: CGameSprite) -> boolean                                                                  |
 	|       return:                                                                                                                                  |
-	|           false -> Spell NOT disrupted.                                                                                                        |
-	|           true  -> Spell disrupted.                                                                                                            |
+	|           -> false - Spell NOT disrupted                                                                                                       |
+	|           -> true  - Spell disrupted                                                                                                           |
 	+------------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -554,8 +554,8 @@
 	|             speed: number, crit: number) -> boolean                                    |
 	|                                                                                        |
 	|       return:                                                                          |
-	|           false -> Don't alter engine behavior                                         |
-	|           true  -> Ignore weapon styles                                                |
+	|           -> false - Don't alter engine behavior                                       |
+	|           -> true  - Ignore weapon styles                                              |
 	+----------------------------------------------------------------------------------------+
 	--]]
 

@@ -78,8 +78,8 @@
 	+--------------------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Opcode_Hook_OnOp214ApplyEffect(effect: CGameEffect, sprite: CGameSprite) -> boolean |
 	|       return:                                                                                    |
-	|           false -> Effect not handled                                                            |
-	|           true  -> Effect handled (skip normal code)                                             |
+	|           -> false - Effect not handled                                                          |
+	|           -> true  - Effect handled (skip normal code)                                           |
 	+--------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -253,8 +253,8 @@
 	+------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_Op280_ShouldSuppressWildSurgeVisuals(pSprite: CGameSprite*) -> bool   |
 	|       return:                                                                                        |
-	|           false -> Don't alter engine behavior                                                       |
-	|           true  -> Suppress wild surge feedback string and visuals                                   |
+	|           -> false - Don't alter engine behavior                                                     |
+	|           -> true  - Suppress wild surge feedback string and visuals                                 |
 	+------------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -420,8 +420,8 @@
 	+----------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_ApplySpell_ShouldFlipSplprotSourceAndTarget(pEffect: CGameEffect*) -> int |
 	|       return:                                                                                            |
-	|            0 -> Don't alter engine behavior                                                              |
-	|           !0 -> Flip what SPLPROT.2DA considers the "source" and "target" sprites                        |
+	|           ->  0 - Don't alter engine behavior                                                            |
+	|           -> !0 - Flip what SPLPROT.2DA considers the "source" and "target" sprites                      |
 	+----------------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -508,8 +508,8 @@
 	+------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_Op101_ShouldEffectBypassImmunity(pEffect: CGameEffect*) -> bool |
 	|       return:                                                                                  |
-	|           false -> Don't alter engine behavior                                                 |
-	|           true  -> Bypass opcode #101                                                          |
+	|           -> false - Don't alter engine behavior                                               |
+	|           -> true  - Bypass opcode #101                                                        |
 	+------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -672,8 +672,8 @@
 	+----------------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
 	|       return:                                                                                                        |
-	|            0 -> Halt effect list processing                                                                          |
-	|           !0 -> Continue effect list processing                                                                      |
+	|           ->  0 - Halt effect list processing                                                                        |
+	|           -> !0 - Continue effect list processing                                                                    |
 	+----------------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_SetTemporaryAIScript_OnRemove(pEffect: CGameEffect*, pSprite: CGameSprite*)           |
 	+----------------------------------------------------------------------------------------------------------------------+
@@ -711,16 +711,16 @@
 	|   param1  -> Modification amount                                                                                |
 	|                                                                                                                 |
 	|   param2  -> Modification type:                                                                                 |
-	|                  0 -> Sum     - stat = stat + param1                                                            |
-	|                  1 -> Set     - stat = param1                                                                   |
-	|                  2 -> Percent - stat = stat * param1 / 100                                                      |
+	|                  -> 0 (Sum)     - stat = stat + param1                                                          |
+	|                  -> 1 (Set)     - stat = param1                                                                 |
+	|                  -> 2 (Percent) - stat = stat * param1 / 100                                                    |
 	|                                                                                                                 |
 	|   special -> Extended stat id                                                                                   |
 	+-----------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_SetExtendedStat_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
 	|       return:                                                                                                   |
-	|            0 -> Halt effect list processing                                                                     |
-	|           !0 -> Continue effect list processing                                                                 |
+	|           ->  0 - Halt effect list processing                                                                   |
+	|           -> !0 - Continue effect list processing                                                               |
 	+-----------------------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -793,13 +793,13 @@
 	+---------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_ScreenEffects_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
 	|       return:                                                                                                 |
-	|            0 -> Halt effect list processing                                                                   |
-	|           !0 -> Continue effect list processing                                                               |
+	|           ->  0 - Halt effect list processing                                                                 |
+	|           -> !0 - Continue effect list processing                                                             |
 	+---------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_OnCheckAdd(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int                |
 	|       return:                                                                                                 |
-	|            0 -> Don't alter engine behavior                                                                   |
-	|           !0 -> Block effect                                                                                  |
+	|           ->  0 - Don't alter engine behavior                                                                 |
+	|           -> !0 - Block effect                                                                                |
 	+---------------------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -913,8 +913,8 @@
 	+-------------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_ProjectileMutator_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
 	|       return:                                                                                                     |
-	|            0 -> Don't alter engine behavior                                                                       |
-	|           !0 -> Block effect                                                                                      |
+	|           ->  0 - Halt effect list processing                                                                     |
+	|           -> !0 - Continue effect list processing                                                                 |
 	+-------------------------------------------------------------------------------------------------------------------+
 	--]]
 
@@ -939,15 +939,15 @@
 	|   The function's signature is: listener(sprite: CGameSprite, action: CAIAction, op409: CGameEffect)                  |
 	+----------------------------------------------------------------------------------------------------------------------+
 	|   param1:                                                                                                            |
-	|        0 -> Action listener disabled                                                                                 |
-	|       !0 -> Action listener enabled                                                                                  |
+	|       ->  0 - Action listener disabled                                                                               |
+	|       -> !0 - Action listener enabled                                                                                |
 	|                                                                                                                      |
 	|   resource -> The name of the function as registered by EEex_Action_AddEnabledSpriteStartedActionListener()          |
 	+----------------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_EnableActionListener_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
 	|       return:                                                                                                        |
-	|            0 -> Don't alter engine behavior                                                                          |
-	|           !0 -> Block effect                                                                                         |
+	|           ->  0 - Halt effect list processing                                                                        |
+	|           -> !0 - Continue effect list processing                                                                    |
 	+----------------------------------------------------------------------------------------------------------------------+
 	--]]
 

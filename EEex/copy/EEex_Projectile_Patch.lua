@@ -9,8 +9,8 @@
 	+----------------------------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Projectile_Hook_OnBeforeDecode(nProjectileType: ushort, pDecoder: CGameAIBase*, pRetPtr: uintptr_t) -> ushort |
 	|       return:                                                                                                                    |
-	|            -1 -> Don't alter engine behavior                                                                                     |
-	|           !-1 -> Override projectile type with the return value                                                                  |
+	|           ->  -1 - Don't alter engine behavior                                                                                   |
+	|           -> !-1 - Override projectile type with the return value                                                                |
 	+----------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
