@@ -87,53 +87,11 @@ function EEex_Utility_GetOrCreateTable(t, key, fillFunc)
 	return default
 end
 
+-- @bubb_doc { EEex_Utility_DeepCopy }
+-- @deprecated: Use ``EEex.DeepCopy`` instead.
 function EEex_Utility_DeepCopy(t)
-
-	if type(t) ~= "table" then
-		return t
-	end
-
-	local tCopy = {}
-	local processStack = {{tCopy, nil, t}} -- vCopy, iterK, toProcessT
-	local stackTop = 1
-
-	while true do
-
-		::continue::
-		local toProcess = processStack[stackTop]
-		local toProcessT = toProcess[3]
-		local vCopy = toProcess[1]
-
-		while true do
-
-			local k, v = next(toProcessT, toProcess[2])
-			if k == nil then
-				break
-			end
-
-			toProcess[2] = k
-
-			if type(v) == "table" then
-				stackTop = stackTop + 1
-				processStack[stackTop] = {{}, nil, v}
-				goto continue
-			else
-				vCopy[k] = v
-			end
-		end
-
-		processStack[stackTop] = nil
-		stackTop = stackTop - 1
-
-		if stackTop == 0 then
-			break
-		end
-
-		local parent = processStack[stackTop]
-		parent[1][parent[2]] = vCopy
-	end
-
-	return tCopy
+	-- [EEex.dll]
+	return EEex.DeepCopy(t)
 end
 
 function EEex_Utility_DumpSprite()

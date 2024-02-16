@@ -48,12 +48,23 @@ end
 
 	EEex_DisableCodeProtection()
 
-	EEex_HookAfterCall(EEex_Label("Hook-CChitin::OnResizeWindow()-B3Scale"), EEex_FlattenTable({[[
-		#MAKE_SHADOW_SPACE(32)
-		]], EEex_GenLuaCall("B3Scale_Hook_DoSizeChange"), [[
-		call_error:
-		#DESTROY_SHADOW_SPACE
-	]]}))
+	--[[
+	+---------------------------------------------------+
+	| Tweak the UI scale whenever the window is resized |
+	+---------------------------------------------------+
+	|   [Lua] B3Scale_Hook_DoSizeChange()               |
+	+---------------------------------------------------+
+	--]]
+
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::OnResizeWindow()-B3Scale"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		EEex_FlattenTable({[[
+			#MAKE_SHADOW_SPACE(32)
+			]], EEex_GenLuaCall("B3Scale_Hook_DoSizeChange"), [[
+			call_error:
+			#DESTROY_SHADOW_SPACE
+		]]})
+	)
 
 	EEex_EnableCodeProtection()
 

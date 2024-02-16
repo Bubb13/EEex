@@ -452,8 +452,15 @@ function EEex_Sprite_GetActiveStats(sprite)
 end
 CGameSprite.getActiveStats = EEex_Sprite_GetActiveStats
 
+-- @bubb_doc { EEex_Sprite_GetExtendedStat / instance_name=getExtendedStat }
+-- @deprecated: Use ``EEex_Sprite_GetStat()`` instead.
+-- @summary: Returns the value of the extended stat on the given ``sprite``.
+-- @self { sprite / type=CGameSprite }: The sprite whose extended stat value is being fetched.
+-- @return { type=number }: See summary.
+
 function EEex_Sprite_GetExtendedStat(sprite, id)
-	return EEex_GetUDAux(sprite:getActiveStats())["EEex_ExtendedStats"][id]
+	-- [EEex.dll]
+	return EEex.GetExtendedStatValue(sprite, id)
 end
 CGameSprite.getExtendedStat = EEex_Sprite_GetExtendedStat
 
@@ -844,13 +851,13 @@ function EEex_Sprite_Hook_OnResetQuickListCounts(sprite)
 	end
 end
 
-function EEex_Sprite_Hook_OnConstruct(sprite)
+-- function EEex_Sprite_Hook_OnConstruct(sprite)
+--
+-- end
 
-end
-
-function EEex_Sprite_Hook_OnDestruct(sprite)
-
-end
+-- function EEex_Sprite_Hook_OnDestruct(sprite)
+--
+-- end
 
 EEex_Sprite_Private_MarshalHandlerFieldType = {
 	["TABLE_END"]   = 0,

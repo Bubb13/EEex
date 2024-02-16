@@ -1,11 +1,4 @@
 
--- BUG: v2.6.6.0 - op206/318/324 incorrectly indexes source object's items
--- list if the incoming effect's source spell has a name strref of -1
--- without first checking if the source was a sprite.
-function EEex_Fix_Hook_SpellImmunityShouldSkipItemIndexing(object)
-	return object.m_objectType ~= CGameObjectType.SPRITE
-end
-
 -- The engine doesn't update quick lists when a special ability is added,
 -- such as from op171 or act279.
 function EEex_Fix_Hook_OnAddSpecialAbility(sprite, spell)
@@ -43,16 +36,4 @@ end
 
 function EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow(sprite)
 	EEex_GetUDAux(sprite)["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 1
-end
-
--------------------------------------------------------------------------------------------
--- Fix several regressions in v2.6 where:                                                --
---   1) op206's param1 only works for values 0xF00074 and 0xF00080.                      --
---   2) op232 and op256's "you cannot cast multiple instances" message fails to display. --
--------------------------------------------------------------------------------------------
-
-function EEex_Fix_Hook_ShouldTransformSpellImmunityStrref(effect, immunitySpell)
-	local sourceResRef = effect.m_sourceRes:get()
-	local errorStrref = immunitySpell.m_error
-	return sourceResRef == "" and (errorStrref == 0xF00074 or errorStrref == 0xF00080)
 end

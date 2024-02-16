@@ -449,6 +449,7 @@ function EEex_Projectile_RegisterGlobalMutator(mutatorTableName)
 		EEex_Error("[EEex_Projectile_RegisterGlobalMutator] Invalid mutatorTableName parameter value")
 	end
 	table.insert(EEex_Projectile_Private_GlobalMutators, mutatorTableName)
+	EEex.Projectile_LuaHook_GlobalMutators_Enabled = true
 end
 
 -- @bubb_doc { EEex_Projectile_CastUserType / alias=EEex_Projectile_CastUT }
@@ -477,42 +478,43 @@ end
 --
 -- }: See summary.
 
+EEex_Projectile_Private_CastUserTypes = {
+	[EEex_Projectile_Type.CProjectile]                      = "CProjectile",
+	[EEex_Projectile_Type.CProjectileAmbiant]               = "CProjectileAmbiant",
+	[EEex_Projectile_Type.CProjectileArea]                  = "CProjectileArea",
+	[EEex_Projectile_Type.CProjectileBAM]                   = "CProjectileBAM",
+	--[EEex_Projectile_Type.CProjectileCallLightning]       = "CProjectileCallLightning",
+	--[EEex_Projectile_Type.CProjectileCastingGlow]         = "CProjectileCastingGlow",
+	[EEex_Projectile_Type.CProjectileChain]                 = "CProjectileChain",
+	[EEex_Projectile_Type.CProjectileColorSpray]            = "CProjectileColorSpray",
+	[EEex_Projectile_Type.CProjectileConeOfCold]            = "CProjectileConeOfCold",
+	[EEex_Projectile_Type.CProjectileFall]                  = "CProjectileFall",
+	[EEex_Projectile_Type.CProjectileFireHands]             = "CProjectileFireHands",
+	[EEex_Projectile_Type.CProjectileInstant]               = "CProjectileInstant",
+	--[EEex_Projectile_Type.CProjectileInvisibleTravelling] = "CProjectileInvisibleTravelling",
+	--[EEex_Projectile_Type.CProjectileLightningBolt]       = "CProjectileLightningBolt",
+	--[EEex_Projectile_Type.CProjectileLightningBoltGround] = "CProjectileLightningBoltGround",
+	--[EEex_Projectile_Type.CProjectileLightningBounce]     = "CProjectileLightningBounce",
+	--[EEex_Projectile_Type.CProjectileLightningStorm]      = "CProjectileLightningStorm",
+	--[EEex_Projectile_Type.CProjectileMagicMissileMulti]   = "CProjectileMagicMissileMulti",
+	[EEex_Projectile_Type.CProjectileMulti]                 = "CProjectileMulti",
+	[EEex_Projectile_Type.CProjectileMushroom]              = "CProjectileMushroom",
+	[EEex_Projectile_Type.CProjectileNewScorcher]           = "CProjectileNewScorcher",
+	[EEex_Projectile_Type.CProjectileScorcher]              = "CProjectileScorcher",
+	[EEex_Projectile_Type.CProjectileSegment]               = "CProjectileSegment",
+	[EEex_Projectile_Type.CProjectileSkyStrike]             = "CProjectileSkyStrike",
+	[EEex_Projectile_Type.CProjectileSkyStrikeBAM]          = "CProjectileSkyStrikeBAM",
+	[EEex_Projectile_Type.CProjectileSpellHit]              = "CProjectileSpellHit",
+	[EEex_Projectile_Type.CProjectileTravelDoor]            = "CProjectileTravelDoor",
+}
+
 function EEex_Projectile_CastUserType(projectile)
 
 	if not projectile then
 		return nil
 	end
 
-	local usertype = ({
-		[EEex_Projectile_Type.CProjectile]                      = "CProjectile",
-		[EEex_Projectile_Type.CProjectileAmbiant]               = "CProjectileAmbiant",
-		[EEex_Projectile_Type.CProjectileArea]                  = "CProjectileArea",
-		[EEex_Projectile_Type.CProjectileBAM]                   = "CProjectileBAM",
-		--[EEex_Projectile_Type.CProjectileCallLightning]       = "CProjectileCallLightning",
-		--[EEex_Projectile_Type.CProjectileCastingGlow]         = "CProjectileCastingGlow",
-		[EEex_Projectile_Type.CProjectileChain]                 = "CProjectileChain",
-		[EEex_Projectile_Type.CProjectileColorSpray]            = "CProjectileColorSpray",
-		[EEex_Projectile_Type.CProjectileConeOfCold]            = "CProjectileConeOfCold",
-		[EEex_Projectile_Type.CProjectileFall]                  = "CProjectileFall",
-		[EEex_Projectile_Type.CProjectileFireHands]             = "CProjectileFireHands",
-		[EEex_Projectile_Type.CProjectileInstant]               = "CProjectileInstant",
-		--[EEex_Projectile_Type.CProjectileInvisibleTravelling] = "CProjectileInvisibleTravelling",
-		--[EEex_Projectile_Type.CProjectileLightningBolt]       = "CProjectileLightningBolt",
-		--[EEex_Projectile_Type.CProjectileLightningBoltGround] = "CProjectileLightningBoltGround",
-		--[EEex_Projectile_Type.CProjectileLightningBounce]     = "CProjectileLightningBounce",
-		--[EEex_Projectile_Type.CProjectileLightningStorm]      = "CProjectileLightningStorm",
-		--[EEex_Projectile_Type.CProjectileMagicMissileMulti]   = "CProjectileMagicMissileMulti",
-		[EEex_Projectile_Type.CProjectileMulti]                 = "CProjectileMulti",
-		[EEex_Projectile_Type.CProjectileMushroom]              = "CProjectileMushroom",
-		[EEex_Projectile_Type.CProjectileNewScorcher]           = "CProjectileNewScorcher",
-		[EEex_Projectile_Type.CProjectileScorcher]              = "CProjectileScorcher",
-		[EEex_Projectile_Type.CProjectileSegment]               = "CProjectileSegment",
-		[EEex_Projectile_Type.CProjectileSkyStrike]             = "CProjectileSkyStrike",
-		[EEex_Projectile_Type.CProjectileSkyStrikeBAM]          = "CProjectileSkyStrikeBAM",
-		[EEex_Projectile_Type.CProjectileSpellHit]              = "CProjectileSpellHit",
-		[EEex_Projectile_Type.CProjectileTravelDoor]            = "CProjectileTravelDoor",
-	})[projectile:getType()]
-
+	local usertype = EEex_Projectile_Private_CastUserTypes[projectile:getType()]
 	return usertype and EEex_CastUD(projectile, usertype) or projectile
 end
 EEex_Projectile_CastUT = EEex_Projectile_CastUserType
@@ -601,119 +603,3 @@ function EEex_Projectile_IsOfType(projectile, checkType)
 	return EEex_BAnd(EEex_Projectile_Private_Inheritance[projType], checkType) ~= 0x0
 end
 CProjectile.isOfType = EEex_Projectile_IsOfType
-
------------
--- Hooks --
------------
-
-function EEex_Projectile_Private_CallMutatorFunction(mutatorTableName, mutatorFunctionName, arguments)
-	local mutatorTable = _G[mutatorTableName]
-	if mutatorTable ~= nil and type(mutatorTable) == "table" then
-		local mutatorFunc = mutatorTable[mutatorFunctionName]
-		if mutatorFunc then
-			if type(mutatorFunc) == "function" then
-				return mutatorFunc(arguments)
-			else
-				print("[!] op408 (ProjectileMutator) attempted to use an invalid \""..mutatorFunctionName.."\" value under: \""..mutatorTableName.."\"")
-			end
-		end
-	else
-		print("[!] op408 (ProjectileMutator) attempted to use an invalid mutator table: \""..mutatorTableName.."\"")
-	end
-end
-
-function EEex_Projectile_Private_ProcessMutatorFunctions(aiBase, callProjectileMutatorFunc)
-
-	for _, mutatorTableName in ipairs(EEex_Projectile_Private_GlobalMutators) do
-		local retVal = callProjectileMutatorFunc(mutatorTableName)
-		if retVal then
-			return retVal
-		end
-	end
-
-	if EEex_GameObject_IsSprite(aiBase, true) then
-		local statsAux = EEex_GetUDAux(aiBase:getActiveStats())
-		for _, originatingEffect in ipairs(statsAux["EEex_ProjectileMutatorEffects"] or {}) do
-			local retVal = callProjectileMutatorFunc(originatingEffect.m_res:get(), originatingEffect)
-			if retVal then
-				return retVal
-			end
-		end
-	end
-end
-
-function EEex_Projectile_Hook_OnBeforeDecode(projectileType, aiBase, retPtr)
-
-	local decodeSource = EEex_Projectile_Private_DecodeSources[retPtr]
-
-	local callTypeMutator = function(mutatorTableName, originatingEffect)
-
-		local newType = EEex_Projectile_Private_CallMutatorFunction(mutatorTableName, "typeMutator", {
-			["decodeSource"] = decodeSource,
-			["originatingEffect"] = originatingEffect,
-			["originatingSprite"] = aiBase,
-			["projectileType"] = projectileType,
-		})
-
-		if newType then
-			if type(newType) == "number" then
-				return newType
-			else
-				print("[!] op408 (ProjectileMutator) attempted to use an invalid return value \""..tostring(newType).."\" from typeMutator under: \""..mutatorTableName.."\"")
-			end
-		end
-	end
-
-	return EEex_Projectile_Private_ProcessMutatorFunctions(aiBase, callTypeMutator) or -1
-end
-
-function EEex_Projectile_Hook_OnAfterDecode(projectile, aiBase, retPtr)
-
-	local decodeSource = EEex_Projectile_Private_DecodeSources[retPtr]
-
-	local callProjectileMutator = function(mutatorTableName, originatingEffect)
-
-		local blockFurtherMutations = EEex_Projectile_Private_CallMutatorFunction(mutatorTableName, "projectileMutator", {
-			["decodeSource"] = decodeSource,
-			["originatingEffect"] = originatingEffect,
-			["originatingSprite"] = aiBase,
-			["projectile"] = projectile,
-		})
-
-		if blockFurtherMutations then
-			if type(blockFurtherMutations) == "boolean" then
-				return blockFurtherMutations
-			else
-				print("[!] op408 (ProjectileMutator) attempted to use an invalid return value \""..tostring(blockFurtherMutations).."\" from projectileMutator under: \""..mutatorTableName.."\"")
-			end
-		end
-	end
-
-	EEex_Projectile_Private_ProcessMutatorFunctions(aiBase, callProjectileMutator)
-end
-
-function EEex_Projectile_Hook_BeforeAddEffect(projectile, aiBase, effect, retPtr)
-
-	local addEffectSource = EEex_Projectile_Private_AddEffectSources[retPtr]
-
-	local callEffectMutator = function(mutatorTableName, originatingEffect)
-
-		local blockFurtherMutations = EEex_Projectile_Private_CallMutatorFunction(mutatorTableName, "effectMutator", {
-			["addEffectSource"] = addEffectSource,
-			["effect"] = effect,
-			["originatingEffect"] = originatingEffect,
-			["originatingSprite"] = aiBase,
-			["projectile"] = projectile,
-		})
-
-		if blockFurtherMutations then
-			if type(blockFurtherMutations) == "boolean" then
-				return blockFurtherMutations
-			else
-				print("[!] op408 (ProjectileMutator) attempted to use an invalid return value \""..tostring(blockFurtherMutations).."\" from effectMutator under: \""..mutatorTableName.."\"")
-			end
-		end
-	end
-
-	EEex_Projectile_Private_ProcessMutatorFunctions(aiBase, callEffectMutator)
-end

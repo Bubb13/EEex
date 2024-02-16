@@ -1,7 +1,21 @@
 
-EEex_OnceTable = {}
-EEex_GlobalAssemblyLabels = {}
-EEex_CodePageAllocations = {}
+-- This file needs to be called by both EEex_EarlyMain.lua and
+-- EEex_Main.lua. This guard prevents the file from being
+-- needlessly processed twice.
+if EEex_Assembly_AlreadyLoaded then
+	return
+end
+EEex_Assembly_AlreadyLoaded = true
+
+-- LuaJIT compatibility
+if not table.pack then
+	table.pack = function(...)
+		local t = {...}
+		t.n = #t
+		return t
+	end
+	table.unpack = unpack
+end
 
 -------------------
 -- Debug Utility --
@@ -37,6 +51,8 @@ end
 --------------------
 -- Random Utility --
 --------------------
+
+EEex_OnceTable = {}
 
 function EEex_Once(key, func)
 	if not EEex_OnceTable[key] then
@@ -356,8 +372,27 @@ end
 -- General Assembly Writing --
 ------------------------------
 
+-- This table is stored in the Lua registry. InfinityLoader automatically
+-- updates it when new patterns are added by Lua bindings DLLs.
+EEex_GlobalAssemblyLabels = EEex_GetPatternMap()
+
 function EEex_DefineAssemblyLabel(label, value)
 	EEex_GlobalAssemblyLabels[label] = value
+end
+
+function EEex_ClearAssemblyLabel(label)
+	EEex_GlobalAssemblyLabels[label] = nil
+end
+
+function EEex_RunWithAssemblyLabels(labels, func)
+	for _, labelPair in ipairs(labels) do
+		EEex_DefineAssemblyLabel(labelPair[1], labelPair[2])
+	end
+	local retVal = func()
+	for _, labelPair in ipairs(labels) do
+		EEex_ClearAssemblyLabel(labelPair[1])
+	end
+	return retVal
 end
 
 function EEex_LabelDefault(label, default)
@@ -367,8 +402,12 @@ end
 function EEex_Label(label)
 	local value = EEex_GlobalAssemblyLabels[label]
 	if not value then
-		EEex_Error("Label \""..label.."\" is not defined in the global scope!")
+		EEex_Error(string.format("Label \"#L(%s)\" not defined", label))
 	end
+	return EEex_GlobalAssemblyLabels[label]
+end
+
+function EEex_TryLabel(label)
 	return EEex_GlobalAssemblyLabels[label]
 end
 
@@ -403,43 +442,232 @@ function EEex_StoreBytesAssembly(startAddress, size)
 	return bytes
 end
 
-function EEex_HookRelativeBranch(address, assemblyT)
+function EEex_ReplaceCall(address, newTarget)
 	local opcode = EEex_ReadU8(address)
-	if opcode ~= 0xE8 and opcode ~= 0xE9 then EEex_Error("Not disp32 relative: "..EEex_ToHex(opcode)) end
+	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+	EEex_JITAt(address, {"call short ", EEex_JITNear({"jmp ", newTarget, "#ENDL"}), "#ENDL"})
+end
+
+function EEex_HookRemoveCallInternal(address, labelPairs, assemblyT)
+
+	local opcode = EEex_ReadU8(address)
+	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+
 	local afterCall = address + 5
-	EEex_DefineAssemblyLabel("return", afterCall)
 	local target = afterCall + EEex_Read32(address + 1)
-	EEex_DefineAssemblyLabel("original", target)
-	local hookAddress = EEex_JITNear(assemblyT)
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
+		if EEex_HookIntegrityWatchdog_Load then
+			EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			})
+			EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		end
+
+		local manualReturn = EEex_TryLabel("manual_return")
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"original", target},
+			{"return", manualReturn and afterCall or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+					#IF ]], not manualReturn, [[ {
+						return:
+						#MANUAL_HOOK_EXIT(0)
+						jmp ]], afterCall, [[
+					}
+				]]}))
+			end
+		)
+	end)
+
+	EEex_JITAt(address, {"jmp short "..hookAddress})
+end
+
+function EEex_HookRemoveCall(address, assemblyT)
+	EEex_HookRemoveCallInternal(address, {}, assemblyT)
+end
+
+function EEex_HookRemoveCallWithLabels(address, labelPairs, assemblyT)
+	EEex_HookRemoveCallInternal(address, labelPairs, assemblyT)
+end
+
+function EEex_HookRelativeJumpInternal(address, labelPairs, assemblyT)
+
+	local opcode = EEex_ReadU8(address)
+	if opcode ~= 0xE9 then EEex_Error("Not disp32 jmp: "..EEex_ToHex(opcode)) end
+
+	local afterCall = address + 5
+	local target = afterCall + EEex_Read32(address + 1)
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		local manualContinue = EEex_TryLabel("manual_continue")
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"original", manualContinue and target or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+					#IF ]], not manualContinue, [[ {
+						original:
+						#MANUAL_HOOK_EXIT(0)
+						jmp ]], target, [[
+					}
+				]]}))
+			end
+		)
+	end)
+
+	EEex_JITAt(address, {"jmp short "..hookAddress})
+end
+
+function EEex_HookRelativeJump(address, assemblyT)
+	EEex_HookRelativeJumpInternal(address, {}, assemblyT)
+end
+
+function EEex_HookRelativeJumpWithLabels(address, labelPairs, assemblyT)
+	EEex_HookRelativeJumpInternal(address, labelPairs, assemblyT)
+end
+
+function EEex_HookCallInternal(address, labelPairs, assemblyT, after)
+
+	local opcode = EEex_ReadU8(address)
+	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+
+	local afterCall = address + 5
+	local target = afterCall + EEex_Read32(address + 1)
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
+		if EEex_HookIntegrityWatchdog_Load then
+			if not after then
+				EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {EEex_HookIntegrityWatchdogRegister.RAX})
+			else
+				EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {
+					EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+					EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+				})
+			end
+			EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		end
+
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return_skip", (not EEex_HookIntegrityWatchdog_Load and not after) and afterCall or nil},
+			{"return", (not EEex_HookIntegrityWatchdog_Load and after) and afterCall or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable(
+					not after
+					and {
+						EEex_HookIntegrityWatchdog_HookEnter,
+						assemblyT, [[
+						return:
+						#MANUAL_HOOK_EXIT(0)
+						call ]], target, [[ #ENDL
+						jmp ]], afterCall, [[ #ENDL
+
+						#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+							return_skip:
+							#MANUAL_HOOK_EXIT(0)
+							jmp ]], afterCall, [[ #ENDL
+						}
+					]]}
+					or {[[
+						call ]], target, "#ENDL",
+						EEex_HookIntegrityWatchdog_HookEnter,
+						assemblyT, [[
+						#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+							return:
+							#MANUAL_HOOK_EXIT(0)
+						}
+						jmp ]], afterCall, [[ #ENDL
+					]]}
+				))
+			end
+		)
+	end)
+
 	EEex_JITAt(address, {"jmp short "..hookAddress})
 end
 
 function EEex_HookBeforeCall(address, assemblyT)
-	local opcode = EEex_ReadU8(address)
-	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
-	local afterCall = address + 5
-	EEex_DefineAssemblyLabel("return", afterCall)
-	local target = afterCall + EEex_Read32(address + 1)
-	local hookAddress = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{"call #$(1) #ENDL", {target}},
-		{"jmp #$(1) #ENDL", {afterCall}},
-	}))
-	EEex_JITAt(address, {"jmp short "..hookAddress})
+	EEex_HookCallInternal(address, {}, assemblyT, false)
+end
+
+function EEex_HookBeforeCallWithLabels(address, labelPairs, assemblyT)
+	EEex_HookCallInternal(address, labelPairs, assemblyT, false)
 end
 
 function EEex_HookAfterCall(address, assemblyT)
+	EEex_HookCallInternal(address, {}, assemblyT, true)
+end
+
+function EEex_HookAfterCallWithLabels(address, labelPairs, assemblyT)
+	EEex_HookCallInternal(address, labelPairs, assemblyT, true)
+end
+
+function EEex_HookBeforeAndAfterCallInternal(address, labelPairs, beforeAssemblyT, afterAssemblyT)
+
 	local opcode = EEex_ReadU8(address)
 	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
+
 	local afterCall = address + 5
-	EEex_DefineAssemblyLabel("return", afterCall)
 	local target = afterCall + EEex_Read32(address + 1)
-	local hookAddress = EEex_JITNear(EEex_FlattenTable({
-		{"call #$(1) #ENDL", {target}},
-		assemblyT,
-		{"jmp #$(1) #ENDL", {afterCall}},
-	}))
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
+		if EEex_HookIntegrityWatchdog_Load then
+			EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(address, 0, {EEex_HookIntegrityWatchdogRegister.RAX})
+			EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance(address, 0)
+			EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(address, 1, {
+				EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+				EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+			})
+			EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance(address, 1)
+		end
+
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return", not EEex_HookIntegrityWatchdog_Load and afterCall or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+
+					EEex_HookIntegrityWatchdog_HookEnter,
+					beforeAssemblyT, [[
+					call:
+					#MANUAL_HOOK_EXIT(0)
+
+					call ]], target, "#ENDL",
+
+					EEex_HookIntegrityWatchdog_HookEnter,
+					afterAssemblyT, [[
+					#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+						return:
+					}
+					#MANUAL_HOOK_EXIT(1)
+					jmp ]], afterCall, "#ENDL",
+				}))
+			end
+		)
+	end)
+
 	EEex_JITAt(address, {"jmp short "..hookAddress})
+end
+
+function EEex_HookBeforeAndAfterCall(address, beforeAssemblyT, afterAssemblyT)
+	EEex_HookBeforeAndAfterCallInternal(address, {}, beforeAssemblyT, afterAssemblyT)
+end
+
+function EEex_HookBeforeAndAfterCallWithLabels(address, labelPairs, beforeAssemblyT, afterAssemblyT)
+	EEex_HookBeforeAndAfterCallInternal(address, labelPairs, beforeAssemblyT, afterAssemblyT)
 end
 
 function EEex_GetJmpInfo(address)
@@ -517,201 +745,372 @@ function EEex_GetJmpInfo(address)
 	return entry[1], afterInst + readFunc(curAddress), afterInst - address, afterInst
 end
 
-function EEex_HookJump(address, restoreSize, assemblyT)
+function EEex_ForceJump(address)
+	local _, jmpDest, instructionLength, _ = EEex_GetJmpInfo(address)
+	EEex_JITAt(address, {[[
+		jmp short ]], jmpDest, [[ #ENDL
+		#REPEAT(#$(1),nop #ENDL) ]], {instructionLength - 5}
+	})
+end
+
+function EEex_HookBeforeConditionalJumpInternal(address, restoreSize, labelPairs, assemblyT)
 
 	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
 
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
 
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"jmp_success", not EEex_HookIntegrityWatchdog_Load and jmpDest or nil},
+			{"jmp_fail", (not EEex_HookIntegrityWatchdog_Load and restoreSize <= 0) and jmpFailDest or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{[[
-			jmp:
-		]]},
-		{
-			jmpMnemonic, " ", jmpDest, [[ #ENDL
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-	}))
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+
+					#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+
+						return: #ENDL ]],
+						jmpMnemonic, [[ jmp_success
+
+						jmp_fail:
+						#MANUAL_HOOK_EXIT(0) ]],
+						restoreBytes, [[
+						jmp ]], jmpFailDest, [[ #ENDL
+
+						jmp_success:
+						#MANUAL_HOOK_EXIT(0)
+						jmp ]], jmpDest, [[ #ENDL
+					}
+
+					#IF ]], not EEex_HookIntegrityWatchdog_Load, [[ {
+
+						return: #ENDL ]],
+						jmpMnemonic, " ", jmpDest, [[ #ENDL
+
+						#IF ]], restoreSize > 0, [[ {
+							jmp_fail: #ENDL ]],
+							restoreBytes, [[
+						}
+
+						jmp ]], jmpFailDest, [[ #ENDL
+					} ]],
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
-function EEex_HookJumpOnFail(address, restoreSize, assemblyT)
+function EEex_HookBeforeConditionalJump(address, restoreSize, assemblyT)
+	EEex_HookBeforeConditionalJumpInternal(address, restoreSize, {}, assemblyT)
+end
+
+function EEex_HookBeforeConditionalJumpWithLabels(address, restoreSize, labelPairs, assemblyT)
+	EEex_HookBeforeConditionalJumpInternal(address, restoreSize, labelPairs, assemblyT)
+end
+
+function EEex_HookConditionalJumpOnFailInternal(address, restoreSize, labelPairs, assemblyT)
 
 	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
 
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
 
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"jmp_success", not EEex_HookIntegrityWatchdog_Load and jmpDest or nil},
+			{"jmp_fail", (not EEex_HookIntegrityWatchdog_Load and restoreSize <= 0) and jmpFailDest or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		{jmpMnemonic, " ", jmpDest, "#ENDL"},
-		assemblyT,
-		{[[
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-	}))
+					jmpMnemonic, " ", jmpDest, "#ENDL",
+
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+
+					#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+
+						jmp_fail:
+						#MANUAL_HOOK_EXIT(0) ]],
+						restoreBytes, [[
+						jmp ]], jmpFailDest, [[ #ENDL
+
+						jmp_success:
+						#MANUAL_HOOK_EXIT(0)
+						jmp ]], jmpDest, [[ #ENDL
+					}
+
+					#IF ]], not EEex_HookIntegrityWatchdog_Load, [[ {
+
+						#IF ]], restoreSize > 0, [[ {
+							jmp_fail: #ENDL ]],
+							restoreBytes, [[
+						}
+
+						jmp ]], jmpFailDest, [[ #ENDL
+					} ]],
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
-function EEex_HookJumpOnSuccess(address, restoreSize, assemblyT)
+function EEex_HookConditionalJumpOnFail(address, restoreSize, assemblyT)
+	EEex_HookConditionalJumpOnFailInternal(address, restoreSize, {}, assemblyT)
+end
+
+function EEex_HookConditionalJumpOnFailWithLabels(address, restoreSize, labelPairs, assemblyT)
+	EEex_HookConditionalJumpOnFailInternal(address, restoreSize, labelPairs, assemblyT)
+end
+
+function EEex_HookConditionalJumpOnSuccessInternal(address, restoreSize, labelPairs, assemblyT)
 
 	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
 
 	local jmpFailDest = afterInstruction + restoreSize
 	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
 
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"jmp_success", not EEex_HookIntegrityWatchdog_Load and jmpDest or nil},
+			{"jmp_fail", (not EEex_HookIntegrityWatchdog_Load and restoreSize <= 0) and jmpFailDest or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		{jmpMnemonic, [[ jmp_succeeded
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-		{[[
-			jmp_succeeded:
-		]]},
-		assemblyT,
-		{"jmp ", jmpDest, "#ENDL"},
-	}))
+					jmpMnemonic, " jmp_success_internal #ENDL",
+					restoreBytes, [[
+					jmp ]], jmpFailDest, [[ #ENDL
+
+					#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+
+						jmp_success_internal: #ENDL ]],
+						EEex_HookIntegrityWatchdog_HookEnter,
+
+						assemblyT, [[
+						jmp_success:
+						#MANUAL_HOOK_EXIT(0)
+						jmp ]], jmpDest, [[ #ENDL
+
+						jmp_fail:
+						#MANUAL_HOOK_EXIT(0) ]],
+						restoreBytes, [[
+						jmp ]], jmpFailDest, [[ #ENDL
+					}
+
+					#IF ]], not EEex_HookIntegrityWatchdog_Load, [[ {
+
+						jmp_success_internal: #ENDL ]],
+						assemblyT, [[
+						jmp ]], jmpDest, [[ #ENDL
+
+						#IF ]], restoreSize > 0, [[ {
+							jmp_fail: #ENDL ]],
+							restoreBytes, [[
+							jmp ]], jmpFailDest, [[ #ENDL
+						}
+					} ]],
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
 	})
 end
 
-function EEex_HookJumpAuto(address, restoreSize, assemblyT, bAutoSuccess)
-
-	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
-
-	local jmpFailDest = afterInstruction + restoreSize
-	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
-
-	EEex_DefineAssemblyLabel("jmp_success", jmpDest)
-
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{[[
-			#IF ]], bAutoSuccess, [[ {
-				jmp #L(jmp_success)
-			}
-			jmp_fail:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], jmpFailDest, [[ #ENDL
-		]]},
-	}))
-
-	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
-	})
+function EEex_HookConditionalJumpOnSuccess(address, restoreSize, assemblyT)
+	EEex_HookConditionalJumpOnSuccessInternal(address, restoreSize, {}, assemblyT)
 end
 
-function EEex_HookJumpAutoFail(address, restoreSize, assemblyT)
-	EEex_HookJumpAuto(address, restoreSize, assemblyT, false)
+function EEex_HookConditionalJumpOnSuccessWithLabels(address, restoreSize, labelPairs, assemblyT)
+	EEex_HookConditionalJumpOnSuccessInternal(address, restoreSize, labelPairs, assemblyT)
 end
 
-function EEex_HookJumpAutoSucceed(address, restoreSize, assemblyT)
-	EEex_HookJumpAuto(address, restoreSize, assemblyT, true)
-end
-
-function EEex_HookBeforeRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+function EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
 
 	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
 	local returnAddress = address + returnDelay
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		assemblyT,
-		{[[
-			return:
-		]]},
-		restoreBytes,
-		{[[
-			jmp ]], returnAddress, [[ #ENDL
-		]]},
-	}))
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+
+		local manualHookIntegrityExit = EEex_TryLabel("manual_hook_integrity_exit")
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+					return:
+					#IF ]], not manualHookIntegrityExit, [[ {
+						#MANUAL_HOOK_EXIT(0)
+					} ]],
+					restoreBytes, [[
+					jmp ]], returnAddress, "#ENDL"
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
+		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
+	})
+end
+
+function EEex_HookBeforeRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
+	EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, returnDelay, {}, assemblyT)
+end
+
+function EEex_HookBeforeRestoreWithLabels(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+	EEex_HookBeforeRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+end
+
+function EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+
+	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
+	local returnAddress = address + returnDelay
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+
+		local manualReturn = EEex_TryLabel("manual_return")
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return", (not EEex_HookIntegrityWatchdog_Load or manualReturn) and returnAddress or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					restoreBytes,
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+					#IF ]], not manualReturn, [[ {
+						#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+							return:
+							#MANUAL_HOOK_EXIT(0)
+						}
+						jmp ]], returnAddress, [[ #ENDL
+					} ]]
+				}))
+			end
+		)
+	end)
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
 	})
 end
 
 function EEex_HookAfterRestore(address, restoreDelay, restoreSize, returnDelay, assemblyT)
-
-	local restoreBytes = EEex_StoreBytesAssembly(address + restoreDelay, restoreSize)
-	local returnAddress = address + returnDelay
-	EEex_DefineAssemblyLabel("return", returnAddress)
-
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		restoreBytes,
-		assemblyT,
-		{[[
-			jmp ]], returnAddress, [[ #ENDL
-		]]},
-	}))
-
-	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
-		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
-	})
+	EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, returnDelay, {}, assemblyT)
 end
 
-function EEex_HookBetweenRestore(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, assemblyT)
+function EEex_HookAfterRestoreWithLabels(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+	EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
+end
+
+function EEex_HookBetweenRestoreInternal(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, labelPairs, assemblyT)
 
 	local restoreBytes1 = EEex_StoreBytesAssembly(address + restoreDelay1, restoreSize1)
 	local restoreBytes2 = EEex_StoreBytesAssembly(address + restoreDelay2, restoreSize2)
 	local returnAddress = address + returnDelay
 
-	local hookCode = EEex_JITNear(EEex_FlattenTable({
-		restoreBytes1,
-		assemblyT,
-		restoreBytes2,
-		{[[
-			return:
-			jmp ]], returnAddress, [[ #ENDL
-		]]},
-	}))
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					restoreBytes1,
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+					return:
+					#MANUAL_HOOK_EXIT(0) ]],
+					restoreBytes2, [[
+					jmp ]], returnAddress, "#ENDL"
+				}))
+			end
+		)
+	end)
 
 	EEex_JITAt(address, {[[
-		jmp short ]], hookCode, [[ #ENDL
+		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {returnDelay - 5}
 	})
 end
 
-function EEex_HookNOPs(address, nopCount, assemblyStr)
-	EEex_DefineAssemblyLabel("return", address + 5 + nopCount)
-	local hookAddress = EEex_JITNear(assemblyStr)
+function EEex_HookBetweenRestore(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, assemblyT)
+	EEex_HookBetweenRestoreInternal(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, {}, assemblyT)
+end
+
+function EEex_HookBetweenRestoreWithLabels(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, labelPairs, assemblyT)
+	EEex_HookBetweenRestoreInternal(address, restoreDelay1, restoreSize1, restoreDelay2, restoreSize2, returnDelay, labelPairs, assemblyT)
+end
+
+function EEex_HookNOPsInternal(address, nopCount, labelPairs, assemblyT)
+
+	local returnAddress = address + 5 + nopCount
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+		EEex_HookIntegrityWatchdog_IgnoreRegisters(address, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStack(address)
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address},
+			{"return", not EEex_HookIntegrityWatchdog_Load and returnAddress or nil}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_HookIntegrityWatchdog_HookEnter,
+					assemblyT, [[
+					#IF ]], EEex_HookIntegrityWatchdog_Load == true, [[ {
+						return:
+						#MANUAL_HOOK_EXIT(0)
+					}
+					jmp ]], returnAddress, "#ENDL"
+				}))
+			end
+		)
+	end)
+
 	EEex_JITAt(address, {[[
 		jmp short ]], hookAddress, [[ #ENDL
 		#REPEAT(#$(1),nop #ENDL) ]], {nopCount}
 	})
+end
+
+function EEex_HookNOPs(address, nopCount, assemblyT)
+	EEex_HookNOPsInternal(address, nopCount, {}, assemblyT)
+end
+
+function EEex_HookNOPsWithLabels(address, nopCount, labelPairs, assemblyT)
+	EEex_HookNOPsInternal(address, nopCount, labelPairs, assemblyT)
 end
 
 EEex_LuaCallReturnType = {
@@ -843,7 +1242,7 @@ function EEex_GenLuaCall(funcName, meta)
 						mov rdx, ]], -(2 + errorFuncLuaStackPopAmount + argI), [[ ; index
 						mov rcx, rbx                                              ; L
 						#ALIGN
-						call short #L(Hardcoded_lua_settop)
+						call #L(Hardcoded_lua_settop)
 						#ALIGN_END
 						jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 
@@ -926,7 +1325,7 @@ function EEex_GenLuaCall(funcName, meta)
 					{[[
 						mov rcx, rbx ; L
 						#ALIGN
-						call short #L(Hardcoded_luaL_loadstring)
+						call #L(Hardcoded_luaL_loadstring)
 						#ALIGN_END
 
 						test rax, rax
@@ -1040,7 +1439,7 @@ function EEex_GenLuaCall(funcName, meta)
 			mov r8, ]], numRet, [[                            ; nresults
 			mov rdx, ]], numArgs, [[                          ; nargs
 			mov rcx, rbx                                      ; L
-			call short #L(Hardcoded_lua_pcallk)
+			call #L(Hardcoded_lua_pcallk)
 			#ALIGN_END
 
 			#ALIGN
@@ -1051,12 +1450,12 @@ function EEex_GenLuaCall(funcName, meta)
 			test rax, rax
 
 			#IF ]], errorFunc ~= nil, [[ {
-				jz short EEex_GenLuaCall_no_error#$(1) ]], {labelSuffix}, [[ #ENDL
+				jz EEex_GenLuaCall_no_error#$(1) ]], {labelSuffix}, [[ #ENDL
 				; Clear error function and its precursors off of Lua stack
 				mov rdx, ]], -(1 + errorFuncLuaStackPopAmount), [[ ; index
 				mov rcx, rbx                                       ; L
 				#ALIGN
-				call short #L(Hardcoded_lua_settop)
+				call #L(Hardcoded_lua_settop)
 				#ALIGN_END
 				jmp EEex_GenLuaCall_call_error#$(1) ]], {labelSuffix}, [[ #ENDL
 			}
@@ -1164,22 +1563,10 @@ function EEex_ReverseTable(t, tMaxI)
 	return newT
 end
 
-function EEex_AssemblyToHex(number)
-
-	local hexT = {}
-	local insertI = 1
-
-	repeat
-		hexT[insertI] = string.format("%x", EEex_Extract(number, 0, 4)):upper()
-		insertI = insertI + 1
-		number = EEex_RShift(number, 4)
-	until number == 0x0
-
-	hexT = EEex_ReverseTable(hexT, insertI - 1)
-	hexT[insertI] = "h"
-	return table.concat(hexT)
-end
-
+-- Warning: Don't use this with negative numbers in anything critical!
+-- Lua's precision breaks down when RShifting near-max 64bit values.
+-- If you need to convert a 64bit integer to a string, use
+-- EEex_ToDecStr(), which is written in C++.
 function EEex_ToHex(number, minLength, suppressPrefix)
 
 	if type(number) ~= "number" then
@@ -1322,52 +1709,75 @@ function EEex_FindClosing(str, openStr, endStr, curLevel)
 	return false, curLevel
 end
 
+EEex_DebugPreprocessAssembly = false
+
 function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 
 	local advanceCount = 1
 
 	-- #IF
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#IF(.*)", function(match)
-		if EEex_FindPattern(match.groups[1], "[^%s]") then EEex_Error("Text between #IF and immediate condition") end
+
+		if EEex_FindPattern(match.groups[1], "[^%s]") then
+			EEex_Error("Text between #IF and immediate condition")
+		end
+
 		advanceCount = 2
 		local conditionV = assemblyT[curI + 1]
+
 		if type(conditionV) == "boolean" then
+
 			local hadBody = false
 			local bodyI = curI + 2
 			local bodyV = assemblyT[bodyI]
+
 			if type(bodyV) == "string" then
+
+				-- Find and remove the opening "{"
 				local hadOpen = false
-				bodyV = EEex_ReplacePattern(bodyV, "^%s*{(.*)", function(bodyMatch)
+				bodyV = EEex_ReplacePattern(bodyV, "^%s-{(.*)", function(bodyMatch)
 					hadOpen = true
 					return bodyMatch.groups[1], true
 				end)
-				assemblyT[bodyI] = bodyV
+
 				if hadOpen then
+
+					assemblyT[bodyI] = bodyV
+
 					local curLevel = 1
-					while true do
+					repeat
+						-- Look for closing "}"
 						if type(bodyV) == "string" then
+
+							local findV -- curLevel if not hadBody, else found closingI
 							hadBody, findV = EEex_FindClosing(bodyV, "{", "}", curLevel)
+
 							if hadBody then
-								if conditionV and findV > 1 then
-									assemblyT[bodyI] = bodyV:sub(1, findV - 1)..bodyV:sub(findV + 1)
-								else
-									assemblyT[bodyI] = bodyV:sub(findV + 1)
-								end
+								-- Save contents before and after the "}" if condition was true,
+								-- else only save contents after the "}"
+								assemblyT[bodyI] = conditionV and findV > 1
+									and bodyV:sub(1, findV - 1)..bodyV:sub(findV + 1)
+									or  bodyV:sub(findV + 1)
 								break
 							end
 							curLevel = findV
 						end
+
+						-- Skip every assemblyT value until "}" is found
 						if not conditionV then
 							advanceCount = advanceCount + 1
 						end
+
 						bodyI = bodyI + 1
 						bodyV = assemblyT[bodyI]
-						if bodyV == nil then break end
-						curLevel = findV
-					end
+
+					until bodyV == nil
 				end
 			end
-			if not hadBody then EEex_Error("#IF has no immediate body") end
+
+			if not hadBody then
+				EEex_Error("#IF has no immediate body")
+			end
 		else
 			EEex_Error("#IF has no immediate condition")
 		end
@@ -1383,15 +1793,20 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 		local argsTableSize = #argsTable
 		if argIndex > argsTableSize then EEex_Error(string.format("#$%d out of bounds for arg table of size %d", argIndex, argsTableSize)) end
 		advanceCount = 2
-		return tostring(argsTable[argIndex])
+		local argVal = argsTable[argIndex]
+		return type(argVal) == "number"
+			and EEex_ToDecStr(argVal)
+			or tostring(argVal)
 	end)
 
 	-- #L
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#L(%b())", function(match)
-		return EEex_AssemblyToHex(EEex_Label(match.groups[1]:sub(2, -2)))
+		local labelName = match.groups[1]:sub(2, -2)
+		local labelAddress = EEex_TryLabel(labelName)
+		return labelAddress and EEex_ToDecStr(labelAddress) or labelName
 	end)
 
-	--#REPEAT
+	-- #REPEAT
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#REPEAT(%b())", function(match)
 
 		local toBuild = {}
@@ -1410,7 +1825,7 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 	return assemblyStr, advanceCount
 end
 
-function EEex_PreprocessAssembly(assemblyT)
+function EEex_PreprocessAssembly(assemblyT, state)
 
 	local builtStr = {}
 	local insertI = 1
@@ -1425,7 +1840,7 @@ function EEex_PreprocessAssembly(assemblyT)
 			builtStr[insertI], advanceCount = EEex_PreprocessAssemblyStr(assemblyT, i, v)
 			insertI = insertI + 1
 		elseif vtype == "number" then
-			builtStr[insertI] = tostring(v)
+			builtStr[insertI] = EEex_ToDecStr(v)
 			insertI = insertI + 1
 		else
 			EEex_Error("Unexpected type encountered during JIT: "..vtype)
@@ -1445,96 +1860,151 @@ function EEex_PreprocessAssembly(assemblyT)
 		(#ALIGN_END)[6]
 		(#ALIGN((\d+)[8?]))[7]
 		(#SHADOW_SPACE_BOTTOM((\d+)[10?]))[9]
-		(#RESUME_SHADOW_ENTRY)[11]
+		(#LAST_FRAME_TOP((\d+)[12?]))[11]
+		(#RESUME_SHADOW_ENTRY)[13]
+		(#MANUAL_HOOK_EXIT(\d+)[15])[14]
 	--]]
 
-	local shadowSpaceStack = {}
-	local shadowSpaceStackTop = 0
-	local alignModStack = {}
-	local alignModStackTop = 0
-	local hintAccumulator = 0
+	if not state then
+		state = {
+			["shadowSpaceStack"] = {},
+			["shadowSpaceStackTop"] = 0,
+			["alignModStack"] = {},
+			["alignModStackTop"] = 0,
+			["hintAccumulator"] = 0,
+			["debug"] = false,
+		}
+	end
 
-	toReturn = EEex_ReplaceRegex(toReturn, "(?:#STACK_MOD\\s*\\((-{0,1}\\d+)\\))|(#MAKE_SHADOW_SPACE(?:\\s*\\((\\d+)\\)){0,1})|(#DESTROY_SHADOW_SPACE(?:(?!\\(.*?\\))|(?:\\((KEEP_ENTRY)\\))))|(#ALIGN_END)|(#ALIGN(?:\\s*\\((\\d+)\\)){0,1})|(#SHADOW_SPACE_BOTTOM\\s*\\((-{0,1}.+)\\))|(#RESUME_SHADOW_ENTRY)", function(pos, endPos, str, groups)
+	toReturn = EEex_ReplaceRegex(toReturn, "(?:#STACK_MOD\\s*\\((-{0,1}\\d+)\\))|(#MAKE_SHADOW_SPACE(?:\\s*\\((\\d+)\\)){0,1})|(#DESTROY_SHADOW_SPACE(?:(?!\\(.*?\\))|(?:\\((KEEP_ENTRY)\\))))|(#ALIGN_END)|(#ALIGN(?:\\s*\\((\\d+)\\)){0,1})|(#SHADOW_SPACE_BOTTOM\\s*\\((-{0,1}.+?)\\))|(#LAST_FRAME_TOP\\s*\\((-{0,1}.+?)\\))|(#RESUME_SHADOW_ENTRY)|(#MANUAL_HOOK_EXIT\\s*\\((\\d+)\\))|(#DEBUG_ON)|(#DEBUG_OFF)", function(pos, endPos, str, groups)
 		if groups[1] then
 			--print("#STACK_MOD("..tonumber(groups[1])..")")
-			hintAccumulator = hintAccumulator + tonumber(groups[1])
+			state.hintAccumulator = state.hintAccumulator + tonumber(groups[1])
 		elseif groups[2] then
 			--print("#MAKE_SHADOW_SPACE")
 			local neededShadow = 32 + (groups[3] and tonumber(groups[3]) or 0)
-			if shadowSpaceStackTop > 0 and shadowSpaceStack[shadowSpaceStackTop].top == hintAccumulator then
-				local shadowEntry = shadowSpaceStack[shadowSpaceStackTop]
+			if state.shadowSpaceStackTop > 0 and state.shadowSpaceStack[state.shadowSpaceStackTop].top == state.hintAccumulator then
+				local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
 				if shadowEntry.sizeNoRounding < neededShadow then
 					print(debug.traceback("[!] #MAKE_SHADOW_SPACE redefined where original failed to provide enough space! Correct this by expanding "..(shadowEntry.sizeNoRounding - 32).." to "..(neededShadow - 32).."; continuing with suboptimal configuration."))
 					local sizeDiff = EEex_RoundUp(neededShadow, 16) - shadowEntry.size
-					hintAccumulator = hintAccumulator + sizeDiff
+					state.hintAccumulator = state.hintAccumulator + sizeDiff
 					shadowEntry.top = shadowEntry.top + sizeDiff
 					shadowEntry.size = shadowEntry.size + sizeDiff
+					shadowEntry.active = true
 					-- Ideally this would be merged with the previous shadow space instruction, but abusing
 					-- regex like this doesn't help make that happen, (would require an additional pass)
-					return string.format("sub rsp, %d #ENDL", sizeDiff)
+					return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", sizeDiff)
 				end
 			else
-				local neededStack = EEex_DistanceToMultiple(hintAccumulator + neededShadow, 16) + neededShadow
-				hintAccumulator = hintAccumulator + neededStack
-				shadowSpaceStackTop = shadowSpaceStackTop + 1
-				shadowSpaceStack[shadowSpaceStackTop] = {
-					["top"] = hintAccumulator,
+				local neededStack = EEex_DistanceToMultiple(state.hintAccumulator + neededShadow, 16) + neededShadow
+
+				if state.debug then
+					print(string.format(
+						"[?] #MAKE_SHADOW_SPACE() with hintAccumulator = %d, need %d bytes for shadow space, allocating %d to maintain alignment",
+						state.hintAccumulator, neededShadow, neededStack
+					))
+				end
+
+				state.hintAccumulator = state.hintAccumulator + neededStack
+				state.shadowSpaceStackTop = state.shadowSpaceStackTop + 1
+				state.shadowSpaceStack[state.shadowSpaceStackTop] = {
+					["top"] = state.hintAccumulator,
 					["size"] = neededStack,
 					["sizeNoRounding"] = neededShadow,
+					["active"] = true,
 				}
-				return string.format("sub rsp, %d #ENDL", neededStack)
+				return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", neededStack)
 			end
 		elseif groups[4] then
 			--print("#DESTROY_SHADOW_SPACE")
-			local shadowEntry = shadowSpaceStack[shadowSpaceStackTop]
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			if state.hintAccumulator ~= shadowEntry.top then EEex_Error("#DESTROY_SHADOW_SPACE() failed - stack top not where it should be") end
 			if not groups[5] then
-				shadowSpaceStackTop = shadowSpaceStackTop - 1
+				state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1
+			else
+				shadowEntry.active = false -- KEEP_ENTRY
 			end
-			hintAccumulator = hintAccumulator - shadowEntry.size
-			-- LEA maintains flags (as opposed to SUB), which allows us to test a register
+			state.hintAccumulator = state.hintAccumulator - shadowEntry.size
+			-- LEA maintains flags (as opposed to ADD), which allows us to test a register
 			-- and restore it before calling #DESTROY_SHADOW_SPACE and still use the result
 			-- for a branch.
 			return string.format("lea rsp, qword ptr ss:[rsp+%d]", shadowEntry.size)
 		elseif groups[6] then
 			--print("#ALIGN_END")
-			local alignEntry = alignModStack[alignModStackTop]
-			if alignEntry.madeShadow then shadowSpaceStackTop = shadowSpaceStackTop - 1 end
-			alignModStackTop = alignModStackTop - 1
+			local alignEntry = state.alignModStack[state.alignModStackTop]
+			if alignEntry.madeShadow then state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1 end
+			state.alignModStackTop = state.alignModStackTop - 1
 			if alignEntry.popAmount > 0 then
-				return string.format("add rsp, %d #ENDL", tonumber(alignEntry.popAmount))
+				return string.format("lea rsp, qword ptr ss:[rsp+%d] #ENDL", tonumber(alignEntry.popAmount))
 			end
 		elseif groups[7] then
 			local pushedArgBytes = groups[8] and tonumber(groups[8]) or 0
 			--print("#ALIGN("..pushedArgBytes..")")
 			local neededShadow = 0
-			if shadowSpaceStackTop == 0 or shadowSpaceStack[shadowSpaceStackTop].top ~= hintAccumulator then
+			if state.shadowSpaceStackTop == 0 or state.shadowSpaceStack[state.shadowSpaceStackTop].top ~= state.hintAccumulator then
 				neededShadow = 32
-				shadowSpaceStackTop = shadowSpaceStackTop + 1
-				shadowSpaceStack[shadowSpaceStackTop] = {
-					["top"] = hintAccumulator,
+				state.shadowSpaceStackTop = state.shadowSpaceStackTop + 1
+				state.shadowSpaceStack[state.shadowSpaceStackTop] = {
+					["top"] = state.hintAccumulator,
 					["size"] = neededShadow,
 					["sizeNoRounding"] = neededShadow,
 				}
 			end
-			local neededStack = EEex_DistanceToMultiple(hintAccumulator + neededShadow + pushedArgBytes, 16) + neededShadow - pushedArgBytes
-			alignModStackTop = alignModStackTop + 1
-			alignModStack[alignModStackTop] = {
+			local neededStack = EEex_DistanceToMultiple(state.hintAccumulator + neededShadow + pushedArgBytes, 16) + neededShadow - pushedArgBytes
+			state.alignModStackTop = state.alignModStackTop + 1
+			state.alignModStack[state.alignModStackTop] = {
 				["popAmount"] = neededStack + pushedArgBytes,
 				["madeShadow"] = neededShadow > 0,
 			}
 			if neededStack > 0 then
-				return string.format("sub rsp, %d #ENDL", neededStack)
+				return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", neededStack)
 			end
 		elseif groups[9] then
 			--print("#SHADOW_SPACE_BOTTOM")
-			local adjust = 0
 			local adjustStr = groups[10]
-			if adjustStr then
-				adjust = adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr)
-			end
-			return tostring(shadowSpaceStack[shadowSpaceStackTop].size + adjust)
+			local adjust = adjustStr
+				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
+				or 0
+			if adjust >= 0 then EEex_Error("#SHADOW_SPACE_BOTTOM must have a negative offset") end
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			local stackModAdj = state.hintAccumulator - shadowEntry.top -- For when #STACK_MOD() adjusts the stack after #MAKE_SHADOW_SPACE()
+			return tostring(shadowEntry.sizeNoRounding + stackModAdj + adjust)
 		elseif groups[11] then
-			hintAccumulator = hintAccumulator + shadowSpaceStack[shadowSpaceStackTop].size
+			--print("#LAST_FRAME_TOP")
+			local adjustStr = groups[12]
+			local adjust = adjustStr
+				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
+				or 0
+			if adjust < 0 then EEex_Error("#LAST_FRAME_TOP must have a positive offset") end
+			if state.shadowSpaceStackTop == 0 then return adjust end
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			local stackModAdj = state.hintAccumulator - shadowEntry.top -- For when #STACK_MOD() adjusts the stack after #MAKE_SHADOW_SPACE()
+			return tostring(shadowEntry.size + stackModAdj + adjust)
+		elseif groups[13] then
+			--print("#RESUME_SHADOW_ENTRY")
+			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
+			state.hintAccumulator = state.hintAccumulator + shadowEntry.size
+			shadowEntry.active = true
+		elseif groups[14] then
+			--print("#MANUAL_HOOK_EXIT")
+			local hadActiveShadowSpace = false
+			for i = state.shadowSpaceStackTop, 1, -1 do
+				if state.shadowSpaceStack[state.shadowSpaceStackTop].active then
+					hadActiveShadowSpace = true
+					break
+				end
+			end
+			if hadActiveShadowSpace or state.alignModStackTop ~= 0 then EEex_Error("#MANUAL_HOOK_EXIT cannot exit inside a stack frame") end
+			local instance = tonumber(groups[15])
+			if instance == nil or instance < 0 then EEex_Error("#MANUAL_HOOK_EXIT has invalid instance") end
+			return EEex_PreprocessAssembly(EEex_HookIntegrityWatchdog_HookExit(instance), state)
+		elseif groups[16] then
+			--print("#DEBUG_ON")
+			state.debug = true
+		elseif groups[17] then
+			--print("#DEBUG_OFF")
+			state.debug = false
 		end
 		return ""
 	end)
@@ -1545,10 +2015,30 @@ function EEex_PreprocessAssembly(assemblyT)
 	toReturn = EEex_ReplacePattern(toReturn, "\n+", "\n")      -- Merge newlines
 	toReturn = EEex_ReplacePattern(toReturn, "\n[ \t]+", "\n") -- Remove whitespace after newlines, (indentation)
 	toReturn = EEex_ReplacePattern(toReturn, "^[ \t]+", "")    -- Remove initial indent
+	toReturn = EEex_ReplacePattern(toReturn, "[ \t]+;", " ;")  -- Remove indentation before comments
 
-	--print("EEex_PreprocessAssembly returning:\n\n"..toReturn.."\n")
+	if EEex_DebugPreprocessAssembly then
+		print("EEex_PreprocessAssembly returning:\n\n"..toReturn.."\n")
+	end
+
+	-- Validate labels to prevent subtle bug where zero-offset branch instructions are written for non-existing labels
+	local seenLabels = {}
+	EEex_IterateRegex(toReturn, "^\\s*(\\S+):", function(pos, endPos, matchedStr, groups)
+		seenLabels[groups[1]] = true
+	end)
+
+	local branchUsingLabel = "^\\s*(?:call|ja|jae|jb|jbe|jc|je|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|loope|loopne|loopnz|loopz)\\s+([^0-9]\\S*)\\s*$"
+	EEex_IterateRegex(toReturn, branchUsingLabel, function(pos, endPos, matchedStr, groups)
+		local expectedLabel = groups[1]
+		if not seenLabels[expectedLabel] then
+			EEex_Error(string.format("Label \"%s\" not defined. Did you mean to use \"#L(%s)\"?", expectedLabel, expectedLabel))
+		end
+	end)
+
 	return toReturn
 end
+
+EEex_CodePageAllocations = {}
 
 function EEex_AllocCodePage()
 	local address, size = EEex_AllocCodePageInternal()
@@ -1562,6 +2052,14 @@ function EEex_AllocCodePage()
 end
 
 function EEex_JITNear(assemblyT)
+
+	local stackMod = EEex_TryLabel("stack_mod")
+	if stackMod then
+		assemblyT = EEex_FlattenTable({
+			{"#STACK_MOD(#$(1)) #ENDL", {stackMod}},
+			assemblyT,
+		})
+	end
 
 	local assemblyStr = EEex_PreprocessAssembly(assemblyT)
 
@@ -1663,3 +2161,17 @@ function EEex_JITAt(dst, assemblyT)
 	local checkJIT = function(writeSize) return 0 end
 	EEex_JITAtInternal(dst, checkJIT, assemblyStr)
 end
+
+(function()
+	local dummyTable = {}
+	EEex_HookIntegrityWatchdog_HookEnter = dummyTable
+	EEex_HookIntegrityWatchdog_HookExit = function() return dummyTable end
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance = function() end
+	EEex_HookIntegrityWatchdog_IgnoreRegisters = function() end
+	EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance = function() end
+	EEex_HookIntegrityWatchdog_DefaultIgnoreStack = function() end
+	EEex_HookIntegrityWatchdog_IgnoreStackSizesForInstance = function() end
+	EEex_HookIntegrityWatchdog_IgnoreStackSizes = function() end
+	-- Contains some assembly functions for EEex_Assembly.lua
+	EEex_DoFile("EEex_Assembly_Patch")
+end)()

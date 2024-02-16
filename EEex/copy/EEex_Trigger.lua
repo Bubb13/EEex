@@ -112,6 +112,7 @@ function EEex_Trigger_Hook_OnEvaluatingUnknown(aiBase, trigger)
 
 	elseif triggerID == 0x4110 then -- EEex_MatchObject / EEex_MatchObjectEx
 
+		-- [EEex.dll]
 		local matchedID = EEex.MatchObject(aiBase, trigger.m_string1.m_pchData:get(),
 			trigger.m_specificID, trigger.m_specific2, trigger.m_specific3)
 

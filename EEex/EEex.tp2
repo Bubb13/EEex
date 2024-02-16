@@ -3,11 +3,11 @@ AUTHOR ~Bubb~
 VERSION ~master~
 README ~EEex/readme-EEex.html~
 
-BEGIN ~EEex~
+BEGIN ~EEex~ LABEL ~B3-EEex-Main~
 REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) ~Game not supported.~
 
 	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER BEGIN
-		COPY ~EEex\patch\%file%.IDS~ ~EEex\patch~
+		COPY ~EEex/patch/%file%.IDS~ ~EEex/patch~
 			COUNT_2DA_ROWS 2 rows
 			FOR (i = 0; i <= rows; ++i) BEGIN
 				READ_2DA_ENTRY i 0 2 "col1"
@@ -44,11 +44,23 @@ REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.
 		APPEND ~%data%.IDS~ ~%data_1% %data_2%~ UNLESS ~^[ %TAB%]*%data_1_escaped%[ %TAB%]+%data_2_escaped%[ %TAB%]*%MNL%*$~
 	END
 
-	COPY ~EEex/loader~ ~.~ IF_EXISTS
-	COPY ~EEex/copy~ ~override~ IF_EXISTS
+	COPY ~EEex/loader~ ~.~
+	COPY ~EEex/loader/Lua52~ ~.~
+	COPY ~EEex/copy~ ~override~
 
 
-BEGIN ~Enable effect menu module - LShift-on-hover to view spells affecting creature~
+BEGIN ~Experimental - Use LuaJIT (can help stuttering)~ LABEL ~B3-EEex-LuaJIT~
+REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+
+	COPY ~InfinityLoader.ini~ ~.~
+		REPLACE_TEXTUALLY ~^\(LuaLibrary=\).*~ ~\1lua51.dll~
+		REPLACE_TEXTUALLY ~^\(LuaPatchMode=\).*~ ~\1REPLACE_INTERNAL_WITH_EXTERNAL~
+	BUT_ONLY
+
+	COPY ~EEex/loader/LuaJIT~ ~.~
+
+
+BEGIN ~Enable effect menu module - LShift-on-hover to view spells affecting creature~ LABEL ~B3-EEex-Module-Effect-Menu~
 REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
@@ -56,7 +68,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 	BUT_ONLY
 
 
-BEGIN ~Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns~
+BEGIN ~Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns~ LABEL ~B3-EEex-Module-Timer-Main~
 REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
@@ -64,7 +76,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 	BUT_ONLY
 
 
-BEGIN ~Timer module - Show modal actions (red bar)~
+BEGIN ~Timer module - Show modal actions (red bar)~ LABEL ~B3-EEex-Module-Timer-Modal~
 REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
 
 	COPY ~override/B3Timer.lua~ ~override~
@@ -72,7 +84,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer modu
 	BUT_ONLY
 
 
-BEGIN ~Timer module - Show contingencies (green bar)~
+BEGIN ~Timer module - Show contingencies (green bar)~ LABEL ~B3-EEex-Module-Timer-Contingency~
 REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
 
 	COPY ~override/B3Timer.lua~ ~override~
@@ -80,7 +92,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer modu
 	BUT_ONLY
 
 
-BEGIN ~Timer module - Show spell/item cooldowns (cyan bar)~
+BEGIN ~Timer module - Show spell/item cooldowns (cyan bar)~ LABEL ~B3-EEex-Module-Timer-Aura~
 REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
 
 	COPY ~override/B3Timer.lua~ ~override~
@@ -88,7 +100,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer modu
 	BUT_ONLY
 
 
-BEGIN ~Time step module - Advance 1 game tick on keypress~
+BEGIN ~Time step module - Advance 1 game tick on keypress~ LABEL ~B3-EEex-Module-Time-Step~
 REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
@@ -96,7 +108,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 	BUT_ONLY
 
 
-BEGIN ~Hotkey module - Edit override/B3Hotkey.lua to create advanced spell hotkeys~
+BEGIN ~Hotkey module - Edit override/B3Hotkey.lua to create advanced spell hotkeys~ LABEL ~B3-EEex-Module-Hotkey~
 REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~

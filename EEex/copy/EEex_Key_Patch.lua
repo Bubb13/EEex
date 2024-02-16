@@ -3,9 +3,16 @@
 
 	EEex_DisableCodeProtection()
 
-	-------------------------------------
-	-- EEex_Key_Hook_AfterEventsPoll() --
-	-------------------------------------
+	--[[
+	+--------------------------------------------------------------------+
+	| React to input by intercepting SDL events                          |
+	+--------------------------------------------------------------------+
+	|   [Lua] EEex_Key_Hook_AfterEventsPoll(event: SDL_Event) -> boolean |
+	|       return:                                                      |
+	|           -> false - Don't alter engine behavior                   |
+	|           -> true  - Suppress event                                |
+	+--------------------------------------------------------------------+
+	--]]
 
 	local afterEventsPollHook = EEex_JITNear(EEex_FlattenTable({
 		{[[
@@ -40,17 +47,19 @@
 		]]},
 	}))
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1"), {[[
-		call #L(original)
-		call ]], afterEventsPollHook, [[ #ENDL
-		jmp #L(return)
-	]]})
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		{[[
+			call ]], afterEventsPollHook, [[ #ENDL
+		]]}
+	)
 
-	EEex_HookRelativeBranch(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2"), {[[
-		call #L(original)
-		call ]], afterEventsPollHook, [[ #ENDL
-		jmp #L(return)
-	]]})
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::ProcessEvents()-SDL_PollEvent()-2"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		{[[
+			call ]], afterEventsPollHook, [[ #ENDL
+		]]}
+	)
 
 	EEex_EnableCodeProtection()
 
