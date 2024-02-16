@@ -1,5 +1,5 @@
 
-EEex_HookIntegrityWatchdog_Load = true
+EEex_HookIntegrityWatchdog_Load = false
 
 (function()
 
