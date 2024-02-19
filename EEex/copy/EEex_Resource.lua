@@ -177,10 +177,22 @@ EEex_Resource_GetValidSpellsItr = EEex_Resource_GetValidSpellsIterator
 -- 2DA --
 ---------
 
-function EEex_Resource_Find2DAColumnIndex(array, y, toSearchFor)
+-- @bubb_doc { EEex_Resource_Find2DAColumnIndex / instance_name=findColumnIndex }
+--
+-- @summary: Searches the values of the row specified by ``rowIndex`` and returns the first column index that matches ``toSearchFor``.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { rowIndex / type=number }: The index of the row to be searched.
+--
+-- @param { toSearchFor / type=string }: The value to search for.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Resource_Find2DAColumnIndex(array, rowIndex, toSearchFor)
 	toSearchFor = toSearchFor:upper()
 	local toReturn = -1
-	array:iterateRowIndex(y, function(i, val)
+	array:iterateRowIndex(rowIndex, function(i, val)
 		if val == toSearchFor then
 			toReturn = i
 			return true
@@ -189,6 +201,16 @@ function EEex_Resource_Find2DAColumnIndex(array, y, toSearchFor)
 	return toReturn
 end
 C2DArray.findColumnIndex = EEex_Resource_Find2DAColumnIndex
+
+-- @bubb_doc { EEex_Resource_Find2DAColumnLabel / instance_name=findColumnLabel }
+--
+-- @summary: Searches the .2DA's column labels and returns the first column index that matches ``toSearchFor``.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { toSearchFor / type=string }: The label to search for.
+--
+-- @return { type=number }: See summary.
 
 function EEex_Resource_Find2DAColumnLabel(array, toSearchFor)
 	toSearchFor = toSearchFor:upper()
@@ -202,10 +224,22 @@ function EEex_Resource_Find2DAColumnLabel(array, toSearchFor)
 end
 C2DArray.findColumnLabel = EEex_Resource_Find2DAColumnLabel
 
-function EEex_Resource_Find2DARowIndex(array, x, toSearchFor)
+-- @bubb_doc { EEex_Resource_Find2DARowIndex / instance_name=findRowIndex }
+--
+-- @summary: Searches the values of the column specified by ``columnIndex`` and returns the first row index that matches ``toSearchFor``.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { columnIndex / type=number }: The index of the column to be searched.
+--
+-- @param { toSearchFor / type=string }: The value to search for.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Resource_Find2DARowIndex(array, columnIndex, toSearchFor)
 	toSearchFor = toSearchFor:upper()
 	local toReturn = -1
-	array:iterateColumnIndex(x, function(i, val)
+	array:iterateColumnIndex(columnIndex, function(i, val)
 		if val == toSearchFor then
 			toReturn = i
 			return true
@@ -214,6 +248,16 @@ function EEex_Resource_Find2DARowIndex(array, x, toSearchFor)
 	return toReturn
 end
 C2DArray.findRowIndex = EEex_Resource_Find2DARowIndex
+
+-- @bubb_doc { EEex_Resource_Find2DARowLabel / instance_name=findRowLabel }
+--
+-- @summary: Searches the .2DA's row labels and returns the first row index that matches ``toSearchFor``.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { toSearchFor / type=string }: The label to search for.
+--
+-- @return { type=number }: See summary.
 
 function EEex_Resource_Find2DARowLabel(array, toSearchFor)
 	toSearchFor = toSearchFor:upper()
@@ -227,6 +271,15 @@ function EEex_Resource_Find2DARowLabel(array, toSearchFor)
 end
 C2DArray.findRowLabel = EEex_Resource_Find2DARowLabel
 
+-- @bubb_doc { EEex_Resource_Free2DA / instance_name=free }
+--
+-- @summary: Frees the memory associated with ``array``. *** Only use this if you know what you are doing! ***
+--
+-- @note: ``C2DArray`` objects returned by ``EEex_Resource_Load2DA()`` are subject to garbage-collection
+--        – meaning ``EEex_Resource_Free2DA()`` should ***not*** be called on these instances.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+
 function EEex_Resource_Free2DA(array)
 	EEex_SetUDGCFunc(array, nil)
 	array:Destruct()
@@ -234,28 +287,89 @@ function EEex_Resource_Free2DA(array)
 end
 C2DArray.free = EEex_Resource_Free2DA
 
-function EEex_Resource_Get2DAColumnLabel(array, n)
+-- @bubb_doc { EEex_Resource_Get2DAColumnLabel / instance_name=getColumnLabel }
+--
+-- @summary: Returns the label of the column specified by ``columnIndex``.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { columnIndex / type=number }: The column index of the label to be fetched.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Resource_Get2DAColumnLabel(array, columnIndex)
 	local sizeX = array.m_nSizeX
-	if n < 0 or n >= sizeX then return "" end
-	return array.m_pNamesX:getReference(n).m_pchData:get()
+	if columnIndex < 0 or columnIndex >= sizeX then return "" end
+	return array.m_pNamesX:getReference(columnIndex).m_pchData:get()
 end
 C2DArray.getColumnLabel = EEex_Resource_Get2DAColumnLabel
+
+-- @bubb_doc { EEex_Resource_Get2DADefault / instance_name=getDefault }
+--
+-- @summary: Returns the "default" value of the .2DA.
+--
+-- @note: A .2DA's default value is defined by the line directly below the version header – it is usually an asterisk ('*').
+--
+-- @note: If the engine (or any EEex function) indexes a .2DA out-of-bounds, the default value is returned instead.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @return { type=string }: See summary.
 
 function EEex_Resource_Get2DADefault(array)
 	return array.m_default.m_pchData:get()
 end
 C2DArray.getDefault = EEex_Resource_Get2DADefault
 
+-- @bubb_doc { EEex_Resource_Get2DADimensions / instance_name=getDimensions }
+--
+-- @summary: Returns the x and y dimensions of the .2DA. That is the number of columns, and the number of rows respectively.
+--
+-- @note:
+--     * The returned 'x' dimension **includes** the row labels, (that is to say, its value is 1 more than expected).
+--     * The returned 'y' dimension **excludes** the column labels.
+--
+--     When indexing a .2DA, column / row labels **are always excluded**.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @return { type=number }: The .2DA's 'x' dimension.
+--
+-- @return { type=number }: The .2DA's 'y' dimension.
+
 function EEex_Resource_Get2DADimensions(array)
 	return array.m_nSizeX, array.m_nSizeY
 end
 C2DArray.getDimensions = EEex_Resource_Get2DADimensions
 
-function EEex_Resource_Get2DARowLabel(array, n)
-	if n < 0 or n >= array.m_nSizeY then return "" end
-	return array.m_pNamesY:getReference(n).m_pchData:get()
+-- @bubb_doc { EEex_Resource_Get2DARowLabel / instance_name=getRowLabel }
+--
+-- @summary: Returns the label of the row specified by ``rowIndex``.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { rowIndex / type=number }: The row index of the label to be fetched.
+--
+-- @return { type=string }: See summary.
+
+function EEex_Resource_Get2DARowLabel(array, rowIndex)
+	if rowIndex < 0 or rowIndex >= array.m_nSizeY then return "" end
+	return array.m_pNamesY:getReference(rowIndex).m_pchData:get()
 end
 C2DArray.getRowLabel = EEex_Resource_Get2DARowLabel
+
+-- @bubb_doc { EEex_Resource_GetAt2DALabels / instance_name=getAtLabels }
+--
+-- @summary: Returns the value at the intersection of ``columnLabel`` and ``rowLabel``. If either label is missing, returns the .2DA's
+--           default value, (see ``EEex_Resource_Get2DADefault()``).
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { columnLabel / type=string }: The column label of the value to be fetched.
+--
+-- @param { rowLabel / type=string }: The row label of the value to be fetched.
+--
+-- @return { type=string }: See summary.
 
 function EEex_Resource_GetAt2DALabels(array, columnLabel, rowLabel)
 	local toReturn
@@ -269,18 +383,41 @@ function EEex_Resource_GetAt2DALabels(array, columnLabel, rowLabel)
 end
 C2DArray.getAtLabels = EEex_Resource_GetAt2DALabels
 
-function EEex_Resource_GetAt2DAPoint(array, x, y)
+-- @bubb_doc { EEex_Resource_GetAt2DAPoint / instance_name=getAtPoint }
+--
+-- @summary: Returns the value at the intersection of ``columnIndex`` and ``rowIndex``. If either index exceeds the .2DA's dimensions, returns the
+--           .2DA's default value, (see ``EEex_Resource_Get2DADefault()``).
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { columnIndex / type=number }: The column index of the value to be fetched.
+--
+-- @param { rowIndex / type=number }: The row index of the value to be fetched.
+--
+-- @return { type=string }: See summary.
+
+function EEex_Resource_GetAt2DAPoint(array, columnIndex, rowIndex)
 	local sizeX, sizeY = array:getDimensions()
-	if x < 0 or x >= sizeX or y < 0 or y >= sizeY then return array:getDefault() end
-	return array.m_pArray:getReference(x + y * sizeX).m_pchData:get()
+	if columnIndex < 0 or columnIndex >= sizeX or rowIndex < 0 or rowIndex >= sizeY then return array:getDefault() end
+	return array.m_pArray:getReference(columnIndex + rowIndex * sizeX).m_pchData:get()
 end
 C2DArray.getAtPoint = EEex_Resource_GetAt2DAPoint
 
-function EEex_Resource_Iterate2DAColumnIndex(array, x, func)
+-- @bubb_doc { EEex_Resource_Iterate2DAColumnIndex / instance_name=iterateColumnIndex }
+--
+-- @summary: Calls ``func`` for every value in the column specified by ``columnIndex``. If ``func`` returns ``true`` the iteration ends early.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { columnIndex / type=number }: The index of the column whose values are to be iterated.
+--
+-- @param { func / type=function(value: string) -> boolean }: The function to be called.
+
+function EEex_Resource_Iterate2DAColumnIndex(array, columnIndex, func)
 	local sizeX, sizeY = array:getDimensions()
-	if x < 0 or x >= sizeX then return end
+	if columnIndex < 0 or columnIndex >= sizeX then return end
 	local pArray = array.m_pArray
-	local curIndex = x
+	local curIndex = columnIndex
 	for i = 0, sizeY - 1 do
 		if func(i, pArray:getReference(curIndex).m_pchData:get()) then break end
 		curIndex = curIndex + sizeX
@@ -288,16 +425,36 @@ function EEex_Resource_Iterate2DAColumnIndex(array, x, func)
 end
 C2DArray.iterateColumnIndex = EEex_Resource_Iterate2DAColumnIndex
 
+-- @bubb_doc { EEex_Resource_Iterate2DAColumnLabel / instance_name=iterateColumnLabel }
+--
+-- @summary: Calls ``func`` for every value in the column specified by ``columnLabel``. If ``func`` returns ``true`` the iteration ends early.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { columnLabel / type=string }: The label of the column whose values are to be iterated.
+--
+-- @param { func / type=function(value: string) -> boolean }: The function to be called.
+
 function EEex_Resource_Iterate2DAColumnLabel(array, columnLabel, func)
 	array:iterateColumnIndex(array:findColumnLabel(columnLabel), func)
 end
 C2DArray.iterateColumnLabel = EEex_Resource_Iterate2DAColumnLabel
 
-function EEex_Resource_Iterate2DARowIndex(array, y, func)
+-- @bubb_doc { EEex_Resource_Iterate2DARowIndex / instance_name=iterateRowIndex }
+--
+-- @summary: Calls ``func`` for every value in the row specified by ``rowIndex``. If ``func`` returns ``true`` the iteration ends early.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { rowIndex / type=number }: The index of the row whose values are to be iterated.
+--
+-- @param { func / type=function(value: string) -> boolean }: The function to be called.
+
+function EEex_Resource_Iterate2DARowIndex(array, rowIndex, func)
 	local sizeX, sizeY = array:getDimensions()
-	if y < 0 or y >= sizeY then return end
+	if rowIndex < 0 or rowIndex >= sizeY then return end
 	local pArray = array.m_pArray
-	local curIndex = sizeX * y
+	local curIndex = sizeX * rowIndex
 	for i = 0, sizeX - 2 do
 		if func(i, pArray:getReference(curIndex).m_pchData:get()) then break end
 		curIndex = curIndex + 1
@@ -305,10 +462,28 @@ function EEex_Resource_Iterate2DARowIndex(array, y, func)
 end
 C2DArray.iterateRowIndex = EEex_Resource_Iterate2DARowIndex
 
+-- @bubb_doc { EEex_Resource_Iterate2DARowLabel / instance_name=iterateRowLabel }
+--
+-- @summary: Calls ``func`` for every value in the row specified by ``rowLabel``. If ``func`` returns ``true`` the iteration ends early.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @param { rowLabel / type=string }: The label of the row whose values are to be iterated.
+--
+-- @param { func / type=function(value: string) -> boolean }: The function to be called.
+
 function EEex_Resource_Iterate2DARowLabel(array, rowLabel, func)
 	array:iterateRowIndex(array:findRowLabel(rowLabel), func)
 end
 C2DArray.iterateRowLabel = EEex_Resource_Iterate2DARowLabel
+
+-- @bubb_doc { EEex_Resource_Load2DA }
+--
+-- @summary: Returns a ``C2DArray`` instance that represents the .2DA with ``resref``.
+--
+-- @param { resref / type=string }: The resref of the .2DA to be loaded – (should omit the file extension).
+--
+-- @return { type=C2DArray }: See summary.
 
 function EEex_Resource_Load2DA(resref)
 	local array = EEex_NewUD("C2DArray")
