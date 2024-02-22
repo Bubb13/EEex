@@ -133,14 +133,14 @@ EEex_GameState_AddInitializedListener(function()
 	end
 end)
 
-itemcatIDSToSymbol = {}
+weaponTypeIDSToSymbol = {}
 
 EEex_GameState_AddInitializedListener(function()
 
 	local itemcat = EEex_Resource_LoadIDS("ITEMCAT")
 
 	for id = 15, 30 do -- for all weapon categories ...
-		itemcatIDSToSymbol[id] = EEex_Utility_FindNameById(itemcat, id)
+		weaponTypeIDSToSymbol[id] = EEex_Utility_FindNameById(itemcat, id)
 	end
 end)
 
