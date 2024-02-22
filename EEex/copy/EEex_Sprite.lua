@@ -1323,8 +1323,8 @@ function EEex_Sprite_Hook_IgnoresCloseRangedPenalityWithItemCat(sprite, pItem)
 	local m_baseStats = sprite.m_baseStats
 	local kitIDS = EEex_BOr(EEex_LShift(m_baseStats.m_mageSpecUpperWord, 16), m_baseStats.m_mageSpecialization)
 	--
-	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][itemcatIDSToSymbol[pHeader.itemType]] == nil then return false end
-	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][itemcatIDSToSymbol[pHeader.itemType]] then
+	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][weaponTypeIDSToSymbol[pHeader.itemType]] == nil then return false end
+	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][weaponTypeIDSToSymbol[pHeader.itemType]] then
 		return true
 	else
 		return false
