@@ -105,3 +105,58 @@ function EEex_GameState_Hook_OnDestroyed()
 		listener()
 	end
 end
+
+-----------------------------------
+-- Generic Lua maps out of .2DAs --
+-----------------------------------
+
+kitIDSToSymbol = {}
+
+EEex_GameState_AddInitializedListener(function()
+
+	local kitlist = EEex_Resource_Load2DA("KITLIST")
+	local _, kitListLastRowIndex = kitlist:getDimensions()
+	kitListLastRowIndex = kitListLastRowIndex - 2
+
+	local kitSymbolColumn = kitlist:findColumnLabel("ROWNAME")
+	local kitIDSColumn = kitlist:findColumnLabel("KITIDS")
+
+	for rowIndex = 0, kitListLastRowIndex do
+		local kitIDSStr = kitlist:getAtPoint(kitIDSColumn, rowIndex)
+		if kitIDSStr:sub(1, 2):lower() == "0x" then
+			local kitIDS = tonumber(kitIDSStr:sub(3), 16)
+			if kitIDS ~= nil then
+				local kitSymbol = kitlist:getAtPoint(kitSymbolColumn, rowIndex)
+				kitIDSToSymbol[kitIDS] = kitSymbol
+			end
+		end
+	end
+end)
+
+itemcatIDSToSymbol = {}
+
+EEex_GameState_AddInitializedListener(function()
+
+	local itemcat = EEex_Resource_LoadIDS("ITEMCAT")
+
+	for id = 15, 30 do -- for all weapon categories ...
+		itemcatIDSToSymbol[id] = EEex_Utility_FindNameById(itemcat, id)
+	end
+end)
+
+EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory = {}
+
+EEex_GameState_AddInitializedListener(function()
+
+	local data = EEex_Resource_Load2DA("X-CLSERG")
+	local nX, nY = data:getDimensions()
+	nX = nX - 2
+	nY = nY - 1
+
+	for rowIndex = 0, nY do
+		EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[data:getRowLabel(rowIndex)] = {}
+		for columnIndex = 0, nX do
+			EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[data:getRowLabel(rowIndex)][data:getColumnLabel(columnIndex)] = data:getAtPoint(columnIndex, rowIndex)
+		end
+	end
+end)

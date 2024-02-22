@@ -1306,3 +1306,28 @@ function EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item, damR, damL, th
 
 	return false
 end
+
+---------------------------------------------------------------------------------------
+-- Ignore the -8 thac0 penalty a character incurs when meleeing with a ranged weapon --
+---------------------------------------------------------------------------------------
+
+function EEex_Sprite_Hook_IgnoresCloseRangedPenalityWithItemCat(sprite, pItem)
+	if pItem == nil then return false end
+	--
+	local pRes = pItem.pRes
+	if pRes == nil then return false end
+	--
+	local pHeader = pRes.pHeader
+	if pHeader == nil then return false end
+	--
+	local m_baseStats = sprite.m_baseStats
+	local kitIDS = EEex_BOr(EEex_LShift(m_baseStats.m_mageSpecUpperWord, 16), m_baseStats.m_mageSpecialization)
+	--
+	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][itemcatIDSToSymbol[pHeader.itemType]] == nil then return false end
+	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][itemcatIDSToSymbol[pHeader.itemType]] then
+		return true
+	else
+		return false
+	end
+end
+CGameSprite.ignoresCloseRangedPenalityWithItemCat = EEex_Sprite_Hook_IgnoresCloseRangedPenalityWithItemCat

@@ -673,6 +673,49 @@
 		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
+	-- Ignore the -8 thac0 penalty characters incur when meleeing with a ranged weapon --
+
+	local CGameSprite_Hit_SavedItem = EEex_Malloc(0x8)
+
+	EEex_HookAfterCall(0x14039DA86, {[[
+		mov qword ptr ds:[#$(1)], r15 ]], {CGameSprite_Hit_SavedItem}
+	})
+
+	EEex_HookAfterRestore(0x14039E3D0, 0, 7, 7, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(56)
+			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], eax
+		]]},
+		EEex_GenLuaCall("EEex_Opcode_Hook_CGameSprite_HitRangePenalty", {
+			["args"] = {
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+				function(rspOffset) return {[[
+					mov rax, qword ptr ss:[#$(1)] ]], {CGameSprite_Hit_SavedItem}, [[ #ENDL
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]}, "CItem" end,
+			}
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+
+			call_error:
+			xor rax, rax
+
+			no_error:
+			test rax, rax
+			jz no_override
+
+			xor rax, rax
+			#DESTROY_SHADOW_SPACE
+			jmp #L(return)
+
+			no_override:
+			mov eax, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
 	EEex_EnableCodeProtection()
 
 end)()
