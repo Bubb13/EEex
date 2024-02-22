@@ -106,9 +106,9 @@ function EEex_GameState_Hook_OnDestroyed()
 	end
 end
 
------------------------------------
--- Generic Lua maps out of .2DAs --
------------------------------------
+-------------------------------------------
+-- Generic Lua maps out of .2DAs / .IDSs --
+-------------------------------------------
 
 kitIDSToSymbol = {}
 
