@@ -647,48 +647,183 @@ C2DArray.getRowColumnsByLabelItr = EEex_Resource_Get2DARowColumnsByLabelItr
 -- IDS --
 ---------
 
+-- @bubb_doc { EEex_Resource_FreeIDS / instance_name=free }
+--
+-- @summary: Frees the memory associated with ``ids``. *** Only use this if you know what you are doing! ***
+--
+-- @note: ``CAIIdList`` objects returned by ``EEex_Resource_LoadIDS()`` are subject to garbage-collection
+--        – meaning ``EEex_Resource_FreeIDS()`` should ***not*** be called on these instances.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+
 function EEex_Resource_FreeIDS(ids)
+	EEex_SetUDGCFunc(ids, nil)
 	ids:Destruct()
 	EEex_FreeUD(ids)
 end
 CAIIdList.free = EEex_Resource_FreeIDS
+
+-- @bubb_doc { EEex_Resource_GetIDSCount / instance_name=getCount }
+--
+-- @summary: Returns the size of ``ids``'s backing cache array.
+--
+-- @warning: This function is only valid if the .IDS was loaded with ``cacheAsArray=true``.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+--
+-- @return { type=number }: See summary.
 
 function EEex_Resource_GetIDSCount(ids)
 	return ids.m_nArray
 end
 CAIIdList.getCount = EEex_Resource_GetIDSCount
 
+-- @bubb_doc { EEex_Resource_GetIDSEntry / instance_name=getEntry }
+--
+-- @summary: Returns the ``CAIId`` entry with the given ``id``, or ``nil`` if ``id`` is not present in the .IDS.
+--
+-- @note: This function performs a linear search unless the .IDS was loaded with ``cacheAsArray=true``.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+--
+-- @param { id / type=number }: The id of the entry to be fetched.
+--
+-- @return { usertype=CAIId }: See summary.
+
 function EEex_Resource_GetIDSEntry(ids, id)
-	return id < ids:getCount() and ids.m_pIdArray:get(id) or nil
+	local array = ids.m_pIdArray
+	if array then
+		return id < ids.m_nArray and array:get(id) or nil
+	else
+		local found = nil
+		ids:iterateEntries(function(entry)
+			if entry.m_id == id then
+				found = entry
+				return true
+			end
+		end)
+		return found
+	end
 end
 CAIIdList.getEntry = EEex_Resource_GetIDSEntry
 
+-- @bubb_doc { EEex_Resource_GetIDSLine / instance_name=getLine }
+--
+-- @summary: Returns the symbol associated with the given ``id``, or ``nil`` if ``id`` is not present in the .IDS.
+--
+-- @note: This function performs a linear search unless the .IDS was loaded with ``cacheAsArray=true``.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+--
+-- @param { id / type=number }: The id of the symbol to be fetched.
+--
+-- @return { type=string }: See summary.
+
 function EEex_Resource_GetIDSLine(ids, id)
-	if id >= ids:getCount() then return nil end
-	local entry = ids.m_pIdArray:get(id)
+	local entry = ids:getEntry()
 	return entry and entry.m_line.m_pchData:get() or nil
 end
 CAIIdList.getLine = EEex_Resource_GetIDSLine
 
+-- @bubb_doc { EEex_Resource_GetIDSStart / instance_name=getStart }
+--
+-- @summary: Returns the symbol value associated with the given ``id`` up until (and not including)
+--           the first '(' character, or ``nil`` if ``id`` is not present in the .IDS.
+--
+-- @note: This function performs a linear search unless the .IDS was loaded with ``cacheAsArray=true``.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+--
+-- @param { id / type=number }: The id of the symbol to be fetched.
+--
+-- @return { type=string }: See summary.
+
 function EEex_Resource_GetIDSStart(ids, id)
-	if id >= ids:getCount() then return nil end
-	local entry = ids.m_pIdArray:get(id)
+	local entry = ids:getEntry()
 	return entry and entry.m_start.m_pchData:get() or nil
 end
 CAIIdList.getStart = EEex_Resource_GetIDSStart
 
+-- @bubb_doc { EEex_Resource_IDSHasID / instance_name=hasID }
+--
+-- @summary: Returns ``true`` if the given ``id`` is present in the .IDS.
+--
+-- @note: This function performs a linear search unless the .IDS was loaded with ``cacheAsArray=true``.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+--
+-- @param { id / type=number }: The id to search for.
+--
+-- @return { type=boolean }: See summary.
+
 function EEex_Resource_IDSHasID(ids, id)
-	return id < ids:getCount() and ids.m_pIdArray:get(id) ~= nil
+	return ids:getEntry() ~= nil
 end
 CAIIdList.hasID = EEex_Resource_IDSHasID
 
-function EEex_Resource_LoadIDS(resref)
+-- @bubb_doc { EEex_Resource_IterateIDSEntries / instance_name=iterateEntries }
+--
+-- @summary: Calls ``func`` for every ``CAIId`` entry of the .IDS. If ``func`` returns ``true`` the iteration ends early.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+--
+-- @param { func / type=function(entry: CAIId) -> boolean }: The function to be called.
+
+function EEex_Resource_IterateIDSEntries(ids, func)
+	EEex_Utility_IterateCPtrList(ids.m_idList, func)
+end
+CAIIdList.iterateEntries = EEex_Resource_IterateIDSEntries
+
+-- @bubb_doc { EEex_Resource_IterateUnpackedIDSEntries / instance_name=iterateUnpackedEntries }
+--
+-- @summary: Calls ``func`` for every ``CAIId`` entry of the .IDS, unpacking the entry's members for convenience.
+--           If ``func`` returns ``true`` the iteration ends early.
+--
+-- @self { ids / usertype=CAIIdList }: The .IDS file being operated on. This is usually the object returned by ``EEex_Resource_LoadIDS()``.
+--
+-- @param { func / type=function(id: number, line: string, start: string) -> boolean }:
+--
+--     The function to be called.                                                                  @EOL
+--                                                                                                 @EOL
+--     ``id`` – the entry's numerical value.                                                       @EOL
+--     ``line`` – the entry's complete symbol value.                                               @EOL
+--     ``start`` – the entry's symbol value up until (and not including) the first '(' character.
+
+function EEex_Resource_IterateUnpackedIDSEntries(ids, func)
+	ids:iterateEntries(function(entry)
+		return func(entry.m_id, entry.m_line.m_pchData:get(), entry.m_start.m_pchData:get())
+	end)
+end
+CAIIdList.iterateUnpackedEntries = EEex_Resource_IterateUnpackedIDSEntries
+
+-- @bubb_doc { EEex_Resource_LoadIDS }
+--
+-- @summary: Returns a ``CAIIdList`` instance that represents the .IDS with ``resref``.
+--
+-- @param { resref / type=string }: The resref of the .IDS to be loaded – (should omit the file extension).
+--
+-- @param { cacheAsArray / type=boolean / default=false }:
+--
+--     If ``true``, internally builds an array that maps every id of the .IDS to its corresponding ``CAIId`` entry in the      @EOL
+--     range [0, <max id in .IDS>].                                                                                            @EOL
+--                                                                                                                             @EOL
+--     Setting this parameter to ``true`` can speed up entry lookups for the returned ``CAIIdList`` instance – ***however***,  @EOL
+--     care must be taken that the given .IDS does not have a large max id value.                                              @EOL
+--                                                                                                                             @EOL
+--     For example, it would be a bad idea to load ``KIT.IDS`` with ``cacheAsArray=true``, as the max id of ``KIT.IDS``,       @EOL
+--     ``0x80000000``, would cause the ``CAIIdList`` instance to attempt to allocate an array that has a size of               @EOL
+--     ``(0x80000000 + 1) * 8 bytes`` *** = ~16 gigabytes! ***
+--
+-- @return { type=CAIIdList }: See summary.
+
+function EEex_Resource_LoadIDS(resref, cacheAsArray)
 	local ids = EEex_NewUD("CAIIdList")
 	ids:Construct1()
 	EEex_RunWithStackManager({
 		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = {["args"] = {resref} }}, },
 		function(manager)
-			ids:LoadList2(manager:getUD("resref"), true)
+			ids:LoadList2(manager:getUD("resref"), cacheAsArray or false)
 		end)
+	EEex_SetUDGCFunc(ids, EEex_Resource_FreeIDS)
 	return ids
 end

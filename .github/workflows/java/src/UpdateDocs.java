@@ -850,8 +850,8 @@ public class UpdateDocs
 	private static String replaceRole(String str, String macroString, String roleName)
 	{
 		macroString = "(@" + macroString + "[ \t]*\\([ \t]*(.*?)[ \t]*\\))";
-		str = str.replaceAll("\\S" + macroString, " $1");
-		str = str.replaceAll(macroString + "\\S", "$1 ");
+		str = str.replaceAll("(?<=\\S)" + macroString, "$1");
+		str = str.replaceAll(macroString + "(?=\\S)", "$1\\\\");
 		str = str.replaceAll("[ \t]+" + macroString, " $1");
 		str = str.replaceAll(macroString + "[ \t]+", "$1 ");
 		str = str.replaceAll(macroString + "[ \t]+(?=\r?\n)", "$1");
@@ -861,8 +861,8 @@ public class UpdateDocs
 	private static String replaceBoldItalic(String str)
 	{
 		String macroString = "(\\*\\*\\*[ \t]*(.*?)[ \t]*\\*\\*\\*)";
-		str = str.replaceAll("\\S" + macroString, " $1");
-		str = str.replaceAll(macroString + "\\S", "$1 ");
+		str = str.replaceAll("(?<=\\S)" + macroString, "$1");
+		str = str.replaceAll(macroString + "(?=\\S)", "$1\\\\");
 		str = str.replaceAll("[ \t]+" + macroString, " $1");
 		str = str.replaceAll(macroString + "[ \t]+", "$1 ");
 		str = str.replaceAll(macroString + "[ \t]+(?=\r?\n)", "$1");
@@ -872,8 +872,8 @@ public class UpdateDocs
 	private static String replacePre(String str)
 	{
 		String macroString = "(@\\|[ \t]*(.*?)[ \t]*@\\|)";
-		str = str.replaceAll("\\S" + macroString, " $1");
-		str = str.replaceAll(macroString + "\\S", "$1 ");
+		str = str.replaceAll("(?<=\\S)" + macroString, "$1");
+		str = str.replaceAll(macroString + "(?=\\S)", "$1\\\\");
 		str = str.replaceAll("[ \t]+" + macroString, " $1");
 		str = str.replaceAll(macroString + "[ \t]+", "$1 ");
 		str = str.replaceAll(macroString + "[ \t]+(?=\r?\n)", "$1");
@@ -882,8 +882,8 @@ public class UpdateDocs
 
 	private static String preprocessDescription(String str)
 	{
-		str = str.replaceAll("(?<=\\S)@EOL", " @EOL");
-		str = str.replaceAll("@EOL(?=\\S)", "@EOL ");
+		str = str.replaceAll("(?<=\\S)@EOL", "@EOL");
+		str = str.replaceAll("@EOL(?=\\S)", "@EOL\\\\");
 		str = str.replaceAll("\\s*@EOL\\s*", " @EOL ");
 		str = str.replaceAll("@EOL", ":raw-html:`<br/>`");
 		return replacePre(replaceBoldItalic(str));
