@@ -244,6 +244,10 @@ Operations=ADD -7
 Pattern=4881C1C8070000
 Operations=ADD -7
 
+[CGameSprite::GetLauncher]
+Pattern=33DB498BF0
+Operations=ADD -20
+
 [CGameSprite::GetLauncherSlot]
 Pattern=574883EC20480FBFC2
 Operations=ADD -10
@@ -1492,6 +1496,14 @@ Operations=ADD -8
 [Hook-CGameSprite::GetStatBreakdown()-GetProfBonuses-SaveItem]
 Pattern=498BCE48894590
 Operations=ADD 7
+
+[Hook-CGameSprite::Hit()-FirstCall]
+Pattern=418BF1488D4DD8
+Operations=ADD 10
+
+[Hook-CGameSprite::Hit()-MeleeingWithRangedPenalty]
+Pattern=2BF90FAFC0
+Operations=ADD 9
 
 [Hook-CGameSprite::IsOver()-B3Invis]
 Pattern=3843387627

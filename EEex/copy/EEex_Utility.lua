@@ -126,15 +126,8 @@ function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
 	end
 end
 
-function EEex_Utility_FindNameById(ids, id)
-	local toReturn = nil
-	EEex_Utility_IterateCPtrList(ids.m_idList, function(idEntry)
-		if idEntry.m_id == id then
-			toReturn = idEntry.m_line.m_pchData:get()
-			return true
-		end
-	end)
-	return toReturn
+function EEex_Utility_NewScope(func)
+	return func()
 end
 
 ---------------

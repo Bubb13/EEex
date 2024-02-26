@@ -126,6 +126,7 @@ function EEex_Resource_Demand(resref, extension)
 
 	local castType = ({
 		["SPL"] = "Spell_Header_st",
+		["ITM"] = "Item_Header_st",
 	})[extension:upper()]
 
 	if castType then demanded = EEex_CastUD(demanded, castType) end
@@ -137,6 +138,17 @@ function EEex_Resource_GetSpellAbility(spellHeader, abilityIndex)
 	return EEex_PtrToUD(EEex_UDToPtr(spellHeader) + spellHeader.abilityOffset + Spell_ability_st.sizeof * abilityIndex, "Spell_ability_st")
 end
 Spell_Header_st.getAbility = EEex_Resource_GetSpellAbility
+
+function EEex_Resource_GetItemAbility(itemHeader, abilityIndex)
+	if itemHeader.abilityCount <= abilityIndex then return end
+	return EEex_PtrToUD(EEex_UDToPtr(itemHeader) + itemHeader.abilityOffset + Item_Header_st.sizeof * abilityIndex, "Item_ability_st")
+end
+Item_Header_st.getAbility = EEex_Resource_GetItemAbility
+
+function EEex_Resource_GetCItemAbility(item, abilityIndex)
+	return item.pRes.pHeader:getAbility(abilityIndex)
+end
+CItem.getAbility = EEex_Resource_GetCItemAbility
 
 function EEex_Resource_GetSpellAbilityForLevel(spellHeader, casterLevel)
 
@@ -402,6 +414,21 @@ function EEex_Resource_GetAt2DAPoint(array, columnIndex, rowIndex)
 	return array.m_pArray:getReference(columnIndex + rowIndex * sizeX).m_pchData:get()
 end
 C2DArray.getAtPoint = EEex_Resource_GetAt2DAPoint
+
+-- @bubb_doc { EEex_Resource_GetMax2DAIndices / instance_name=getMaxIndices }
+--
+-- @summary: Returns the maximum x and y indices of the .2DA. That is the maximum indexable column, and the maximum indexable row respectively.
+--
+-- @self { array / usertype=C2DArray }: The .2DA file being operated on. This is usually the object returned by ``EEex_Resource_Load2DA()``.
+--
+-- @return { type=number }: The .2DA's maximum 'x' index.
+--
+-- @return { type=number }: The .2DA's maximum 'y' index.
+
+function EEex_Resource_GetMax2DAIndices(array)
+	return array.m_nSizeX - 2, array.m_nSizeY - 1
+end
+C2DArray.getMaxIndices = EEex_Resource_GetMax2DAIndices
 
 -- @bubb_doc { EEex_Resource_Iterate2DAColumnIndex / instance_name=iterateColumnIndex }
 --
@@ -827,3 +854,113 @@ function EEex_Resource_LoadIDS(resref, cacheAsArray)
 	EEex_SetUDGCFunc(ids, EEex_Resource_FreeIDS)
 	return ids
 end
+
+---------------------------------------------------
+-- Lua tables derived from .2DA / .IDS resources --
+---------------------------------------------------
+
+EEex_Resource_Private_ItemCategoryIDSToSymbol = {}
+EEex_Resource_Private_ItemCategorySymbolToIDS = {}
+
+function EEex_Resource_ItemCategoryIDSToSymbol(itemCategoryIDS)
+	return EEex_Resource_Private_ItemCategoryIDSToSymbol[itemCategoryIDS]
+end
+
+function EEex_Resource_ItemCategorySymbolToIDS(itemCategorySymbol)
+	return EEex_Resource_Private_ItemCategorySymbolToIDS[itemCategorySymbol]
+end
+
+EEex_Resource_Private_KitIDSToSymbol = {}
+EEex_Resource_Private_KitSymbolToIDS = {}
+
+function EEex_Resource_KitIDSToSymbol(kitIDS)
+	return EEex_Resource_Private_KitIDSToSymbol[kitIDS]
+end
+
+function EEex_Resource_KitSymbolToIDS(kitSymbol)
+	return EEex_Resource_Private_KitSymbolToIDS[kitSymbol]
+end
+
+EEex_Resource_Private_KitIgnoresMeleeingWithRangedPenaltyForItemCategory = {}
+
+EEex_GameState_AddInitializedListener(function()
+
+	-----------------
+	-- KITLIST.2DA --
+	-----------------
+
+	-- Fills:
+	--     [table] EEex_Resource_Private_KitIDSToSymbol
+	--     [table] EEex_Resource_Private_KitSymbolToIDS
+
+	EEex_Utility_NewScope(function()
+
+		local kitlist = EEex_Resource_Load2DA("KITLIST")
+		local _, lastRowIndex = kitlist:getMaxIndices()
+
+		local kitSymbolColumn = kitlist:findColumnLabel("ROWNAME")
+		local kitIDSColumn = kitlist:findColumnLabel("KITIDS")
+
+		for rowIndex = 0, lastRowIndex do
+			local kitIDSStr = kitlist:getAtPoint(kitIDSColumn, rowIndex)
+			if kitIDSStr:sub(1, 2):lower() == "0x" then
+				local kitIDS = tonumber(kitIDSStr:sub(3), 16)
+				if kitIDS ~= nil then
+					local kitSymbol = kitlist:getAtPoint(kitSymbolColumn, rowIndex)
+					EEex_Resource_Private_KitIDSToSymbol[kitIDS] = kitSymbol
+					EEex_Resource_Private_KitSymbolToIDS[kitSymbol] = kitIDS
+				end
+			end
+		end
+	end)
+
+	-----------------
+	-- ITEMCAT.IDS --
+	-----------------
+
+	-- Fills:
+	--     [table] EEex_Resource_Private_ItemCategoryIDSToSymbol
+
+	EEex_Utility_NewScope(function()
+		local itemcat = EEex_Resource_LoadIDS("ITEMCAT")
+		itemcat:iterateUnpackedEntries(function(id, symbol, _)
+			EEex_Resource_Private_ItemCategoryIDSToSymbol[id] = symbol
+			EEex_Resource_Private_ItemCategorySymbolToIDS[symbol] = id
+		end)
+	end)
+
+	------------------
+	-- X-CLSERG.2DA --
+	------------------
+
+	-- Fills:
+	--     [table] EEex_Resource_Private_KitIgnoresMeleeingWithRangedPenaltyForItemCategory
+
+	EEex_Utility_NewScope(function()
+
+		local data = EEex_Resource_Load2DA("X-CLSERG")
+		local lastColumnIndex, lastRowIndex = data:getMaxIndices()
+
+		for rowIndex = 0, lastRowIndex do
+
+			local kitSymbol = data:getRowLabel(rowIndex)
+			local kitIDS = EEex_Resource_KitSymbolToIDS(kitSymbol)
+
+			if kitIDS ~= nil then
+
+				local itemCategories = {}
+				EEex_Resource_Private_KitIgnoresMeleeingWithRangedPenaltyForItemCategory[kitIDS] = itemCategories
+
+				for columnIndex = 0, lastColumnIndex do
+
+					itemCategory = EEex_Resource_ItemCategorySymbolToIDS(data:getColumnLabel(columnIndex))
+
+					if itemCategory ~= nil then
+						local value = data:getAtPoint(columnIndex, rowIndex) == "1"
+						itemCategories[itemCategory] = value
+					end
+				end
+			end
+		end
+	end)
+end)

@@ -314,13 +314,13 @@ function EEex_MemoryManager:init(structEntries, stackModeFunc)
 	end
 
 	if stackModeFunc then
-		local retVal
+		local retVals
 		EEex_RunWithStack(currentOffset, function(rsp)
 			initMemory(rsp)
-			retVal = stackModeFunc(self)
+			retVals = {stackModeFunc(self)}
 			self:destruct()
 		end)
-		return retVal
+		return table.unpack(retVals)
 	else
 		initMemory(EEex_Malloc(currentOffset))
 	end

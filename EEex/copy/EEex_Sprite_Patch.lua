@@ -673,48 +673,72 @@
 		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
-	-- Ignore the -8 thac0 penalty characters incur when meleeing with a ranged weapon --
+	--[[
+	+------------------------------------------------------------------------------------------+
+	| Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with |
+	| a ranged weapon for specific [KITLIST.2DA]->ROWNAME / ITEMCAT.IDS pairs                  |
+	+------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_IgnoreCloseRangedPenalityWithItemCat(sprite, pItem) -> boolean  |
+	|       return:                                                                            |
+	|           -> false - Don't alter engine behavior                                         |
+	|           -> true  - Ignore -8 thac0 penalty                                             |
+	+------------------------------------------------------------------------------------------+
+	--]]
 
-	local CGameSprite_Hit_SavedItem = EEex_Malloc(0x8)
+	local CGameSprite_Hit_SavedVariables = EEex_Malloc(EEex_PtrSize * 2)
+	local CGameSprite_Hit_SavedItem = CGameSprite_Hit_SavedVariables
+	local CGameSprite_Hit_SavedItemAbilityNum = CGameSprite_Hit_SavedVariables + EEex_PtrSize
 
-	EEex_HookAfterCall(0x14039DA86, {[[
-		mov qword ptr ds:[#$(1)], r15 ]], {CGameSprite_Hit_SavedItem}
+	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Hit()-FirstCall"), {[[
+		mov qword ptr ds:[#$(1)], r15 ]], {CGameSprite_Hit_SavedItem}, [[ #ENDL
+		mov qword ptr ds:[#$(1)], rsi ]], {CGameSprite_Hit_SavedItemAbilityNum}
 	})
 
-	EEex_HookAfterRestore(0x14039E3D0, 0, 7, 7, EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(56)
-			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], eax
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_CGameSprite_HitRangePenalty", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
-				function(rspOffset) return {[[
-					mov rax, qword ptr ss:[#$(1)] ]], {CGameSprite_Hit_SavedItem}, [[ #ENDL
-					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
-				]]}, "CItem" end,
-			}
-			["returnType"] = EEex_LuaCallReturnType.Boolean,
-		}),
-		{[[
-			jmp no_error
+	EEex_HookNOPsWithLabels(EEex_Label("Hook-CGameSprite::Hit()-MeleeingWithRangedPenalty"), 2, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(56)
+			]]},
+			EEex_GenLuaCall("EEex_Sprite_Hook_ShouldIgnoreMeleeingWithRangedPenalty", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+					function(rspOffset) return {[[
+						mov rax, qword ptr ss:[#$(1)] ]], {CGameSprite_Hit_SavedItem}, [[ #ENDL
+						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+					]]}, "CItem" end,
+					function(rspOffset) return {[[
+						mov rax, qword ptr ss:[#$(1)] ]], {CGameSprite_Hit_SavedItemAbilityNum}, [[ #ENDL
+						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+					]]} end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Boolean,
+			}),
+			{[[
+				jmp no_error
 
-			call_error:
-			xor rax, rax
+				call_error:
+				xor rax, rax
 
-			no_error:
-			test rax, rax
-			jz no_override
+				no_error:
+				test rax, rax
+				jz no_override
 
-			xor rax, rax
-			#DESTROY_SHADOW_SPACE
-			jmp #L(return)
+				xor rax, rax ; no penalty (0)
+				#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+				jmp #L(return)
 
-			no_override:
-			mov eax, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
+				no_override:
+				mov rax, -8 ; default penalty
+				#RESUME_SHADOW_ENTRY
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
 
 	EEex_EnableCodeProtection()
 

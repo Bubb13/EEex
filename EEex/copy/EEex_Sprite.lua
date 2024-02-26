@@ -800,6 +800,17 @@ function EEex_Sprite_OpenOp214Interface(sourceSprite, buttonDataIterator)
 end
 CGameSprite.openOp214Interface = EEex_Sprite_OpenOp214Interface
 
+function EEex_Sprite_GetLauncher(sprite, curAbility)
+	return EEex_RunWithStackManager({
+		{ ["name"] = "launcherSlot", ["struct"] = "uninitialized", ["constructor"] = { ["args"] = {2} } } },
+		function(manager)
+			local launcherSlotPtr = EEex_NewUDPtr(manager:getAddress("launcherSlot"), "short")
+			return sprite:GetLauncher(curAbility, launcherSlotPtr), launcherSlotPtr:getValue()
+		end
+	)
+end
+CGameSprite.getLauncher = EEex_Sprite_GetLauncher
+
 ------------------------------
 -- / End Instance Functions --
 ------------------------------
@@ -1307,27 +1318,34 @@ function EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item, damR, damL, th
 	return false
 end
 
----------------------------------------------------------------------------------------
--- Ignore the -8 thac0 penalty a character incurs when meleeing with a ranged weapon --
----------------------------------------------------------------------------------------
+--[[
++------------------------------------------------------------------------------------------+
+| Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with |
+| a ranged weapon for specific [KITLIST.2DA]->ROWNAME / ITEMCAT.IDS pairs                  |
++------------------------------------------------------------------------------------------+
+|   [Lua] EEex_Sprite_Hook_IgnoreCloseRangedPenalityWithItemCat(sprite, pItem) -> boolean  |
+|       return:                                                                            |
+|           -> false - Don't alter engine behavior                                         |
+|           -> true  - Ignore -8 thac0 penalty                                             |
++------------------------------------------------------------------------------------------+
+--]]
 
-function EEex_Sprite_Hook_IgnoresCloseRangedPenalityWithItemCat(sprite, pItem)
-	if pItem == nil then return false end
-	--
-	local pRes = pItem.pRes
+function EEex_Sprite_Hook_ShouldIgnoreMeleeingWithRangedPenalty(sprite, item, abilityNum)
+
+	if item == nil then return false end
+	item = sprite:getLauncher(item:getAbility(abilityNum)) or item
+
+	local pRes = item.pRes
 	if pRes == nil then return false end
-	--
+
 	local pHeader = pRes.pHeader
 	if pHeader == nil then return false end
-	--
+
 	local m_baseStats = sprite.m_baseStats
 	local kitIDS = EEex_BOr(EEex_LShift(m_baseStats.m_mageSpecUpperWord, 16), m_baseStats.m_mageSpecialization)
-	--
-	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][weaponTypeIDSToSymbol[pHeader.itemType]] == nil then return false end
-	if EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[kitIDSToSymbol[kitIDS]][weaponTypeIDSToSymbol[pHeader.itemType]] then
-		return true
-	else
-		return false
-	end
+
+	local itemCategories = EEex_Resource_Private_KitIgnoresMeleeingWithRangedPenaltyForItemCategory[kitIDS]
+	if itemCategories == nil then return false end
+
+	return itemCategories[pHeader.itemType] == true
 end
-CGameSprite.ignoresCloseRangedPenalityWithItemCat = EEex_Sprite_Hook_IgnoresCloseRangedPenalityWithItemCat

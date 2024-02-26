@@ -64,17 +64,23 @@ end
 -- Listeners --
 ---------------
 
-EEex_GameState_InitializedListeners = {}
+EEex_GameState_Private_AlreadyInitialized = false
+EEex_GameState_Private_InitializedListeners = {}
 
 -- @bubb_doc { EEex_GameState_AddInitializedListener }
 --
 -- @summary: Registers a listener function that is called immediately after the engine's Lua environment has been initialized.
---           This only occurs once during the engine's early start up process.
+--           This only occurs once during the engine's early start up process. If the engine has already been initialized,
+--           ``listener`` is called immediately.
 --
 -- @param { listener / type=function }: The listener to register.
 
 function EEex_GameState_AddInitializedListener(listener)
-	table.insert(EEex_GameState_InitializedListeners, listener)
+	if EEex_GameState_Private_AlreadyInitialized then
+		listener()
+	else
+		table.insert(EEex_GameState_Private_InitializedListeners, listener)
+	end
 end
 
 EEex_GameState_DestroyedListeners = {}
@@ -95,9 +101,11 @@ end
 -----------
 
 function EEex_GameState_LuaHook_OnInitialized()
-	for _, listener in ipairs(EEex_GameState_InitializedListeners) do
+	for _, listener in ipairs(EEex_GameState_Private_InitializedListeners) do
 		listener()
 	end
+	EEex_GameState_Private_AlreadyInitialized = true
+	EEex_GameState_Private_InitializedListeners = {}
 end
 
 function EEex_GameState_Hook_OnDestroyed()
@@ -105,58 +113,3 @@ function EEex_GameState_Hook_OnDestroyed()
 		listener()
 	end
 end
-
--------------------------------------------
--- Generic Lua maps out of .2DAs / .IDSs --
--------------------------------------------
-
-kitIDSToSymbol = {}
-
-EEex_GameState_AddInitializedListener(function()
-
-	local kitlist = EEex_Resource_Load2DA("KITLIST")
-	local _, kitListLastRowIndex = kitlist:getDimensions()
-	kitListLastRowIndex = kitListLastRowIndex - 2
-
-	local kitSymbolColumn = kitlist:findColumnLabel("ROWNAME")
-	local kitIDSColumn = kitlist:findColumnLabel("KITIDS")
-
-	for rowIndex = 0, kitListLastRowIndex do
-		local kitIDSStr = kitlist:getAtPoint(kitIDSColumn, rowIndex)
-		if kitIDSStr:sub(1, 2):lower() == "0x" then
-			local kitIDS = tonumber(kitIDSStr:sub(3), 16)
-			if kitIDS ~= nil then
-				local kitSymbol = kitlist:getAtPoint(kitSymbolColumn, rowIndex)
-				kitIDSToSymbol[kitIDS] = kitSymbol
-			end
-		end
-	end
-end)
-
-weaponTypeIDSToSymbol = {}
-
-EEex_GameState_AddInitializedListener(function()
-
-	local itemcat = EEex_Resource_LoadIDS("ITEMCAT")
-
-	for id = 15, 30 do -- for all weapon categories ...
-		weaponTypeIDSToSymbol[id] = EEex_Utility_FindNameById(itemcat, id)
-	end
-end)
-
-EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory = {}
-
-EEex_GameState_AddInitializedListener(function()
-
-	local data = EEex_Resource_Load2DA("X-CLSERG")
-	local nX, nY = data:getDimensions()
-	nX = nX - 2
-	nY = nY - 1
-
-	for rowIndex = 0, nY do
-		EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[data:getRowLabel(rowIndex)] = {}
-		for columnIndex = 0, nX do
-			EEex_Sprite_Private_KitIgnoresCloseRangedPenalityForItemCategory[data:getRowLabel(rowIndex)][data:getColumnLabel(columnIndex)] = data:getAtPoint(columnIndex, rowIndex)
-		end
-	end
-end)
