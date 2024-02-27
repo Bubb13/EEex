@@ -674,15 +674,15 @@
 	})
 
 	--[[
-	+------------------------------------------------------------------------------------------+
-	| Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with |
-	| a ranged weapon for specific [KITLIST.2DA]->ROWNAME / ITEMCAT.IDS pairs                  |
-	+------------------------------------------------------------------------------------------+
-	|   [Lua] EEex_Sprite_Hook_IgnoreCloseRangedPenalityWithItemCat(sprite, pItem) -> boolean  |
-	|       return:                                                                            |
-	|           -> false - Don't alter engine behavior                                         |
-	|           -> true  - Ignore -8 thac0 penalty                                             |
-	+------------------------------------------------------------------------------------------+
+	+---------------------------------------------------------------------------------------------------------------------------------+
+	| Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with a ranged weapon for specific           |
+	| [KITLIST.2DA]->ROWNAME / ITEMCAT.IDS pairs                                                                                      |
+	+---------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_ShouldIgnoreMeleeingWithRangedPenalty(sprite: CGameSprite, item: CItem, abilityNum: number) -> boolean |
+	|       return:                                                                                                                   |
+	|           -> false - Don't alter engine behavior                                                                                |
+	|           -> true  - Ignore -8 thac0 penalty                                                                                    |
+	+---------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	local CGameSprite_Hit_SavedVariables = EEex_Malloc(EEex_PtrSize * 2)
