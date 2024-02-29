@@ -1513,9 +1513,17 @@ Operations=ADD 3
 Pattern=41B001EB17
 Operations=ADD 51
 
-[Hook-CGameSprite::ProcessEffectList()-AfterListsResolved]
-Pattern=488D866005000085FF
-Operations=ADD 18
+[Hook-CGameSprite::ProcessEffectList()-AfterListsResolved-1]
+Pattern=837D8C00
+Operations=ADD 20
+
+[Hook-CGameSprite::ProcessEffectList()-AfterListsResolved-2]
+Pattern=837D8C00
+Operations=ADD 29
+
+[Hook-CGameSprite::ProcessEffectList()-AfterListsResolved-3]
+Pattern=837D8C00
+Operations=ADD 34
 
 [Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
 Pattern=488D8660050000660F1F440000

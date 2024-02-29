@@ -43,65 +43,41 @@
 	)
 
 	--[[
-	+------------------------------------------------------------+
-	| [Unused] Call a hook whenever a CGameSprite is constructed |
-	+------------------------------------------------------------+
-	|   [Lua] EEex_Sprite_Hook_OnConstruct(sprite: CGameSprite)  |
-	+------------------------------------------------------------+
+	+-------------------------------------------------------------------+
+	| Call a hook whenever a CGameSprite is constructed                 |
+	+-------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_OnConstruct(pSprite: CGameSprite*) |
+	+-------------------------------------------------------------------+
 	--]]
 
-	-- for _, labelName in ipairs({
-	-- 	"Hook-CGameSprite::Construct1()-FirstCall",
-	-- 	"Hook-CGameSprite::Construct2()-FirstCall"
-	-- }) do
-	-- 	EEex_HookAfterCallWithLabels(EEex_Label(labelName), {
-	-- 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
-	-- 		EEex_FlattenTable({
-	-- 			{[[
-	-- 				#MAKE_SHADOW_SPACE(40)
-	-- 			]]},
-	-- 			EEex_GenLuaCall("EEex_Sprite_Hook_OnConstruct", {
-	-- 				["args"] = {
-	-- 					function(rspOffset) return {[[
-	-- 						mov qword ptr ss:[rsp+#$(1)], rsi
-	-- 					]], {rspOffset}}, "CGameSprite" end,
-	-- 				},
-	-- 			}),
-	-- 			{[[
-	-- 				call_error:
-	-- 				#DESTROY_SHADOW_SPACE
-	-- 			]]},
-	-- 		})
-	-- 	)
-	-- end
+	for _, labelName in ipairs({
+		"Hook-CGameSprite::Construct1()-FirstCall",
+		"Hook-CGameSprite::Construct2()-FirstCall"
+	}) do
+		EEex_HookAfterCallWithLabels(EEex_Label(labelName), {
+			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+			{[[
+				mov rcx, rsi ; pSprite
+				call #L(EEex::Sprite_Hook_OnConstruct)
+			]]}
+		)
+	end
 
 	--[[
-	+-----------------------------------------------------------+
-	| [Unused] Call a hook whenever a CGameSprite is destructed |
-	+-----------------------------------------------------------+
-	|   [Lua] EEex_Sprite_Hook_OnDestruct(sprite: CGameSprite)  |
-	+-----------------------------------------------------------+
+	+------------------------------------------------------------------+
+	| Call a hook whenever a CGameSprite is destructed                 |
+	+------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_OnDestruct(pSprite: CGameSprite*) |
+	+------------------------------------------------------------------+
 	--]]
 
-	-- EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Destruct()-FirstCall"), {
-	-- 	{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
-	-- 	EEex_FlattenTable({
-	-- 		{[[
-	-- 			#MAKE_SHADOW_SPACE(40)
-	-- 		]]},
-	-- 		EEex_GenLuaCall("EEex_Sprite_Hook_OnDestruct", {
-	-- 			["args"] = {
-	-- 				function(rspOffset) return {[[
-	-- 					mov qword ptr ss:[rsp+#$(1)], rbx
-	-- 				]], {rspOffset}}, "CGameSprite" end,
-	-- 			},
-	-- 		}),
-	-- 		{[[
-	-- 			call_error:
-	-- 			#DESTROY_SHADOW_SPACE
-	-- 		]]},
-	-- 	})
-	-- )
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Destruct()-FirstCall"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		{[[
+			mov rcx, rbx ; pSprite
+			call #L(EEex::Sprite_Hook_OnDestruct)
+		]]}
+	)
 
 	--[[
 	+--------------------------------------------------------------------------------------------------------------+
@@ -120,7 +96,7 @@
 		}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(88)
+				#MAKE_SHADOW_SPACE(96)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
@@ -134,6 +110,9 @@
 						movsx rax, r8w
 						mov qword ptr ss:[rsp+#$(1)], rax
 					]], {rspOffset}} end,
+					function(rspOffset) return {[[
+						mov qword ptr ss:[rsp+#$(1)], r9
+					]], {rspOffset}}, "boolean" end,
 				},
 			}),
 			{[[

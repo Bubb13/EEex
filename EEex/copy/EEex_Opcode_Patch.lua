@@ -43,7 +43,8 @@
 
 	--[[
 	+-------------------------------------------------------------------------------------+
-	| Call a hook immediately after sprites have had both of their effect lists evaluated |
+	| Call a hook immediately after a sprite has had both of its effect lists evaluated,  |
+	| and once the engine permits the sprite's effect list to be evaluated once again     |
 	+-------------------------------------------------------------------------------------+
 	|   Used to implement listeners that act as "final" operations on a sprite            |
 	+-------------------------------------------------------------------------------------+
@@ -51,9 +52,28 @@
 	+-------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Opcode_LuaHook_AfterListsResolved(sprite: CGameSprite)                 |
 	+-------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_LuaHook_OnSpellDisableStateChanged(sprite: CGameSprite)         |
+	+-------------------------------------------------------------------------------------+
 	--]]
 
-	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved"), {
+	for _, entry in ipairs({
+		{"Hook-CGameSprite::ProcessEffectList()-AfterListsResolved-1", 7},
+		{"Hook-CGameSprite::ProcessEffectList()-AfterListsResolved-2", 3}, })
+	do
+		EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label(entry[1]), entry[2], {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				mov rcx, rsi                                  ; pSprite
+				call #L(EEex::Opcode_Hook_AfterListsResolved)
+			]]}
+		)
+	end
+
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-AfterListsResolved-3"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
 			mov rcx, rsi                                  ; pSprite

@@ -448,7 +448,7 @@ CGameSprite.getPortraitIndex = EEex_Sprite_GetPortraitIndex
 -- @return { usertype=CDerivedStats }: See summary.
 
 function EEex_Sprite_GetActiveStats(sprite)
-	return sprite.m_bAllowEffectListCall and sprite.m_derivedStats or sprite.m_tempStats
+	return sprite.m_bAllowEffectListCall ~= 0 and sprite.m_derivedStats or sprite.m_tempStats
 end
 CGameSprite.getActiveStats = EEex_Sprite_GetActiveStats
 
@@ -831,6 +831,18 @@ function EEex_Sprite_AddQuickListCountsResetListener(listener)
 	table.insert(EEex_Sprite_Private_QuickListCountsResetListeners, listener)
 end
 
+EEex_Sprite_Private_QuickListNotifyRemovedListeners = {}
+
+function EEex_Sprite_AddQuickListNotifyRemovedListener(listener)
+	table.insert(EEex_Sprite_Private_QuickListNotifyRemovedListeners, listener)
+end
+
+EEex_Sprite_Private_SpellDisableStateChangedListeners = {}
+
+function EEex_Sprite_AddSpellDisableStateChangedListener(listener)
+	table.insert(EEex_Sprite_Private_SpellDisableStateChangedListeners, listener)
+end
+
 EEex_Sprite_Private_MarshalHandlers = {}
 
 function EEex_Sprite_AddMarshalHandlers(handlerName, exporter, importer)
@@ -848,16 +860,32 @@ function EEex_Sprite_Hook_CheckSuppressTooltip()
 	return false
 end
 
-function EEex_Sprite_Hook_OnCheckQuickLists(sprite, abilityId, changeAmount)
+function EEex_Sprite_Hook_OnCheckQuickLists(sprite, abilityId, changeAmount, remove)
+
 	local resref = abilityId.m_res:get()
-	if changeAmount == 0 or resref == "" then return end
-	for _, listener in ipairs(EEex_Sprite_Private_QuickListsCheckedListeners) do
-		listener(sprite, resref, changeAmount)
+	if resref == "" then
+		return
+	end
+
+	if remove then
+		for _, listener in ipairs(EEex_Sprite_Private_QuickListNotifyRemovedListeners) do
+			listener(sprite, resref)
+		end
+	elseif changeAmount ~= 0 then
+		for _, listener in ipairs(EEex_Sprite_Private_QuickListsCheckedListeners) do
+			listener(sprite, resref, changeAmount)
+		end
 	end
 end
 
 function EEex_Sprite_Hook_OnResetQuickListCounts(sprite)
 	for _, listener in ipairs(EEex_Sprite_Private_QuickListCountsResetListeners) do
+		listener(sprite)
+	end
+end
+
+function EEex_Sprite_LuaHook_OnSpellDisableStateChanged(sprite)
+	for _, listener in ipairs(EEex_Sprite_Private_SpellDisableStateChangedListeners) do
 		listener(sprite)
 	end
 end
