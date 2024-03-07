@@ -344,6 +344,39 @@
 		)
 	end
 
+	--[[
+	+-------------------------------------------------------------+
+	| Call a hook immediately after the engine has checked that a |
+	| uiItem is enabled, and before the item is rendered. This    |
+	| can be used to implement custom item render routines.       |
+	+-------------------------------------------------------------+
+	|   [Lua] EEex_Menu_Hook_OnBeforeUIItemRender(item: uiItem)   |
+	+-------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-drawItem()-AfterEnabledCheck"), 0, 5, 5, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(40)
+			]]},
+			EEex_GenLuaCall("EEex_Menu_Hook_OnBeforeUIItemRender", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15", {rspOffset}, "#ENDL"}, "uiItem" end,
+				},
+			}),
+			{[[
+				call_error:
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
+
+
 	EEex_EnableCodeProtection()
 
 end)()

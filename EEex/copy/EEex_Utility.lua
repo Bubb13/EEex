@@ -113,7 +113,7 @@ function EEex_Utility_Switch(toSwitchOn, cases, defaultCase)
 	end
 end
 
-function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
+function EEex_Utility_MapToSortedTable(map, sortFunc)
 	local t = {}
 	local insertI = 1
 	for k, v in pairs(map) do
@@ -121,6 +121,11 @@ function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
 		insertI = insertI + 1
 	end
 	table.sort(t, sortFunc)
+	return t
+end
+
+function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
+	local t = EEex_Utility_MapToSortedTable(map, sortFunc)
 	for i, v in ipairs(t) do
 		func(i, v[1], v[2])
 	end

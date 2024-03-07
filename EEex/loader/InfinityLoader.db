@@ -487,6 +487,10 @@ Operations=ADD 20, PUSH, READ DWORD, ADD, ADD 4
 Pattern=756633C0
 Operations=ADD 7, PUSH, READ DWORD, ADD, ADD 4
 
+[g_keywords]
+Pattern=4963074883F840
+Operations=ADD 17, PUSH, READ DWORD, ADD, ADD 4
+
 [g_lua]
 Pattern=4885C00F85DA000000
 Operations=ADD 12, PUSH, READ DWORD, ADD, ADD 4
@@ -526,6 +530,34 @@ Operations=ADD 219, PUSH, READ DWORD, ADD, ADD 8
 [resources]
 Pattern=488B1CFB4885DB745B
 Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4, ADD -8
+
+[slicedRects]
+Pattern=488945EF0F1002
+Operations=ADD 13, PUSH, READ DWORD, ADD, ADD 4
+
+[yyRuleInfo]
+Pattern=4C8BB424D80000004C8BBC24D0000000
+Operations=ADD 45, READ DWORD, ADD 5368709120
+
+[yy_action]
+Pattern=BDAD000000
+Operations=ADD 80, READ DWORD, ADD 5368709120
+
+[yy_default]
+Pattern=BDAD000000
+Operations=ADD 91, READ DWORD, ADD 5368709120
+
+[yy_lookahead]
+Pattern=BDAD000000
+Operations=ADD 69, READ DWORD, ADD 5368709120
+
+[yy_reduce_ofst]
+Pattern=4C8BB424D80000004C8BBC24D0000000
+Operations=ADD 76, READ DWORD, ADD 5368709120
+
+[yy_shift_ofst]
+Pattern=BDAD000000
+Operations=ADD 40, READ DWORD, ADD 5368709120
 
 ;----------
 ;-- Data --
@@ -789,9 +821,41 @@ Operations=ADD -10
 Pattern=488BF24889542468
 Operations=ADD -49
 
+[CResPVR::Demand]
+Pattern=41564883EC3083795800
+Operations=ADD -15
+
 [Chitin_GetSectionCallback]
 Pattern=4889742418574883EC20BA01000000
 Operations=ADD -10
+
+[DrawAlpha]
+Pattern=83CF02448BCD
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawBindTexture]
+Pattern=4533C94533C08BD78BCE
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawBlendFunc]
+Pattern=4883EC28B9E20B0000
+Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawColor]
+Pattern=B916878FA0
+Operations=ADD 6, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawEnable]
+Pattern=4883EC28B9E20B0000
+Operations=ADD 10, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawPopState]
+Pattern=0F287424604C8B742470
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawPushState]
+Pattern=488945EF448B6D6F
+Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
 
 [bootstrapLua]
 Pattern=B918190000
@@ -800,6 +864,18 @@ Operations=ADD -31, PUSH, READ DWORD, ADD, ADD 4
 [chWriteInifile]
 Pattern=4889742418574883EC20498BF1498BE8
 Operations=ADD 32, PUSH, READ DWORD, ADD, ADD 4
+
+[dimmGetResObject]
+Pattern=4C892F488D55E7
+Operations=ADD -20, PUSH, READ DWORD, ADD, ADD 4
+
+[drawSlice]
+Pattern=488945F0448B4904
+Operations=ADD -24
+
+[drawSliceSide]
+Pattern=488945E7660F6E02
+Operations=ADD -33
 
 [l_log_print]
 Pattern=BB010000008BF0
@@ -811,6 +887,17 @@ Operations=ADD -6
 
 [panic]
 Pattern=4883EC284533C0418D50FF
+
+[uiDrawSlicedRect]
+Pattern=405553565741554156488D6C24D1
+
+[uiExecLuaInt]
+Pattern=8B7C2430EB04
+Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
+
+[uiVariantAsInt]
+Pattern=C3833900
+Operations=ADD -15
 
 ;---------------------
 ;-- Engine VFTables --
@@ -1695,6 +1782,10 @@ Operations=ADD 67
 [Hook-dimmInit()-uiLoadMenu()]
 ExeSwitch=1
 ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
+
+[Hook-drawItem()-AfterEnabledCheck]
+Pattern=0F8403260000
+Operations=ADD 6
 
 [Hook-drawItem()-CheckScrollbarContentHeight]
 Pattern=85C00F85CE040000

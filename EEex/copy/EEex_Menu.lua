@@ -33,10 +33,8 @@ function EEex_Menu_IsCursorWithinRect(x, y, width, height)
 	   and mouseY >= y and mouseY <= (y + height)
 end
 
--- Returns the given menu's x, y, w, and h components - or nil if passed invalid menuName.
-function EEex_Menu_GetArea(menuName)
+function EEex_Menu_GetUIMenuArea(menu)
 
-	local menu = EEex_Menu_Find(menuName)
 	if not menu then return end
 
 	local screenW, screenH = Infinity_GetScreenSize()
@@ -71,8 +69,27 @@ function EEex_Menu_GetArea(menuName)
 		returnY = windowH / 2 - menuH / 2
 	end
 
-	local offsetX, offsetY = Infinity_GetOffset(menuName)
-	return returnX + offsetX, returnY + offsetY, w, h
+	return returnX + menu.offset.x, returnY + menu.offset.y, w, h
+end
+uiMenu.getArea = EEex_Menu_GetUIMenuArea
+
+-- Returns the given menu's x, y, w, and h components - or nil if passed invalid menuName.
+function EEex_Menu_GetArea(menuName)
+	return EEex_Menu_GetUIMenuArea(EEex_Menu_Find(menuName))
+end
+
+function EEex_Menu_GetUIItemArea(item)
+	local menuX, menuY, menuW, menuH = item.menu:getArea()
+	local itemArea = item.area
+	return menuX + itemArea.x, menuY + itemArea.y, itemArea.w, itemArea.h
+end
+uiItem.getArea = EEex_Menu_GetUIItemArea
+
+function EEex_Menu_GetItemArea(menuItemName)
+	local lightItem = nameToItem[menuItemName]
+	if lightItem == nil then return end
+	local item = EEex_PtrToUD(EEex_LightUDToPtr(lightItem), "uiItem")
+	return item:getArea()
 end
 
 function EEex_Menu_IsCursorWithin(menuName, menuItemName)
@@ -205,6 +222,12 @@ function EEex_Menu_SetForceScrollbarRender(itemName, value)
 	EEex_Menu_ScrollbarForced[itemName] = value
 end
 
+EEex_Menu_BeforeUIItemRenderListeners = {}
+
+function EEex_Menu_AddBeforeUIItemRenderListener(itemName, func)
+	EEex_Menu_BeforeUIItemRenderListeners[itemName] = func
+end
+
 ---------------
 -- Listeners --
 ---------------
@@ -296,4 +319,11 @@ end
 function EEex_Menu_Hook_CheckForceScrollbarRender(item)
 	local itemName = item.name:get()
 	return itemName ~= "" and EEex_Menu_ScrollbarForced[itemName]
+end
+
+function EEex_Menu_Hook_OnBeforeUIItemRender(item)
+	local listener = EEex_Menu_BeforeUIItemRenderListeners[item.name:get()]
+	if listener then
+		listener(item)
+	end
 end
