@@ -22,7 +22,13 @@ function B3Scale_PokeEngine()
 	EEex_EngineGlobal_CBaldurChitin:OnResizeWindow(w, h)
 end
 
-function B3Scale_Hook_DoSizeChange()
+--[[
++-----------------------------------------------------------------------------+
+| Tweak the UI scale whenever the window is resized (called directly by EEex) |
++-----------------------------------------------------------------------------+
+--]]
+
+function B3Scale_DoSizeChange()
 
 	if B3Scale_Percentage == -1 then
 		return
@@ -43,29 +49,3 @@ function B3Scale_Hook_DoSizeChange()
 	CVidMode.SCREENWIDTH = math.floor(scaledH * ratio)
 	CVidMode.SCREENHEIGHT = math.floor(scaledH)
 end
-
-(function()
-
-	EEex_DisableCodeProtection()
-
-	--[[
-	+---------------------------------------------------+
-	| Tweak the UI scale whenever the window is resized |
-	+---------------------------------------------------+
-	|   [Lua] B3Scale_Hook_DoSizeChange()               |
-	+---------------------------------------------------+
-	--]]
-
-	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CChitin::OnResizeWindow()-B3Scale"), {
-		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
-		EEex_FlattenTable({[[
-			#MAKE_SHADOW_SPACE(32)
-			]], EEex_GenLuaCall("B3Scale_Hook_DoSizeChange"), [[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]})
-	)
-
-	EEex_EnableCodeProtection()
-
-end)()

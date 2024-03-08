@@ -222,12 +222,6 @@ function EEex_Menu_SetForceScrollbarRender(itemName, value)
 	EEex_Menu_ScrollbarForced[itemName] = value
 end
 
-EEex_Menu_BeforeUIItemRenderListeners = {}
-
-function EEex_Menu_AddBeforeUIItemRenderListener(itemName, func)
-	EEex_Menu_BeforeUIItemRenderListeners[itemName] = func
-end
-
 ---------------
 -- Listeners --
 ---------------
@@ -259,6 +253,18 @@ EEex_Menu_BeforeListRendersItemListeners = {}
 function EEex_Menu_AddBeforeListRendersItemListener(listName, listener)
 	local listListeners = EEex_Utility_GetOrCreateTable(EEex_Menu_BeforeListRendersItemListeners, listName)
 	table.insert(listListeners, listener)
+end
+
+EEex_Menu_BeforeUIItemRenderListeners = {}
+
+function EEex_Menu_AddBeforeUIItemRenderListener(itemName, listener)
+	EEex_Menu_BeforeUIItemRenderListeners[itemName] = listener
+end
+
+EEex_Menu_WindowSizeChangedListeners = {}
+
+function EEex_Menu_AddWindowSizeChangedListener(listener)
+	table.insert(EEex_Menu_WindowSizeChangedListeners, listener)
 end
 
 -----------
@@ -325,5 +331,19 @@ function EEex_Menu_Hook_OnBeforeUIItemRender(item)
 	local listener = EEex_Menu_BeforeUIItemRenderListeners[item.name:get()]
 	if listener then
 		listener(item)
+	end
+end
+
+function EEex_Menu_Hook_OnWindowSizeChanged()
+
+	if EEex_Modules["B3Scale"] then
+		B3Scale_DoSizeChange()
+	end
+
+	local width = CVidMode.SCREENWIDTH
+	local height = CVidMode.SCREENHEIGHT
+
+	for _, listener in ipairs(EEex_Menu_WindowSizeChangedListeners) do
+		listener(width, height)
 	end
 end
