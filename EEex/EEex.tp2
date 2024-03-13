@@ -1,6 +1,6 @@
 BACKUP ~EEex/backup~
 AUTHOR ~Bubb~
-VERSION ~v0.10.1.1-alpha~
+VERSION ~devel~
 README ~EEex/readme-EEex.html~
 
 BEGIN ~EEex~ LABEL ~B3-EEex-Main~
@@ -50,7 +50,7 @@ REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.
 
 
 BEGIN ~Experimental - Use LuaJIT (can help stuttering)~ LABEL ~B3-EEex-LuaJIT~
-REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
 
 	COPY ~InfinityLoader.ini~ ~.~
 		REPLACE_TEXTUALLY ~^\(LuaLibrary=\).*~ ~\1lua51.dll~
@@ -61,15 +61,23 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 
 
 BEGIN ~Enable effect menu module - LShift-on-hover to view spells affecting creature~ LABEL ~B3-EEex-Module-Effect-Menu~
-REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3EffMen"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
 	BUT_ONLY
 
 
+BEGIN ~Enable empty container module - Highlight empty containers in gray instead of cyan~ LABEL ~B3-EEex-Module-Empty-Containers~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+
+	COPY ~override/EEex_Modules.lua~ ~override~
+		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3EmptyContainer"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
+	BUT_ONLY
+
+
 BEGIN ~Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns~ LABEL ~B3-EEex-Module-Timer-Main~
-REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3Timer"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
@@ -77,7 +85,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to 
 
 
 BEGIN ~Timer module - Show modal actions (red bar)~ LABEL ~B3-EEex-Module-Timer-Modal~
-REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Module-Timer-Main~) ~This component requires the "Enable timer module" component to be installed.~
 
 	COPY ~override/B3Timer.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\(B3Timer_ShowModalTimer = \)[^ %TAB%%WNL%]+~ ~\1true~
@@ -85,7 +93,7 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer modu
 
 
 BEGIN ~Timer module - Show contingencies (green bar)~ LABEL ~B3-EEex-Module-Timer-Contingency~
-REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Module-Timer-Main~) ~This component requires the "Enable timer module" component to be installed.~
 
 	COPY ~override/B3Timer.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\(B3Timer_ShowContingencyTimer = \)[^ %TAB%%WNL%]+~ ~\1true~
@@ -93,23 +101,23 @@ REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer modu
 
 
 BEGIN ~Timer module - Show spell/item cooldowns (cyan bar)~ LABEL ~B3-EEex-Module-Timer-Aura~
-REQUIRE_COMPONENT ~EEex.tp2~ ~2~ ~This component requires the "Enable timer module" component to be installed.~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Module-Timer-Main~) ~This component requires the "Enable timer module" component to be installed.~
 
 	COPY ~override/B3Timer.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\(B3Timer_ShowCastTimer = \)[^ %TAB%%WNL%]+~ ~\1true~
 	BUT_ONLY
 
 
-BEGIN ~Time step module - Advance 1 game tick on keypress~ LABEL ~B3-EEex-Module-Time-Step~
-REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+BEGIN ~Enable time step module - Advance 1 game tick on keypress~ LABEL ~B3-EEex-Module-Time-Step~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3TimeStep"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
 	BUT_ONLY
 
 
-BEGIN ~Hotkey module - Edit override/B3Hotkey.lua to create advanced spell hotkeys~ LABEL ~B3-EEex-Module-Hotkey~
-REQUIRE_COMPONENT ~EEex.tp2~ ~0~ ~This component requires the main component to be installed.~
+BEGIN ~Enable hotkey module - Edit override/B3Hotkey.lua to create advanced spell hotkeys~ LABEL ~B3-EEex-Module-Hotkey~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3Hotkey"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~

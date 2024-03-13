@@ -1422,6 +1422,10 @@ Operations=ADD 31
 Pattern=6689B3BA040000
 Operations=ADD -5
 
+[Hook-CGameContainer::Render()-B3EmptyContainer]
+Pattern=85C00F8893000000
+Operations=ADD 150
+
 [Hook-CGameEffect::CheckAdd()-FixShouldTransformSpellImmunityStrref]
 Pattern=448D7E01BBFFFFFFFF
 Operations=ADD 4
