@@ -94,17 +94,26 @@ end
 
 function EEex_Resource_Fetch(resref, extension)
 	local toReturn
-	EEex_RunWithStack(CRes.sizeof + #resref + 1, function(rsp)
+	local resrefLen = #resref + 1
+	EEex_RunWithStack(CRes.sizeof + resrefLen + EEex_PtrSize, function(rsp)
 
-		local resObj = EEex_PtrToUD(rsp, "CRes")
+		local curRspOffset = rsp
+
+		local resObj = EEex_PtrToUD(curRspOffset, "CRes")
 		resObj:Construct()
-		local resrefStr = EEex_CastUD(resObj.resref, "CharString")
-		resrefStr:pointTo(rsp + CRes.sizeof)
-		resrefStr:write(resref)
 		resObj.type = EEex_Resource_ExtToType(extension)
 
+		curRspOffset = curRspOffset + CRes.sizeof
+		local resrefStr = EEex_CastUD(resObj.resref, "CharString")
+		resrefStr:pointTo(curRspOffset)
+		resrefStr:write(resref)
+
+		curRspOffset = curRspOffset + resrefLen
+		local ptrToResObj = EEex_PtrToUD(curRspOffset, "Pointer<CRes>")
+		ptrToResObj.reference = resObj
+
 		toReturn = EngineGlobals.bsearch(
-			resObj:getInternalReference(),
+			ptrToResObj,
 			EngineGlobals.resources.m_pData,
 			EngineGlobals.resources.m_nSize,
 			EEex_PointerSize,

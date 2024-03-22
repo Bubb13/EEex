@@ -802,10 +802,11 @@ CGameSprite.openOp214Interface = EEex_Sprite_OpenOp214Interface
 
 function EEex_Sprite_GetLauncher(sprite, curAbility)
 	return EEex_RunWithStackManager({
-		{ ["name"] = "launcherSlot", ["struct"] = "uninitialized", ["constructor"] = { ["args"] = {2} } } },
+		{ ["name"] = "launcherSlot", ["struct"] = "Primitive<short>" } },
 		function(manager)
-			local launcherSlotPtr = EEex_NewUDPtr(manager:getAddress("launcherSlot"), "short")
-			return sprite:GetLauncher(curAbility, launcherSlotPtr), launcherSlotPtr:getValue()
+			local launcherSlot = manager:getUD("launcherSlot")
+			local launcher = sprite:GetLauncher(curAbility, launcherSlot)
+			return launcher, launcher and launcherSlot.value or -1
 		end
 	)
 end

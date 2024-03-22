@@ -102,15 +102,15 @@ function EEex_Menu_Find(menuName, panel, state)
 	return EngineGlobals.findMenu(menuName, panel or 0, state or 0)
 end
 
-function EEex_Menu_GetItemFunction(funcRefPtr)
-	local regIndex = funcRefPtr:getValue()
+function EEex_Menu_GetItemFunction(funcRef)
+	local regIndex = funcRef.value
 	return regIndex ~= 0 and EEex_GetLuaRegistryIndex(regIndex) or nil
 end
 
-function EEex_Menu_SetItemFunction(funcRefPtr, func)
-	local regIndex = funcRefPtr:getValue()
+function EEex_Menu_SetItemFunction(funcRef, func)
+	local regIndex = funcRef.value
 	if regIndex == 0 then
-		funcRefPtr:setValue(EEex_AddToLuaRegistry(func))
+		funcRef.value = EEex_AddToLuaRegistry(func)
 	else
 		EEex_SetLuaRegistryIndex(regIndex, func)
 	end
@@ -133,10 +133,10 @@ uiVariant.getValue = EEex_Menu_GetItemVariant
 
 function EEex_Menu_SetItemVariant(variantRefPtr, myVal)
 
-	variant = variantRefPtr:getValue()
+	variant = variantRefPtr.reference
 	if not variant then
 		variant = EEex_PtrToUD(EEex_Malloc(uiVariant.sizeof), "uiVariant")
-		variantRefPtr:setValue(variant)
+		variantRefPtr.reference = variant
 	end
 
 	local myValType = type(myVal)
