@@ -853,6 +853,12 @@ function EEex_Sprite_AddMarshalHandlers(handlerName, exporter, importer)
 	}
 end
 
+EEex_Sprite_Private_AddBlockWeaponHitListeners = {}
+
+function EEex_Sprite_AddBlockWeaponHitListener(listener)
+	table.insert(EEex_Sprite_Private_AddBlockWeaponHitListeners, listener)
+end
+
 -----------
 -- Hooks --
 -----------
@@ -888,6 +894,14 @@ end
 function EEex_Sprite_LuaHook_OnSpellDisableStateChanged(sprite)
 	for _, listener in ipairs(EEex_Sprite_Private_SpellDisableStateChangedListeners) do
 		listener(sprite)
+	end
+end
+
+function EEex_Sprite_Hook_Swing_AddBlockWeaponHit(weaponAbility, targetSprite, weapon, attackingSprite)
+	for _, listener in ipairs(EEex_Sprite_Private_AddBlockWeaponHitListeners) do
+		if listener({ ["weapon"] = weapon, ["weaponAbility"] = weaponAbility, ["targetSprite"] = targetSprite, ["attackingSprite"] = attackingSprite }) then
+			return true
+		end
 	end
 end
 

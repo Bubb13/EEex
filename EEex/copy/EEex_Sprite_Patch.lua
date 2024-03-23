@@ -719,6 +719,89 @@
 		})
 	)
 
+	--[[
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	| Implement EEex_Sprite_AddBlockWeaponHitListener - Block base weapon damage and on-hit effects                                            |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_Swing_AddBlockWeaponHit(abilityNum: number, sprite: CGameSprite, weapon: CItem, sprite: CGameSprite) -> boolean |
+	|       return:                                                                                                                            |
+	|           -> false - Don't alter engine behavior                                                                                         |
+	|           -> true  - Block base weapon damage and on-hit effects                                                                         |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookAfterCall(0x1403B879E, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(72)
+			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], eax
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_Swing_AddBlockWeaponHit", {
+			["args"] = {
+				function(rspOffset) return {[[
+					mov rax, qword ptr ds:[rsp+#LAST_FRAME_TOP(68h)]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]}, "Item_ability_st" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "CGameSprite" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CItem" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+			}
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+	
+			call_error:
+			xor rax, rax
+	
+			no_error:
+			test rax, rax
+			jz do_not_block_base_weapon_damage_and_onhit_effects
+	
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			jmp #L(return)
+	
+			do_not_block_base_weapon_damage_and_onhit_effects:
+			mov eax, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
+	EEex_HookAfterCall(0x1403B8BD2, EEex_FlattenTable({
+		{[[
+			#MAKE_SHADOW_SPACE(72)
+			mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], eax
+		]]},
+		EEex_GenLuaCall("EEex_Sprite_Hook_Swing_AddBlockWeaponHit", {
+			["args"] = {
+				function(rspOffset) return {[[
+					mov rax, qword ptr ds:[rsp+#LAST_FRAME_TOP(68h)]
+					mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+				]]}, "Item_ability_st" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "CGameSprite" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r12 #ENDL", {rspOffset}}, "CItem" end,
+				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+			}
+			["returnType"] = EEex_LuaCallReturnType.Boolean,
+		}),
+		{[[
+			jmp no_error
+	
+			call_error:
+			xor rax, rax
+	
+			no_error:
+			test rax, rax
+			jz do_not_block_base_weapon_damage_and_onhit_effects
+	
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			jmp #L(return)
+	
+			do_not_block_base_weapon_damage_and_onhit_effects:
+			mov eax, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+	}))
+
 	EEex_EnableCodeProtection()
 
 end)()
