@@ -1,4 +1,13 @@
 # ![EEex Logo](EEex.png)
+
+- [Overview](#overview)
+- [Compatibility](#compatibility)
+- [Download](#download)
+- [Installation](#installation)
+- [Stability](#stability)
+- [How EEex Works](#how-eeex-works)
+- [Documentation](#documentation)
+
 <h1>Overview</h1>
 EEex is an executable extender for Beamdog's Enhanced Edition of the Infinity Engine. Its goal is to externalize certain parts of the engine to grant modders a greater degree of control over otherwise hardcoded mechanics.
 <br>
@@ -42,9 +51,14 @@ EEex is distributed as a Gibberlings3 installer. After running the setup file, s
 <b>Please note:</b> The game must be started using InfinityLoader.exe / EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash. If InfinityLoader.exe fails to start, please ensure you have installed the latest <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe/">Microsoft Visual C++ Redistributable</a>.
 <br>
 <br>
-<b>Stability:</b> While crashes are extremely rare, they may still occur. If you encounter a crash, or a bug with EEex, please report the issue by:
+
+<h1>Stability</h1>
+While crashes are extremely rare, they may still occur. If you encounter a crash, or a bug with EEex, please report the issue to <a href="https://github.com/Bubb13/EEex/issues">EEex’s GitHub Issues page</a> or <a href="https://forums.beamdog.com/discussion/71798/p1">EEex’s thread on the Beamdog Forums</a>.
 <br>
-- Uploading:
+<br>
+
+When reporting, please:
+- Upload:
   - WeiDU.log — This is in your game directory.
   - A save that exhibits the issue — Saves are found in `C:\Users\<user name>\Documents\<game folder>\save`. Zip the entire save folder.
   - (If applicable) The generated crash .dmp — This is usually found in `C:\Users\<user name>\Documents\Infinity Engine - Enhanced Edition\crash`.
@@ -52,7 +66,7 @@ EEex is distributed as a Gibberlings3 installer. After running the setup file, s
   - Provide a series of steps that reproduce the issue.
 
 <br>
-<h1>How EEex works</h1>
+<h1>How EEex Works</h1>
 EEex uses a loader program to modify the game's executable after it has been placed into memory. The exact modifications depend on the version of EEex, and any installed mods that make use of EEex's capabilities.
 <br>
 <br>
