@@ -106,8 +106,15 @@ Pattern=0FB64208884108
 Pattern=48895424105556574883EC40
 Operations=ADD -5
 
+[CAIScript::Destruct]
+Pattern=488BF14885DB743E
+Operations=ADD -14
+
 [CAIScriptFile::Construct]
 Pattern=48895C241848896C242056574154415641574883EC20
+
+[CAIScriptFile::DecodeActionType]
+Pattern=48894C2408555356574156
 
 [CAIScriptFile::Destruct]
 Pattern=488B7908488BD9
@@ -209,6 +216,10 @@ Pattern=48895C2410565741564883EC40
 Pattern=5741564883EC4033DB
 Operations=ADD -11
 
+[CGameObject::InControl]
+Pattern=80BAC902000001750D
+Operations=ADD -7
+
 [CGameObjectArray::GetShare]
 Pattern=48C7020000000083F9FF
 
@@ -294,6 +305,10 @@ Pattern=48896C24104889742418574881ECE0000000
 Pattern=4889442430448BFA
 Operations=ADD -38
 
+[CInfGame::GetCharacterPortraitNum]
+Pattern=4239948118660000
+Operations=ADD -20
+
 [CInfGame::OnPortraitLDblClick]
 Pattern=0F8DAE000000
 Operations=ADD -7
@@ -335,6 +350,10 @@ Operations=ADD 11, PUSH, READ DWORD, ADD, ADD 4
 [CObList::Destruct]
 Pattern=44396C2468
 Operations=ADD 21, PUSH, READ DWORD, ADD, ADD 4
+
+[CObList::Find]
+Pattern=75044C8D4108
+Operations=ADD -3
 
 [CObList::RemoveAt]
 Pattern=4883EC20488BD9488B0A

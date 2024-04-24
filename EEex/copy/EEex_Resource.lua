@@ -864,6 +864,54 @@ function EEex_Resource_LoadIDS(resref, cacheAsArray)
 	return ids
 end
 
+----------------
+-- .BCS / .BS --
+----------------
+
+-- @bubb_doc { EEex_Resource_FreeScript / instance_name=free }
+--
+-- @summary: Frees the memory associated with ``script``. *** Only use this if you know what you are doing! ***
+--
+-- @note: ``CAIScript`` objects returned by ``EEex_Resource_LoadScript()`` are subject to garbage-collection
+--        – meaning ``EEex_Resource_FreeScript()`` should ***not*** be called on these instances.
+--
+-- @self { script / usertype=CAIScript }: The .BCS / .BS file being operated on. This is usually the object returned by ``EEex_Resource_LoadScript()``.
+
+function EEex_Resource_FreeScript(script)
+	EEex_SetUDGCFunc(script, nil)
+	script:Destruct()
+	EEex_FreeUD(script)
+end
+CAIScript.free = EEex_Resource_FreeScript
+
+-- @bubb_doc { EEex_Resource_LoadScript }
+--
+-- @summary: Returns a ``CAIScript`` instance that represents the .BCS / .BS with ``resref``.
+--
+-- @param { resref / type=string }: The resref of the .BCS / .BS to be loaded – (should omit the file extension).
+--
+-- @param { bPlayerScript / type=boolean / default=false }:
+--
+--     If ``true``, signifies that ``resref`` has the extension ``.BS`` instead of ``.BCS``.  @EOL @EOL
+--
+--     **Note:** Due to the enhanced edition’s use of script caching, the engine has trouble  @EOL
+--     differentiating between ``.BS`` and ``.BCS`` files with the same name. If a script     @EOL
+--     with the given ``resref`` has already been loaded by the engine, that script will be   @EOL
+--     used, regardless of ``bPlayerScript``.
+--
+-- @return { type=CAIScript }: See summary.
+
+function EEex_Resource_LoadScript(resref, bPlayerScript)
+	local script = EEex_NewUD("CAIScript")
+	EEex_RunWithStackManager({
+		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = {["args"] = {resref} }}, },
+		function(manager)
+			script:Construct1(manager:getUD("resref"), bPlayerScript or false)
+		end)
+	EEex_SetUDGCFunc(script, EEex_Resource_FreeScript)
+	return script
+end
+
 ---------------------------------------------------
 -- Lua tables derived from .2DA / .IDS resources --
 ---------------------------------------------------

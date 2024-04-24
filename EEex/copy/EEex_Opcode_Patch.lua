@@ -939,10 +939,19 @@
 	--]]
 
 	local EEex_ProjectileMutator = genOpcodeDecode({
+
 		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
 			call #L(EEex::Opcode_Hook_ProjectileMutator_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+
+		["OnRemove"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_ProjectileMutator_OnRemove)
 			#DESTROY_SHADOW_SPACE
 			ret
 		]]},

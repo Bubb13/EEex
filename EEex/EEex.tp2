@@ -1,6 +1,6 @@
 BACKUP ~EEex/backup~
 AUTHOR ~Bubb~
-VERSION ~v0.10.2-alpha~
+VERSION ~devel~
 README ~EEex/readme-EEex.html~
 
 BEGIN ~EEex~ LABEL ~B3-EEex-Main~
