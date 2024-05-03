@@ -48,6 +48,10 @@ Operations=ADD -10
 [CAICondition::Hold]
 Pattern=4053555641544155
 
+[CAICondition::TriggerHolds]
+Pattern=41564883EC200FB702
+Operations=ADD -15
+
 [CAIGroup::AddToSearch]
 Pattern=488B59104885DB0F84DE000000
 Operations=ADD -6
@@ -95,6 +99,10 @@ Operations=ADD -2
 Pattern=4533ED458BE0
 Operations=ADD -22
 
+[CAIObjectType::GetShareType]
+Pattern=4883EC20410FB6F8
+Operations=ADD -6
+
 [CAIObjectType::OfType]
 Pattern=415441574883EC30488BFA
 Operations=ADD -4
@@ -130,6 +138,9 @@ Pattern=4C8BDC5553574154
 [CAIScriptFile::ParseResponseString]
 Pattern=B802000000C7470400000000
 Operations=ADD -30
+
+[CAITrigger::OfType]
+Pattern=4883EC380FB702
 
 [CAbilityId::Construct]
 Pattern=488BF94883C106
@@ -1494,6 +1505,10 @@ Operations=ADD 3
 Pattern=4C8BCF8B5320
 Operations=ADD 9
 
+[Hook-CGameEffectCopySelf::ApplyEffect()-CGameSprite::Copy()]
+Pattern=4533C948899C2440010000
+Operations=ADD 64
+
 [Hook-CGameEffectDamage::ApplyEffect()-OnDone]
 Pattern=448964242041FF92E8000000
 Operations=ADD 23
@@ -1517,6 +1532,9 @@ Operations=ADD 278
 [Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()]
 Pattern=FFCF4885ED
 Operations=ADD 80
+
+[Hook-CGameEffectList::Unmarshal()-Continue]
+Pattern=66FFC3FFCF85FF
 
 [Hook-CGameEffectList::Unmarshal()-Return]
 Pattern=66FFC3FFCF85FF
@@ -1602,6 +1620,10 @@ Operations=ADD -8
 [Hook-CGameSprite::GetMinDamage()-GetProfBonuses-SaveItem]
 Pattern=03457F894577
 Operations=ADD -8
+
+[Hook-CGameSprite::GetRatingWithItem()-CGameSprite::Copy()]
+Pattern=410FB69D283A0000
+Operations=ADD 38
 
 [Hook-CGameSprite::GetStatBreakdown()-GetProfBonuses-SaveItem]
 Pattern=498BCE48894590
@@ -1746,9 +1768,17 @@ Operations=ADD 154
 Pattern=498D8EF8200000
 Operations=ADD -11
 
+[Hook-CInfGame::CharacterExport()-CGameSprite::Marshal()]
+Pattern=0F858F040000
+Operations=ADD 47
+
 [Hook-CInfGame::DestroyGame()-LastCall]
 Pattern=EB0D4C8D450F
 Operations=ADD 72
+
+[Hook-CInfGame::Unmarshal()-AfterGlobalVariablesUnmarshalled]
+Pattern=413B7C2434
+Operations=ADD 14
 
 [Hook-CProjectile::DecodeProjectile()-LastCall]
 Pattern=488BC3488B4D58

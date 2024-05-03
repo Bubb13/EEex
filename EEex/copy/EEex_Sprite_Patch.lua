@@ -165,30 +165,66 @@
 	+--------------------------------------------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite: CGameSprite, memory: number)                               |
 	+--------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_OnBeforeEffectListMarshalled(pSprite: CGameSprite*)                                       |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_OnAfterEffectListUnmarshalled(pSprite: CGameSprite*)                                      |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_OnBeforeEffectUnmarshalled(pSprite: CGameSprite*, pEffectBase: CGameEffectBase*)          |
+	+--------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
-	-----------------------------------------------------
-	-- [JIT] CGameEffectList_Marshal_SavedSpritePtrMem --
-	-----------------------------------------------------
+	-----------------------------------------------------------
+	-- [JIT] CGameEffectList_Marshal_SavedSpritePtrMem       --
+	-- [EEex.dll] Sprite_Hook_OnBeforeEffectListMarshalled() --
+	-----------------------------------------------------------
 
 	local CGameEffectList_Marshal_SavedSpritePtrMem = EEex_Malloc(EEex_PtrSize * 2)
 	EEex_WritePtr(CGameEffectList_Marshal_SavedSpritePtrMem, 0x0)
 
-	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()"),
-		{"mov qword ptr ds:[#$(1)], r13 #ENDL", {CGameEffectList_Marshal_SavedSpritePtrMem}},
+	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()"), {
+		{"hook_integrity_watchdog_ignore_registers_0", {
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			mov qword ptr ds:[#$(1)], r13 ]], {CGameEffectList_Marshal_SavedSpritePtrMem}, [[ #ENDL
+
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+			mov rcx, r13 ; pSprite
+			call #L(EEex::Sprite_Hook_OnBeforeEffectListMarshalled)
+
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
 		{"mov qword ptr ds:[#$(1)], 0 #ENDL", {CGameEffectList_Marshal_SavedSpritePtrMem}}
 	)
 
-	-------------------------------------------------------
-	-- [JIT] CGameEffectList_Unmarshal_SavedSpritePtrMem --
-	-------------------------------------------------------
+	------------------------------------------------------------
+	-- [JIT] CGameEffectList_Unmarshal_SavedSpritePtrMem      --
+	-- [EEex.dll] Sprite_Hook_OnAfterEffectListUnmarshalled() --
+	------------------------------------------------------------
 
 	local CGameEffectList_Unmarshal_SavedSpritePtrMem = CGameEffectList_Marshal_SavedSpritePtrMem + EEex_PtrSize
 	EEex_WritePtr(CGameEffectList_Unmarshal_SavedSpritePtrMem, 0x0)
 
-	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"),
+	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"), {
+		{"hook_integrity_watchdog_ignore_registers_1", {
+			EEex_HookIntegrityWatchdogRegister.RAX
+		}}},
 		{"mov qword ptr ds:[#$(1)], rbx #ENDL", {CGameEffectList_Unmarshal_SavedSpritePtrMem}},
-		{"mov qword ptr ds:[#$(1)], 0 #ENDL", {CGameEffectList_Unmarshal_SavedSpritePtrMem}}
+		{[[
+			mov qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
+
+			mov rcx, rbx ; pSprite
+			call #L(EEex::Sprite_Hook_OnAfterEffectListUnmarshalled)
+		]]}
 	)
 
 	----------------------------------------------------------
@@ -272,9 +308,10 @@
 		]]},
 	}))
 
-	-----------------------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal() --
-	-----------------------------------------------------------
+	---------------------------------------------------------------
+	-- [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal()     --
+	-- [EEex.dll] EEex::Sprite_Hook_OnBeforeEffectUnmarshalled() --
+	---------------------------------------------------------------
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -283,12 +320,36 @@
 		}}},
 		EEex_FlattenTable({
 			{[[
+				cmp qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
+				jz #L(return)
+
 				cmp dword ptr ds:[rcx], 0x49422D58 ; Check if signature is "X-BI"
+				je do_extra_unmarshal
+
+				#MAKE_SHADOW_SPACE(8)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+
+				mov rdx, rcx                                                              ; pEffectBase
+				mov rcx, ds:[#$(1)] ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ ; pSprite
+				call #L(EEex::Sprite_Hook_OnBeforeEffectUnmarshalled)
+
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+
+				cmp rax, #$(1) ]], {EEex_OnBeforeEffectUnmarshalledRet.CONTINUE}, [[ #ENDL
+				jne not_continue
+
+				#MANUAL_HOOK_EXIT(0)
+				jmp #L(Hook-CGameEffectList::Unmarshal()-Continue)
+
+				not_continue:
+				cmp rax, #$(1) ]], {EEex_OnBeforeEffectUnmarshalledRet.BREAK}, [[ #ENDL
 				jne #L(return)
 
-				cmp qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-				jz dont_process_effect
+				#MANUAL_HOOK_EXIT(0)
+				jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
 
+				do_extra_unmarshal:
 				#MAKE_SHADOW_SPACE(48)
 			]]},
 			EEex_GenLuaCall("EEex_Sprite_Hook_ReadExtraEffectListUnmarshal", {
@@ -306,7 +367,6 @@
 				call_error:
 				#DESTROY_SHADOW_SPACE
 
-				dont_process_effect:
 				#MANUAL_HOOK_EXIT(1)
 				jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
 			]]},
@@ -718,6 +778,51 @@
 			]]},
 		})
 	)
+
+	--[[
+	+---------------------------------------------------+
+	| Prevent clones from inheriting summoner's UUID    |
+	| Prevent exports from having a UUID                |
+	| Prevent item comparison from generating new UUIDs |
+	+---------------------------------------------------+
+	|   [EEex.dll] EEex::bStripUUID: bool               |
+	|   [EEex.dll] EEex::bNoUUID: bool                  |
+	+---------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CGameEffectCopySelf::ApplyEffect()-CGameSprite::Copy()"),
+		{[[
+			mov rax, #$(1) ]], {EEex_Label("EEex::bStripUUID")}, [[ #ENDL
+			mov byte ptr ds:[rax], 1
+		]]},
+		{[[
+			mov rcx, #$(1) ]], {EEex_Label("EEex::bStripUUID")}, [[ #ENDL
+			mov byte ptr ds:[rcx], 0
+		]]}
+	)
+
+	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CInfGame::CharacterExport()-CGameSprite::Marshal()"),
+		{[[
+			mov rax, #$(1) ]], {EEex_Label("EEex::bStripUUID")}, [[ #ENDL
+			mov byte ptr ds:[rax], 1
+		]]},
+		{[[
+			mov rcx, #$(1) ]], {EEex_Label("EEex::bStripUUID")}, [[ #ENDL
+			mov byte ptr ds:[rcx], 0
+		]]}
+	)
+
+	EEex_HookBeforeAndAfterCall(EEex_Label("Hook-CGameSprite::GetRatingWithItem()-CGameSprite::Copy()"),
+		{[[
+			mov rax, #$(1) ]], {EEex_Label("EEex::bNoUUID")}, [[ #ENDL
+			mov byte ptr ds:[rax], 1
+		]]},
+		{[[
+			mov rcx, #$(1) ]], {EEex_Label("EEex::bNoUUID")}, [[ #ENDL
+			mov byte ptr ds:[rcx], 0
+		]]}
+	)
+
 
 	EEex_EnableCodeProtection()
 

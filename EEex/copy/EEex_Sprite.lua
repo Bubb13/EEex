@@ -412,6 +412,10 @@ function EEex_Sprite_CountAllOfTypeStringInRange(sprite, aiObjectTypeString, ran
 end
 CGameSprite.countAllOfTypeStringInRange = EEex_Sprite_CountAllOfTypeStringInRange
 
+function EEex_Sprite_GetFromUUID(uuid)
+	return EEex.GetSpriteFromUUID(uuid)
+end
+
 --------------------
 -- Sprite Details --
 --------------------

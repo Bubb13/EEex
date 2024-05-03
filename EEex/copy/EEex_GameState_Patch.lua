@@ -47,6 +47,31 @@
 		})
 	)
 
+	--[[
+	+------------------------------------------------------------------------+
+	| Immediately read special values from GLOBALS (like EEEX_NEXTUUID)      |
+	+------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::GameState_Hook_OnAfterGlobalVariablesUnmarshalled() |
+	+------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CInfGame::Unmarshal()-AfterGlobalVariablesUnmarshalled"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+
+			call #L(EEex::GameState_Hook_OnAfterGlobalVariablesUnmarshalled)
+
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+
 	EEex_EnableCodeProtection()
 
 end)()
