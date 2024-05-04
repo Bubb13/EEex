@@ -334,6 +334,17 @@ function EEex_GameObject_Hook_OnDeleting(objectID)
 		return
 	end
 
+	if object:isSprite(true) then
+		local sourceUUID = object:getUUID()
+		local callbacksMap = EEex_Sprite_Private_LoadedWithUUIDCallbacksBySource[sourceUUID]
+		if callbacksMap then
+			for callbacks, _ in pairs(callbacksMap) do
+				callbacks[sourceUUID] = nil
+			end
+			EEex_Sprite_Private_LoadedWithUUIDCallbacksBySource[sourceUUID] = nil
+		end
+	end
+
 	EEex_DeleteUDAux(object)
 
 	if EEex_UDEqual(object, EEex_LuaObject) then

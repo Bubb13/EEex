@@ -19,6 +19,7 @@ EEex_Main_Private_NormalStartupFiles = {
 	"EEex_Actionbar",
 	"EEex_Actionbar_Patch",
 	"EEex_AIBase",
+	"EEex_AIBase_Patch",
 	"EEex_Area",
 	"EEex_Fix",
 	"EEex_Fix_Patch",
@@ -47,6 +48,7 @@ EEex_Main_Private_NormalStartupFiles = {
 	"EEex_Trigger_Patch",
 	"EEex_Utility",
 	"EEex_Variable",
+	"EEex_Marshal",
 	"EEex_Debug",
 }
 

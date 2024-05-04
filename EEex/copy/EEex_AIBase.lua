@@ -1,4 +1,10 @@
 
+EEex_AIBase_Private_ScriptingObjectUpdatedListeners = {}
+
+function EEex_AIBase_AddScriptingObjectUpdatedListener(func)
+	table.insert(EEex_AIBase_Private_ScriptingObjectUpdatedListeners, func)
+end
+
 -- @bubb_doc { EEex_AIBase_GetScriptLevel / instance_name=getScriptLevel }
 --
 -- @summary: Returns the ``aiBase``'s ``CAIScript`` for the given ``scriptLevel``.
@@ -176,3 +182,13 @@ function EEex_AIBase_SetStoredScriptingTarget(aiBase, targetKey, target)
 	targetTable[targetKey] = target and target.m_id or nil
 end
 CGameAIBase.setStoredScriptingTarget = EEex_AIBase_SetStoredScriptingTarget
+
+-----------
+-- Hooks --
+-----------
+
+function EEex_AIBase_LuaHook_OnScriptingObjectUpdated(aiBase, scriptingObject)
+	for _, listener in ipairs(EEex_AIBase_Private_ScriptingObjectUpdatedListeners) do
+		listener(EEex_GameObject_CastUT(aiBase), scriptingObject)
+	end
+end

@@ -81,7 +81,7 @@ Operations=ADD -20
 Pattern=488B5928488BF1488901
 Operations=ADD -18
 
-[CAIIdList::Find1]
+[CAIIdList::Find(int)]
 Pattern=837958007415
 
 [CAIIdList::LoadList2]
@@ -109,6 +109,9 @@ Operations=ADD -4
 
 [CAIObjectType::Set]
 Pattern=0FB64208884108
+
+[CAIObjectType::operator==]
+Pattern=0FB64208384108
 
 [CAIScript::Construct1]
 Pattern=48895424105556574883EC40
@@ -139,6 +142,10 @@ Pattern=4C8BDC5553574154
 Pattern=B802000000C7470400000000
 Operations=ADD -30
 
+[CAITrigger::ConstructCopy]
+Pattern=488BDA8B4204
+Operations=ADD -19
+
 [CAITrigger::OfType]
 Pattern=4883EC380FB702
 
@@ -148,6 +155,14 @@ Operations=ADD -25
 
 [CChitin::OnResizeWindow]
 Pattern=48895C2420565741564883EC30
+
+[CContingencyList::Process]
+Pattern=41564881ECB8000000
+Operations=ADD -2
+
+[CContingencyList::ProcessTrigger]
+Pattern=55574881ECB0000000
+Operations=ADD -2
 
 [CDerivedStats::Construct]
 Pattern=48894C24085741544155415641574883EC20488BF1
@@ -222,6 +237,14 @@ Pattern=6644894C24204C89442418
 
 [CGameArea::OnActionButtonClickGround]
 Pattern=48895C2410565741564883EC40
+
+[CGameContainer::SetDrawPoly]
+Pattern=663B91A0090000
+Operations=ADD -16
+
+[CGameDoor::SetDrawPoly]
+Pattern=663B9160060000
+Operations=ADD -16
 
 [CGameEffect::DecodeEffect]
 Pattern=5741564883EC4033DB
@@ -304,6 +327,10 @@ Operations=ADD -4
 [CGameSprite::UpdateTarget]
 Pattern=488BD94885D2740F
 Operations=ADD -13
+
+[CGameTrigger::SetDrawPoly]
+Pattern=663B91D4050000
+Operations=ADD -16
 
 [CImmunitiesAIType::OnList]
 Pattern=4889742410574883EC30488B5908
@@ -949,6 +976,10 @@ Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
 Pattern=8B4B48498B06
 Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
 
+[CMessageUpdateReaction::VFTable]
+Pattern=741C8B434889420C
+Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
+
 [CProjectile::VFTable]
 Pattern=488901488BF94885DB741B
 Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
@@ -1440,6 +1471,10 @@ Operations=ADD 641
 Pattern=4883EC300FB74204
 Operations=ADD 75
 
+[Hook-CGameAIBase::ApplyTriggers()-FirstInstruction]
+Pattern=488B8890100000B8C5B3A291
+Operations=ADD -17
+
 [Hook-CGameAIBase::EvaluateStatusTrigger()-DefaultJmp]
 Pattern=0FBF8550030000
 Operations=ADD 17
@@ -1451,6 +1486,9 @@ Operations=ADD 31
 [Hook-CGameAIBase::ExecuteAction()-NormalBranch]
 Pattern=6689B3BA040000
 Operations=ADD -5
+
+[Hook-CGameAIBase::SetTrigger()-FirstInstruction]
+Pattern=48895C2418574883EC20488BD9
 
 [Hook-CGameContainer::Render()-B3EmptyContainer]
 Pattern=85C00F8893000000
@@ -1779,6 +1817,10 @@ Operations=ADD 72
 [Hook-CInfGame::Unmarshal()-AfterGlobalVariablesUnmarshalled]
 Pattern=413B7C2434
 Operations=ADD 14
+
+[Hook-CMessageSetLastObject::Run()-FirstInstruction]
+Pattern=84C00F855E020000
+Operations=ADD -22
 
 [Hook-CProjectile::DecodeProjectile()-LastCall]
 Pattern=488BC3488B4D58

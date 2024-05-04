@@ -3,6 +3,12 @@
 -- Static Functions --
 ----------------------
 
+EEex_Sprite_LoadedListeners = {}
+
+function EEex_Sprite_AddLoadedListener(func)
+	table.insert(EEex_Sprite_LoadedListeners, func)
+end
+
 ----------------------
 -- Fetching Sprites --
 ----------------------
@@ -162,6 +168,27 @@ end
 ------------------------
 -- Instance Functions --
 ------------------------
+
+EEex_Sprite_Private_LoadedWithUUIDCallbacks = {}
+EEex_Sprite_Private_LoadedWithUUIDCallbacksBySource = {}
+
+function EEex_Sprite_LoadedWithUUIDCallback(sourceSprite, uuid, func)
+
+	local sourceUUID = sourceSprite:getUUID()
+
+	-- Keep track of callbacks via EEex_Sprite_Private_LoadedWithUUIDCallbacks[<target uuid>][<source uuid>] = { <callbacks...> }
+	local callbacks = EEex_Utility_GetOrCreateTable(EEex_Sprite_Private_LoadedWithUUIDCallbacks, uuid)
+	table.insert(EEex_Utility_GetOrCreateTable(callbacks, sourceUUID), func)
+
+	-- Reverse mapping via EEex_Sprite_Private_LoadedWithUUIDCallbacksBySource[<source uuid>] = { EEex_Sprite_Private_LoadedWithUUIDCallbacks[<target uuid...>] = true }
+	EEex_Utility_GetOrCreateTable(EEex_Sprite_Private_LoadedWithUUIDCallbacksBySource, sourceUUID)[callbacks] = true
+
+	local loadedSprite = EEex_Sprite_GetFromUUID(uuid)
+	if loadedSprite then
+		func(sourceSprite, loadedSprite)
+	end
+end
+CGameSprite.loadedWithUUIDCallback = EEex_Sprite_LoadedWithUUIDCallback
 
 ----------------------
 -- Fetching Sprites --
@@ -1381,4 +1408,21 @@ function EEex_Sprite_Hook_ShouldIgnoreMeleeingWithRangedPenalty(sprite, item, ab
 	if itemCategories == nil then return false end
 
 	return itemCategories[pHeader.itemType] == true
+end
+
+function EEex_Sprite_LuaHook_OnAfterEffectListUnmarshalled(sprite)
+
+	local allCallbacks = EEex_Sprite_Private_LoadedWithUUIDCallbacks[sprite:getUUID()]
+	if allCallbacks then
+		for sourceUUID, callbacks in pairs(allCallbacks) do
+			local sourceSprite = EEex_Sprite_GetFromUUID(sourceUUID)
+			for _, callback in ipairs(callbacks) do
+				callback(sourceSprite, sprite)
+			end
+		end
+	end
+
+	for _, func in ipairs(EEex_Sprite_LoadedListeners) do
+		func(sprite)
+	end
 end
