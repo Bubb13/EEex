@@ -816,6 +816,8 @@
 	|           ->  0 - Halt effect list processing                                                                 |
 	|           -> !0 - Continue effect list processing                                                             |
 	+---------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_ScreenEffects_OnRemove(pEffect: CGameEffect*, pSprite: CGameSprite*)           |
+	+---------------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_OnCheckAdd(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int                |
 	|       return:                                                                                                 |
 	|           ->  0 - Don't alter engine behavior                                                                 |
@@ -828,10 +830,19 @@
 	--------------------------------------------------------------
 
 	local EEex_ScreenEffects = genOpcodeDecode({
+
 		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
 			call #L(EEex::Opcode_Hook_ScreenEffects_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+
+		["OnRemove"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_ScreenEffects_OnRemove)
 			#DESTROY_SHADOW_SPACE
 			ret
 		]]},
@@ -936,6 +947,8 @@
 	|           ->  0 - Halt effect list processing                                                                     |
 	|           -> !0 - Continue effect list processing                                                                 |
 	+-------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_ProjectileMutator_OnRemove(pEffect: CGameEffect*, pSprite: CGameSprite*)           |
+	+-------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	local EEex_ProjectileMutator = genOpcodeDecode({
@@ -978,13 +991,24 @@
 	|           ->  0 - Halt effect list processing                                                                        |
 	|           -> !0 - Continue effect list processing                                                                    |
 	+----------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_EnableActionListener_OnRemove(pEffect: CGameEffect*, pSprite: CGameSprite*)           |
+	+----------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	local EEex_EnableActionListener = genOpcodeDecode({
+
 		["ApplyEffect"] = {[[
 			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
 			#MAKE_SHADOW_SPACE
 			call #L(EEex::Opcode_Hook_EnableActionListener_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+
+		["OnRemove"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_EnableActionListener_OnRemove)
 			#DESTROY_SHADOW_SPACE
 			ret
 		]]},

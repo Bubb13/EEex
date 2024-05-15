@@ -1072,6 +1072,9 @@ Operations=ADD -2
 Pattern=48894424404889542430
 Operations=ADD -14
 
+[Hardcoded_luaL_newmetatable]
+Pattern=48895C2418574883EC20488BFA4C8BC2
+
 [Hardcoded_luaL_ref]
 Pattern=488B4910488D41F0
 Operations=ADD -26
@@ -1082,6 +1085,10 @@ Operations=ADD -4
 
 [Hardcoded_lua_callk]
 Pattern=48895C2408574883EC204C8B5110
+
+[Hardcoded_lua_concat]
+Pattern=488BF983FA02
+Operations=ADD -12
 
 [Hardcoded_lua_createtable]
 Pattern=418BF8488B4918
@@ -1118,6 +1125,10 @@ Operations=ADD -12
 [Hardcoded_lua_isnumber]
 Pattern=83F9037428
 Operations=ADD -12
+
+[Hardcoded_lua_isstring]
+Pattern=483BC17418
+Operations=ADD -16
 
 [Hardcoded_lua_isuserdata]
 Pattern=83F947
@@ -1165,6 +1176,9 @@ Pattern=48895C2408574883EC20488BFA488BD94885D27519
 [Hardcoded_lua_pushvalue]
 Pattern=4189400849834210104883C428
 Operations=ADD -25
+
+[Hardcoded_lua_rawequal]
+Pattern=40534883EC20458BD8
 
 [Hardcoded_lua_rawget]
 Pattern=488B53104883EA10488B08
@@ -1232,6 +1246,10 @@ Operations=ADD -15
 [Hardcoded_lua_type]
 Pattern=740B8B4008
 Operations=ADD -19
+
+[Hardcoded_lua_typename]
+Pattern=4C8BC08BD7
+Operations=ADD -25, PUSH, READ DWORD, ADD, ADD 4
 
 [Hardcoded_tolua_bnd_cast]
 Pattern=488BCB488BF0418D5002
