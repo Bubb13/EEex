@@ -44,6 +44,7 @@ EEex_Main_Private_NormalStartupFiles = {
 	"EEex_Sprite_Patch",
 	"EEex_Stats",
 	"EEex_Stats_Patch",
+	"EEex_Test",
 	"EEex_Trigger",
 	"EEex_Trigger_Patch",
 	"EEex_Utility",
