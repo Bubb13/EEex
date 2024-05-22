@@ -108,7 +108,7 @@ function EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly(pScriptFile, pGa
 				pCurAction:operator_equ(pAction)
 
 				-- Decode new action's CAIObjectType(s)
-				if not EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_ruleTables.m_lNoDecodeList:Find1(pCurAction.m_actionID) then
+				if not EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_ruleTables.m_lNoDecodeList:FindID(pCurAction.m_actionID) then
 					pCurAction:Decode(pGameAIBase)
 				end
 

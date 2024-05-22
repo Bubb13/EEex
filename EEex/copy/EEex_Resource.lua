@@ -316,7 +316,7 @@ C2DArray.free = EEex_Resource_Free2DA
 --
 -- @param { columnIndex / type=number }: The column index of the label to be fetched.
 --
--- @return { type=number }: See summary.
+-- @return { type=string }: See summary.
 
 function EEex_Resource_Get2DAColumnLabel(array, columnIndex)
 	local sizeX = array.m_nSizeX
@@ -447,7 +447,7 @@ C2DArray.getMaxIndices = EEex_Resource_GetMax2DAIndices
 --
 -- @param { columnIndex / type=number }: The index of the column whose values are to be iterated.
 --
--- @param { func / type=function(value: string) -> boolean }: The function to be called.
+-- @param { func / type=function(i: number, value: string) -> boolean }: The function to be called.
 
 function EEex_Resource_Iterate2DAColumnIndex(array, columnIndex, func)
 	local sizeX, sizeY = array:getDimensions()
@@ -469,7 +469,7 @@ C2DArray.iterateColumnIndex = EEex_Resource_Iterate2DAColumnIndex
 --
 -- @param { columnLabel / type=string }: The label of the column whose values are to be iterated.
 --
--- @param { func / type=function(value: string) -> boolean }: The function to be called.
+-- @param { func / type=function(i: number, value: string) -> boolean }: The function to be called.
 
 function EEex_Resource_Iterate2DAColumnLabel(array, columnLabel, func)
 	array:iterateColumnIndex(array:findColumnLabel(columnLabel), func)
@@ -484,7 +484,7 @@ C2DArray.iterateColumnLabel = EEex_Resource_Iterate2DAColumnLabel
 --
 -- @param { rowIndex / type=number }: The index of the row whose values are to be iterated.
 --
--- @param { func / type=function(value: string) -> boolean }: The function to be called.
+-- @param { func / type=function(i: number, value: string) -> boolean }: The function to be called.
 
 function EEex_Resource_Iterate2DARowIndex(array, rowIndex, func)
 	local sizeX, sizeY = array:getDimensions()
@@ -506,7 +506,7 @@ C2DArray.iterateRowIndex = EEex_Resource_Iterate2DARowIndex
 --
 -- @param { rowLabel / type=string }: The label of the row whose values are to be iterated.
 --
--- @param { func / type=function(value: string) -> boolean }: The function to be called.
+-- @param { func / type=function(i: number, value: string) -> boolean }: The function to be called.
 
 function EEex_Resource_Iterate2DARowLabel(array, rowLabel, func)
 	array:iterateRowIndex(array:findRowLabel(rowLabel), func)
@@ -756,7 +756,7 @@ CAIIdList.getEntry = EEex_Resource_GetIDSEntry
 -- @return { type=string }: See summary.
 
 function EEex_Resource_GetIDSLine(ids, id)
-	local entry = ids:getEntry()
+	local entry = ids:getEntry(id)
 	return entry and entry.m_line.m_pchData:get() or nil
 end
 CAIIdList.getLine = EEex_Resource_GetIDSLine
@@ -775,7 +775,7 @@ CAIIdList.getLine = EEex_Resource_GetIDSLine
 -- @return { type=string }: See summary.
 
 function EEex_Resource_GetIDSStart(ids, id)
-	local entry = ids:getEntry()
+	local entry = ids:getEntry(id)
 	return entry and entry.m_start.m_pchData:get() or nil
 end
 CAIIdList.getStart = EEex_Resource_GetIDSStart
@@ -793,7 +793,7 @@ CAIIdList.getStart = EEex_Resource_GetIDSStart
 -- @return { type=boolean }: See summary.
 
 function EEex_Resource_IDSHasID(ids, id)
-	return ids:getEntry() ~= nil
+	return ids:getEntry(id) ~= nil
 end
 CAIIdList.hasID = EEex_Resource_IDSHasID
 
