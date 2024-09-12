@@ -7,7 +7,7 @@ function EEex_Resource_ExtToType(extension)
 		["BAM"]  = 0x3E8, -- CResCell
 		["BCS"]  = 0x3EF, -- CResText
 		["BIO"]  = 0x3FE, -- CResBIO
-		["BMP"]  = 0x1  , -- CResBitmap
+		["BMP"]  = 0x001, -- CResBitmap
 		["BS"]   = 0x3F9, -- CResText
 		["CHR"]  = 0x3FA, -- CResCHR
 		["CHU"]  = 0x3EA, -- CResUI
@@ -18,77 +18,77 @@ function EEex_Resource_ExtToType(extension)
 		["GLSL"] = 0x405, -- CResText
 		["GUI"]  = 0x402, -- CResText
 		["IDS"]  = 0x3F0, -- CResText
-		["INI"]  = 0x802, -- CRes(???)
+		["INI"]  = 0x802, -- CResINI
 		["ITM"]  = 0x3ED, -- CResItem
 		["LUA"]  = 0x409, -- CResText
 		["MENU"] = 0x408, -- CResText
 		["MOS"]  = 0x3EC, -- CResMosaic
-		["MVE"]  = 0x2  , -- CRes(???)
-		["PLT"]  = 0x6  , -- CResPLT
+		["MVE"]  = 0x002, -- CRes
+		["PLT"]  = 0x006, -- CResPLT
 		["PNG"]  = 0x40B, -- CResPng
 		["PRO"]  = 0x3FD, -- CResBinary
 		["PVRZ"] = 0x404, -- CResPVR
 		["SPL"]  = 0x3EE, -- CResSpell
 		["SQL"]  = 0x403, -- CResText
 		["STO"]  = 0x3F6, -- CResStore
-		["TGA"]  = 0x3  , -- CRes(???)
+		["TGA"]  = 0x003, -- CRes
 		["TIS"]  = 0x3EB, -- CResTileSet
-		["TOH"]  = 0x407, -- CRes(???)
-		["TOT"]  = 0x406, -- CRes(???)
+		["TOH"]  = 0x407, -- CRes
+		["TOT"]  = 0x406, -- CRes
 		["TTF"]  = 0x40A, -- CResFont
 		["VEF"]  = 0x3FC, -- CResBinary
 		["VVC"]  = 0x3FB, -- CResBinary
-		["WAV"]  = 0x4  , -- CResWave
+		["WAV"]  = 0x004, -- CResWave
 		["WBM"]  = 0x3FF, -- CResWebm
 		["WED"]  = 0x3E9, -- CResWED
-		["WFX"]  = 0x5  , -- CResBinary
+		["WFX"]  = 0x005, -- CResBinary
 		["WMP"]  = 0x3F7, -- CResWorldMap
 	})[extension:upper()]
 end
 
 function EEex_Resource_ExtToUserType(extension)
 	return ({
-		["2DA"]  = "CResText",
-		["ARE"]  = "CResArea",
-		["BAM"]  = "CResCell",
-		["BCS"]  = "CResText",
-		["BIO"]  = "CResBIO",
-		["BMP"]  = "CResBitmap",
-		["BS"]   = "CResText",
-		["CHR"]  = "CResCHR",
-		["CHU"]  = "CResUI",
-		["CRE"]  = "CResCRE",
-		["DLG"]  = "CResDLG",
-		["EFF"]  = "CResEffect",
-		["GAM"]  = "CResGame",
-		["GLSL"] = "CResText",
-		["GUI"]  = "CResText",
-		["IDS"]  = "CResText",
-		["INI"]  = "CRes",
-		["ITM"]  = "CResItem",
-		["LUA"]  = "CResText",
-		["MENU"] = "CResText",
-		["MOS"]  = "CResMosaic",
-		["MVE"]  = "CRes",
-		["PLT"]  = "CResPLT",
-		["PNG"]  = "CResPng",
-		["PRO"]  = "CResBinary",
-		["PVRZ"] = "CResPVR",
-		["SPL"]  = "CResSpell",
-		["SQL"]  = "CResText",
-		["STO"]  = "CResStore",
-		["TGA"]  = "CRes",
-		["TIS"]  = "CResTileSet",
-		["TOH"]  = "CRes",
-		["TOT"]  = "CRes",
-		["TTF"]  = "CResFont",
-		["VEF"]  = "CResBinary",
-		["VVC"]  = "CResBinary",
-		["WAV"]  = "CResWave",
-		["WBM"]  = "CResWebm",
-		["WED"]  = "CResWED",
-		["WFX"]  = "CResBinary",
-		["WMP"]  = "CResWorldMap",
+		["2DA"]  = "CResText",     -- 0x3F4
+		["ARE"]  = "CResArea",     -- 0x3F2
+		["BAM"]  = "CResCell",     -- 0x3E8
+		["BCS"]  = "CResText",     -- 0x3EF
+		["BIO"]  = "CResBIO",      -- 0x3FE
+		["BMP"]  = "CResBitmap",   -- 0x001
+		["BS"]   = "CResText",     -- 0x3F9
+		["CHR"]  = "CResCHR",      -- 0x3FA
+		["CHU"]  = "CResUI",       -- 0x3EA
+		["CRE"]  = "CResCRE",      -- 0x3F1
+		["DLG"]  = "CResDLG",      -- 0x3F3
+		["EFF"]  = "CResEffect",   -- 0x3F8
+		["GAM"]  = "CResGame",     -- 0x3F5
+		["GLSL"] = "CResText",     -- 0x405
+		["GUI"]  = "CResText",     -- 0x402
+		["IDS"]  = "CResText",     -- 0x3F0
+		["INI"]  = "CResINI",      -- 0x802
+		["ITM"]  = "CResItem",     -- 0x3ED
+		["LUA"]  = "CResText",     -- 0x409
+		["MENU"] = "CResText",     -- 0x408
+		["MOS"]  = "CResMosaic",   -- 0x3EC
+		["MVE"]  = "CRes",         -- 0x002
+		["PLT"]  = "CResPLT",      -- 0x006
+		["PNG"]  = "CResPng",      -- 0x40B
+		["PRO"]  = "CResBinary",   -- 0x3FD
+		["PVRZ"] = "CResPVR",      -- 0x404
+		["SPL"]  = "CResSpell",    -- 0x3EE
+		["SQL"]  = "CResText",     -- 0x403
+		["STO"]  = "CResStore",    -- 0x3F6
+		["TGA"]  = "CRes",         -- 0x003
+		["TIS"]  = "CResTileSet",  -- 0x3EB
+		["TOH"]  = "CRes",         -- 0x407
+		["TOT"]  = "CRes",         -- 0x406
+		["TTF"]  = "CResFont",     -- 0x40A
+		["VEF"]  = "CResBinary",   -- 0x3FC
+		["VVC"]  = "CResBinary",   -- 0x3FB
+		["WAV"]  = "CResWave",     -- 0x004
+		["WBM"]  = "CResWebm",     -- 0x3FF
+		["WED"]  = "CResWED",      -- 0x3E9
+		["WFX"]  = "CResBinary",   -- 0x005
+		["WMP"]  = "CResWorldMap", -- 0x3F7
 	})[extension:upper()]
 end
 
@@ -133,12 +133,13 @@ function EEex_Resource_Demand(resref, extension)
 	local demanded = res:Demand()
 	if not demanded then return end
 
-	local castType = ({
-		["SPL"] = "Spell_Header_st",
-		["ITM"] = "Item_Header_st",
+	local castFunc = ({
+		["EFF"] = function() return EEex_PtrToUD(EEex_UDToPtr(demanded) + 0x8, "CGameEffectBase") end,
+		["ITM"] = function() return EEex_CastUD(demanded, "Item_Header_st") end,
+		["SPL"] = function() return EEex_CastUD(demanded, "Spell_Header_st") end,
 	})[extension:upper()]
 
-	if castType then demanded = EEex_CastUD(demanded, castType) end
+	if castFunc then return castFunc() end
 	return demanded
 end
 
