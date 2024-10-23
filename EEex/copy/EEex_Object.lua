@@ -57,7 +57,8 @@ end
 -----------
 
 function EEex_Object_Hook_ForceIgnoreActorScriptName(aiType)
-	return aiType.m_SpecialCase:get(0) == 117
+	local firstEvaluatedObject = aiType.m_SpecialCase:get(0)
+	return firstEvaluatedObject == 117 or firstEvaluatedObject == 118
 end
 
 EEex_Object_Hook_OnEvaluatingUnknown_ReturnType = {
@@ -70,13 +71,17 @@ function EEex_Object_Hook_OnEvaluatingUnknown(decodingAIType, caller, nSpecialCa
 
 	local nObjectIDS = decodingAIType.m_SpecialCase:get(nSpecialCaseI)
 
+	local fail = function()
+		decodingAIType:Set(CAIObjectType.NOONE)
+		return EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.HANDLED_DONE
+	end
+
 	local setObject = function(object)
 		if object then
 			curAIType:Set(object:virtual_GetAIType())
 			return EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.HANDLED_CONTINUE
 		else
-			decodingAIType:Set(CAIObjectType.NOONE)
-			return EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.HANDLED_DONE
+			return fail()
 		end
 	end
 
@@ -96,6 +101,13 @@ function EEex_Object_Hook_OnEvaluatingUnknown(decodingAIType, caller, nSpecialCa
 
 		local targetTable = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(caller), "EEex_Target")
 		return setInstance(targetTable[curAIType.m_name.m_pchData:get()])
+
+	elseif nObjectIDS == 118 then -- EEex_LuaDecode
+
+		EEex_LuaDecode_Object = caller
+
+		local success, retVal = EEex_Utility_Eval("EEex_LuaDecode", curAIType.m_name.m_pchData:get())
+		return success and setObject(retVal) or fail()
 	end
 
 	return EEex_Object_Hook_OnEvaluatingUnknown_ReturnType.UNHANDLED

@@ -8,6 +8,7 @@
 	| Prevent certain OBJECT.IDS entries from interpreting their string parameter as a script name |
 	+----------------------------------------------------------------------------------------------+
 	|   117 EEex_Target()                                                                          |
+	|   118 EEex_LuaDecode()                                                                       |
 	+----------------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Object_Hook_ForceIgnoreActorScriptName(aiType: CAIObjectType) -> boolean        |
 	|       return:                                                                                |
@@ -53,6 +54,7 @@
 	| Implement new OBJECT.IDS entries                                                                                             |
 	+------------------------------------------------------------------------------------------------------------------------------+
 	|   117 EEex_Target()                                                                                                          |
+	|   118 EEex_LuaDecode()                                                                                                       |
 	+------------------------------------------------------------------------------------------------------------------------------+
 	|   [Lua] EEex_Object_Hook_OnEvaluatingUnknown(decodingAIType: CAIObjectType, caller CGameAIBase|EEex_GameObject_CastUT,       |
 	|                                              nSpecialCaseI: number, curAIType: CAIObjectType) -> number                      |
