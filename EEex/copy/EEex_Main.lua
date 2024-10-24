@@ -30,6 +30,7 @@ EEex_Main_Private_NormalStartupFiles = {
 	"EEex_Key_Patch",
 	"EEex_Menu",
 	"EEex_Menu_Patch",
+	"EEex_Mix_Patch",
 	"EEex_Object",
 	"EEex_Object_Patch",
 	"EEex_Opcode",

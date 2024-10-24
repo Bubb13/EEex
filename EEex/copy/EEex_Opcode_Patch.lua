@@ -149,15 +149,15 @@
 	})
 
 	--[[
-	+---------------------------------------------------------------------------------------------------------------------+
-	| Opcode #248                                                                                                         |
-	+---------------------------------------------------------------------------------------------------------------------+
-	|   (special & 1) != 0 -> .EFF bypasses op120                                                                         |
-	+---------------------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail(pOp248: CGameEffect*, pExtraEffect: CGameEffect*)                     |
-	+---------------------------------------------------------------------------------------------------------------------+
-	|   [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
-	+---------------------------------------------------------------------------------------------------------------------+
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	| Opcode #248                                                                                                                              |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	|   (special & 1) != 0 -> .EFF bypasses op120                                                                                              |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail(pOp248: CGameEffect*, pExtraEffect: CGameEffect*)                                          |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] [EEex_Mix_Patch.lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	---------------------------------------------------
@@ -173,39 +173,16 @@
 		]]}
 	)
 
-	-------------------------------------------------------
-	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248() --
-	-------------------------------------------------------
-
-	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(64)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnAfterSwingCheckedOp248", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "CGameSprite" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax #ENDL", {rspOffset}}, "boolean" end,
-			},
-		}),
-		{[[
-			call_error:
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
-
 	--[[
-	+---------------------------------------------------------------------------------------------------------------------+
-	| Opcode #249                                                                                                         |
-	+---------------------------------------------------------------------------------------------------------------------+
-	|   (special & 1) != 0 -> .EFF bypasses op120                                                                         |
-	+---------------------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail(pOp249: CGameEffect*, pExtraEffect: CGameEffect*)                     |
-	+---------------------------------------------------------------------------------------------------------------------+
-	|   [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
-	+---------------------------------------------------------------------------------------------------------------------+
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	| Opcode #249                                                                                                                              |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	|   (special & 1) != 0 -> .EFF bypasses op120                                                                                              |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail(pOp249: CGameEffect*, pExtraEffect: CGameEffect*)                                          |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] [EEex_Mix_Patch.lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
+	+------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	---------------------------------------------------
@@ -226,38 +203,6 @@
 			call #L(EEex::Opcode_Hook_OnOp249AddTail)
 		]]}
 	)
-
-	-------------------------------------------------------
-	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249() --
-	-------------------------------------------------------
-
-	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(64)
-			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-		]]},
-		EEex_GenLuaCall("EEex_Opcode_Hook_OnAfterSwingCheckedOp249", {
-			["args"] = {
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "CGameSprite" end,
-				function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax #ENDL", {rspOffset}}, "boolean" end,
-			},
-		}),
-		{[[
-			call_error:
-			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-			#DESTROY_SHADOW_SPACE
-
-			test rax, rax
-			jz #L(return)
-
-			#MANUAL_HOOK_EXIT(0)
-			; The consequence of not running the else block is that this boilerplate is not executed
-			mov rsi, qword ptr ss:[rsp+0x70]
-			lea r13, qword ptr ds:[r15+0xC]
-			jmp #L(Hook-CGameSprite::Swing()-NoCImmunitiesWeaponElseContinue)
-		]]},
-	}))
 
 	--[[
 	+------------------------------------------------------------------------------------------------------+
