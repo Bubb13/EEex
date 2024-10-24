@@ -173,6 +173,8 @@ end
 -- Opcode #249 (Special BIT0 allows .EFF to bypass op120) --
 ------------------------------------------------------------
 
+-- This function replaces the `else` block (hit blocked) of the op120 check for ranged attacks.
+--   [Bubb]: Why did I replace the entire else block instead of hooking after its CProjectile::ClearEffects() call?
 function EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite, targetSprite, bBlocked)
 
 	if bBlocked then

@@ -1,4 +1,6 @@
 
+-- This flag instructs EEex to write integrity watchdog checks before and after all of its hooks.
+-- If any CPU registers / stack values change unexpectedly during a hook's execution, these changes will be logged to the console.
 EEex_HookIntegrityWatchdog_Load = false
 
 (function()

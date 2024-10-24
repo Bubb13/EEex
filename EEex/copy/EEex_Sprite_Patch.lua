@@ -823,6 +823,16 @@
 		]]}
 	)
 
+	--[[
+	+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	| Implement EEex_Sprite_AddBlockWeaponHitListener() - Lua listeners that can block base weapon damage and on-hit effects as if via op120                                               |
+	+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] [EEex_Mix_Patch.lua] EEex_Sprite_Hook_CheckBlockWeaponHit(attackingSprite: CGameSprite, targetSprite: CGameSprite, weapon: CItem, weaponAbility: Item_ability_st) -> boolean |
+	|       return:                                                                                                                                                                        |
+	|           -> false - Don't alter engine behavior                                                                                                                                     |
+	|           -> true  - Block base weapon damage and on-hit effects                                                                                                                     |
+	+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
 
 	EEex_EnableCodeProtection()
 
