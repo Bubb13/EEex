@@ -8,7 +8,7 @@
 	EEex_DisableCodeProtection()
 
 	-------------------------------------------------------
-    -- [Lua] EEex_Sprite_Hook_CheckBlockWeaponHit()      --
+	-- [Lua] EEex_Sprite_Hook_CheckBlockWeaponHit()      --
 	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248() --
 	-------------------------------------------------------
 
@@ -67,7 +67,7 @@
 	)
 
 	-------------------------------------------------------
-    -- [Lua] EEex_Sprite_Hook_CheckBlockWeaponHit()      --
+	-- [Lua] EEex_Sprite_Hook_CheckBlockWeaponHit()      --
 	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249() --
 	-------------------------------------------------------
 
@@ -134,6 +134,6 @@
 		})
 	)
 
-    EEex_EnableCodeProtection()
+	EEex_EnableCodeProtection()
 
 end)()
