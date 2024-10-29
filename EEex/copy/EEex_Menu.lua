@@ -336,6 +336,18 @@ end
 
 function EEex_Menu_Hook_OnWindowSizeChanged()
 
+	local sdlWindow = EngineGlobals.g_pBaldurChitin.cVideo.pCurrentMode.m_pWindow
+	local sdlWindowFlags = EngineGlobals.SDL_GetWindowFlags(sdlWindow)
+
+	-- Ignore size change caused by fullscreen window being minimized.
+	-- This reports the non-fullscreen window size, which never actually
+	-- goes into effect, as opening the window again reenters fullscreen.
+	if EEex_IsMaskSet(sdlWindowFlags, SDL_WindowFlags.SDL_WINDOW_FULLSCREEN)
+		and EEex_IsMaskSet(sdlWindowFlags, SDL_WindowFlags.SDL_WINDOW_MINIMIZED)
+	then
+		return
+	end
+
 	if EEex_Modules["B3Scale"] then
 		B3Scale_DoSizeChange()
 	end

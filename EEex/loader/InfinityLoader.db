@@ -536,6 +536,14 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 Pattern=0F5BD2660F6EC1
 Operations=ADD -26, PUSH, READ DWORD, ADD, ADD 4
 
+[SDL_GetWindowFlags]
+Pattern=75088B4140
+Operations=ADD -42
+
+[SDL_GetWindowFromID]
+Pattern=741D488B80E8010000
+Operations=ADD -10
+
 [afxPchNil]
 Pattern=488D542420488937
 Operations=ADD 20, PUSH, READ DWORD, ADD, ADD 4
