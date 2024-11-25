@@ -40,6 +40,12 @@ EEex_MemoryManagerStructDefinitions["CAIScriptFile"] = {
 	["destructor"] = CAIScriptFile.Destruct,
 }
 
+EEex_MemoryManagerStructDefinitions["CButtonData"] = {
+	["constructors"] = {
+		["#default"] = CButtonData.Construct,
+	},
+}
+
 EEex_MemoryManagerStructDefinitions["CPoint"] = {
 	["constructors"] = {
 		["fromXY"] = function(point, x, y)

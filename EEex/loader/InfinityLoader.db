@@ -153,6 +153,10 @@ Pattern=4883EC380FB702
 Pattern=488BF94883C106
 Operations=ADD -25
 
+[CButtonData::Construct]
+Pattern=488D4F1C
+Operations=ADD -42
+
 [CChitin::OnResizeWindow]
 Pattern=48895C2420565741564883EC30
 
