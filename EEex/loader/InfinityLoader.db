@@ -3,13 +3,29 @@
 ;-- Bound Engine Functions --
 ;----------------------------
 
+[!ExeSwitch-Baldur.exe-CSound::Construct]
+Pattern=4C89314883C110
+Operations=ADD -43
+
+[!ExeSwitch-Baldur.exe-CTlkTable::Fetch]
+Pattern=8D43FF83F8FD
+Operations=ADD -118
+
 [!ExeSwitch-Baldur.exe-OpenIniFile]
 Pattern=4889842450040000488BD9
 Operations=ADD -23
 
+[!ExeSwitch-icewind.exe-CSound::Construct]
+Pattern=4C89314883C110
+Operations=ADD -56
+
+[!ExeSwitch-icewind.exe-CTlkTable::Fetch]
+Pattern=8D43FF83F8FD
+Operations=ADD -136
+
 [!ExeSwitch-icewind.exe-OpenIniFile]
-Pattern=4889842450040000488BD9
-Operations=ADD -36
+Pattern=488BD7488D8C2440020000
+Operations=ADD -91
 
 [C2DArray::Construct]
 Pattern=488D542420488937
@@ -430,8 +446,8 @@ Pattern=48895C241855565741564157488D6C24D9
 Pattern=48895C242056574154415541564883EC30
 
 [CSound::Construct]
-Pattern=4C89314883C110
-Operations=ADD -43
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [CSound::Destruct]
 Pattern=488B8D30110000
@@ -461,8 +477,8 @@ Pattern=B301E959FFFFFF
 Operations=ADD -14, PUSH, READ DWORD, ADD, ADD 4
 
 [CTlkTable::Fetch]
-Pattern=8D43FF83F8FD
-Operations=ADD -118
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [CVariable::Construct]
 Pattern=40534883EC2041B820000000
