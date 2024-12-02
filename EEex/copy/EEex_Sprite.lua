@@ -1327,19 +1327,18 @@ end
 
 EEex_Sprite_Private_SavedDamageEffectTargetStartingHP = nil
 
+EEex_Sprite_Private_DisruptableActions = {
+	[ 31] = true, -- Spell()
+	[ 95] = true, -- SpellPoint()
+	[191] = true, -- SpellNoDec()
+	[192] = true, -- SpellPointNoDec()
+	[476] = true, -- EEex_SpellObjectOffset()
+	[477] = true, -- EEex_SpellObjectOffsetNoDec()
+}
+
 function EEex_Sprite_Hook_OnDamageEffectStartingCalculations(effect, sourceSprite, targetSprite)
 	local actionID = targetSprite.m_curAction.m_actionID
-
-	local actionSources = {
-		[31] = true, -- Spell()
-		[95] = true, -- SpellPoint()
-		[191] = true, -- SpellNoDec()
-		[192] = true, -- SpellPointNoDec()
-		[476] = true, -- EEex_SpellObjectOffset()
-		[477] = true, -- EEex_SpellObjectOffsetNoDec()
-	}
-
-	if actionSources[actionID] then
+	if EEex_Sprite_Private_DisruptableActions[actionID] then
 		EEex_Sprite_Private_SavedDamageEffectTargetStartingHP = targetSprite.m_baseStats.m_hitPoints
 	end
 end
@@ -1347,17 +1346,7 @@ end
 function EEex_Sprite_Hook_OnDamageEffectDone(effect, sourceSprite, targetSprite)
 
 	local actionID = targetSprite.m_curAction.m_actionID
-
-	local actionSources = {
-		[31] = true, -- Spell()
-		[95] = true, -- SpellPoint()
-		[191] = true, -- SpellNoDec()
-		[192] = true, -- SpellPointNoDec()
-		[476] = true, -- EEex_SpellObjectOffset()
-		[477] = true, -- EEex_SpellObjectOffsetNoDec()
-	}
-
-	if actionSources[actionID] then
+	if EEex_Sprite_Private_DisruptableActions[actionID] then
 
 		local damageTaken = EEex_Sprite_Private_SavedDamageEffectTargetStartingHP - targetSprite.m_baseStats.m_hitPoints
 		if damageTaken > 0 then
