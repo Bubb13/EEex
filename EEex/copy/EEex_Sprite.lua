@@ -1329,7 +1329,17 @@ EEex_Sprite_Private_SavedDamageEffectTargetStartingHP = nil
 
 function EEex_Sprite_Hook_OnDamageEffectStartingCalculations(effect, sourceSprite, targetSprite)
 	local actionID = targetSprite.m_curAction.m_actionID
-	if actionID == 31 or actionID == 95 then -- Spell() or SpellPoint()
+
+	local actionSources = {
+		[31] = true, -- Spell()
+		[95] = true, -- SpellPoint()
+		[191] = true, -- SpellNoDec()
+		[192] = true, -- SpellPointNoDec()
+		[476] = true, -- EEex_SpellObjectOffset()
+		[477] = true, -- EEex_SpellObjectOffsetNoDec()
+	}
+
+	if actionSources[actionID] then
 		EEex_Sprite_Private_SavedDamageEffectTargetStartingHP = targetSprite.m_baseStats.m_hitPoints
 	end
 end
@@ -1337,7 +1347,17 @@ end
 function EEex_Sprite_Hook_OnDamageEffectDone(effect, sourceSprite, targetSprite)
 
 	local actionID = targetSprite.m_curAction.m_actionID
-	if actionID == 31 or actionID == 95 then -- Spell() or SpellPoint()
+
+	local actionSources = {
+		[31] = true, -- Spell()
+		[95] = true, -- SpellPoint()
+		[191] = true, -- SpellNoDec()
+		[192] = true, -- SpellPointNoDec()
+		[476] = true, -- EEex_SpellObjectOffset()
+		[477] = true, -- EEex_SpellObjectOffsetNoDec()
+	}
+
+	if actionSources[actionID] then
 
 		local damageTaken = EEex_Sprite_Private_SavedDamageEffectTargetStartingHP - targetSprite.m_baseStats.m_hitPoints
 		if damageTaken > 0 then
