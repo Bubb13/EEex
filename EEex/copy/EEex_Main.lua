@@ -83,6 +83,9 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 	EEex_OpenLuaBindings("EEex")
 	EEex_DoFile("EEex_HookIntegrityWatchdog")
 
+	-- Defines aliases for EEex functions to preserve API compatibility if internal names change
+	EEex_DoFile("EEex_Alias")
+
 	-- Defines information about usertypes for the EEex_MemoryManager helper
 	EEex_DoFile("EEex_MemoryManagerDefinitions")
 

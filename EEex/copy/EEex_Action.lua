@@ -245,6 +245,17 @@ end
 
 EEex_Action_Private_Switch = {
 
+	-- Bug Fix: Enable ForceSpellRange / ForceSpellRangeRES
+	[318] = function(aiBase, curAction)
+		local target = aiBase:GetTargetShareType_Overload_ObjectType(1)
+		return aiBase:ForceSpell(target)
+	end,
+
+	-- Bug Fix: Enable ForceSpellPointRange / ForceSpellPointRangeRES
+	[319] = function(aiBase, curAction)
+		return aiBase:ForceSpellPoint()
+	end,
+
 	-- EEex_LuaAction
 	[472] = function(aiBase, curAction)
 

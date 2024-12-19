@@ -41,13 +41,13 @@ Pattern=48895C2410565741564883EC20
 Pattern=488BEC4883EC50488B4110
 Operations=ADD -11
 
-[CAIAction::Construct1]
-Pattern=48897C242041564881ECF0000000
-Operations=ADD -10
-
-[CAIAction::ConstructCopy]
+[CAIAction::Construct(CAIAction*)]
 Pattern=4883C208488901
 Operations=ADD -33
+
+[CAIAction::Construct(short,CPoint*,int,int)]
+Pattern=48897C242041564881ECF0000000
+Operations=ADD -10
 
 [CAIAction::Decode]
 Pattern=488BFA4883C108
@@ -57,7 +57,7 @@ Operations=ADD -13
 Pattern=488D5348488D4DD8
 Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 
-[CAIAction::operator_equ]
+[CAIAction::operator=]
 Pattern=0FB702488BDA
 Operations=ADD -10
 
@@ -82,14 +82,14 @@ Operations=ADD -2
 [CAIGroup::GetOffsets]
 Pattern=48895C24086689542410
 
-[CAIGroup::GroupSetTarget1]
+[CAIGroup::GroupSetTarget(CPoint,int,short,CPoint)]
 Pattern=488954241055534155
 
 [CAIGroup::RemoveFromSearch]
 Pattern=4885DB0F84D6000000
 Operations=ADD -10
 
-[CAIIdList::Construct1]
+[CAIIdList::Construct()]
 Pattern=4889442428488BF94883C110
 Operations=ADD -20
 
@@ -100,10 +100,10 @@ Operations=ADD -18
 [CAIIdList::Find(int)]
 Pattern=837958007415
 
-[CAIIdList::LoadList2]
+[CAIIdList::LoadList(CResRef,int)]
 Pattern=48895C24184889542410574883EC20
 
-[CAIObjectType::Construct1]
+[CAIObjectType::Construct(byte,byte,byte,byte,byte,byte,byte,int)]
 Pattern=4889010FB6442428
 Operations=ADD -7
 
@@ -129,7 +129,7 @@ Pattern=0FB64208884108
 [CAIObjectType::operator==]
 Pattern=0FB64208384108
 
-[CAIScript::Construct1]
+[CAIScript::Construct(CResRef,int)]
 Pattern=48895424105556574883EC40
 Operations=ADD -5
 
@@ -158,7 +158,7 @@ Pattern=4C8BDC5553574154
 Pattern=B802000000C7470400000000
 Operations=ADD -30
 
-[CAITrigger::ConstructCopy]
+[CAITrigger::Construct(CAITrigger*)]
 Pattern=488BDA8B4204
 Operations=ADD -19
 
@@ -212,6 +212,9 @@ Pattern=40534883EC200FB6C2488BD9FFC8
 [CGameAIBase::ApplyEffectToParty]
 Pattern=405355415641574883EC28
 
+[CGameAIBase::ForceSpell]
+Pattern=48895C24185556574154415541564157488D6C2490
+
 [CGameAIBase::ForceSpellPoint]
 Pattern=5741564157488D6C24F0
 Operations=ADD -7
@@ -220,11 +223,11 @@ Operations=ADD -7
 Pattern=4883EC20488BF94533C0
 Operations=ADD -6
 
-[CGameAIBase::GetTargetShareType1]
+[CGameAIBase::GetTargetShareType(CAIObjectType*,byte)]
 Pattern=56574883EC20488BC2
 Operations=ADD -6
 
-[CGameAIBase::GetTargetShareType2]
+[CGameAIBase::GetTargetShareType(byte)]
 Pattern=4889742420574883EC200FB6F2
 Operations=ADD -5
 
@@ -241,18 +244,18 @@ Pattern=4C894C242053574156
 Pattern=4C894C24204C894424185556574154
 Operations=ADD -5
 
-[CGameArea::GetAllInRange1]
+[CGameArea::GetAllInRange(CPoint*,CAIObjectType*,short,byte*,CTypedPtrList<CPtrList,long>*,int,int)]
 Pattern=4C8BE2488BB9380C0000
 Operations=ADD -33
 
-[CGameArea::GetAllInRange2]
+[CGameArea::GetAllInRange(__POSITION*,CPoint*,CAIObjectType*,short,byte*,CTypedPtrList<CPtrList,long>*,int,int)]
 Pattern=4C894C242048894C240853555657415441554156
 
 [CGameArea::GetNearest]
 Pattern=4881ECE80000000F29B424D0000000
 Operations=ADD -18
 
-[CGameArea::GetNearest2]
+[CGameArea::GetNearest(CPoint,CAIObjectType*,short,byte*,int,int,byte)]
 Pattern=6644894C24204C89442418
 
 [CGameArea::OnActionButtonClickGround]
@@ -390,7 +393,7 @@ Operations=ADD -9
 Pattern=5541564883EC30488BD9
 Operations=ADD -2
 
-[CItem::Construct3]
+[CItem::Construct(CResRef,ushort,ushort,ushort,ushort,uint)]
 Pattern=48896C242048895424105657
 Operations=ADD -5
 
@@ -461,22 +464,22 @@ Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
 Pattern=488D4C2448BAEE030000
 Operations=ADD -173
 
-[CString::ConstructFromCString]
+[CString::Construct(CString*)]
 Pattern=488BD98378F400
 Operations=ADD -9
 
-[CString::ConstructFromChars]
+[CString::Construct(char*)]
 Pattern=488BF2488901488BF9
 Operations=ADD -17
 
 [CString::Destruct]
 Pattern=488B114883C2F4
 
-[CString::SetFromCString]
+[CString::operator=(CString*)]
 Pattern=488B02488BD9488B09
 Operations=ADD -10
 
-[CString::SetFromChars]
+[CString::operator=(char*)]
 Pattern=B301E959FFFFFF
 Operations=ADD -14, PUSH, READ DWORD, ADD, ADD 4
 
@@ -1525,9 +1528,9 @@ Operations=ADD -17
 Pattern=0FBF8550030000
 Operations=ADD 17
 
-[Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
-Pattern=488BCBFF17
-Operations=ADD 31
+[Hook-CGameAIBase::ExecuteAction()-DefaultCase]
+Pattern=BEFFFFFFFFEB11
+Operations=ADD 7
 
 [Hook-CGameAIBase::ExecuteAction()-NormalBranch]
 Pattern=6689B3BA040000
