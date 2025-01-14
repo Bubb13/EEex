@@ -974,13 +974,13 @@ EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = 0
 function EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(number)
 	if number >= 0 then
 		if number <= 0xFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU8, EEex_Write8, 1
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU8, EEex_WriteU8, 1
 		elseif number <= 0xFFFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU16, EEex_Write16, 2
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU16, EEex_WriteU16, 2
 		elseif number <= 0xFFFFFFFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU32, EEex_Write32, 4
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU32, EEex_WriteU32, 4
 		elseif number <= 0xFFFFFFFFFFFFFFFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU64, EEex_Write64, 8
+			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU64, EEex_WriteU64, 8
 		else
 			EEex_Error("Number too large to be marshalled in creature handler")
 		end
