@@ -71,6 +71,7 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 
 	-- Contains most of the code editing functions. This file is the core of EEex.
 	EEex_DoFile("EEex_Assembly")
+	EEex_DoFile("EEex_Assembly_Patch")
 
 	-- Contains Lua bindings that map engine structures to Lua
 	EEex_OpenLuaBindings("LuaBindings-v2.6.6.0", function()

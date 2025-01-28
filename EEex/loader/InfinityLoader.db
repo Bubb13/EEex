@@ -1106,9 +1106,19 @@ Operations=ADD -14
 [Hardcoded_luaL_newmetatable]
 Pattern=48895C2418574883EC20488BFA4C8BC2
 
+[Hardcoded_luaL_newstate]
+Pattern=7412488B4818
+Operations=ADD -21
+
+[Hardcoded_luaL_openlibs]
+Unsupported=1
+
 [Hardcoded_luaL_ref]
 Pattern=488B4910488D41F0
 Operations=ADD -26
+
+[Hardcoded_luaL_traceback]
+Pattern=48895C2420555657415641574881ECB0000000
 
 [Hardcoded_lua_atpanic]
 Pattern=498B8000010000
@@ -1233,6 +1243,10 @@ Operations=ADD -6
 [Hardcoded_lua_remove]
 Pattern=498B4A104883C010
 Operations=ADD -12
+
+[Hardcoded_lua_setfield]
+Pattern=49C7C0FFFFFFFF488D5710
+Operations=ADD -33
 
 [Hardcoded_lua_setglobal]
 Pattern=C6862595000001

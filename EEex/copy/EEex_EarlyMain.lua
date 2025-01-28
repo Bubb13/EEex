@@ -6,6 +6,7 @@
 (function()
 	-- Contains most of the code editing functions. This file is the core of EEex.
 	EEex_DoFile("EEex_Assembly")
+	EEex_DoFile("EEex_Assembly_Patch")
 	-- Replaces the statically compiled, in-exe Lua version with LuaLibrary.
 	EEex_DoFile("EEex_ReplaceLua")
 end)()

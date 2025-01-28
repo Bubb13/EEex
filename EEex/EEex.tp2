@@ -55,6 +55,7 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-M
 	COPY ~InfinityLoader.ini~ ~.~
 		REPLACE_TEXTUALLY ~^\(LuaLibrary=\).*~ ~\1lua51.dll~
 		REPLACE_TEXTUALLY ~^\(LuaPatchMode=\).*~ ~\1REPLACE_INTERNAL_WITH_EXTERNAL~
+		REPLACE_TEXTUALLY ~^\(LuaVersionExternal=\).*~ ~\15.1~
 	BUT_ONLY
 
 	COPY ~EEex/loader/LuaJIT~ ~.~
