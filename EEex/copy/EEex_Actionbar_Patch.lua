@@ -8,6 +8,7 @@
 	| Implement actionbar listeners                                            |
 	+--------------------------------------------------------------------------+
 	|   [Lua] EEex_Actionbar_Hook_StateUpdating(config: number, state: number) |
+	|   [Lua] EEex_Actionbar_Hook_ButtonsUpdated()                             |
 	+--------------------------------------------------------------------------+
 	--]]
 
@@ -51,6 +52,20 @@
 				call_error:
 				#DESTROY_SHADOW_SPACE
 				mov rcx, r14
+			]]},
+		})
+	)
+
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CInfButtonArray::UpdateButtons()-LastCall"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(32)
+			]]},
+			EEex_GenLuaCall("EEex_Actionbar_Hook_ButtonsUpdated"),
+			{[[
+				call_error:
+				#DESTROY_SHADOW_SPACE
 			]]},
 		})
 	)

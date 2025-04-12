@@ -247,8 +247,8 @@ end
 -- Listeners --
 ---------------
 
-EEex_Actionbar_Listeners = EEex_Actionbar_Listeners or {}
-EEex_Actionbar_SuppressingListeners = false
+EEex_Actionbar_Private_Listeners = EEex_Actionbar_Private_Listeners or {}
+EEex_Actionbar_Private_SuppressingListeners = false
 
 -- @bubb_doc { EEex_Actionbar_AddListener }
 --
@@ -345,18 +345,24 @@ EEex_Actionbar_SuppressingListeners = false
 -- +--------+-----------------+
 
 function EEex_Actionbar_AddListener(func)
-	table.insert(EEex_Actionbar_Listeners, func)
+	table.insert(EEex_Actionbar_Private_Listeners, func)
+end
+
+EEex_Actionbar_Private_ButtonsUpdatedListeners = {}
+
+function EEex_Actionbar_AddButtonsUpdatedListener(func)
+	table.insert(EEex_Actionbar_Private_ButtonsUpdatedListeners, func)
 end
 
 function EEex_Actionbar_SuppressListeners(bSuppress)
-	EEex_Actionbar_SuppressingListeners = bSuppress
+	EEex_Actionbar_Private_SuppressingListeners = bSuppress
 end
 
 function EEex_Actionbar_RunWithListenersSuppressed(func)
-	local saved = EEex_Actionbar_SuppressingListeners
-	EEex_Actionbar_SuppressingListeners = true
+	local saved = EEex_Actionbar_Private_SuppressingListeners
+	EEex_Actionbar_Private_SuppressingListeners = true
 	local toReturn = func()
-	EEex_Actionbar_SuppressingListeners = saved
+	EEex_Actionbar_Private_SuppressingListeners = saved
 	return toReturn
 end
 
@@ -404,7 +410,8 @@ EEex_Actionbar_GetOp214ButtonDataItr = EEex_Actionbar_GetOp214ButtonDataIterator
 -- Hooks --
 -----------
 
-EEex_Actionbar_IgnoreEngineStatup = true
+EEex_Actionbar_Private_IgnoreEngineStartup1 = true
+EEex_Actionbar_Private_IgnoreEngineStartup2 = true
 
 --[[
 Unique Config | State(s)
@@ -450,17 +457,35 @@ Unique Config | State(s)
 --]]
 function EEex_Actionbar_Hook_StateUpdating(config, state)
 
-	if EEex_Actionbar_IgnoreEngineStatup then
-		EEex_Actionbar_IgnoreEngineStatup = false
+	if EEex_Actionbar_Private_IgnoreEngineStartup1 then
+		EEex_Actionbar_Private_IgnoreEngineStartup1 = false
 		return
 	end
 
-	if EEex_Actionbar_SuppressingListeners then
+	if EEex_Actionbar_Private_SuppressingListeners then
 		return
 	end
 
-	for i, func in ipairs(EEex_Actionbar_Listeners) do
+	for _, func in ipairs(EEex_Actionbar_Private_Listeners) do
 		if func(config, state) then
+			break
+		end
+	end
+end
+
+function EEex_Actionbar_Hook_ButtonsUpdated()
+
+	if EEex_Actionbar_Private_IgnoreEngineStartup2 then
+		EEex_Actionbar_Private_IgnoreEngineStartup2 = false
+		return
+	end
+
+	if EEex_Actionbar_Private_SuppressingListeners then
+		return
+	end
+
+	for _, func in ipairs(EEex_Actionbar_Private_ButtonsUpdatedListeners) do
+		if func() then
 			break
 		end
 	end

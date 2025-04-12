@@ -1869,6 +1869,10 @@ Operations=ADD 154
 Pattern=498D8EF8200000
 Operations=ADD -11
 
+[Hook-CInfButtonArray::UpdateButtons()-LastCall]
+Pattern=488B8D80020000
+Operations=ADD 10
+
 [Hook-CInfGame::CharacterExport()-CGameSprite::Marshal()]
 Pattern=0F858F040000
 Operations=ADD 47
