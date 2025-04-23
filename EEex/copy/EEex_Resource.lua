@@ -136,6 +136,17 @@ function EEex_Resource_Demand(resref, extension)
 	local castFunc = ({
 		["EFF"] = function() return EEex_PtrToUD(EEex_UDToPtr(demanded) + 0x8, "CGameEffectBase") end,
 		["ITM"] = function() return EEex_CastUD(demanded, "Item_Header_st") end,
+		["PRO"] = function()
+			local base = EEex_PtrToUD(EEex_UDToPtr(demanded) + 0x8, "CProjectileFileFormat")
+			local fileType = base.m_wFileType
+			if fileType == 2 then
+				return EEex_CastUD(base, "CProjectileBAMFileFormat")
+			elseif fileType == 3 then
+				return EEex_CastUD(base, "CProjectileAreaFileFormat")
+			else
+				return base
+			end
+		end,
 		["SPL"] = function() return EEex_CastUD(demanded, "Spell_Header_st") end,
 	})[extension:upper()]
 
