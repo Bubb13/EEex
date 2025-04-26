@@ -834,6 +834,34 @@
 	+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
+	--[[
+	+-------------------------------------------------------------------------------------------------------------+
+	| Implement EEex_Sprite_AddAlterBaseWeaponDamageListener() - Lua listeners that can alter base weapon damage  |
+	+-------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] CGameSprite::Override_Damage(                                                                  |
+	|                  curWeaponIn: CItem*, pLauncher: CItem*, curAttackNum: int, criticalDamage: int,            |
+	|                  type: CAIObjectType*, facing: short, myFacing: short, target: CGameSprite*, lastSwing: int |
+	|              )                                                                                              |
+	|   [Lua] EEex_Sprite_Hook_AlterBaseWeaponDamage(effect: CGameEffect)                                         |
+	+-------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local callAlterBaseWeaponDamageHook = function(address)
+		EEex_HookNOPsWithLabels(address, 0, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				call #L(CGameSprite::Override_Damage)
+			]]}
+		)
+	end
+
+	callAlterBaseWeaponDamageHook(EEex_Label("Hook-CGameSprite::Swing()-CGameSprite::Damage()-1"))
+	callAlterBaseWeaponDamageHook(EEex_Label("Hook-CGameSprite::Swing()-CGameSprite::Damage()-2"))
+
 	EEex_EnableCodeProtection()
 
 end)()

@@ -890,6 +890,12 @@ function EEex_Sprite_AddBlockWeaponHitListener(listener)
 	table.insert(EEex_Sprite_Private_BlockWeaponHitListeners, listener)
 end
 
+EEex_Sprite_Private_AlterBaseWeaponDamageListeners = {}
+
+function EEex_Sprite_AddAlterBaseWeaponDamageListener(listener)
+	table.insert(EEex_Sprite_Private_AlterBaseWeaponDamageListeners, listener)
+end
+
 -----------
 -- Hooks --
 -----------
@@ -1455,5 +1461,23 @@ function EEex_Sprite_LuaHook_OnAfterEffectListUnmarshalled(sprite)
 
 	for _, func in ipairs(EEex_Sprite_LoadedListeners) do
 		func(sprite)
+	end
+end
+
+--[[
++-------------------------------------------------------------------------------------------------------------+
+| Implement EEex_Sprite_AddAlterBaseWeaponDamageListener() - Lua listeners that can alter base weapon damage  |
++-------------------------------------------------------------------------------------------------------------+
+|   [EEex.dll] CGameSprite::Override_Damage(                                                                  |
+|                  curWeaponIn: CItem*, pLauncher: CItem*, curAttackNum: int, criticalDamage: int,            |
+|                  type: CAIObjectType*, facing: short, myFacing: short, target: CGameSprite*, lastSwing: int |
+|              )                                                                                              |
+|   [Lua] EEex_Sprite_LuaHook_AlterBaseWeaponDamage(context: table)                                           |
++-------------------------------------------------------------------------------------------------------------+
+--]]
+
+function EEex_Sprite_LuaHook_AlterBaseWeaponDamage(context)
+	for _, listener in ipairs(EEex_Sprite_Private_AlterBaseWeaponDamageListeners) do
+		listener(context)
 	end
 end

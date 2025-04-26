@@ -283,6 +283,10 @@ Pattern=48C7020000000083F9FF
 [CGameSprite::CheckQuickLists]
 Pattern=405557415441554156488D6C24D1
 
+[CGameSprite::Damage]
+Pattern=488945F7488B4577
+Operations=ADD -35
+
 [CGameSprite::FeedBack]
 Pattern=48895C24105556574154415541564157488D6C24F9
 
@@ -396,6 +400,10 @@ Operations=ADD -2
 [CItem::Construct(CResRef,ushort,ushort,ushort,ushort,uint)]
 Pattern=48896C242048895424105657
 Operations=ADD -5
+
+[CItem::GetAbility]
+Pattern=7535488B4B08
+Operations=ADD -40
 
 [CMessageHandler::AddMessage]
 Pattern=4889742410574883EC20488B02
@@ -1805,6 +1813,14 @@ Operations=ADD 43
 [Hook-CGameSprite::SpellPoint()-CheckDirectionJmp]
 Pattern=8B4B48488B442460
 Operations=ADD -20
+
+[Hook-CGameSprite::Swing()-CGameSprite::Damage()-1]
+Pattern=498D5730488B742470
+Operations=ADD 55
+
+[Hook-CGameSprite::Swing()-CGameSprite::Damage()-2]
+Pattern=498D57304C8B442470
+Operations=ADD 49
 
 [Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee]
 Pattern=0F85B5070000
