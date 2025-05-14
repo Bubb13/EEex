@@ -842,7 +842,7 @@
 	|                  curWeaponIn: CItem*, pLauncher: CItem*, curAttackNum: int, criticalDamage: int,            |
 	|                  type: CAIObjectType*, facing: short, myFacing: short, target: CGameSprite*, lastSwing: int |
 	|              )                                                                                              |
-	|   [Lua] EEex_Sprite_Hook_AlterBaseWeaponDamage(effect: CGameEffect)                                         |
+	|   [Lua] EEex_Sprite_LuaHook_AlterBaseWeaponDamage(context: table)                                           |
 	+-------------------------------------------------------------------------------------------------------------+
 	--]]
 
