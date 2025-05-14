@@ -190,6 +190,10 @@ function EEex_Sprite_LoadedWithUUIDCallback(sourceSprite, uuid, func)
 end
 CGameSprite.loadedWithUUIDCallback = EEex_Sprite_LoadedWithUUIDCallback
 
+function EEex_Sprite_GetUUID(sprite)
+	return sprite:getUUID()
+end
+
 ----------------------
 -- Fetching Sprites --
 ----------------------
