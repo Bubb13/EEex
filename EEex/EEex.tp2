@@ -1,6 +1,6 @@
 BACKUP ~weidu_external/EEex/backup~
 AUTHOR ~Bubb~
-VERSION ~devel~
+VERSION ~v0.10.3-alpha~
 README ~EEex/readme-EEex.html~
 
 BEGIN ~EEex~ LABEL ~B3-EEex-Main~
