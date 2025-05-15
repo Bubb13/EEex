@@ -32,6 +32,7 @@ menu
 			{
 				area 0 0 32 32
 				bam lua "B3EffectMenu_Menu_List_Table[rowNumber].bam"
+				scaleToClip
 			}
 		}
 		column
