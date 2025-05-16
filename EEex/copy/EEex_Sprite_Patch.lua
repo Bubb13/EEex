@@ -173,12 +173,12 @@
 	+--------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
-	-----------------------------------------------------------
-	-- [JIT] CGameEffectList_Marshal_SavedSpritePtrMem       --
-	-- [EEex.dll] Sprite_Hook_OnBeforeEffectListMarshalled() --
-	-----------------------------------------------------------
+	-----------------------------------------------------------------
+	-- [JIT] CGameEffectList_Marshal_SavedSpritePtrMem             --
+	-- [EEex.dll] EEex::Sprite_Hook_OnBeforeEffectListMarshalled() --
+	-----------------------------------------------------------------
 
-	local CGameEffectList_Marshal_SavedSpritePtrMem = EEex_Malloc(EEex_PtrSize * 2)
+	local CGameEffectList_Marshal_SavedSpritePtrMem = EEex_Malloc(EEex_PtrSize)
 	EEex_WritePtr(CGameEffectList_Marshal_SavedSpritePtrMem, 0x0)
 
 	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Marshal()-CGameEffectList::Marshal()"), {
@@ -206,22 +206,13 @@
 		{"mov qword ptr ds:[#$(1)], 0 #ENDL", {CGameEffectList_Marshal_SavedSpritePtrMem}}
 	)
 
-	------------------------------------------------------------
-	-- [JIT] CGameEffectList_Unmarshal_SavedSpritePtrMem      --
-	-- [EEex.dll] Sprite_Hook_OnAfterEffectListUnmarshalled() --
-	------------------------------------------------------------
+	------------------------------------------------------------------
+	-- [EEex.dll] EEex::Sprite_Hook_OnAfterEffectListUnmarshalled() --
+	------------------------------------------------------------------
 
-	local CGameEffectList_Unmarshal_SavedSpritePtrMem = CGameEffectList_Marshal_SavedSpritePtrMem + EEex_PtrSize
-	EEex_WritePtr(CGameEffectList_Unmarshal_SavedSpritePtrMem, 0x0)
-
-	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"), {
-		{"hook_integrity_watchdog_ignore_registers_1", {
-			EEex_HookIntegrityWatchdogRegister.RAX
-		}}},
-		{"mov qword ptr ds:[#$(1)], rbx #ENDL", {CGameEffectList_Unmarshal_SavedSpritePtrMem}},
+	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Unmarshal()-CGameEffectList::Unmarshal()"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
 		{[[
-			mov qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-
 			mov rcx, rbx ; pSprite
 			call #L(EEex::Sprite_Hook_OnAfterEffectListUnmarshalled)
 		]]}
@@ -308,76 +299,14 @@
 		]]},
 	}))
 
-	---------------------------------------------------------------
-	-- [Lua] EEex_Sprite_Hook_ReadExtraEffectListUnmarshal()     --
-	-- [EEex.dll] EEex::Sprite_Hook_OnBeforeEffectUnmarshalled() --
-	---------------------------------------------------------------
+	--------------------------------------------------------------
+	-- [Lua] EEex_Sprite_LuaHook_ReadExtraEffectListUnmarshal() --
+	-- [EEex.dll] CGameEffectList::Override_Unmarshal()         --
+	--------------------------------------------------------------
 
-	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), {
-		{"hook_integrity_watchdog_ignore_registers", {
-			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
-			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
-		}}},
-		EEex_FlattenTable({
-			{[[
-				cmp qword ptr ds:[#$(1)], 0 ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-				jz #L(return)
-
-				cmp dword ptr ds:[rcx], 0x49422D58 ; Check if signature is "X-BI"
-				je do_extra_unmarshal
-
-				#MAKE_SHADOW_SPACE(8)
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-
-				mov rdx, rcx                                                              ; pEffectBase
-				mov rcx, ds:[#$(1)] ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ ; pSprite
-				call #L(EEex::Sprite_Hook_OnBeforeEffectUnmarshalled)
-
-				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-				#DESTROY_SHADOW_SPACE
-
-				cmp rax, #$(1) ]], {EEex_OnBeforeEffectUnmarshalledRet.CONTINUE}, [[ #ENDL
-				jne not_continue
-
-				#MANUAL_HOOK_EXIT(0)
-				jmp #L(Hook-CGameEffectList::Unmarshal()-Continue)
-
-				not_continue:
-				cmp rax, #$(1) ]], {EEex_OnBeforeEffectUnmarshalledRet.BREAK}, [[ #ENDL
-				jne #L(return)
-
-				#MANUAL_HOOK_EXIT(0)
-				jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
-
-				do_extra_unmarshal:
-				#MAKE_SHADOW_SPACE(48)
-			]]},
-			EEex_GenLuaCall("EEex_Sprite_Hook_ReadExtraEffectListUnmarshal", {
-				["args"] = {
-					-- sprite
-					function(rspOffset) return {[[
-						mov rax, qword ptr ss:[#$(1)] ]], {CGameEffectList_Unmarshal_SavedSpritePtrMem}, [[ #ENDL
-						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
-					]]}, "CGameSprite" end,
-					-- memory
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"} end,
-				},
-			}),
-			{[[
-				call_error:
-				#DESTROY_SHADOW_SPACE
-
-				#MANUAL_HOOK_EXIT(1)
-				jmp #L(Hook-CGameEffectList::Unmarshal()-Return)
-			]]},
-		})
-	)
-	-- Manually define the ignored registers for the unusual `dont_process_effect` branch above
-	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()"), 1, {
-		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
-		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
-		EEex_HookIntegrityWatchdogRegister.R11
-	})
+	EEex_JITAt(EEex_Label("Hook-CGameEffectList::Unmarshal()-FirstInstruction"), {[[
+		jmp #L(CGameEffectList::Override_Unmarshal)
+	]]})
 
 	--[[
 	+------------------------------------------------------------------------------------------------------------------------------------------------+

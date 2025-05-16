@@ -273,6 +273,10 @@ Operations=ADD -16
 Pattern=5741564883EC4033DB
 Operations=ADD -11
 
+[CGameEffect::DecodeEffectFromBase]
+Pattern=49895B1057
+Operations=ADD -3
+
 [CGameObject::InControl]
 Pattern=80BAC902000001750D
 Operations=ADD -7
@@ -1638,16 +1642,9 @@ Operations=ADD 269
 Pattern=488BCBFF504085C0
 Operations=ADD 278
 
-[Hook-CGameEffectList::Unmarshal()-CGameEffect::DecodeEffectFromBase()]
-Pattern=FFCF4885ED
-Operations=ADD 80
-
-[Hook-CGameEffectList::Unmarshal()-Continue]
-Pattern=66FFC3FFCF85FF
-
-[Hook-CGameEffectList::Unmarshal()-Return]
-Pattern=66FFC3FFCF85FF
-Operations=ADD 9
+[Hook-CGameEffectList::Unmarshal()-FirstInstruction]
+Pattern=57415641574883EC4033DB
+Operations=ADD -10
 
 [Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail]
 Pattern=F6472004

@@ -1177,10 +1177,15 @@ function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 		addTableExport(handlerName, toExport)
 	end
 
+	-- Initial size of 8 to store the signature and version.
+	-- Round up to multiple of CGameEffectBase to match an effect boundary on the CRE.
+	-- If only 8 bytes are needed (no data is marshalled), skip writing entirely.
+
 	local extraMarshalSize = 8 + EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(EEex_Sprite_Private_CurrentSpriteMarshalHandlerData)
 	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = (extraMarshalSize ~= 8 and
 		EEex_RoundUp(extraMarshalSize, CGameEffectBase.sizeof)
 		or 0) - 8
+
 	return EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize + 8
 end
 
@@ -1202,22 +1207,21 @@ function EEex_Sprite_Hook_WriteExtraEffectListMarshal(memory)
 	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = 0
 end
 
-function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
+function EEex_Sprite_LuaHook_ReadExtraEffectListUnmarshal(sprite, baseMemory)
 
-	memory = memory + 8
+	local memory = baseMemory + 8
 
 	while true do
 
 		local toFill = {}
 		local handlerStr = EEex_ReadString(memory)
+		memory = memory + #handlerStr + 1
 
 		-- The top level list writes TABLE_END('\0') to signal that all
 		-- marshalled data has ended, which reads as an empty string
 		if handlerStr == "" then
 			break
 		end
-
-		memory = memory + #handlerStr + 1
 
 		local fieldReadSwitch = {
 			[EEex_Sprite_Private_MarshalHandlerFieldType.STRING] = function()
@@ -1306,6 +1310,9 @@ function EEex_Sprite_Hook_ReadExtraEffectListUnmarshal(sprite, memory)
 			fallbackStorage[handlerStr] = toFill
 		end
 	end
+
+	-- Return to the C++ hook how many effects were EEex binary data
+	return EEex_RoundUp(memory - baseMemory, CGameEffectBase.sizeof) / CGameEffectBase.sizeof
 end
 
 EEex_Sprite_Private_CustomConcentrationCheckFuncName = nil
