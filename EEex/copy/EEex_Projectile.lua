@@ -603,3 +603,32 @@ function EEex_Projectile_IsOfType(projectile, checkType)
 	return EEex_BAnd(EEex_Projectile_Private_Inheritance[projType], checkType) ~= 0x0
 end
 CProjectile.isOfType = EEex_Projectile_IsOfType
+
+function EEex_Projectile_Private_GetStartingPosInternal(projectile, sourceObject, args)
+
+	local area         = args["area"]         or sourceObject.m_pArea or EEex_Error("The default value for 'area' is invalid")
+	local targetObject = args["targetObject"]
+	local targetX      = args["targetX"]      or (targetObject and targetObject.m_pos.x)
+	local targetY      = args["targetY"]      or (targetObject and targetObject.m_pos.y)
+	local height       = args["height"]       or projectile:DetermineHeight(sourceObject)
+
+	if targetObject == nil and (targetX == nil or targetY == nil) then
+		EEex_Error("'targetX' and 'targetY' are required when 'targetObject' is nil")
+	end
+
+	return EEex.GetProjectileStartingPos(projectile, area, sourceObject, targetObject, targetX, targetY, height)
+end
+
+function EEex_Projectile_GetStartingPos(projectile, sourceObject, args)
+	if projectile == nil then EEex_Error("'projectile' required") end
+	if sourceObject == nil then EEex_Error("'sourceObject' required") end
+	return EEex_Projectile_Private_GetStartingPosInternal(projectile, sourceObject, args)
+end
+CProjectile.getStartingPos = EEex_Projectile_GetStartingPos
+
+function EEex_Projectile_GetStartingPosForID(projectileID, sourceObject, args)
+	if sourceObject == nil then EEex_Error("'sourceObject' required") end
+	local projectile = CProjectile.DecodeProjectile(projectileID, sourceObject)
+	if projectile == nil then EEex_Error("Failed to decode 'projectileID'") end
+	return EEex_Projectile_Private_GetStartingPosInternal(projectile, sourceObject, args)
+end

@@ -443,6 +443,14 @@ Pattern=0FB741604883C178
 Pattern=488B9980000000488BF9
 Operations=ADD -10
 
+[CProjectile::DetermineHeight]
+Pattern=4883EC2080B95801000000
+Operations=ADD -2
+
+[CProjectile::GetStart]
+Pattern=488BEC4883EC40488BF2
+Operations=ADD -4
+
 [CRes::Construct]
 Pattern=66C741500000488901
 Operations=ADD -7
