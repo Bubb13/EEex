@@ -40,7 +40,7 @@ end
 function EEex_Utility_Eval(src, chunk)
 	local func, err = load(chunk, nil, "t")
 	if func then
-		local success, val = xpcall(func, debug.traceback)
+		local success, val = xpcall(func, EEex_ErrorMessageHandler)
 		if success then
 			return true, val
 		end
@@ -49,6 +49,13 @@ function EEex_Utility_Eval(src, chunk)
 		print(string.format("[%s] Compile error: %s", src, err))
 	end
 	return false
+end
+
+function EEex_Utility_TryFinally(func, finally, ...)
+	local result = { xpcall(func, EEex_ErrorMessageHandler, ...) }
+	finally()
+	if not result[1] then error(result[2], 0) end
+	return select(2, table.unpack(result))
 end
 
 function EEex_Utility_CallIfExists(func, ...)

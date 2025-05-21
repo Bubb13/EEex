@@ -630,5 +630,7 @@ function EEex_Projectile_GetStartingPosForID(projectileID, sourceObject, args)
 	if sourceObject == nil then EEex_Error("'sourceObject' required") end
 	local projectile = CProjectile.DecodeProjectile(projectileID, sourceObject)
 	if projectile == nil then EEex_Error("Failed to decode 'projectileID'") end
-	return EEex_Projectile_Private_GetStartingPosInternal(projectile, sourceObject, args)
+	return EEex_Utility_TryFinally(EEex_Projectile_Private_GetStartingPosInternal,
+		function() projectile:virtual_Destruct(true) end,
+		projectile, sourceObject, args)
 end

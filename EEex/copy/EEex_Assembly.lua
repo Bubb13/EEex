@@ -109,7 +109,14 @@ end
 
 -- Throws a Lua error, appending the current stacktrace to the end of the message.
 function EEex_Error(message)
-	error(debug.traceback("[!] "..message))
+	error(debug.traceback("[!] "..message, 2), 0)
+end
+
+function EEex_ErrorMessageHandler(err)
+	if type(err) == "string" and err:find("stack traceback:") then
+		return err
+	end
+	return debug.traceback(err)
 end
 
 -- Logs a message to the console window, prepending the message with the calling function's name.
