@@ -183,6 +183,12 @@ function EEex_AIBase_SetStoredScriptingTarget(aiBase, targetKey, target)
 end
 CGameAIBase.setStoredScriptingTarget = EEex_AIBase_SetStoredScriptingTarget
 
+function EEex_AIBase_GetStoredScriptingTarget(aiBase, targetKey)
+	local targetTable = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(aiBase), "EEex_Target")
+	return EEex_GameObject_Get(targetTable[targetKey])
+end
+CGameAIBase.getStoredScriptingTarget = EEex_AIBase_GetStoredScriptingTarget
+
 -----------
 -- Hooks --
 -----------

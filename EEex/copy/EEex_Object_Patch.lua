@@ -115,7 +115,7 @@
 			]]},
 		})
 	)
-
+	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CAIObjectType::Decode()-DefaultJmp"), {{0x68, CAIObjectType.sizeof}})
 
 	EEex_EnableCodeProtection()
 

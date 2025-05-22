@@ -610,10 +610,29 @@ EEex_LuaCallReturnType = {
 
 function EEex_GenLuaCall(funcName, meta)
 
+	-- +-------------------------------------------------------+
+	-- | [0x0] Shadow Space                                    |
+	-- +-------------------------------------------------------+
+	-- | [0x32] (localCallArgsTop)                             |
+	-- |   pcallk's stack args                                 |
+	-- |   stack args the caller requested                     |
+	-- +-------------------------------------------------------+
+	-- | [0x32 + numLocalCallArgBytes] (localArgsTop)          |
+	-- |   saved rbx                                           |
+	-- +-------------------------------------------------------+
+	-- | [0x32 + numLocalCallArgBytes + 0x8]                   |
+	-- |   saved return value                                  |
+	-- +-------------------------------------------------------+
+	-- | [0x32 + numLocalCallArgBytes + 0x10] (luaCallArgsTop) |
+	-- |   saved Lua arg #1                                    |
+	-- |   saved Lua arg #2                                    |
+	-- |   ...                                                 |
+	-- +-------------------------------------------------------+
+
 	local numArgs = #((meta or {}).args or {})
 
 	-- These are used to store pcallk's stack args, plus any stack args the caller requested
-	local numShadowLocalCallArgBytes = 16 + math.max(0, ((meta or {}).numStackArgs or 0) - 2) * 8
+	local numLocalCallArgBytes = 16 + math.max(0, ((meta or {}).numStackArgs or 0) - 2) * 8
 
 	-- qword:[localArgsTop]     - The saved rbx value, which I clobber to store lua_State* L
 	-- qword:[localArgsTop + 8] - The saved return value (if any), I should probably only
@@ -621,10 +640,10 @@ function EEex_GenLuaCall(funcName, meta)
 	local numShadowLocalArgBytes = 16
 
 	-- Total shadow space needed (not including the default-included 32 bytes)
-	local numShadowExtraBytes = numShadowLocalCallArgBytes + numShadowLocalArgBytes + numArgs * 8
+	local numShadowExtraBytes = numLocalCallArgBytes + numShadowLocalArgBytes + numArgs * 8
 
 	-- Top of GenLuaCall's special variables, (+32 to move over shadow space register storage)
-	local localArgsTop = 32 + numShadowLocalCallArgBytes
+	local localArgsTop = 32 + numLocalCallArgBytes
 
 	-- Top of GenLuaCall's saved Lua function argument values
 	local luaCallArgsTop = localArgsTop + numShadowLocalArgBytes
