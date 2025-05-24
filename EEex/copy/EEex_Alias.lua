@@ -56,6 +56,12 @@
 	CGameArea.GetAllInRange2 = alias(CGameArea.GetAllInRange_Overload_VertListPos)
 	CGameArea.GetNearest2 = alias(CGameArea.GetNearest_Overload_Point)
 
+	----------------------------
+	-- CMessageDisplayTextRef --
+	----------------------------
+
+	CMessageDisplayTextRef.Construct = alias(CMessageDisplayTextRef.Construct_Overload_Manual)
+
 	-----------
 	-- CItem --
 	-----------

@@ -10,6 +10,33 @@ function EEex_Area_GetVisible()
 	return game.m_gameAreas:get(game.m_visibleArea)
 end
 
+function EEex_Area_GetNearestOpenPosition(area, x, y, snapshotPersonalSpace, terrainTable, facing)
+	local resultX, resultY = area.m_search:GetNearestOpenSquare(x / 16, y / 12, terrainTable or CGameObject.DEFAULT_TERRAIN_TABLE, snapshotPersonalSpace, facing or -1)
+	return resultX * 16, resultY * 12
+end
+CGameArea.getNearestOpenPosition = EEex_Area_GetNearestOpenPosition
+
+function EEex_Area_CreateVisualEffect(area, resref, pointX, pointY, optionalArgs)
+
+	if optionalArgs == nil then optionalArgs = {} end
+	local targetX = optionalArgs["targetX"] or pointX
+	local targetY = optionalArgs["targetY"] or pointY
+	local height  = optionalArgs["height"]  or 32
+	local speed   = optionalArgs["speed"]   or -1
+
+	local objectId = EEex_RunWithStackManager({
+		{ ["name"] = "name",        ["struct"] = "CString", ["constructor"] = {                        ["args"] = {resref}          }, ["noDestruct"] = true },
+		{ ["name"] = "startPoint",  ["struct"] = "CPoint",  ["constructor"] = {["variant"] = "fromXY", ["args"] = {pointX, pointY}  }                        },
+		{ ["name"] = "targetPoint", ["struct"] = "CPoint",  ["constructor"] = {["variant"] = "fromXY", ["args"] = {targetX, targetY}}                        }, },
+		function(manager)
+			return CVisualEffect.Load(manager:getUD("name"), area, manager:getUD("startPoint"),
+				-1, manager:getUD("targetPoint"), height, false, speed)
+		end)
+
+	return EEex_GameObject_Get(objectId)
+end
+CGameArea.createVisualEffect = EEex_Area_CreateVisualEffect
+
 -- @bubb_doc { EEex_Area_GetVariableInt / instance_name=getVariableInt }
 --
 -- @summary: Returns the integer value of the ``variableName`` Global scoped to ``area``.

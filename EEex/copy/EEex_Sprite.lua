@@ -10,6 +10,39 @@ function EEex_Sprite_AddLoadedListener(func)
 end
 
 ----------------------
+-- Creating Sprites --
+----------------------
+
+function EEex_Sprite_CreateFromResref(resref, args)
+
+	local res = EEex_Resource_Fetch(resref, "CRE")
+	if not res then return end
+
+	local demanded = res:Demand()
+	if not demanded then return end
+
+	if args == nil then args = {} end
+	local type             = args["type"]             or 0
+	local expirationTime   = args["expirationTime"]   or 0xFFFFFFFF
+	local huntingRange     = args["huntingRange"]     or 0
+	local followRange      = args["followRange"]      or 0
+	local timeOfDayVisible = args["timeOfDayVisible"] or 0x7FFFFFFF
+	local startPosX        = args["startPosX"]        or -1
+	local startPosY        = args["startPosY"]        or -1
+	local facing           = args["facing"]           or 0
+	local copyScript       = args["copyScript"]       or 1
+
+	return EEex_RunWithStackManager({
+		{ ["name"] = "startPos", ["struct"] = "CPoint", ["constructor"] = {["variant"] = "fromXY", ["args"] = {startPosX, startPosY}} }, },
+		function(manager)
+			local newSprite = EEex_NewUD("CGameSprite")
+			newSprite:Construct_Overload_FromData(demanded, res.nSize, type, expirationTime, huntingRange,
+				followRange, timeOfDayVisible, manager:getUD("startPos"), facing, copyScript)
+			return newSprite
+		end)
+end
+
+----------------------
 -- Fetching Sprites --
 ----------------------
 
@@ -193,6 +226,22 @@ CGameSprite.loadedWithUUIDCallback = EEex_Sprite_LoadedWithUUIDCallback
 function EEex_Sprite_GetUUID(sprite)
 	return sprite:getUUID()
 end
+
+----------------------
+-- Creating Sprites --
+----------------------
+
+function EEex_Sprite_CreateCopy(sprite, args)
+
+	if args == nil then args = {} end
+	local markItemsAsNonDroppable = args["markItemsAsNonDroppable"] or 0
+	local copyNonDroppable        = args["copyNonDroppable"]        or 1
+	local copyEffects             = args["copyEffects"]             or 1
+	local copyScripts             = args["copyScripts"]             or 1
+
+	return sprite:Copy(markItemsAsNonDroppable, copyNonDroppable, copyEffects, copyScripts)
+end
+CGameSprite.createCopy = EEex_Sprite_CreateCopy
 
 ----------------------
 -- Fetching Sprites --
@@ -471,6 +520,18 @@ function EEex_Sprite_GetPortraitIndex(sprite)
 end
 CGameSprite.getPortraitIndex = EEex_Sprite_GetPortraitIndex
 
+function EEex_Sprite_GetCharacterIndex(sprite)
+	local spriteID = sprite.m_id
+	local charactersArray = EngineGlobals.g_pBaldurChitin.m_pObjectGame.m_characters
+	for i = 0, 5 do
+		if charactersArray:get(i) == spriteID then
+			return i
+		end
+	end
+	return -1
+end
+CGameSprite.getCharacterIndex = EEex_Sprite_GetCharacterIndex
+
 -- @bubb_doc { EEex_Sprite_GetActiveStats / instance_name=getActiveStats }
 --
 -- @summary:
@@ -503,6 +564,15 @@ function EEex_Sprite_GetName(sprite)
 	return sprite.m_sName.m_pchData:get()
 end
 CGameSprite.getName = EEex_Sprite_GetName
+
+function EEex_Sprite_GetNameRef(sprite)
+	local nameRef = sprite.m_baseStats.m_name
+	if nameRef ~= 0xFFFFFFFF then return nameRef end
+	local characterIndex = EEex_Sprite_GetCharacterIndex(sprite)
+	if characterIndex <= -1 then characterIndex = 0 end
+	return -characterIndex - 2
+end
+CGameSprite.getNameRef = EEex_Sprite_GetNameRef
 
 function EEex_Sprite_GetSpellState(sprite, spellStateID)
 	return sprite:getActiveStats():GetSpellState(spellStateID) ~= 0
@@ -604,6 +674,14 @@ function EEex_Sprite_GetCasterLevelForSpell(sprite, spellResRef, includeWildMage
 		end)
 end
 CGameSprite.getCasterLevelForSpell = EEex_Sprite_GetCasterLevelForSpell
+
+function EEex_Sprite_GetPersonalSpace(sprite)
+	local animation = sprite.m_animation
+	return EEex_BAnd(animation.m_overrides, 4) == 0
+		and animation.m_animation:virtual_GetPersonalSpace()
+		or animation.m_personalSpace
+end
+CGameSprite.getPersonalSpace = EEex_Sprite_GetPersonalSpace
 
 -- Iterator returns <number spellLevel, number knownSpellIndex, string spellResRef>
 function EEex_Sprite_Private_GetKnownSpellsIterator(sprite, minLevel, maxLevel, getKnownSpellFunc)
@@ -846,6 +924,29 @@ function EEex_Sprite_GetLauncher(sprite, curAbility)
 	)
 end
 CGameSprite.getLauncher = EEex_Sprite_GetLauncher
+
+function EEex_Sprite_DisplayTextRef(sprite, text, optionalArgs)
+
+	local id = sprite.m_id
+	local message = EEex_NewUD("CMessageDisplayTextRef")
+	message:Construct_Overload_Default()
+
+	if optionalArgs == nil then optionalArgs = {} end
+	message.m_targetId           = id
+	message.m_sourceId           = id
+	message.m_name               = sprite:getNameRef()
+	message.m_text               = text
+	message.m_nameColor          = optionalArgs["nameColor"] or CVidPalette.RANGE_COLORS:get(sprite.m_baseStats.m_colors:get(2))
+	message.m_textColor          = optionalArgs["textColor"] or 0xBED7D7
+	message.m_marker             = -1
+	message.m_moveToTop          = false
+	message.m_overHead           = optionalArgs["overHead"] or false
+	message.m_overrideDialogMode = false
+	message.m_bPlaySound         = optionalArgs["playSound"] or true
+
+	EngineGlobals.g_pBaldurChitin.m_cMessageHandler:AddMessage(message, false)
+end
+CGameSprite.displayTextRef = EEex_Sprite_DisplayTextRef
 
 ------------------------------
 -- / End Instance Functions --

@@ -69,7 +69,13 @@ EEex_MemoryManagerStructDefinitions["CSpell"] = {
 
 EEex_MemoryManagerStructDefinitions["CString"] = {
 	["constructors"] = {
-		["#default"] = CString.ConstructFromChars,
+		["#default"] = function(self, str)
+			if str == nil then
+				self:Construct()
+			else
+				self:ConstructFromChars(str)
+			end
+		end,
 	},
 	["destructor"] = CString.Destruct,
 }

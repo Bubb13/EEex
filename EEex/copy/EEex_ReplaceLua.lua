@@ -7,6 +7,7 @@
 	-- Initialize EEex.dll and replace the engine's bootstrap code to make it use the external Lua state --
 	-------------------------------------------------------------------------------------------------------
 
+	EEex_InitLuaBindings("LuaBindings-v2.6.6.0")
 	EEex_InitLuaBindings("EEex")
 
 	local override = function(funcName)

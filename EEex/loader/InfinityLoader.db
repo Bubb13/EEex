@@ -287,6 +287,10 @@ Pattern=48C7020000000083F9FF
 [CGameSprite::CheckQuickLists]
 Pattern=405557415441554156488D6C24D1
 
+[CGameSprite::Copy]
+Pattern=57415541564157488DAC2400FFFFFF
+Operations=ADD -11
+
 [CGameSprite::Damage]
 Pattern=488945F7488B4577
 Operations=ADD -35
@@ -339,6 +343,10 @@ Operations=ADD -4
 [CGameSprite::GetQuickButtons]
 Pattern=48895C242055565741544156488D6C24C9
 
+[CGameSprite::MakeGlobal]
+Pattern=555657498D6BA1
+Operations=ADD -3
+
 [CGameSprite::PlaySound]
 Pattern=535741554156488D6C24D1
 Operations=ADD -2
@@ -378,6 +386,9 @@ Operations=ADD -38
 Pattern=4239948118660000
 Operations=ADD -20
 
+[CInfGame::GetFamiliar]
+Pattern=405556574883EC40
+
 [CInfGame::OnPortraitLDblClick]
 Pattern=0F8DAE000000
 Operations=ADD -7
@@ -412,6 +423,10 @@ Operations=ADD -40
 [CMessageHandler::AddMessage]
 Pattern=4889742410574883EC20488B02
 Operations=ADD -5
+
+[CMessageStartVEF::Construct]
+Pattern=4833C448894424288B842490000000
+Operations=ADD -23
 
 [CObList::AddTail]
 Pattern=48895C2408574883EC20488BDA4533C0
@@ -463,6 +478,10 @@ Operations=ADD -6
 Pattern=4D39A708020000
 Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
 
+[CResHelper<CResCRE,1009>::SetResRef]
+Pattern=41B901000000488D55A8
+Operations=ADD 18, PUSH, READ DWORD, ADD, ADD 4
+
 [CRuleTables::MapCharacterSpecializationToSchool]
 Pattern=81FA000800007736
 
@@ -471,6 +490,9 @@ Pattern=48895C241855565741564157488D6C24D9
 
 [CSearchBitmap::GetCost]
 Pattern=48895C242056574154415541564883EC30
+
+[CSearchBitmap::GetNearestOpenSquare]
+Pattern=4C894C24204C89442418488954241053
 
 [CSound::Construct]
 ExeSwitch=1
@@ -516,6 +538,9 @@ Pattern=48895C240848895424105556574154415541564157488BEC4883EC70
 [CVariableHash::FindKey]
 Pattern=4155415641574883EC304C8BF9
 Operations=ADD -10
+
+[CVisualEffect::Load]
+Pattern=4055534154415541564157
 
 [CompareCResByTypeThenName]
 Pattern=488B09488B12
@@ -578,6 +603,10 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 [CVidMode::SCREENWIDTH]
 Pattern=0F5BD2660F6EC1
 Operations=ADD -26, PUSH, READ DWORD, ADD, ADD 4
+
+[CVidPalette::RANGE_COLORS]
+Pattern=488944246033ED
+Operations=ADD 37, PUSH, READ DWORD, ADD, ADD 4
 
 [SDL_GetWindowFlags]
 Pattern=75088B4140
@@ -924,6 +953,10 @@ Operations=ADD -30
 [CGameEffect::GetItemEffect]
 Pattern=488BF9B930000000
 Operations=ADD -10
+
+[CGameSprite::Construct(byte*,int,ushort,uint,ushort,ushort,uint,CPoint,ushort,int)]
+Pattern=488D6C24F94881EC00010000
+Operations=ADD -16
 
 [CProjectile::DecodeProjectile]
 Pattern=488BF24889542468

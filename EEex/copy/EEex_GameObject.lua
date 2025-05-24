@@ -178,10 +178,10 @@ CGameObject.getClass = EEex_GameObject_GetClass
 --  +------------------+-------------------+------------------------------------------------------------------------------------------------+
 --  | effectID         | ``<ERROR>``       | As per offset [+0x10] of .EFF v2.0.                                                            |
 --  +------------------+-------------------+------------------------------------------------------------------------------------------------+
---  | effectList       | ``0``             | If 1, adds the effect to the sprite's timed list. :raw-html:`<br/>`                            |
+--  | effectList       | ``1``             | If 1, adds the effect to the sprite's timed list. :raw-html:`<br/>`                            |
 --  |                  |                   | If 2, adds the effect to the sprite's equipped list.                                           |
 --  +------------------+-------------------+------------------------------------------------------------------------------------------------+
---  | immediateResolve | ``0``             | Determines whether the engine immediately applies the effect during the :raw-html:`<br/>`      |
+--  | immediateResolve | ``1``             | Determines whether the engine immediately applies the effect during the :raw-html:`<br/>`      |
 --  |                  |                   | function call, or the next time the sprite's effect list is processed.                         |
 --  +------------------+-------------------+------------------------------------------------------------------------------------------------+
 --  | m_casterLevel    | ``0``             | As per offset [+0xC8] of .EFF v2.0.                                                            |
@@ -322,6 +322,39 @@ function EEex_GameObject_ApplyEffect(object, args)
 	object:virtual_AddEffect(effect, args["effectList"] or 1, args["noSave"] or 0, args["immediateResolve"] or 1)
 end
 CGameObject.applyEffect = EEex_GameObject_ApplyEffect
+
+function EEex_Object_AddToArea(object, area, x, y, z, listType)
+	EEex_RunWithStackManager({
+		{ ["name"] = "point", ["struct"] = "CPoint", ["constructor"] = {["variant"] = "fromXY", ["args"] = {x, y}} }, },
+		function(manager)
+			object:virtual_AddToArea(area, manager:getUD("point"), z or 0, listType or 0)
+		end)
+end
+CGameObject.addToArea = EEex_Object_AddToArea
+
+function EEex_GameObject_AttachVisualEffect(object, resref, optionalArgs)
+
+	if optionalArgs == nil then optionalArgs = {} end
+	local targetX      = optionalArgs["targetX"]      or object.m_pos.x
+	local targetY      = optionalArgs["targetY"]      or object.m_pos.y
+	local startX       = optionalArgs["startX"]       or targetX
+	local startY       = optionalArgs["startY"]       or targetY
+	local height       = optionalArgs["height"]       or 32
+	local linkToObject = optionalArgs["linkToObject"] or true
+	local speed        = optionalArgs["speed"]        or -1
+
+	local objectId = EEex_RunWithStackManager({
+		{ ["name"] = "name",        ["struct"] = "CString", ["constructor"] = {                        ["args"] = {resref}          }, ["noDestruct"] = true },
+		{ ["name"] = "startPoint",  ["struct"] = "CPoint",  ["constructor"] = {["variant"] = "fromXY", ["args"] = {startX, startY}  }                        },
+		{ ["name"] = "targetPoint", ["struct"] = "CPoint",  ["constructor"] = {["variant"] = "fromXY", ["args"] = {targetX, targetY}}                        }, },
+		function(manager)
+			return CVisualEffect.Load(manager:getUD("name"), object.m_pArea, manager:getUD("startPoint"),
+				object.m_id, manager:getUD("targetPoint"), height, linkToObject, speed)
+		end)
+
+	return EEex_GameObject_Get(objectId)
+end
+CGameObject.attachVisualEffect = EEex_GameObject_AttachVisualEffect
 
 -----------
 -- Hooks --
