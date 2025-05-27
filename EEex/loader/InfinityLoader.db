@@ -491,8 +491,15 @@ Pattern=48895C241855565741564157488D6C24D9
 [CSearchBitmap::GetCost]
 Pattern=48895C242056574154415541564883EC30
 
+[CSearchBitmap::GetLOSCost]
+Pattern=48897C242041564883EC20498BF9
+Operations=ADD -15
+
 [CSearchBitmap::GetNearestOpenSquare]
 Pattern=4C894C24204C89442418488954241053
+
+[CSearchBitmap::GetStructureHeight]
+Pattern=33C06685D2
 
 [CSound::Construct]
 ExeSwitch=1
@@ -501,6 +508,10 @@ ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 [CSound::Destruct]
 Pattern=488B8D30110000
 Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
+
+[CSoundMixer::GetListenPosition]
+Pattern=418B817C280000
+Operations=ADD -3
 
 [CSpell::Construct]
 Pattern=488D4C2448BAEE030000
@@ -607,6 +618,10 @@ Operations=ADD -26, PUSH, READ DWORD, ADD, ADD 4
 [CVidPalette::RANGE_COLORS]
 Pattern=488944246033ED
 Operations=ADD 37, PUSH, READ DWORD, ADD, ADD 4
+
+[CVisibilityMap::m_SSToVSTable]
+Pattern=44884C24204C89442418488954241048894C2408
+Operations=ADD 170, PUSH, READ DWORD, ADD, ADD 4
 
 [SDL_GetWindowFlags]
 Pattern=75088B4140
@@ -1958,6 +1973,16 @@ Operations=ADD -5
 [Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall]
 Pattern=3CFF7484
 Operations=ADD 10
+
+[Hook-CVisibilityMap::AddCharacter()-FirstInstruction]
+Pattern=415441564157488BEC4883EC400FB64550
+Operations=ADD -12
+
+[Hook-CVisibilityMap::RemoveCharacter()-FirstInstruction]
+Pattern=48895C2408488974241855574156
+
+[Hook-CVisibilityMap::UpDate()-FirstInstruction]
+Pattern=48895C2408488974242055574154
 
 [Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
 Pattern=0F848D000000488B4808

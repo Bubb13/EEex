@@ -209,6 +209,28 @@
 		]]}
 	)
 
+	--[[
+	+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	| Increase the number of FoW-clearing creatures to the intended cap of 15                                                                                                                  |
+	+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] CVisibilityMap::Override_AddCharacter(pos: CPoint*, charId: int, pVisibleTerrainTable: byte*, visualRange: byte, pRemovalTable: int*) -> byte                               |
+	|   [EEex.dll] CVisibilityMap::Override_RemoveCharacter(ptOldPos: CPoint*, charId: int, pVisibleTerrainTable: byte*, visualRange: byte, pRemovalTable: int*, bRemoveCharId: byte)          |
+	|   [EEex.dll] CVisibilityMap::Override_UpDate(ptOldPos: CPoint*, ptNewPos: CPoint*, charId: int, pVisibleTerrainTable: byte*, visualRange: byte, pRemovalTable: int*, bForceUpdate: byte) |
+	+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CVisibilityMap::AddCharacter()-FirstInstruction"), {[[
+		jmp #L(CVisibilityMap::Override_AddCharacter)
+	]]})
+
+	EEex_JITAt(EEex_Label("Hook-CVisibilityMap::RemoveCharacter()-FirstInstruction"), {[[
+		jmp #L(CVisibilityMap::Override_RemoveCharacter)
+	]]})
+
+	EEex_JITAt(EEex_Label("Hook-CVisibilityMap::UpDate()-FirstInstruction"), {[[
+		jmp #L(CVisibilityMap::Override_UpDate)
+	]]})
+
 	EEex_EnableCodeProtection()
 
 end)()
