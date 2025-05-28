@@ -1851,6 +1851,10 @@ Operations=ADD -5
 Pattern=80BF38400000FF
 Operations=ADD 63
 
+[Hook-CGameSprite::SetVisualRange()-FirstInstruction]
+Pattern=488974242041564883EC40
+Operations=ADD -5
+
 [Hook-CGameSprite::Spell()-ApplyCastingEffect()]
 Pattern=E9C40F0000
 Operations=ADD 34
@@ -1977,6 +1981,16 @@ Operations=ADD 10
 [Hook-CVisibilityMap::AddCharacter()-FirstInstruction]
 Pattern=415441564157488BEC4883EC400FB64550
 Operations=ADD -12
+
+[Hook-CVisibilityMap::Construct()-FirstInstruction]
+Pattern=488BC4535556574154
+
+[Hook-CVisibilityMap::Destruct()-FirstInstruction]
+Pattern=4883EC20488B4168
+Operations=ADD -11
+
+[Hook-CVisibilityMap::IsCharacterIdOnMap()-FirstInstruction]
+Pattern=33C04C0FBFC0
 
 [Hook-CVisibilityMap::RemoveCharacter()-FirstInstruction]
 Pattern=48895C2408488974241855574156

@@ -210,17 +210,29 @@
 	)
 
 	--[[
-	+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-	| Increase the number of FoW-clearing creatures to the intended cap of 15                                                                                                                  |
-	+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] CVisibilityMap::Override_AddCharacter(pos: CPoint*, charId: int, pVisibleTerrainTable: byte*, visualRange: byte, pRemovalTable: int*) -> byte                               |
-	|   [EEex.dll] CVisibilityMap::Override_RemoveCharacter(ptOldPos: CPoint*, charId: int, pVisibleTerrainTable: byte*, visualRange: byte, pRemovalTable: int*, bRemoveCharId: byte)          |
-	|   [EEex.dll] CVisibilityMap::Override_UpDate(ptOldPos: CPoint*, ptNewPos: CPoint*, charId: int, pVisibleTerrainTable: byte*, visualRange: byte, pRemovalTable: int*, bForceUpdate: byte) |
-	+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	| Increase the cap of FoW-clearing creatures to 32,768                                                                                                                                  |
+	+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] CGameSprite::Override_SetVisualRange(nVisRange: short) -> short                                                                                                          |
+	|   [EEex.dll] CVisibilityMap::Override_AddCharacter(pPos: CPoint*, nCharId: int, pVisibleTerrainTable: byte*, nVisRange: byte, pRemovalTable: int*) -> byte                            |
+	|   [EEex.dll] CVisibilityMap::Override_IsCharacterIdOnMap(nCharId: int) -> int                                                                                                         |
+	|   [EEex.dll] CVisibilityMap::Override_RemoveCharacter(pOldPos: CPoint*, nCharId: int, pVisibleTerrainTable: byte*, nVisRange: byte, pRemovalTable: int*, bRemoveCharId: byte)         |
+	|   [EEex.dll] CVisibilityMap::Override_UpDate(pOldPos: CPoint*, pNewPos: CPoint*, nCharId: int, pVisibleTerrainTable: byte*, nVisRange: byte, pRemovalTable: int*, bForceUpdate: byte) |
+	|   [EEex.dll] EEex::VisibilityMap_Hook_OnConstruct(pThis: CVisibilityMap*)                                                                                                             |
+	|   [EEex.dll] EEex::VisibilityMap_Hook_OnDestruct(pThis: CVisibilityMap*)                                                                                                              |
+	+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CGameSprite::SetVisualRange()-FirstInstruction"), {[[
+		jmp #L(CGameSprite::Override_SetVisualRange)
+	]]})
 
 	EEex_JITAt(EEex_Label("Hook-CVisibilityMap::AddCharacter()-FirstInstruction"), {[[
 		jmp #L(CVisibilityMap::Override_AddCharacter)
+	]]})
+
+	EEex_JITAt(EEex_Label("Hook-CVisibilityMap::IsCharacterIdOnMap()-FirstInstruction"), {[[
+		jmp #L(CVisibilityMap::Override_IsCharacterIdOnMap)
 	]]})
 
 	EEex_JITAt(EEex_Label("Hook-CVisibilityMap::RemoveCharacter()-FirstInstruction"), {[[
@@ -230,6 +242,42 @@
 	EEex_JITAt(EEex_Label("Hook-CVisibilityMap::UpDate()-FirstInstruction"), {[[
 		jmp #L(CVisibilityMap::Override_UpDate)
 	]]})
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CVisibilityMap::Construct()-FirstInstruction"), 0, 5, 5, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+
+																 ; rcx already CVisibilityMap
+			call #L(EEex::VisibilityMap_Hook_OnConstruct)
+
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CVisibilityMap::Destruct()-FirstInstruction"), 0, 5, 5, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+
+																 ; rcx already CVisibilityMap
+			call #L(EEex::VisibilityMap_Hook_OnDestruct)
+
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
 
 	EEex_EnableCodeProtection()
 
