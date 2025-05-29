@@ -261,6 +261,10 @@ Pattern=6644894C24204C89442418
 [CGameArea::OnActionButtonClickGround]
 Pattern=48895C2410565741564883EC40
 
+[CGameArea::ShowMonstersInArea]
+Pattern=4881EC90000000488BDA
+Operations=ADD -6
+
 [CGameContainer::SetDrawPoly]
 Pattern=663B91A0090000
 Operations=ADD -16
@@ -1059,6 +1063,10 @@ Operations=ADD -15
 ;-- Engine VFTables --
 ;---------------------
 
+[CMessageAddClairvoyance::VFTable]
+Pattern=74228B4E48
+Operations=ADD 19, PUSH, READ DWORD, ADD, ADD 4
+
 [CMessageAddEffect::VFTable]
 Pattern=488B49104885C97412
 Operations=ADD -12, PUSH, READ DWORD, ADD, ADD 4
@@ -1624,6 +1632,10 @@ Operations=ADD -5
 
 [Hook-CGameAIBase::SetTrigger()-FirstInstruction]
 Pattern=48895C2418574883EC20488BD9
+
+[Hook-CGameArea::AddClairvoyanceObject(CGameSprite*,CPoint,int)-FirstInstruction]
+Pattern=41564883EC30488BF2
+Operations=ADD -12
 
 [Hook-CGameContainer::Render()-B3EmptyContainer]
 Pattern=85C00F8893000000
