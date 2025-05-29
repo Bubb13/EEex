@@ -213,6 +213,7 @@
 	+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 	| Increase the cap of FoW-clearing creatures to 32,768                                                                                                                                  |
 	+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] CGameSprite::Override_CheckIfVisible()                                                                                                                                   |
 	|   [EEex.dll] CGameSprite::Override_SetVisualRange(nVisRange: short) -> short                                                                                                          |
 	|   [EEex.dll] CVisibilityMap::Override_AddCharacter(pPos: CPoint*, nCharId: int, pVisibleTerrainTable: byte*, nVisRange: byte, pRemovalTable: int*) -> byte                            |
 	|   [EEex.dll] CVisibilityMap::Override_IsCharacterIdOnMap(nCharId: int) -> int                                                                                                         |
@@ -222,6 +223,10 @@
 	|   [EEex.dll] EEex::VisibilityMap_Hook_OnDestruct(pThis: CVisibilityMap*)                                                                                                              |
 	+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CGameSprite::CheckIfVisible()-FirstInstruction"), {[[
+		jmp #L(CGameSprite::Override_CheckIfVisible)
+	]]})
 
 	EEex_JITAt(EEex_Label("Hook-CGameSprite::SetVisualRange()-FirstInstruction"), {[[
 		jmp #L(CGameSprite::Override_SetVisualRange)

@@ -1075,6 +1075,10 @@ Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
 Pattern=8B4B48498B06
 Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
 
+[CMessageSetTrigger::VFTable]
+Pattern=488BFA44894908
+Operations=ADD -7, PUSH, READ DWORD, ADD, ADD 4
+
 [CMessageUpdateReaction::VFTable]
 Pattern=741C8B434889420C
 Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
@@ -1743,6 +1747,10 @@ Operations=ADD 7
 [Hook-CGameSprite::CheckCombatStats()-GetProfBonuses-SaveItem]
 Pattern=48894DEF48894DE7
 Operations=ADD 17
+
+[Hook-CGameSprite::CheckIfVisible()-FirstInstruction]
+Pattern=B8B8110000
+Operations=ADD -30
 
 [Hook-CGameSprite::CheckQuickLists()-CallListeners]
 Pattern=405557415441554156488D6C24D1
