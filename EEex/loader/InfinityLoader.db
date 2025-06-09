@@ -1839,9 +1839,17 @@ Operations=ADD 29
 Pattern=837D8C00
 Operations=ADD 34
 
+[Hook-CGameSprite::ProcessEffectList()-AfterRandCalls]
+Pattern=8B564825FF7F0000
+Operations=ADD 26
+
 [Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
 Pattern=488D8660050000660F1F440000
 Operations=ADD 37
+
+[Hook-CGameSprite::ProcessEffectList()-FirstRandCall]
+Pattern=8B81A03F00008986544E0000
+Operations=ADD 12
 
 [Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
 Pattern=4C8D8F800B0000

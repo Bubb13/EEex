@@ -289,6 +289,41 @@
 		]]}
 	)
 
+	--[[
+	+--------------------------------------------------------------------------------------------------------+
+	| Fix "Auto-Pause - Spell Cast" causing effect probabilities to reroll multiple times for a single spell |
+	+--------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_ShouldProcessEffectListSkipRolls() -> bool                                 |
+	|       return:                                                                                          |
+	|           -> false - Don't alter engine behavior                                                       |
+	|           -> true  - Skip rerolling effect probabilities                                               |
+	+--------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-FirstRandCall"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			call #L(EEex::Fix_Hook_ShouldProcessEffectListSkipRolls)
+			test al, al
+			jz #L(return)
+
+			; Manually reimplement instructions skipped by the following jmp
+			mov edx, dword ptr ds:[rsi+0x48]
+			mov edi, r12d
+			#MANUAL_HOOK_EXIT(1)
+			jmp #L(Hook-CGameSprite::ProcessEffectList()-AfterRandCalls)
+		]]}
+	)
+	-- Manually define the ignored registers for the unusual `jmp` above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameSprite::ProcessEffectList()-FirstRandCall"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.RDI, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+		EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+	})
+
 	EEex_EnableCodeProtection()
 
 end)()
