@@ -379,6 +379,38 @@
 
 	--[[
 	+----------------------------------------------------------------------------------------------------------+
+	| Opcode #319 - Add SPLPROT modes                                                                          |
+	+----------------------------------------------------------------------------------------------------------+
+	|   power == 2 -> Not usable by (SPLPROT)                                                                  |
+	|   power == 3 -> Usable by (SPLPROT)                                                                      |
+	|       param1 -> SPLPROT Value                                                                            |
+	|       param2 -> SPLPROT Row                                                                              |
+	+----------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] CGameEffectUsability::Override_CheckUsability(pSprite: CGameSprite*) -> int                 |
+	|       return:                                                                                            |
+	|           ->  0 - Block the sprite from using the item                                                   |
+	|           -> !0 - Allow the sprite to use the item                                                       |
+	+----------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CGameEffectUsability::CheckUsability()-FirstInstruction"), {[[
+		jmp #L(CGameEffectUsability::Override_CheckUsability)
+	]]})
+
+	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CItem::GetUsabilityText()-IsOp319InvertedJmp"), 4, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+														; rcx is already pEffect
+			call #L(EEex::Opcode_Hook_Op319_IsInverted)
+			test al, al
+		]]}
+	)
+
+	--[[
+	+----------------------------------------------------------------------------------------------------------+
 	| Opcode #326                                                                                              |
 	+----------------------------------------------------------------------------------------------------------+
 	|   (special & 1) != 0 -> Flip what SPLPROT.2DA considers the "source" and "target" sprites                |

@@ -486,6 +486,10 @@ Operations=ADD -16, PUSH, READ DWORD, ADD, ADD 4
 Pattern=41B901000000488D55A8
 Operations=ADD 18, PUSH, READ DWORD, ADD, ADD 4
 
+[CRuleTables::IsProtectedFromSpell]
+Pattern=5556574155415641574881EC80000000
+Operations=ADD -2
+
 [CRuleTables::MapCharacterSpecializationToSchool]
 Pattern=81FA000800007736
 
@@ -1736,6 +1740,10 @@ Pattern=48895C24185556574154415541564157488D6C24D94881EC00010000
 [Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call]
 Pattern=FF50088B9350010000
 
+[Hook-CGameEffectUsability::CheckUsability()-FirstInstruction]
+Pattern=4889442448488B02488BF9
+Operations=ADD -20
+
 [Hook-CGameObjectArray::Clean()-DestructJmp]
 Pattern=6666660F1F840000000000480FBFC2
 Operations=ADD 32
@@ -1985,6 +1993,10 @@ Operations=ADD 72
 [Hook-CInfGame::Unmarshal()-AfterGlobalVariablesUnmarshalled]
 Pattern=413B7C2434
 Operations=ADD 14
+
+[Hook-CItem::GetUsabilityText()-IsOp319InvertedJmp]
+Pattern=4183BC2488000000000F84A4000000
+Operations=ADD 55
 
 [Hook-CMessageSetLastObject::Run()-FirstInstruction]
 Pattern=84C00F855E020000
