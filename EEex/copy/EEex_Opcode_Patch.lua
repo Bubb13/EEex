@@ -391,6 +391,11 @@
 	|           ->  0 - Block the sprite from using the item                                                   |
 	|           -> !0 - Allow the sprite to use the item                                                       |
 	+----------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op319_IsInverted(pEffect: CGameEffect*) -> bool                           |
+	|       return:                                                                                            |
+	|           -> false - op319 is in a "Usable by" mode                                                      |
+	|           -> true  - op319 is in a "Not usable by" mode                                                  |
+	+----------------------------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_JITAt(EEex_Label("Hook-CGameEffectUsability::CheckUsability()-FirstInstruction"), {[[
