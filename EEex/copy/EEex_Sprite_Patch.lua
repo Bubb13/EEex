@@ -771,6 +771,7 @@
 	|                  curWeaponIn: CItem*, pLauncher: CItem*, curAttackNum: int, criticalDamage: int,            |
 	|                  type: CAIObjectType*, facing: short, myFacing: short, target: CGameSprite*, lastSwing: int |
 	|              )                                                                                              |
+	|   [JIT] CGameSprite_Hit_Roll                                                                                |
 	|   [Lua] EEex_Sprite_LuaHook_AlterBaseWeaponDamage(context: table)                                           |
 	+-------------------------------------------------------------------------------------------------------------+
 	--]]
@@ -787,6 +788,16 @@
 			]]}
 		)
 	end
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::Hit()-FormatRollCall"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			mov rax, ]], EEex_Label("EEex::CGameSprite_Hit_Roll"), [[ #ENDL
+			mov byte ptr ds:[rax], r8b
+		]]}
+	)
 
 	callAlterBaseWeaponDamageHook(EEex_Label("Hook-CGameSprite::Swing()-CGameSprite::Damage()-1"))
 	callAlterBaseWeaponDamageHook(EEex_Label("Hook-CGameSprite::Swing()-CGameSprite::Damage()-2"))

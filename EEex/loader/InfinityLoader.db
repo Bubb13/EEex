@@ -1823,6 +1823,10 @@ Operations=ADD 7
 Pattern=418BF1488D4DD8
 Operations=ADD 10
 
+[Hook-CGameSprite::Hit()-FormatRollCall]
+Pattern=488D4DD08D7801
+Operations=ADD 18
+
 [Hook-CGameSprite::Hit()-MeleeingWithRangedPenalty]
 Pattern=2BF90FAFC0
 Operations=ADD 9
