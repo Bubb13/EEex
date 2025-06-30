@@ -32,7 +32,7 @@ B3EffectMenu_Options = {
 }
 
 EEex_GameState_AddInitializedListener(function()
-	EEex_Options_AddTab("B3EffectMenu_Options", "Effect Menu", B3EffectMenu_Options)
+	EEex_Options_AddTab("Effect Menu", B3EffectMenu_Options)
 end)
 
 -------------

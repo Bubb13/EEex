@@ -1960,6 +1960,7 @@ EEex_Options_Private_CapturedEdit            = nil -- uiItem
 EEex_Options_Private_MainInset               = nil -- EEex_Options_Private_LayoutInset
 EEex_Options_Private_MainVerticalTabArea     = nil -- EEex_Options_Private_LayoutVerticalTabArea
 EEex_Options_Private_OptionsMap              = {}
+EEex_Options_Private_TabInsertIndex          = 1
 EEex_Options_Private_Tabs                    = {}
 EEex_Options_Private_TemplateInstancesByName = {}
 
@@ -2141,9 +2142,9 @@ function EEex_Options_Private_BuildLayout()
 			EEex_Options_Private_LayoutFixed.new({ ["height"] = 7 }),
 			EEex_Options_Private_LayoutSeparator.new({ ["menuName"] = "EEex_Options", ["height"] = 2 }),
 			EEex_Options_Private_MainVerticalTabArea,
-		}})
-		:inset({ ["insetLeft"] = 10, ["insetTop"] = 10, ["insetRight"] = 10, ["insetBottom"] = 10 }
-	)
+		},
+	})
+	:inset({ ["insetLeft"] = 10, ["insetTop"] = 10, ["insetRight"] = 10, ["insetBottom"] = 10 })
 end
 
 function EEex_Options_Private_TopRightAlign(itemName, x, y)
@@ -2194,7 +2195,9 @@ function EEex_Options_Close()
 	EEex_Options_Private_MainInset:hide()
 end
 
-function EEex_Options_AddTab(menuName, text, options)
+function EEex_Options_AddTab(text, options)
+
+	local menuName = "EEex_Options_Tab" .. EEex_Options_Private_TabInsertIndex
 
 	EEex_Menu_Eval([[
 		menu
@@ -2208,15 +2211,16 @@ function EEex_Options_AddTab(menuName, text, options)
 		}
 	]])
 
-	table.insert(EEex_Options_Private_Tabs, {
+	EEex_Options_Private_Tabs[EEex_Options_Private_TabInsertIndex] = {
 		["name"] = text,
 		["layout"] = EEex_Options_Private_LayoutOptionsPanel.new({
 			["menuName"] = menuName,
 			["options"] = options,
 		})
 		:inset({ ["insetTop"] = 5, ["insetRight"] = 5, ["insetBottom"] = 5 }),
-	})
+	}
 
+	EEex_Options_Private_TabInsertIndex = EEex_Options_Private_TabInsertIndex + 1
 	EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(t) return t.name end)
 end
 
