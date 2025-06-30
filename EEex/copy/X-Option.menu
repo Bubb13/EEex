@@ -1,0 +1,108 @@
+
+menu
+{
+	name "EEex_Options"
+	ignoreEsc
+	modal
+
+	-- The engine won't change the cursor type over templates if there isn't at
+	-- least one "normal" element that occupies an xy of equal or greater value.
+	label
+	{
+		area 0 0 2147483647 2147483647
+		enabled "EEex_Options_Private_Tick()"
+	}
+
+	label
+	{
+		name "EEex_Options_Background"
+		rectangle 0
+	}
+
+	button
+	{
+		name "EEex_Options_Exit"
+		area 0 0 201 42
+		on escape
+		action "EEex_Options_Close()"
+		bam "GUIOSTLM"
+		text "Exit"
+		text style "button"
+	}
+
+	list
+	{
+		column
+		{
+			width 100
+			label
+			{
+				area 0 0 -1 36
+				text lua "EEex_Options_Private_Tabs[rowNumber].name"
+				text style "normal"
+				text align left center
+			}
+		}
+
+		name "EEex_Options_Sidebar"
+		action "EEex_Options_Private_MainVerticalTabArea:_onTabSelected(EEex_Options_Private_CurrentTab)"
+		actionAlt "EEex_Options_Private_MainVerticalTabArea:_onTabSelected(EEex_Options_Private_CurrentTab)"
+		rowheight 36
+		scrollbar "GUISCRC"
+		table "EEex_Options_Private_Tabs"
+		var "EEex_Options_Private_CurrentTab"
+	}
+}
+
+menu
+{
+	name "EEex_Options_Templates"
+
+	template
+	{
+		edit
+		{
+			enabled true
+			action "return EEex_Options_Private_TEMPLATE_Edit_Action()"
+			fill 112 111 111 64
+			maxlines 1
+			text style "edit"
+		}
+		name "EEex_Options_TEMPLATE_Edit"
+	}
+
+	template
+	{
+		label
+		{
+			enabled true
+			text lua "EEex_Options_Private_TEMPLATE_Text_Text()"
+			text style "normal"
+			text useFontZoom 0
+		}
+		name "EEex_Options_TEMPLATE_Text"
+	}
+
+	template
+	{
+		button
+		{
+			enabled true
+			action "EEex_Options_Private_TEMPLATE_Toggle_Action()"
+			bam "ROUNDBUT"
+			frame lua "EEex_Options_Private_TEMPLATE_Toggle_Frame()"
+			scaleToClip
+		}
+		name "EEex_Options_TEMPLATE_Toggle"
+	}
+
+	template
+	{
+		label
+		{
+			enabled true
+			fill lua "EEex_Options_Private_TEMPLATE_Separator_Fill()"
+		}
+		name "EEex_Options_TEMPLATE_Separator"
+	}
+}

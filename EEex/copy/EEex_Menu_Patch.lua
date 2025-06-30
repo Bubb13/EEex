@@ -180,7 +180,7 @@
 
 	--[[
 	+---------------------------------------------------------------------------------+
-	| Prevent EEex_LoadMenuFile() from causing a crash when using UI edit mode's F11  |
+	| Prevent EEex_Menu_LoadFile() from causing a crash when using UI edit mode's F11 |
 	+---------------------------------------------------------------------------------+
 	|   Menus injected by EEex do not exist in UI.MENU, and yet the engine attempts   |
 	|   to write their items back to UI.MENU when F11 is toggled off. This hook       |
@@ -394,6 +394,36 @@
 		]]})
 	)
 
+	--[[
+	+---------------------------------------------------------------------+
+	| Save `instanceId` before calling the action functions of edit items |
+	+---------------------------------------------------------------------+
+	|   [Lua] EEex_Menu_Hook_OnBeforeEditAction(item: uiItem*)            |
+	+---------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-continueEditCapture()-ActionHandlerCall"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(48)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			]]},
+			EEex_GenLuaCall("EEex_Menu_Hook_OnBeforeEditAction", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi", {rspOffset}, "#ENDL"}, "uiItem" end,
+				},
+			}),
+			{[[
+				call_error:
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
 
 	EEex_EnableCodeProtection()
 

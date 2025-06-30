@@ -1029,9 +1029,17 @@ Operations=ADD -31, PUSH, READ DWORD, ADD, ADD 4
 Pattern=4889742418574883EC20498BF1498BE8
 Operations=ADD 32, PUSH, READ DWORD, ADD, ADD 4
 
+[dimmDump]
+Pattern=745853
+Operations=ADD -3
+
 [dimmGetResObject]
 Pattern=4C892F488D55E7
 Operations=ADD -20, PUSH, READ DWORD, ADD, ADD 4
+
+[dimmServiceFromMemory]
+Pattern=41564883EC204963E8
+Operations=ADD -20
 
 [drawSlice]
 Pattern=488945F0448B4904
@@ -2073,6 +2081,10 @@ Operations=ADD 63
 [Hook-chReadIniFile()-luaL_loadfilexptr()]
 Pattern=33F685C07524
 Operations=ADD -5
+
+[Hook-continueEditCapture()-ActionHandlerCall]
+Pattern=418B063D03030000
+Operations=ADD 51
 
 [Hook-dimmInit()-uiLoadFunctions()]
 Pattern=488B18EB03

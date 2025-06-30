@@ -85,10 +85,15 @@ function EEex_Menu_GetUIItemArea(item)
 end
 uiItem.getArea = EEex_Menu_GetUIItemArea
 
-function EEex_Menu_GetItemArea(menuItemName)
+function EEex_Menu_GetItem(menuItemName)
 	local lightItem = nameToItem[menuItemName]
 	if lightItem == nil then return end
-	local item = EEex_PtrToUD(EEex_LightUDToPtr(lightItem), "uiItem")
+	return EEex_PtrToUD(EEex_LightUDToPtr(lightItem), "uiItem")
+end
+
+function EEex_Menu_GetItemArea(menuItemName)
+	local item = EEex_Menu_GetItem(menuItemName)
+	if item == nil then return end
 	return item:getArea()
 end
 
@@ -167,16 +172,37 @@ function EEex_Menu_SetItemVariant(variantRefPtr, myVal)
 end
 uiVariant.setValue = EEex_Menu_SetItemVariant
 
-function EEex_Menu_LoadFile(resref)
+function EEex_Menu_Private_LoadRes(res)
 	EngineGlobals.saveMenuStack()
 	EEex_MemsetUD(EngineGlobals.menuStack, 0x0, EngineGlobals.menuStack.sizeof)
 	EngineGlobals.nextStackMenuIdx = 0
 	local menuSrc = EngineGlobals.menuSrc
 	local menuLength = EngineGlobals.menuLength
-	EngineGlobals.uiLoadMenu(EEex_Resource_Fetch(resref, "MENU"))
+	EngineGlobals.uiLoadMenu(res)
 	EngineGlobals.menuSrc = menuSrc
 	EngineGlobals.menuLength = menuLength
 	EngineGlobals.restoreMenuStack()
+end
+
+function EEex_Menu_LoadFile(resref)
+	EEex_Menu_Private_LoadRes(EEex_Resource_Fetch(resref, "MENU"))
+end
+
+function EEex_Menu_Eval(str)
+
+	local res
+	EEex_RunWithStack(CResRef.sizeof, function(stackMem)
+		local resrefUD = EEex_PtrToUD(stackMem, "CResRef")
+		resrefUD:set("X-TEMP")
+		res = EngineGlobals.dimmGetResObject(resrefUD, EEex_Resource_ExtToType("MENU"), true)
+	end)
+
+	EEex_RunWithString(str, function(strMem)
+		EngineGlobals.dimmServiceFromMemory(res, EEex_PtrToUD(strMem, "VariableArray<char>"), #str + 1, false, true)
+	end)
+
+	EEex_Menu_Private_LoadRes(res)
+	EngineGlobals.dimmDump(res)
 end
 
 -- Exactly the same as Infinity_InstanceAnimation(), but allows said instance to be "injected" into the menu specified.
@@ -191,6 +217,15 @@ function EEex_Menu_DestroyInjectedTemplate(menuName, templateName, instanceId)
 	EEex_Menu_HookGlobal_TemplateMenuOverride = EEex_Menu_Find(menuName)
 	Infinity_DestroyAnimation(templateName, instanceId)
 	EEex_Menu_HookGlobal_TemplateMenuOverride = nil
+end
+
+-- A saner Infinity_InstanceAnimation()
+function EEex_Menu_InjectTemplateInstance(menuName, templateName, instanceId, x, y, w, h)
+	return EEex.InjectTemplateInstance(menuName, templateName, instanceId, x, y, w, h)
+end
+
+function EEex_Menu_DestroyAllTemplates(menuName)
+	EEex.DestroyAllTemplates(menuName)
 end
 
 function EEex_Menu_StoreTemplateInstance(menuName, templateName, instanceID, storeIntoName)
@@ -325,6 +360,10 @@ end
 function EEex_Menu_Hook_CheckForceScrollbarRender(item)
 	local itemName = item.name:get()
 	return itemName ~= "" and EEex_Menu_ScrollbarForced[itemName]
+end
+
+function EEex_Menu_Hook_OnBeforeEditAction(item)
+	instanceId = item.instanceId
 end
 
 function EEex_Menu_Hook_OnBeforeUIItemRender(item)

@@ -1,10 +1,39 @@
 
+--------------------
+-- Manual Options --
+--------------------
+
+B3EffectMenu_Key = EEex_Key_GetFromName("Left Shift")
+
 -------------
 -- Options --
 -------------
 
-B3EffectMenu_Key = EEex_Key_GetFromName("Left Shift")
-B3EffectMenu_RowCount = 4
+B3EffectMenu_RowCount = nil
+
+B3EffectMenu_Options = {
+	{
+		EEex_Options_Option.new({
+			["id"]      = "B3EffectMenu_RowCount",
+			["name"]    = "Row Count",
+			["default"] = 4,
+			["type"] = EEex_Options_EditType.new({
+				["maxCharacters"] = 2,
+				["number"]        = true,
+			}),
+			["accessor"] = EEex_Options_ClampedAccessor.new({
+				["accessor"] = EEex_Options_GlobalAccessor.new({ ["name"] = "B3EffectMenu_RowCount" }),
+				["min"]      = 1,
+				["max"]      = 99,
+			}),
+			["storage"] = EEex_Options_IntegerINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
+		}),
+	},
+}
+
+EEex_GameState_AddInitializedListener(function()
+	EEex_Options_AddTab("B3EffectMenu_Options", "Effect Menu", B3EffectMenu_Options)
+end)
 
 -------------
 -- Globals --
@@ -21,13 +50,9 @@ EEex_Sprite_Hook_CheckSuppressTooltip = function()
 	return B3EffectMenu_Menu_Enabled or B3EffectMenu_OldIsActorTooltipDisabled()
 end
 
-function B3EffectMenu_LoadMenu()
+EEex_Menu_AddMainFileLoadedListener(function()
 
 	EEex_Menu_LoadFile("B3EffMen")
-
-	local rowTotal = 35 * B3EffectMenu_RowCount
-	Infinity_SetArea("B3EffectMenu_Menu_Background", nil, nil, nil, rowTotal + 20)
-	Infinity_SetArea("B3EffectMenu_Menu_List", nil, nil, nil, rowTotal)
 
 	local actionbarMenu = EEex_Menu_Find("WORLD_ACTIONBAR")
 
@@ -43,8 +68,7 @@ function B3EffectMenu_LoadMenu()
 		B3EffectMenu_Close()
 		return oldActionbarOnClose()
 	end)
-end
-EEex_Menu_AddMainFileLoadedListener(B3EffectMenu_LoadMenu)
+end)
 
 ----------
 -- Main --
@@ -67,7 +91,15 @@ function B3EffectMenu_Close()
 	B3EffectMenu_Init()
 end
 
+function B3EffectMenu_DoLayout()
+	local rowTotal = 35 * B3EffectMenu_RowCount
+	Infinity_SetArea("B3EffectMenu_Menu_Background", nil, nil, nil, rowTotal + 20)
+	Infinity_SetArea("B3EffectMenu_Menu_List", nil, nil, nil, rowTotal)
+end
+
 function B3EffectMenu_LaunchInfo()
+
+	B3EffectMenu_DoLayout()
 
 	B3EffectMenu_Menu_List_Table = {}
 	local sprite = EEex_GameObject_Get(B3EffectMenu_CurrentActorID)

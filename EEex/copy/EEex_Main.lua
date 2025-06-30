@@ -52,6 +52,7 @@ EEex_Main_Private_NormalStartupFiles = {
 	"EEex_Variable",
 	"EEex_Marshal",
 	"EEex_Debug",
+	"EEex_Options",
 }
 
 EEex_Main_Private_MinimalStutterStartupFiles = {
