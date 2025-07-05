@@ -455,7 +455,7 @@ function EEex_Options_Private_LayoutHBox:calculateLayout(left, top, right, botto
 
 	self._layoutLeft   = left
 	self._layoutTop    = top
-	self._layoutRight  = right
+	self._layoutRight  = curLeft
 	self._layoutBottom = newLayoutBottom
 	self:_calculateDerivedLayout()
 
@@ -699,7 +699,7 @@ end
 
 function EEex_Options_Private_LayoutTemplate:_onParentLayoutCalculated(left, top, right, bottom)
 	if self.width == nil then self._layoutRight = right end
-	if self.height == nil then self._layoutBottom = right end
+	if self.height == nil then self._layoutBottom = bottom end
 	self:_calculateDerivedLayout()
 end
 
@@ -760,6 +760,165 @@ end
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_Private_LayoutSeparator ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Private_LayoutKeybindBackground ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_Private_LayoutKeybindBackground = {}
+EEex_Options_Private_LayoutKeybindBackground.__index = EEex_Options_Private_LayoutKeybindBackground
+setmetatable(EEex_Options_Private_LayoutKeybindBackground, EEex_Options_Private_LayoutObject)
+--print("EEex_Options_Private_LayoutKeybindBackground: "..tostring(EEex_Options_Private_LayoutKeybindBackground))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_Private_LayoutKeybindBackground.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_Private_LayoutKeybindBackground)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_Private_LayoutKeybindBackground:_init()
+	EEex_Utility_CallSuper(EEex_Options_Private_LayoutKeybindBackground, "_init", self)
+	if self.menuName          == nil then EEex_Error("menuName required")         end
+	if self.option            == nil then EEex_Error("option required")           end
+	if self.startColor        == nil then self.startColor        = 0x406F6F70     end
+	if self.endColor          == nil then self.endColor          = 0x40FFFFFF     end
+	if self.pulseMilliseconds == nil then self.pulseMilliseconds = 500            end
+	if self.layoutCallback    == nil then self.layoutCallback    = function() end end
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_Private_LayoutKeybindBackground:calculateLayout(left, top, right, bottom)
+	local width, height = EEex_Options_Private_GetMaxTextBounds(styles.normal.font, styles.normal.point, 10)
+	width  = width  + 3 + 3 -- Hardcoded pads (X-Option.menu)
+	height = height + 3 + 3 -- Hardcoded pads (X-Option.menu)
+	self._layoutLeft   = left
+	self._layoutTop    = top
+	self._layoutRight  = self._layoutLeft + width
+	self._layoutBottom = self._layoutTop  + height
+	self:_calculateDerivedLayout()
+end
+
+function EEex_Options_Private_LayoutKeybindBackground:doLayout()
+
+	local instanceData = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_KeybindBackground", self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+
+	instanceData.option = self.option
+	instanceData.startColor = self.startColor
+	instanceData.endColor = self.endColor
+	instanceData.pulseMilliseconds = self.pulseMilliseconds
+	instanceData.text = ""
+	EEex_Options_Private_KeybindResetPulse(instanceData)
+
+	local value = self.option:get()
+	EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
+
+	self.layoutCallback(instanceData)
+end
+
+function EEex_Options_TEMPLATE_KeybindBackground_Action()
+	EEex_Options_Private_KeybindPendingFocusedInstance = instanceId
+end
+
+function EEex_Options_TEMPLATE_KeybindBackground_Fill()
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][instanceId]
+	return instanceData.currentColor
+end
+
+function EEex_Options_TEMPLATE_KeybindBackground_Text()
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][instanceId]
+	return instanceData.text
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Private_LayoutKeybindBackground ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Private_LayoutKeybindButton ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_Private_LayoutKeybindButton = {}
+EEex_Options_Private_LayoutKeybindButton.__index = EEex_Options_Private_LayoutKeybindButton
+setmetatable(EEex_Options_Private_LayoutKeybindButton, EEex_Options_Private_LayoutTemplate)
+--print("EEex_Options_Private_LayoutKeybindButton: "..tostring(EEex_Options_Private_LayoutKeybindButton))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_Private_LayoutKeybindButton.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_Private_LayoutKeybindButton)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_Private_LayoutKeybindButton:_init()
+	-- EEex_Options_Private_LayoutTemplate
+	--   self.menuName
+	--   self.width
+	--   self.height
+	EEex_Utility_CallSuper(EEex_Options_Private_LayoutKeybindButton, "_init", self)
+	if self.layoutCallback == nil then self.layoutCallback = function() end end
+	-- Derived
+	--   self._pairedBackgroundInstance
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_Private_LayoutKeybindButton:doLayout()
+	local instanceData = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_KeybindButton", self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+	self.layoutCallback(instanceData)
+end
+
+function EEex_Options_TEMPLATE_KeybindButton_Action()
+
+	local buttonInstanceData     = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindButton"][instanceId]
+	local backgroundInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][buttonInstanceData._pairedBackgroundInstance]
+
+	if instanceId == EEex_Options_Private_KeybindFocusedInstance then
+		EEex_Options_Private_KeybindEndFocus(backgroundInstanceData)
+	else
+		local option = backgroundInstanceData.option
+		local default = option.default
+		option:set(default)
+		EEex_Options_Private_KeybindUpdateText(backgroundInstanceData, default[1], default[2])
+	end
+end
+
+function EEex_Options_TEMPLATE_KeybindButton_Text()
+	return instanceId == EEex_Options_Private_KeybindFocusedInstance and "Accept" or "Default"
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Private_LayoutKeybindButton ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_Private_LayoutToggle  ==
@@ -844,10 +1003,16 @@ end
 
 function EEex_Options_Private_LayoutEdit:_init()
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutEdit, "_init", self)
-	if self.menuName == nil then EEex_Error("menuName required") end
-	if self.font     == nil then EEex_Error("font required")     end
-	if self.point    == nil then EEex_Error("point required")    end
-	if self.option   == nil then EEex_Error("option required")   end
+	if self.menuName  == nil then EEex_Error("menuName required") end
+	if self.font      == nil then EEex_Error("font required")     end
+	if self.point     == nil then EEex_Error("point required")    end
+	if self.option    == nil then EEex_Error("option required")   end
+	if self.padLeft   == nil then self.padLeft   = 3              end
+	if self.padTop    == nil then self.padTop    = 3              end
+	if self.padRight  == nil then self.padRight  = 3              end
+	if self.padBottom == nil then self.padBottom = 3              end
+	-- Derived
+	--   self._pairedEditLUD
 end
 
 ------------
@@ -856,6 +1021,8 @@ end
 
 function EEex_Options_Private_LayoutEdit:calculateLayout(left, top, right, bottom)
 	local editWidth, editHeight = EEex_Options_Private_GetMaxTextBounds(self.font, self.point, self.option.type.maxCharacters)
+	editWidth  = editWidth  + self.padLeft + self.padRight
+	editHeight = editHeight + self.padTop  + self.padBottom
 	self._layoutLeft   = left
 	self._layoutTop    = top
 	self._layoutRight  = self._layoutLeft + editWidth
@@ -864,7 +1031,23 @@ function EEex_Options_Private_LayoutEdit:calculateLayout(left, top, right, botto
 end
 
 function EEex_Options_Private_LayoutEdit:doLayout()
-	EEex_Options_Private_CreateEdit(self.menuName, self.option, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+
+	local backgroundInstance = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_EditBackground",
+		self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+
+	local editInstance = EEex_Options_Private_CreateEdit(self.menuName, self.option,
+		self._layoutLeft   + self.padLeft,
+		self._layoutTop    + self.padTop,
+		self._layoutWidth  - self.padLeft - self.padRight,
+		self._layoutHeight - self.padTop - self.padBottom)
+
+	backgroundInstance._pairedEditLUD = EEex_UDToLightUD(editInstance.uiItem)
+end
+
+function EEex_Options_TEMPLATE_EditBackground_Action()
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_EditBackground"][instanceId]
+	nameToItem["EEex_Options_Temp"] = instanceData._pairedEditLUD
+	EEex_Options_Private_PendingEditFocus = "EEex_Options_Temp"
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -1641,6 +1824,57 @@ end
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_KeybindAccessor ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_KeybindAccessor = {}
+EEex_Options_KeybindAccessor.__index = EEex_Options_KeybindAccessor
+--setmetatable(EEex_Options_KeybindAccessor, )
+--print("EEex_Options_KeybindAccessor: "..tostring(EEex_Options_KeybindAccessor))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_KeybindAccessor.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_KeybindAccessor)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_KeybindAccessor:_init()
+	EEex_Utility_CallSuper(EEex_Options_KeybindAccessor, "_init", self)
+	if self.keybindID == nil then EEex_Error("keybindID required") end
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_KeybindAccessor:get(option, newValue)
+	local modifierKeys, keys = EEex_Keybinds_GetBinding(self.keybindID)
+	return { modifierKeys, keys }
+end
+
+function EEex_Options_KeybindAccessor:set(option, newValue)
+	EEex_Keybinds_SetBinding(self.keybindID, newValue[1], newValue[2])
+	return newValue
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_KeybindAccessor ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_ClampedAccessor ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
@@ -1810,6 +2044,60 @@ end
 -- END EEex_Options_StringINIStorage  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_KeybindINIStorage ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_KeybindINIStorage = {}
+EEex_Options_KeybindINIStorage.__index = EEex_Options_KeybindINIStorage
+setmetatable(EEex_Options_KeybindINIStorage, EEex_Options_Private_INIStorage)
+--print("EEex_Options_KeybindINIStorage: "..tostring(EEex_Options_KeybindINIStorage))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_KeybindINIStorage.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_KeybindINIStorage)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+------------
+-- Public --
+------------
+
+function EEex_Options_KeybindINIStorage:read(option)
+
+	local result
+
+	local str = Infinity_GetINIString(self.section, self.key, "X-DEFAULT")
+	if str ~= "X-DEFAULT" then
+		result = EEex_Options_UnmarshalKeybind(str)
+	end
+
+	if result == nil then
+		result = option:getDefault()
+	end
+
+	option:set(result)
+end
+
+function EEex_Options_KeybindINIStorage:write(option)
+	local value = option:get()
+	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2])
+	Infinity_SetINIValue(self.section, self.key, marshalled)
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_KeybindINIStorage ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_OptionType  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -1952,6 +2240,73 @@ end
 -- END EEex_Options_EditType  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_KeybindType ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_KeybindType = {}
+EEex_Options_KeybindType.__index = EEex_Options_KeybindType
+setmetatable(EEex_Options_KeybindType, EEex_Options_OptionType)
+--print("EEex_Options_KeybindType: "..tostring(EEex_Options_KeybindType))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_KeybindType.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_KeybindType)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_KeybindType:_init()
+	EEex_Utility_CallSuper(EEex_Options_KeybindType, "_init", self)
+end
+
+function EEex_Options_KeybindType:_buildLayout(option, menuName)
+
+	local backgroundInstance
+
+	local backgroundLayoutCallback = function(instanceData)
+		backgroundInstance = instanceData.id
+	end
+
+	local buttonLayoutCallback = function(instanceData)
+		instanceData._pairedBackgroundInstance = backgroundInstance
+	end
+
+	return EEex_Options_Private_LayoutHBox.new({
+		["children"] = {
+			EEex_Options_Private_LayoutKeybindBackground.new({
+				["menuName"]       = menuName,
+				["layoutCallback"] = backgroundLayoutCallback,
+				["option"]         = option,
+			}),
+			EEex_Options_Private_LayoutFixed.new({
+				["width"] = 5,
+			}),
+			EEex_Options_Private_LayoutKeybindButton.new({
+				["menuName"]       = menuName,
+				["layoutCallback"] = buttonLayoutCallback,
+				["width"]          = 100,
+			}),
+		}
+	})
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_KeybindType ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
 --===========
 -- Globals ==
 --===========
@@ -1960,13 +2315,31 @@ EEex_Options_Private_CapturedEdit            = nil -- uiItem
 EEex_Options_Private_MainInset               = nil -- EEex_Options_Private_LayoutInset
 EEex_Options_Private_MainVerticalTabArea     = nil -- EEex_Options_Private_LayoutVerticalTabArea
 EEex_Options_Private_OptionsMap              = {}
+EEex_Options_Private_PendingEditFocus        = nil
 EEex_Options_Private_TabInsertIndex          = 1
 EEex_Options_Private_Tabs                    = {}
 EEex_Options_Private_TemplateInstancesByName = {}
 
+EEex_Options_Private_KeybindFocusedInstance        = nil
+EEex_Options_Private_KeybindPendingFocusedInstance = nil
+EEex_Options_Private_KeybindRecordedKeys           = {}
+EEex_Options_Private_KeybindRecordedModifiers      = {}
+
 --===========
 -- Utility ==
 --===========
+
+function EEex_Options_Private_UnpackColor(color)
+	local alpha = EEex_BAnd(EEex_RShift(color, 24), 0xFF)
+	local blue = EEex_BAnd(EEex_RShift(color, 16), 0xFF)
+	local green = EEex_BAnd(EEex_RShift(color, 8), 0xFF)
+	local red = EEex_BAnd(color, 0xFF)
+	return alpha, blue, green, red
+end
+
+function EEex_Options_Private_PackColor(alpha, blue, green, red)
+	return EEex_Flags({EEex_LShift(alpha, 24), EEex_LShift(blue, 16), EEex_LShift(green, 8), red})
+end
 
 function EEex_Options_Private_GetTextWidthHeight(font, pointSize, text)
 
@@ -2031,11 +2404,13 @@ function EEex_Options_Private_CreateEdit(menuName, option, x, y, w, h)
 	if optionType.maxCharacters then editUD.maxchars = optionType.maxCharacters + 1 end
 
 	_G[optionType._editVar] = tostring(option:get())
+	return instanceData
 end
 
 function EEex_Options_Private_CreateSeparator(menuName, color, x, y, w, h)
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_Separator", x, y, w, h)
 	instanceData.color = color or 0x406F6F70
+	return instanceData
 end
 
 function EEex_Options_Private_CreateText(menuName, text, x, y, w, h, extraArgs)
@@ -2051,26 +2426,25 @@ function EEex_Options_Private_CreateText(menuName, text, x, y, w, h, extraArgs)
 	if extraArgs.point           ~= nil then textUD.point = extraArgs.point                             end
 	if extraArgs.horizontalAlign ~= nil then uiItem.ha    = extraArgs.horizontalAlign                   end
 	if extraArgs.verticalAlign   ~= nil then uiItem.va    = extraArgs.verticalAlign                     end
+
+	return instanceData
 end
 
 function EEex_Options_Private_CreateToggle(menuName, option, x, y, w, h)
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_Toggle", x, y, w, h)
 	instanceData.option = option
+	return instanceData
 end
 
 --=============
 -- Functions ==
 --=============
 
-function EEex_Options_Private_ReadOptions()
-	for _, option in pairs(EEex_Options_Private_OptionsMap) do
-		if not option.deferTo then
-			EEex_Utility_CallIfExists(option.read, option)
-		end
-	end
-end
+----------
+-- Edit --
+----------
 
-function EEex_Options_Private_SetEditOption(option)
+function EEex_Options_Private_EditSetOption(option)
 
 	local optionType = option.type
 	local strVal = _G[optionType._editVar]
@@ -2087,13 +2461,21 @@ function EEex_Options_Private_SetEditOption(option)
 	_G[optionType._editVar] = strVal
 end
 
-function EEex_Options_Private_CheckSetCapturedEditValue()
+function EEex_Options_Private_EditCheckSetCapturedValue()
 	if EEex_Options_Private_CapturedEdit == nil then return end
 	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Edit"][EEex_Options_Private_CapturedEdit.instanceId]
-	EEex_Options_Private_SetEditOption(instanceData.option)
+	EEex_Options_Private_EditSetOption(instanceData.option)
 end
 
-function EEex_Options_Private_CheckEditUnfocused()
+-- On menu tick
+function EEex_Options_Private_EditCheckPendingFocus()
+	if EEex_Options_Private_PendingEditFocus == nil then return end
+	Infinity_FocusTextEdit(EEex_Options_Private_PendingEditFocus)
+	EEex_Options_Private_PendingEditFocus = nil
+end
+
+-- On menu tick
+function EEex_Options_Private_EditCheckUnfocused()
 
 	local captured = EngineGlobals.capture.item
 	local editCaptured = false
@@ -2106,13 +2488,265 @@ function EEex_Options_Private_CheckEditUnfocused()
 		editCaptured = true
 	end
 
-	EEex_Options_Private_CheckSetCapturedEditValue()
+	EEex_Options_Private_EditCheckSetCapturedValue()
 	EEex_Options_Private_CapturedEdit = editCaptured and captured or nil
 end
 
+-- On menu close
+function EEex_Options_Private_EditCheckKillFocus()
+	EEex_Options_Private_PendingEditFocus = nil
+	EEex_Options_Private_EditCheckSetCapturedValue()
+	EEex_Options_Private_CapturedEdit = nil
+end
+
+-------------
+-- Keybind --
+-------------
+
+function EEex_Options_Private_KeybindResetPulse(instanceData)
+	instanceData.currentAlpha, instanceData.currentBlue, instanceData.currentGreen, instanceData.currentRed = EEex_Options_Private_UnpackColor(startColor)
+	instanceData.currentColor = instanceData.startColor
+	instanceData.direction = true
+end
+
+function EEex_Options_Private_KeybindAdvancePulse(instanceData)
+
+	local startAlpha, startBlue, startGreen, startRed = EEex_Options_Private_UnpackColor(instanceData.startColor)
+	local endAlpha,   endBlue,   endGreen,   endRed   = EEex_Options_Private_UnpackColor(instanceData.endColor)
+
+	local currentAlpha = instanceData.currentAlpha
+	local currentBlue  = instanceData.currentBlue
+	local currentGreen = instanceData.currentGreen
+	local currentRed   = instanceData.currentRed
+
+	local dir         = instanceData.direction and 1 or -1
+	local stepPercent = EEex_CChitin.TIMER_UPDATES_PER_SECOND / instanceData.pulseMilliseconds
+
+	local stepColor = function(startColor, currentColor, endColor)
+		local newColor = currentColor + dir * (endColor - startColor) * stepPercent
+		if endColor >= startColor then
+			newColor = math.max(startColor, math.min(newColor, endColor))
+		else
+			newColor = math.max(endColor, math.min(newColor, startColor))
+		end
+		return newColor
+	end
+
+	currentAlpha = stepColor( startAlpha, currentAlpha, endAlpha )
+	currentBlue  = stepColor( startBlue,  currentBlue,  endBlue  )
+	currentGreen = stepColor( startGreen, currentGreen, endGreen )
+	currentRed   = stepColor( startRed,   currentRed,   endRed   )
+
+	instanceData.currentAlpha = currentAlpha
+	instanceData.currentBlue  = currentBlue
+	instanceData.currentGreen = currentGreen
+	instanceData.currentRed   = currentRed
+	instanceData.currentColor = EEex_Options_Private_PackColor(currentAlpha, currentBlue, currentGreen, currentRed)
+
+	if instanceData.direction then
+		if currentAlpha == endAlpha and currentRed == endRed and currentGreen == endGreen and currentBlue == endBlue then
+			instanceData.direction = false
+		end
+	else
+		if currentAlpha == startAlpha and currentRed == startRed and currentGreen == startGreen and currentBlue == startBlue then
+			instanceData.direction = true
+		end
+	end
+end
+
+function EEex_Options_Private_KeybindUpdateText(instanceData, modifierKeys, keys)
+	instanceData.text = EEex_Options_MarshalKeybind(modifierKeys, keys)
+end
+
+function EEex_Options_Private_KeybindUpdateTextFromRecorded(instanceData)
+	EEex_Options_Private_KeybindUpdateText(instanceData, EEex_Options_Private_KeybindRecordedModifiers, EEex_Options_Private_KeybindRecordedKeys)
+end
+
+function EEex_Options_Private_KeybindRecordKey(instanceData, key)
+
+	-- Avoid duplicates
+	for _, recordedKey in ipairs(EEex_Options_Private_KeybindRecordedKeys) do
+		if recordedKey == key then
+			return
+		end
+	end
+
+	-- Insert
+	table.insert(EEex_Options_Private_KeybindRecordedKeys, key)
+
+	-- Update text
+	EEex_Options_Private_KeybindUpdateTextFromRecorded(instanceData)
+end
+
+EEex_Options_Private_KeybindSpecificModifierOrder = {
+	[ EEex_Key_GetFromName("Left Ctrl")   ] = 1,
+	[ EEex_Key_GetFromName("Left Shift")  ] = 2,
+	[ EEex_Key_GetFromName("Left Alt")    ] = 3,
+	[ EEex_Key_GetFromName("Right Ctrl")  ] = 4,
+	[ EEex_Key_GetFromName("Right Shift") ] = 5,
+	[ EEex_Key_GetFromName("Right Alt")   ] = 6,
+}
+
+EEex_Options_Private_KeybindDefaultModifierOrder = #EEex_Options_Private_KeybindSpecificModifierOrder + 1
+
+function EEex_Options_Private_KeybindGetModifierOrder(key)
+	return EEex_Options_Private_KeybindSpecificModifierOrder[key] or EEex_Options_Private_KeybindDefaultModifierOrder
+end
+
+function EEex_Options_Private_KeybindRecordModifierKey(instanceData, key)
+
+	-- Avoid duplicates
+	for _, recordedKey in ipairs(EEex_Options_Private_KeybindRecordedModifiers) do
+		if recordedKey == key then
+			return
+		end
+	end
+
+	-- Insert and sort
+	table.insert(EEex_Options_Private_KeybindRecordedModifiers, key)
+	table.sort(EEex_Options_Private_KeybindRecordedModifiers, function(a, b)
+		return EEex_Options_Private_KeybindGetModifierOrder(a) < EEex_Options_Private_KeybindGetModifierOrder(b)
+	end)
+
+	-- Update text
+	EEex_Options_Private_KeybindUpdateTextFromRecorded(instanceData)
+end
+
+-- On keybind focus gained
+function EEex_Options_Private_KeybindOnActivateFocus(instanceData)
+	EEex_Options_Private_KeybindUpdateTextFromRecorded(instanceData)
+	EEex_Key_EnterCaptureMode(EEex_Options_Private_KeybindOnCaptureKey)
+end
+
+EEex_Options_Private_ModifierKeys = {
+	[ EEex_Key_GetFromName("Left Ctrl")   ] = true,
+	[ EEex_Key_GetFromName("Left Shift")  ] = true,
+	[ EEex_Key_GetFromName("Left Alt")    ] = true,
+	[ EEex_Key_GetFromName("Right Ctrl")  ] = true,
+	[ EEex_Key_GetFromName("Right Shift") ] = true,
+	[ EEex_Key_GetFromName("Right Alt")   ] = true,
+}
+
+-- On focused keybind captured key
+function EEex_Options_Private_KeybindOnCaptureKey(key)
+
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][EEex_Options_Private_KeybindFocusedInstance]
+
+	if key == EEex_Key_GetFromName("Escape") then
+		EEex_Options_Private_KeybindKillFocus(instanceData)
+		return
+	end
+
+	if key == EEex_Key_GetFromName("Return") then
+		EEex_Options_Private_KeybindEndFocus(instanceData)
+		return
+	end
+
+	if key == EEex_Key_GetFromName("Backspace") or key == EEex_Key_GetFromName("Delete") then
+		EEex_Options_Private_KeybindRecordedModifiers = {}
+		EEex_Options_Private_KeybindRecordedKeys = {}
+		EEex_Options_Private_KeybindUpdateTextFromRecorded(instanceData)
+		return
+	end
+
+	if EEex_Options_Private_ModifierKeys[key] then
+		EEex_Options_Private_KeybindRecordModifierKey(instanceData, key)
+	else
+		EEex_Options_Private_KeybindRecordKey(instanceData, key)
+	end
+end
+
+-- On keybind accepted (via Enter key or Submit button)
+function EEex_Options_Private_KeybindEndFocus(instanceData)
+	local option = instanceData.option
+	option:set({ EEex_Options_Private_KeybindRecordedModifiers, EEex_Options_Private_KeybindRecordedKeys })
+	EEex_Options_Private_KeybindKillFocus(instanceData, true)
+end
+
+-- On keybind killed when accepted (see above), or canceled (via Escape key or menu closing)
+function EEex_Options_Private_KeybindKillFocus(instanceData, accepted)
+
+	EEex_Key_ExitCaptureMode()
+	EEex_Options_Private_KeybindResetPulse(instanceData)
+	EEex_Options_Private_KeybindFocusedInstance   = nil
+	EEex_Options_Private_KeybindRecordedModifiers = {}
+	EEex_Options_Private_KeybindRecordedKeys      = {}
+
+	if not accepted then
+		local value = instanceData.option:get()
+		EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
+	end
+end
+
+-- On menu tick
+function EEex_Options_Private_KeybindCheckUnfocused(instanceData)
+
+	local captured = EngineGlobals.capture.item
+	if captured == nil then return end
+
+	local templateName = captured.templateName:get()
+	local instanceId = captured.instanceId
+
+	if templateName == "EEex_Options_TEMPLATE_KeybindButton" then
+
+		local buttonInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindButton"][instanceId]
+
+		if buttonInstanceData._pairedBackgroundInstance ~= EEex_Options_Private_KeybindFocusedInstance then
+			EEex_Options_Private_KeybindKillFocus(instanceData)
+			EEex_Options_Private_KeybindPendingFocusedInstance = nil
+		end
+
+	elseif templateName == "EEex_Options_TEMPLATE_KeybindBackground" then
+
+		if instanceId ~= EEex_Options_Private_KeybindFocusedInstance then
+			EEex_Options_Private_KeybindKillFocus(instanceData)
+		end
+	else
+		EEex_Options_Private_KeybindKillFocus(instanceData)
+		EEex_Options_Private_KeybindPendingFocusedInstance = nil
+	end
+end
+
+-- On menu tick
+function EEex_Options_Private_KeybindTick()
+
+	local instanceData
+
+	if EEex_Options_Private_KeybindFocusedInstance ~= nil then
+		instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][EEex_Options_Private_KeybindFocusedInstance]
+		EEex_Options_Private_KeybindCheckUnfocused(instanceData)
+	end
+
+	if EEex_Options_Private_KeybindPendingFocusedInstance ~= nil then
+		EEex_Options_Private_KeybindFocusedInstance = EEex_Options_Private_KeybindPendingFocusedInstance
+		EEex_Options_Private_KeybindPendingFocusedInstance = nil
+		instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][EEex_Options_Private_KeybindFocusedInstance]
+		EEex_Options_Private_KeybindOnActivateFocus(instanceData)
+	end
+
+	if EEex_Options_Private_KeybindFocusedInstance ~= nil then
+		EEex_Options_Private_KeybindAdvancePulse(instanceData)
+	end
+end
+
+-- On menu close
+function EEex_Options_Private_KeybindCheckKillFocus()
+	if EEex_Options_Private_KeybindFocusedInstance ~= nil then
+		local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][EEex_Options_Private_KeybindFocusedInstance]
+		EEex_Options_Private_KeybindKillFocus(instanceData)
+	end
+	EEex_Options_Private_KeybindPendingFocusedInstance = nil
+end
+
+-------------
+-- General --
+-------------
+
 function EEex_Options_Private_Tick()
-	EEex_Options_Private_CheckEditUnfocused()
-	return true
+	EEex_Options_Private_KeybindTick()
+	EEex_Options_Private_EditCheckPendingFocus()
+	EEex_Options_Private_EditCheckUnfocused()
+	return 1
 end
 
 function EEex_Options_Private_BuildLayout()
@@ -2145,6 +2779,14 @@ function EEex_Options_Private_BuildLayout()
 		},
 	})
 	:inset({ ["insetLeft"] = 10, ["insetTop"] = 10, ["insetRight"] = 10, ["insetBottom"] = 10 })
+end
+
+function EEex_Options_Private_ReadOptions()
+	for _, option in pairs(EEex_Options_Private_OptionsMap) do
+		if not option.deferTo then
+			EEex_Utility_CallIfExists(option.read, option)
+		end
+	end
 end
 
 function EEex_Options_Private_TopRightAlign(itemName, x, y)
@@ -2190,9 +2832,57 @@ end
 function EEex_Options_Close()
 	if not Infinity_IsMenuOnStack("EEex_Options") then return end
 	Infinity_PopMenu("EEex_Options")
-	EEex_Options_Private_CheckSetCapturedEditValue()
-	EEex_Options_Private_CapturedEdit = nil
+	EEex_Options_Private_KeybindCheckKillFocus()
+	EEex_Options_Private_EditCheckKillFocus()
 	EEex_Options_Private_MainInset:hide()
+end
+
+function EEex_Options_MarshalKeybind(modifierKeys, keys)
+
+	local parts = {}
+	local partsI = 1
+
+	for _, key in ipairs(modifierKeys) do
+		parts[partsI] = EngineGlobals.SDL_GetKeyName(key)
+		partsI = partsI + 1
+	end
+
+	for _, key in ipairs(keys) do
+		parts[partsI] = EngineGlobals.SDL_GetKeyName(key)
+		partsI = partsI + 1
+	end
+
+	return table.concat(parts, "+")
+end
+
+function EEex_Options_UnmarshalKeybind(str)
+
+	local modifierKeys = {}
+	local keys = {}
+	result = { modifierKeys, keys }
+
+	local modifierKeysI = 1
+	local keysI = 1
+
+	for _, keyStr in ipairs(EEex_Utility_Split(str, "+", false, true)) do
+
+		local key = EEex_Key_GetFromName(keyStr)
+
+		if key == 0 then
+			result = nil
+			break
+		end
+
+		if EEex_Options_Private_ModifierKeys[key] then
+			modifierKeys[modifierKeysI] = key
+			modifierKeysI = modifierKeysI + 1
+		else
+			keys[keysI] = key
+			keysI = keysI + 1
+		end
+	end
+
+	return result
 end
 
 function EEex_Options_AddTab(text, options)

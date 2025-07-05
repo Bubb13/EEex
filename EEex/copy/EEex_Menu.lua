@@ -362,10 +362,6 @@ function EEex_Menu_Hook_CheckForceScrollbarRender(item)
 	return itemName ~= "" and EEex_Menu_ScrollbarForced[itemName]
 end
 
-function EEex_Menu_Hook_OnBeforeEditAction(item)
-	instanceId = item.instanceId
-end
-
 function EEex_Menu_Hook_OnBeforeUIItemRender(item)
 	local listener = EEex_Menu_BeforeUIItemRenderListeners[item.name:get()]
 	if listener then
@@ -397,4 +393,8 @@ function EEex_Menu_Hook_OnWindowSizeChanged()
 	for _, listener in ipairs(EEex_Menu_WindowSizeChangedListeners) do
 		listener(width, height)
 	end
+end
+
+function EEex_Menu_Hook_SaveInstanceId(item)
+	instanceId = item.instanceId
 end

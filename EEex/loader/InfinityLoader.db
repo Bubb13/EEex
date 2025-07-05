@@ -572,6 +572,9 @@ ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 Pattern=488BD94885C90F84F2000000
 Operations=ADD -10
 
+[SDL_GetKeyName]
+Pattern=4883EC288BD1
+
 [bsearch]
 Pattern=488978204155
 Operations=ADD -15
@@ -2085,6 +2088,10 @@ Operations=ADD -5
 [Hook-continueEditCapture()-ActionHandlerCall]
 Pattern=418B063D03030000
 Operations=ADD 51
+
+[Hook-continueTextCapture()-ActionHandlerCall]
+Pattern=899160050000
+Operations=ADD 19
 
 [Hook-dimmInit()-uiLoadFunctions()]
 Pattern=488B18EB03

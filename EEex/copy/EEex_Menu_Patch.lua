@@ -398,7 +398,7 @@
 	+---------------------------------------------------------------------+
 	| Save `instanceId` before calling the action functions of edit items |
 	+---------------------------------------------------------------------+
-	|   [Lua] EEex_Menu_Hook_OnBeforeEditAction(item: uiItem*)            |
+	|   [Lua] EEex_Menu_Hook_SaveInstanceId(item: uiItem*)                |
 	+---------------------------------------------------------------------+
 	--]]
 
@@ -412,9 +412,40 @@
 				#MAKE_SHADOW_SPACE(48)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 			]]},
-			EEex_GenLuaCall("EEex_Menu_Hook_OnBeforeEditAction", {
+			EEex_GenLuaCall("EEex_Menu_Hook_SaveInstanceId", {
 				["args"] = {
 					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi", {rspOffset}, "#ENDL"}, "uiItem" end,
+				},
+			}),
+			{[[
+				call_error:
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
+
+	--[[
+	+---------------------------------------------------------------------+
+	| Save `instanceId` before calling the action functions of text items |
+	+---------------------------------------------------------------------+
+	|   [Lua] EEex_Menu_Hook_SaveInstanceId(item: uiItem*)                |
+	+---------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-continueTextCapture()-ActionHandlerCall"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(48)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			]]},
+			EEex_GenLuaCall("EEex_Menu_Hook_SaveInstanceId", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax", {rspOffset}, "#ENDL"}, "uiItem" end,
 				},
 			}),
 			{[[

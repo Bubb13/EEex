@@ -29,6 +29,7 @@ EEex_Main_Private_NormalStartupFiles = {
 	"EEex_GameState_Patch",
 	"EEex_Key",
 	"EEex_Key_Patch",
+	"EEex_Keybinds",
 	"EEex_Menu",
 	"EEex_Menu_Patch",
 	"EEex_Mix_Patch",

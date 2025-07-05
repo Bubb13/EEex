@@ -10,7 +10,10 @@ menu
 	label
 	{
 		area 0 0 2147483647 2147483647
-		enabled "EEex_Options_Private_Tick()"
+		-- opacity ticks right before the menu is rendered, and is better than
+		-- `enabled`, since `enabled` is run in various contexts that might
+		-- disrupt tick routines that expect a steady tick rate.
+		opacity lua "EEex_Options_Private_Tick()"
 	}
 
 	label
@@ -64,7 +67,6 @@ menu
 		{
 			enabled true
 			action "return EEex_Options_Private_TEMPLATE_Edit_Action()"
-			fill 112 111 111 64
 			maxlines 1
 			text style "edit"
 		}
@@ -104,5 +106,50 @@ menu
 			fill lua "EEex_Options_Private_TEMPLATE_Separator_Fill()"
 		}
 		name "EEex_Options_TEMPLATE_Separator"
+	}
+
+	template
+	{
+		text
+		{
+			enabled true
+			fill 112 111 111 64
+			action "EEex_Options_TEMPLATE_EditBackground_Action()"
+			actionAlt "EEex_Options_TEMPLATE_EditBackground_Action()"
+		}
+		name "EEex_Options_TEMPLATE_EditBackground"
+	}
+
+	template
+	{
+		text
+		{
+			enabled true
+			action "EEex_Options_TEMPLATE_KeybindBackground_Action()"
+			actionAlt "EEex_Options_TEMPLATE_KeybindBackground_Action()"
+			fill lua "EEex_Options_TEMPLATE_KeybindBackground_Fill()"
+			text lua "EEex_Options_TEMPLATE_KeybindBackground_Text()"
+			text style "normal"
+			text align left center
+			pad 3 3 3 3
+		}
+		name "EEex_Options_TEMPLATE_KeybindBackground"
+	}
+
+	template
+	{
+		button
+		{
+			enabled true
+			action "EEex_Options_TEMPLATE_KeybindButton_Action()"
+			actionAlt "EEex_Options_TEMPLATE_KeybindButton_Action()"
+			bam "GUIOSTCL"
+			text lua "EEex_Options_TEMPLATE_KeybindButton_Text()"
+			text style "button"
+			text align center center
+			pad 6 6 6 6
+			scaleToClip
+		}
+		name "EEex_Options_TEMPLATE_KeybindButton"
 	}
 }

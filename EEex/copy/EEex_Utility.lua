@@ -142,6 +142,38 @@ function EEex_Utility_NewScope(func)
 	return func()
 end
 
+function EEex_Utility_Split(text, splitBy, usePattern, allowEmptyCapture)
+
+	local toReturn = {}
+	local toReturnI = 1
+
+	local plain = usePattern == nil or not usePattern
+	local captureStartI = 1
+
+	while true do
+
+		local splitStartI, splitEndI = text:find(splitBy, captureStartI, plain)
+
+		if splitStartI == nil then
+			break
+		end
+
+		if splitStartI > captureStartI or allowEmptyCapture then
+			toReturn[toReturnI] = text:sub(captureStartI, splitStartI - 1)
+			toReturnI = toReturnI + 1
+		end
+
+		captureStartI = splitEndI + 1
+	end
+
+	local limit = #text
+	if captureStartI <= limit or (allowEmptyCapture and limit > 0) then
+		toReturn[toReturnI] = text:sub(captureStartI, limit)
+	end
+
+	return toReturn
+end
+
 ---------------
 -- Iterators --
 ---------------

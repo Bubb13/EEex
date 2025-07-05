@@ -11,28 +11,26 @@ B3EffectMenu_Key = EEex_Key_GetFromName("Left Shift")
 
 B3EffectMenu_RowCount = nil
 
-B3EffectMenu_Options = {
-	{
-		EEex_Options_Option.new({
-			["id"]      = "B3EffectMenu_RowCount",
-			["name"]    = "Row Count",
-			["default"] = 4,
-			["type"] = EEex_Options_EditType.new({
-				["maxCharacters"] = 2,
-				["number"]        = true,
-			}),
-			["accessor"] = EEex_Options_ClampedAccessor.new({
-				["accessor"] = EEex_Options_GlobalAccessor.new({ ["name"] = "B3EffectMenu_RowCount" }),
-				["min"]      = 1,
-				["max"]      = 99,
-			}),
-			["storage"] = EEex_Options_IntegerINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
-		}),
-	},
-}
-
 EEex_GameState_AddInitializedListener(function()
-	EEex_Options_AddTab("Effect Menu", B3EffectMenu_Options)
+	EEex_Options_AddTab("Effect Menu", {
+		{
+			EEex_Options_Option.new({
+				["id"]      = "B3EffectMenu_RowCount",
+				["name"]    = "Row Count",
+				["default"] = 4,
+				["type"] = EEex_Options_EditType.new({
+					["maxCharacters"] = 2,
+					["number"]        = true,
+				}),
+				["accessor"] = EEex_Options_ClampedAccessor.new({
+					["accessor"] = EEex_Options_GlobalAccessor.new({ ["name"] = "B3EffectMenu_RowCount" }),
+					["min"]      = 1,
+					["max"]      = 99,
+				}),
+				["storage"] = EEex_Options_IntegerINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
+			}),
+		},
+	})
 end)
 
 -------------

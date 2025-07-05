@@ -2,7 +2,6 @@
 -- Format: {function / spell resref, {required modifier keys}, {main keys combination}},
 
 B3Hotkey_Hotkeys = {
-	{function() B3Hotkey_TogglePrintKeys() end, {}, {0x60}},                               -- Key-Pressed Output Toggle ('`')
 	--{"SPIN103", {}, {0x73, 0x61, 0x64}},                                                 -- Old way of doing a spell keybinding
 	--{function() B3Hotkey_AttemptToCastViaHotkey("SPWI112") end, {}, {0x73, 0x61, 0x64}}, -- Example of a spell keybinding
 	--{function() B3Hotkey_AttemptToSelectCharacter(0) end, {0x400000E1}, {0x31}},         -- Example of a keybinding that uses shift mod

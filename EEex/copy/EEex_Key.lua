@@ -937,11 +937,29 @@ function EEex_Key_AddReleasedListener(func)
 	table.insert(EEex_Key_ReleasedListeners, func)
 end
 
+EEex_Key_Private_CaptureFunc = nil
+
+function EEex_Key_EnterCaptureMode(func)
+	EEex_Key_Private_CaptureFunc = func
+end
+
+function EEex_Key_ExitCaptureMode()
+	EEex_Key_Private_CaptureFunc = nil
+end
+
 -----------
 -- Hooks --
 -----------
 
 function EEex_Key_Private_OnPressed(key, bRepeat)
+
+	if EEex_Key_Private_CaptureFunc ~= nil then
+		if not bRepeat then
+			EEex_Key_Private_CaptureFunc(key)
+		end
+		return true -- Consume event
+	end
+
 	EEex_Key_IsDownMap[key] = true
 	if not bRepeat then
 		for i, func in ipairs(EEex_Key_PressedListeners) do
@@ -953,6 +971,11 @@ function EEex_Key_Private_OnPressed(key, bRepeat)
 end
 
 function EEex_Key_Private_OnReleased(key)
+
+	if EEex_Key_Private_CaptureFunc ~= nil then
+		return true -- Consume event
+	end
+
 	EEex_Key_IsDownMap[key] = false
 	for i, func in ipairs(EEex_Key_ReleasedListeners) do
 		if func(key) then
