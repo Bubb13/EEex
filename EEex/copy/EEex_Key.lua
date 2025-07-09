@@ -380,6 +380,10 @@ function EEex_Key_GetFromName(name)
 	return EngineGlobals.SDL_GetKeyFromName(name)
 end
 
+function EEex_Key_GetName(key)
+	return EngineGlobals.SDL_GetKeyName(key)
+end
+
 EEex_Key_IsDownMap = EEex_Key_IsDownMap or {}
 
 -- @bubb_doc { EEex_Key_IsDown }
@@ -947,9 +951,27 @@ function EEex_Key_ExitCaptureMode()
 	EEex_Key_Private_CaptureFunc = nil
 end
 
+EEex_Key_Private_PressedStack = {}
+EEex_Key_Private_PressedStackSize = 0
+
+function EEex_Key_GetPressedStack()
+	return EEex.DeepCopy(EEex_Key_Private_PressedStack)
+end
+
+function EEex_Key_GetPressedCount()
+	return EEex_Key_Private_PressedStackSize
+end
+
 -----------
 -- Hooks --
 -----------
+
+function EEex_Key_Private_RemoveFromPressedStack(key)
+	local foundI = EEex_Utility_Find(EEex_Key_Private_PressedStack, key)
+	if foundI == nil then return end
+	table.remove(EEex_Key_Private_PressedStack, foundI)
+	EEex_Key_Private_PressedStackSize = EEex_Key_Private_PressedStackSize - 1
+end
 
 function EEex_Key_Private_OnPressed(key, bRepeat)
 
@@ -961,7 +983,12 @@ function EEex_Key_Private_OnPressed(key, bRepeat)
 	end
 
 	EEex_Key_IsDownMap[key] = true
+
 	if not bRepeat then
+
+		EEex_Key_Private_PressedStackSize = EEex_Key_Private_PressedStackSize + 1
+		EEex_Key_Private_PressedStack[EEex_Key_Private_PressedStackSize] = key
+
 		for i, func in ipairs(EEex_Key_PressedListeners) do
 			if func(key) then
 				return true -- Consume event
@@ -977,6 +1004,8 @@ function EEex_Key_Private_OnReleased(key)
 	end
 
 	EEex_Key_IsDownMap[key] = false
+	EEex_Key_Private_RemoveFromPressedStack(key)
+
 	for i, func in ipairs(EEex_Key_ReleasedListeners) do
 		if func(key) then
 			return true -- Consume event

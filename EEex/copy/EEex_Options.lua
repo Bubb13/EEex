@@ -35,6 +35,10 @@ function EEex_Options_Private_LayoutObject:_onParentLayoutCalculated(left, top, 
 	-- Empty stub
 end
 
+function EEex_Options_Private_LayoutObject:_onInitLayout()
+	-- Empty stub
+end
+
 ------------
 -- Public --
 ------------
@@ -45,6 +49,7 @@ function EEex_Options_Private_LayoutObject:inset(o)
 end
 
 function EEex_Options_Private_LayoutObject:layout(left, top, right, bottom)
+	self:_onInitLayout()
 	self:calculateLayout(left, top, right, bottom)
 	self:doLayout()
 end
@@ -118,6 +123,12 @@ function EEex_Options_Private_LayoutParent:_init()
 	if self.children == nil then self.children = {} end
 end
 
+function EEex_Options_Private_LayoutParent:_onInitLayout()
+	for _, child in ipairs(self.children) do
+		child:_onInitLayout()
+	end
+end
+
 ------------
 -- Public --
 ------------
@@ -133,6 +144,7 @@ function EEex_Options_Private_LayoutParent:calculateLayout(left, top, right, bot
 	for _, child in ipairs(self.children) do
 		child:calculateLayout(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
 		child:_onParentLayoutCalculated(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
+		-- TODO: Re-layout child
 	end
 
 	--print(string.format("[EEex_Options_Private_LayoutParent:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
@@ -209,6 +221,12 @@ function EEex_Options_Private_LayoutVerticalTabArea:_init()
 	--   self._openTabIndex
 end
 
+function EEex_Options_Private_LayoutVerticalTabArea:_onInitLayout()
+	for _, tab in ipairs(self.tabs) do
+		tab.layout:_onInitLayout()
+	end
+end
+
 function EEex_Options_Private_LayoutVerticalTabArea:_calculateSidebarWidth()
 
 	local maxWidth = 0
@@ -263,6 +281,7 @@ function EEex_Options_Private_LayoutVerticalTabArea:calculateLayout(left, top, r
 
 	for _, tab in ipairs(self.tabs) do
 		tab.layout:_onParentLayoutCalculated(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
+		-- TODO: Re-layout child
 	end
 
 	--print(string.format("[EEex_Options_Private_LayoutVerticalTabArea:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
@@ -346,39 +365,47 @@ end
 
 function EEex_Options_Private_LayoutVBox:calculateLayout(left, top, right, bottom)
 
-	local newLayoutRight = right
-	local curTop = top
+	local calculateLayoutFromChildren = function()
 
-	if self.shrinkToChildren then
+		local newLayoutRight = right
+		local curTop = top
 
-		local maxChildRight = 0
+		if self.shrinkToChildren then
 
-		for _, child in ipairs(self.children) do
-			child:calculateLayout(left, curTop, right, bottom)
-			curTop = curTop + child:getLayoutHeight()
-			local childRight = child:getLayoutRight()
-			if childRight > maxChildRight then maxChildRight = childRight end
+			local maxChildRight = 0
+
+			for _, child in ipairs(self.children) do
+				child:calculateLayout(left, curTop, right, bottom)
+				curTop = curTop + child:getLayoutHeight()
+				local childRight = child:getLayoutRight()
+				if childRight > maxChildRight then maxChildRight = childRight end
+			end
+
+			if maxChildRight < newLayoutRight then
+				newLayoutRight = maxChildRight
+			end
+		else
+			for _, child in ipairs(self.children) do
+				child:calculateLayout(left, curTop, right, bottom)
+				curTop = curTop + child:getLayoutHeight()
+			end
 		end
 
-		if maxChildRight < newLayoutRight then
-			newLayoutRight = maxChildRight
-		end
-	else
-		for _, child in ipairs(self.children) do
-			child:calculateLayout(left, curTop, right, bottom)
-			curTop = curTop + child:getLayoutHeight()
-		end
+		self._layoutLeft   = left
+		self._layoutTop    = top
+		self._layoutRight  = newLayoutRight
+		self._layoutBottom = curTop
+		self:_calculateDerivedLayout()
 	end
 
-	self._layoutLeft   = left
-	self._layoutTop    = top
-	self._layoutRight  = newLayoutRight
-	self._layoutBottom = curTop
-	self:_calculateDerivedLayout()
+	calculateLayoutFromChildren()
 
 	for _, child in ipairs(self.children) do
 		child:_onParentLayoutCalculated(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
 	end
+
+	-- TODO: Only run this if children changed
+	calculateLayoutFromChildren()
 
 	--print(string.format("[EEex_Options_Private_LayoutVBox:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
 	--	self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom, self._layoutWidth, self._layoutHeight))
@@ -429,39 +456,47 @@ end
 
 function EEex_Options_Private_LayoutHBox:calculateLayout(left, top, right, bottom)
 
-	local newLayoutBottom = bottom
-	local curLeft = left
+	local calculateLayoutFromChildren = function()
 
-	if self.shrinkToChildren then
+		local newLayoutBottom = bottom
+		local curLeft = left
 
-		local maxChildBottom = 0
+		if self.shrinkToChildren then
 
-		for _, child in ipairs(self.children) do
-			child:calculateLayout(curLeft, top, right, bottom)
-			curLeft = curLeft + child:getLayoutWidth()
-			local childBottom = child:getLayoutBottom()
-			if childBottom > maxChildBottom then maxChildBottom = childBottom end
+			local maxChildBottom = 0
+
+			for _, child in ipairs(self.children) do
+				child:calculateLayout(curLeft, top, right, bottom)
+				curLeft = curLeft + child:getLayoutWidth()
+				local childBottom = child:getLayoutBottom()
+				if childBottom > maxChildBottom then maxChildBottom = childBottom end
+			end
+
+			if maxChildBottom < newLayoutBottom then
+				newLayoutBottom = maxChildBottom
+			end
+		else
+			for _, child in ipairs(self.children) do
+				child:calculateLayout(curLeft, top, right, bottom)
+				curLeft = curLeft + child:getLayoutWidth()
+			end
 		end
 
-		if maxChildBottom < newLayoutBottom then
-			newLayoutBottom = maxChildBottom
-		end
-	else
-		for _, child in ipairs(self.children) do
-			child:calculateLayout(curLeft, top, right, bottom)
-			curLeft = curLeft + child:getLayoutWidth()
-		end
+		self._layoutLeft   = left
+		self._layoutTop    = top
+		self._layoutRight  = curLeft
+		self._layoutBottom = newLayoutBottom
+		self:_calculateDerivedLayout()
 	end
 
-	self._layoutLeft   = left
-	self._layoutTop    = top
-	self._layoutRight  = curLeft
-	self._layoutBottom = newLayoutBottom
-	self:_calculateDerivedLayout()
+	calculateLayoutFromChildren()
 
 	for _, child in ipairs(self.children) do
 		child:_onParentLayoutCalculated(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
 	end
+
+	-- TODO: Only run this if children changed
+	calculateLayoutFromChildren()
 
 	--print(string.format("[EEex_Options_Private_LayoutHBox:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
 	--	self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom, self._layoutWidth, self._layoutHeight))
@@ -513,7 +548,7 @@ end
 
 function EEex_Options_Private_LayoutInset:_onParentLayoutCalculated(left, top, right, bottom)
 	if not self.growToParent then return end
-	self:calculateLayout(left, top, right, bottom, false)
+	self:calculateLayout(left, top, right, bottom, false) -- TODO
 end
 
 ------------
@@ -566,6 +601,7 @@ function EEex_Options_Private_LayoutInset:calculateLayout(left, top, right, bott
 
 	for _, child in ipairs(self.children) do
 		child:_onParentLayoutCalculated(innerLeft, innerTop, innerRight, innerBottom)
+		-- TODO: Re-layout child
 	end
 
 	--print(string.format("[EEex_Options_Private_LayoutInset:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
@@ -610,6 +646,14 @@ function EEex_Options_Private_LayoutFixed:_init()
 	--   self.itemName
 	--   self.width
 	--   self.height
+	-- Derived
+	-- 	 self._curLayoutWidth
+	--   self._curLayoutHeight
+end
+
+function EEex_Options_Private_LayoutFixed:_onInitLayout()
+	self._curLayoutWidth  = self.width  or 0
+	self._curLayoutHeight = self.height or 0
 end
 
 ------------
@@ -620,8 +664,8 @@ function EEex_Options_Private_LayoutFixed:calculateLayout(left, top, right, bott
 
 	self._layoutLeft   = left
 	self._layoutTop    = top
-	self._layoutRight  = self._layoutLeft + (self.width or 0)
-	self._layoutBottom = self._layoutTop  + (self.height or 0)
+	self._layoutRight  = self._layoutLeft + self._curLayoutWidth
+	self._layoutBottom = self._layoutTop  + self._curLayoutHeight
 	self:_calculateDerivedLayout()
 
 	--print(string.format("[EEex_Options_Private_LayoutFixed:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
@@ -629,9 +673,8 @@ function EEex_Options_Private_LayoutFixed:calculateLayout(left, top, right, bott
 end
 
 function EEex_Options_Private_LayoutFixed:_onParentLayoutCalculated(left, top, right, bottom)
-	if self.width == nil then self._layoutRight = right end
-	if self.height == nil then self._layoutBottom = right end
-	self:_calculateDerivedLayout()
+	if self.width  == nil then self._curLayoutWidth  = right  - self._layoutLeft end
+	if self.height == nil then self._curLayoutHeight = bottom - self._layoutTop  end
 end
 
 function EEex_Options_Private_LayoutFixed:doLayout()
@@ -679,6 +722,14 @@ function EEex_Options_Private_LayoutTemplate:_init()
 	--   self.width
 	--   self.height
 	--   self.templateName (only optional for subclasses)
+	-- Derived
+	-- 	 self._curLayoutWidth
+	--   self._curLayoutHeight
+end
+
+function EEex_Options_Private_LayoutTemplate:_onInitLayout()
+	self._curLayoutWidth  = self.width  or 0
+	self._curLayoutHeight = self.height or 0
 end
 
 ------------
@@ -689,8 +740,8 @@ function EEex_Options_Private_LayoutTemplate:calculateLayout(left, top, right, b
 
 	self._layoutLeft   = left
 	self._layoutTop    = top
-	self._layoutRight  = self._layoutLeft + (self.width or 0)
-	self._layoutBottom = self._layoutTop  + (self.height or 0)
+	self._layoutRight  = self._layoutLeft + self._curLayoutWidth
+	self._layoutBottom = self._layoutTop  + self._curLayoutHeight
 	self:_calculateDerivedLayout()
 
 	--print(string.format("[EEex_Options_Private_LayoutTemplate:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
@@ -698,9 +749,8 @@ function EEex_Options_Private_LayoutTemplate:calculateLayout(left, top, right, b
 end
 
 function EEex_Options_Private_LayoutTemplate:_onParentLayoutCalculated(left, top, right, bottom)
-	if self.width == nil then self._layoutRight = right end
-	if self.height == nil then self._layoutBottom = bottom end
-	self:_calculateDerivedLayout()
+	if self.width  == nil then self._curLayoutWidth  = right  - self._layoutLeft end
+	if self.height == nil then self._curLayoutHeight = bottom - self._layoutTop  end
 end
 
 function EEex_Options_Private_LayoutTemplate:doLayout()
@@ -742,8 +792,12 @@ end
 function EEex_Options_Private_LayoutSeparator:_init()
 	-- EEex_Options_Private_LayoutTemplate
 	--   self.menuName
-	--   self.width
-	--   self.height
+	--   Optional
+	--     self.width
+	--     self.height
+	--   Derived
+	-- 	   self._curLayoutWidth
+	--     self._curLayoutHeight
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutSeparator, "_init", self)
 	-- Optional
 	--   self.color
@@ -880,12 +934,20 @@ end
 function EEex_Options_Private_LayoutKeybindButton:_init()
 	-- EEex_Options_Private_LayoutTemplate
 	--   self.menuName
-	--   self.width
-	--   self.height
+	--   Optional
+	--     self.width
+	--     self.height
+	--   Derived
+	-- 	   self._curLayoutWidth
+	--     self._curLayoutHeight
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutKeybindButton, "_init", self)
 	if self.layoutCallback == nil then self.layoutCallback = function() end end
-	-- Derived
-	--   self._pairedBackgroundInstance
+end
+
+function EEex_Options_Private_LayoutKeybindButton:_onParentLayoutCalculated(left, top, right, bottom)
+	local parentHeight = bottom - top
+	self._curLayoutWidth = parentHeight
+	self._curLayoutHeight = parentHeight
 end
 
 ------------
@@ -906,19 +968,111 @@ function EEex_Options_TEMPLATE_KeybindButton_Action()
 		EEex_Options_Private_KeybindEndFocus(backgroundInstanceData)
 	else
 		local option = backgroundInstanceData.option
-		local default = option.default
+		local default = option:getDefault()
 		option:set(default)
 		EEex_Options_Private_KeybindUpdateText(backgroundInstanceData, default[1], default[2])
 	end
 end
 
-function EEex_Options_TEMPLATE_KeybindButton_Text()
-	return instanceId == EEex_Options_Private_KeybindFocusedInstance and "Accept" or "Default"
+function EEex_Options_TEMPLATE_KeybindButton_Tooltip()
+	return instanceId == EEex_Options_Private_KeybindFocusedInstance and "Accept" or "Reset to Default"
+end
+
+function EEex_Options_TEMPLATE_KeybindButton_Sequence()
+	return instanceId == EEex_Options_Private_KeybindFocusedInstance and 1 or 0
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_Private_LayoutKeybindButton ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Private_LayoutKeybindUpDownButton ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_Private_LayoutKeybindUpDownButton = {}
+EEex_Options_Private_LayoutKeybindUpDownButton.__index = EEex_Options_Private_LayoutKeybindUpDownButton
+setmetatable(EEex_Options_Private_LayoutKeybindUpDownButton, EEex_Options_Private_LayoutTemplate)
+--print("EEex_Options_Private_LayoutKeybindUpDownButton: "..tostring(EEex_Options_Private_LayoutKeybindUpDownButton))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_Private_LayoutKeybindUpDownButton.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_Private_LayoutKeybindUpDownButton)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_Private_LayoutKeybindUpDownButton:_init()
+	-- EEex_Options_Private_LayoutTemplate
+	--   self.menuName
+	--   Optional
+	--     self.width
+	--     self.height
+	--   Derived
+	-- 	   self._curLayoutWidth
+	--     self._curLayoutHeight
+	EEex_Utility_CallSuper(EEex_Options_Private_LayoutKeybindUpDownButton, "_init", self)
+	if self.layoutCallback == nil then self.layoutCallback = function() end end
+end
+
+function EEex_Options_Private_LayoutKeybindUpDownButton:_onParentLayoutCalculated(left, top, right, bottom)
+	local parentHeight = bottom - top
+	self._curLayoutWidth = parentHeight
+	self._curLayoutHeight = parentHeight
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_Private_LayoutKeybindUpDownButton:doLayout()
+	local instanceData = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_KeybindButtonUpDown", self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+	self.layoutCallback(instanceData)
+end
+
+function EEex_Options_Private_KeybindButtonUpDown_GetOption()
+	local buttonInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindButtonUpDown"][instanceId]
+	local backgroundInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][buttonInstanceData._pairedBackgroundInstance]
+	return backgroundInstanceData.option
+end
+
+function EEex_Options_TEMPLATE_KeybindButtonUpDown_Action()
+	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
+	local existingVal = option:get()
+	local upDown = existingVal[3]
+	existingVal[3] = not upDown
+	option:set(existingVal)
+end
+
+function EEex_Options_TEMPLATE_KeybindButtonUpDown_Tooltip()
+	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
+	local upDown = option:get()[3]
+	local result = upDown and "On Sequence Released" or "On Sequence Pressed"
+	return option.type.lockedType == nil and result or result.." (Locked)"
+end
+
+function EEex_Options_TEMPLATE_KeybindButtonUpDown_Sequence()
+	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
+	local upDown = option:get()[3]
+	local sequence = upDown and 2 or 4
+	return option.type.lockedType == nil and sequence or sequence + 1
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Private_LayoutKeybindUpDownButton ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_Private_LayoutToggle  ==
@@ -952,8 +1106,12 @@ function EEex_Options_Private_LayoutToggle:_init()
 
 	-- EEex_Options_Private_LayoutTemplate
 	--   self.menuName
-	--   self.width
-	--   self.height
+	--   Optional
+	--     self.width
+	--     self.height
+	--   Derived
+	-- 	   self._curLayoutWidth
+	--     self._curLayoutHeight
 	if self.width  == nil then self.width  = 32 end
 	if self.height == nil then self.height = 32 end
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutToggle, "_init", self)
@@ -1011,8 +1169,6 @@ function EEex_Options_Private_LayoutEdit:_init()
 	if self.padTop    == nil then self.padTop    = 3              end
 	if self.padRight  == nil then self.padRight  = 3              end
 	if self.padBottom == nil then self.padBottom = 3              end
-	-- Derived
-	--   self._pairedEditLUD
 end
 
 ------------
@@ -1102,6 +1258,14 @@ function EEex_Options_Private_LayoutText:_init()
 	if self.text            == nil then EEex_Error("text required")                                                 end
 	if self.horizontalAlign == nil then self.horizontalAlign = EEex_Options_Private_LayoutText_HorizontalAlign.LEFT end
 	if self.verticalAlign   == nil then self.verticalAlign   = EEex_Options_Private_LayoutText_VerticalAlign.TOP    end
+	-- Derived
+	-- 	 self._curLayoutWidth
+	--   self._curLayoutHeight
+end
+
+function EEex_Options_Private_LayoutText:_onInitLayout()
+	self._curLayoutWidth  = nil
+	self._curLayoutHeight = nil
 end
 
 ------------
@@ -1110,7 +1274,14 @@ end
 
 function EEex_Options_Private_LayoutText:calculateLayout(left, top, right, bottom)
 
-	local width, height = EEex_Options_Private_GetTextWidthHeight(self.font, self.point, self.text)
+	local width  = self._curLayoutWidth
+	local height = self._curLayoutHeight
+
+	if width == nil or height == nil then
+		local textWidth, textHeight = EEex_Options_Private_GetTextWidthHeight(self.font, self.point, self.text)
+		if width  == nil then width  = textWidth  end
+		if height == nil then height = textHeight end
+	end
 
 	self._layoutLeft   = left
 	self._layoutTop    = top
@@ -1123,9 +1294,8 @@ function EEex_Options_Private_LayoutText:calculateLayout(left, top, right, botto
 end
 
 function EEex_Options_Private_LayoutText:_onParentLayoutCalculated(left, top, right, bottom)
-	if self.horizontalAlign ~= EEex_Options_Private_LayoutText_HorizontalAlign.LEFT then self._layoutRight  = right  end
-	if self.verticalAlign   ~= EEex_Options_Private_LayoutText_VerticalAlign.TOP    then self._layoutBottom = bottom end
-	self:_calculateDerivedLayout()
+	if self.horizontalAlign ~= EEex_Options_Private_LayoutText_HorizontalAlign.LEFT then self._curLayoutWidth  = right  - self._layoutLeft end
+	if self.verticalAlign   ~= EEex_Options_Private_LayoutText_VerticalAlign.TOP    then self._curLayoutHeight = bottom - self._layoutTop  end
 end
 
 function EEex_Options_Private_LayoutText:doLayout()
@@ -1196,6 +1366,14 @@ function EEex_Options_Private_LayoutGrid:_init()
 	self._columnHoleIndex     = 1
 	self._rowsLayoutData      = {}
 	self._rowsLayoutDataIndex = 1
+end
+
+function EEex_Options_Private_LayoutGrid:_onInitLayout()
+	for _, column in ipairs(self._columns) do
+		for _, cell in ipairs(column) do
+			cell.layout:_onInitLayout()
+		end
+	end
 end
 
 function EEex_Options_Private_LayoutGrid:_getColumn(x)
@@ -1318,6 +1496,7 @@ function EEex_Options_Private_LayoutGrid:calculateLayout(left, top, right, botto
 			local curBottom = curTop + maxCellHeight
 			cellLayout:calculateLayout(curLeft, curTop, curRight, curBottom)
 			cellLayout:_onParentLayoutCalculated(curLeft, curTop, curRight, curBottom) -- Only allow element to access the cell
+			-- TODO: Re-layout child
 
 			if EEex_IsMaskSet(cell.align, EEex_Options_Private_LayoutGrid_AlignFlags.VERTICAL_CENTER) then
 				local centerOffset = (maxCellHeight - cellLayout:getLayoutHeight()) / 2
@@ -1861,12 +2040,18 @@ end
 ------------
 
 function EEex_Options_KeybindAccessor:get(option, newValue)
-	local modifierKeys, keys = EEex_Keybinds_GetBinding(self.keybindID)
-	return { modifierKeys, keys }
+	local modifierKeys, keys, upDown = EEex_Keybinds_GetBinding(self.keybindID)
+	return { modifierKeys, keys, upDown }
 end
 
 function EEex_Options_KeybindAccessor:set(option, newValue)
-	EEex_Keybinds_SetBinding(self.keybindID, newValue[1], newValue[2])
+
+	local lockedType = option.type.lockedType
+	if lockedType ~= nil then
+		newValue[3] = lockedType
+	end
+
+	EEex_Keybinds_SetBinding(self.keybindID, newValue[1], newValue[2], newValue[3], option.type.callback)
 	return newValue
 end
 
@@ -2090,7 +2275,7 @@ end
 
 function EEex_Options_KeybindINIStorage:write(option)
 	local value = option:get()
-	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2])
+	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3])
 	Infinity_SetINIValue(self.section, self.key, marshalled)
 end
 
@@ -2270,6 +2455,7 @@ end
 
 function EEex_Options_KeybindType:_init()
 	EEex_Utility_CallSuper(EEex_Options_KeybindType, "_init", self)
+	if self.callback == nil then EEex_Error("callback required") end
 end
 
 function EEex_Options_KeybindType:_buildLayout(option, menuName)
@@ -2297,7 +2483,13 @@ function EEex_Options_KeybindType:_buildLayout(option, menuName)
 			EEex_Options_Private_LayoutKeybindButton.new({
 				["menuName"]       = menuName,
 				["layoutCallback"] = buttonLayoutCallback,
-				["width"]          = 100,
+			}),
+			EEex_Options_Private_LayoutFixed.new({
+				["width"] = 5,
+			}),
+			EEex_Options_Private_LayoutKeybindUpDownButton.new({
+				["menuName"]       = menuName,
+				["layoutCallback"] = buttonLayoutCallback,
 			}),
 		}
 	})
@@ -2658,8 +2850,14 @@ end
 
 -- On keybind accepted (via Enter key or Submit button)
 function EEex_Options_Private_KeybindEndFocus(instanceData)
+
 	local option = instanceData.option
-	option:set({ EEex_Options_Private_KeybindRecordedModifiers, EEex_Options_Private_KeybindRecordedKeys })
+
+	local existingVal = option:get()
+	existingVal[1] = EEex_Options_Private_KeybindRecordedModifiers
+	existingVal[2] = EEex_Options_Private_KeybindRecordedKeys
+	option:set(existingVal)
+
 	EEex_Options_Private_KeybindKillFocus(instanceData, true)
 end
 
@@ -2687,9 +2885,9 @@ function EEex_Options_Private_KeybindCheckUnfocused(instanceData)
 	local templateName = captured.templateName:get()
 	local instanceId = captured.instanceId
 
-	if templateName == "EEex_Options_TEMPLATE_KeybindButton" then
+	if templateName == "EEex_Options_TEMPLATE_KeybindButton" or templateName == "EEex_Options_TEMPLATE_KeybindButtonUpDown" then
 
-		local buttonInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindButton"][instanceId]
+		local buttonInstanceData = EEex_Options_Private_TemplateInstancesByName[templateName][instanceId]
 
 		if buttonInstanceData._pairedBackgroundInstance ~= EEex_Options_Private_KeybindFocusedInstance then
 			EEex_Options_Private_KeybindKillFocus(instanceData)
@@ -2802,6 +3000,7 @@ function EEex_Options_Private_Layout()
 	local screenWidth, screenHeight = Infinity_GetScreenSize()
 
 	-- Calculate the layout
+	EEex_Options_Private_MainInset:_onInitLayout()
 	EEex_Options_Private_MainInset:calculateLayout(0, 0, screenWidth, screenHeight)
 	local layoutWidth = EEex_Options_Private_MainInset:getLayoutWidth()
 	local layoutHeight = EEex_Options_Private_MainInset:getLayoutHeight()
@@ -2837,22 +3036,28 @@ function EEex_Options_Close()
 	EEex_Options_Private_MainInset:hide()
 end
 
-function EEex_Options_MarshalKeybind(modifierKeys, keys)
+function EEex_Options_MarshalKeybind(modifierKeys, keys, upDown)
 
 	local parts = {}
 	local partsI = 1
 
 	for _, key in ipairs(modifierKeys) do
-		parts[partsI] = EngineGlobals.SDL_GetKeyName(key)
+		parts[partsI] = EEex_Key_GetName(key)
 		partsI = partsI + 1
 	end
 
 	for _, key in ipairs(keys) do
-		parts[partsI] = EngineGlobals.SDL_GetKeyName(key)
+		parts[partsI] = EEex_Key_GetName(key)
 		partsI = partsI + 1
 	end
 
-	return table.concat(parts, "+")
+	local sequenceStr = table.concat(parts, "+")
+
+	if upDown == nil then
+		return sequenceStr
+	end
+
+	return upDown and sequenceStr.."|Up" or sequenceStr.."|Down"
 end
 
 function EEex_Options_UnmarshalKeybind(str)
@@ -2864,7 +3069,16 @@ function EEex_Options_UnmarshalKeybind(str)
 	local modifierKeysI = 1
 	local keysI = 1
 
-	for _, keyStr in ipairs(EEex_Utility_Split(str, "+", false, true)) do
+	local typeSplit = EEex_Utility_Split(str, "|", false, true)
+
+	if #typeSplit ~= 2 then
+		return nil
+	end
+
+	local sequenceStr = typeSplit[1]
+	local typeStr = typeSplit[2]
+
+	for _, keyStr in ipairs(EEex_Utility_Split(sequenceStr, "+", false, true)) do
 
 		local key = EEex_Key_GetFromName(keyStr)
 
@@ -2880,6 +3094,14 @@ function EEex_Options_UnmarshalKeybind(str)
 			keys[keysI] = key
 			keysI = keysI + 1
 		end
+	end
+
+	if typeStr == "Up" then
+		result[3] = true
+	elseif typeStr == "Down" then
+		result[3] = false
+	else
+		return nil
 	end
 
 	return result

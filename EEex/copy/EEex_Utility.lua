@@ -21,20 +21,37 @@ function EEex_Utility_AlphanumericSortTable(o, stringAccessor)
 	return o
 end
 
-function EEex_Utility_FreeCPtrList(list)
-	while list.m_nCount > 0 do
-		EEex_FreeUD(list:RemoveHead())
-	end
-	list:Destruct()
-	EEex_FreeUD(list)
+function EEex_Utility_CallIfExists(func, ...)
+	if func then return func(...) end
 end
 
-function EEex_Utility_IterateCPtrList(list, func)
-	local node = list.m_pNodeHead
-	while node do
-		if func(node.data) then break end
-		node = node.pNext
+function EEex_Utility_CallSuper(t, funcName, ...)
+	local mt = getmetatable(t)
+	if mt == nil then return end
+	local superFunc = mt[funcName]
+	if superFunc == nil then return end
+	return superFunc(...)
+end
+
+-- @bubb_doc { EEex_Utility_DeepCopy }
+-- @deprecated: Use ``EEex.DeepCopy`` instead.
+function EEex_Utility_DeepCopy(t)
+	-- [EEex.dll]
+	return EEex.DeepCopy(t)
+end
+
+function EEex_Utility_Default(value, default)
+	if value == nil then return default else return value end
+end
+
+function EEex_Utility_DumpSprite()
+	local object = EEex_GameObject_GetUnderCursor()
+	if not object or not object:isSprite() then
+		return
 	end
+	local str = string.format("[EEex] address:[%s], id:[%s], name:[%s]", EEex_ToHex(EEex_UDToPtr(object)), EEex_ToHex(object.m_id), object.m_sName.m_pchData:get())
+	print(str)
+	Infinity_DisplayString(str)
 end
 
 function EEex_Utility_Eval(src, chunk)
@@ -51,31 +68,21 @@ function EEex_Utility_Eval(src, chunk)
 	return false
 end
 
-function EEex_Utility_TryFinally(func, finally, ...)
-	local result = { xpcall(func, EEex_ErrorMessageHandler, ...) }
-	finally()
-	if not result[1] then error(result[2], 0) end
-	return select(2, table.unpack(result))
+function EEex_Utility_Find(iterable, element)
+	for i, itrElement in ipairs(iterable) do
+		if itrElement == element then
+			return i
+		end
+	end
+	return nil
 end
 
-function EEex_Utility_CallIfExists(func, ...)
-	if func then return func(...) end
-end
-
-function EEex_Utility_CallSuper(t, funcName, ...)
-	local mt = getmetatable(t)
-	if mt == nil then return end
-	local superFunc = mt[funcName]
-	if superFunc == nil then return end
-	return superFunc(...)
-end
-
-function EEex_Utility_Default(value, default)
-	if value == nil then return default else return value end
-end
-
-function EEex_Utility_Ternary(condition, ifTrue, ifFalse)
-	if condition then return ifTrue() else return ifFalse() end
+function EEex_Utility_FreeCPtrList(list)
+	while list.m_nCount > 0 do
+		EEex_FreeUD(list:RemoveHead())
+	end
+	list:Destruct()
+	EEex_FreeUD(list)
 end
 
 function EEex_Utility_GetOrCreate(t, key, default)
@@ -94,29 +101,18 @@ function EEex_Utility_GetOrCreateTable(t, key, fillFunc)
 	return default
 end
 
--- @bubb_doc { EEex_Utility_DeepCopy }
--- @deprecated: Use ``EEex.DeepCopy`` instead.
-function EEex_Utility_DeepCopy(t)
-	-- [EEex.dll]
-	return EEex.DeepCopy(t)
-end
-
-function EEex_Utility_DumpSprite()
-	local object = EEex_GameObject_GetUnderCursor()
-	if not object or not object:isSprite() then
-		return
+function EEex_Utility_IterateCPtrList(list, func)
+	local node = list.m_pNodeHead
+	while node do
+		if func(node.data) then break end
+		node = node.pNext
 	end
-	local str = string.format("[EEex] address:[%s], id:[%s], name:[%s]", EEex_ToHex(EEex_UDToPtr(object)), EEex_ToHex(object.m_id), object.m_sName.m_pchData:get())
-	print(str)
-	Infinity_DisplayString(str)
 end
 
-function EEex_Utility_Switch(toSwitchOn, cases, defaultCase)
-	local func = cases[toSwitchOn]
-	if func then
-		func()
-	elseif defaultCase then
-		defaultCase()
+function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
+	local t = EEex_Utility_MapToSortedTable(map, sortFunc)
+	for i, v in ipairs(t) do
+		func(i, v[1], v[2])
 	end
 end
 
@@ -129,13 +125,6 @@ function EEex_Utility_MapToSortedTable(map, sortFunc)
 	end
 	table.sort(t, sortFunc)
 	return t
-end
-
-function EEex_Utility_IterateMapAsSorted(map, sortFunc, func)
-	local t = EEex_Utility_MapToSortedTable(map, sortFunc)
-	for i, v in ipairs(t) do
-		func(i, v[1], v[2])
-	end
 end
 
 function EEex_Utility_NewScope(func)
@@ -172,6 +161,26 @@ function EEex_Utility_Split(text, splitBy, usePattern, allowEmptyCapture)
 	end
 
 	return toReturn
+end
+
+function EEex_Utility_Switch(toSwitchOn, cases, defaultCase)
+	local func = cases[toSwitchOn]
+	if func then
+		func()
+	elseif defaultCase then
+		defaultCase()
+	end
+end
+
+function EEex_Utility_Ternary(condition, ifTrue, ifFalse)
+	if condition then return ifTrue() else return ifFalse() end
+end
+
+function EEex_Utility_TryFinally(func, finally, ...)
+	local result = { xpcall(func, EEex_ErrorMessageHandler, ...) }
+	finally()
+	if not result[1] then error(result[2], 0) end
+	return select(2, table.unpack(result))
 end
 
 ---------------
@@ -532,7 +541,9 @@ function EEex_Dump(key, valueToDump, dumpFunction)
 			elseif tableValueType == 'table' then
 				if tableKey ~= '_G' then
 					local entry = {}
-					entry.string = tableValueType..' '..tostring(tableKey)..':'
+					local tableStr = tostring(tableValue)
+					local tableAddress = tableStr:sub(tableStr:find(" ") + 1, -1)
+					entry.string = tableValueType..' ('..tableAddress..') '..tostring(tableKey)..':'
 					entry.value = {} --entry.value is a levelToFill
 					entry.value.previous = {}
 					entry.value.previous.tableName = tableName

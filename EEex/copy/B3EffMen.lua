@@ -1,10 +1,4 @@
 
---------------------
--- Manual Options --
---------------------
-
-B3EffectMenu_Key = EEex_Key_GetFromName("Left Shift")
-
 -------------
 -- Options --
 -------------
@@ -29,6 +23,17 @@ EEex_GameState_AddInitializedListener(function()
 				}),
 				["storage"] = EEex_Options_IntegerINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
 			}),
+			EEex_Options_Option.new({
+				["id"]       = "B3EffectMenu_LaunchKeybind",
+				["name"]     = "Launch Keybind",
+				["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
+				["type"]     = EEex_Options_KeybindType.new({
+					["lockedType"] = false,
+					["callback"]   = function() B3EffectMenu_Menu_KeybindActive = true end,
+				}),
+				["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
+				["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Launch Keybind" }),
+			}),
 		},
 	})
 end)
@@ -37,7 +42,8 @@ end)
 -- Globals --
 -------------
 
-B3EffectMenu_Menu_Enabled = false
+B3EffectMenu_Menu_Enabled       = false
+B3EffectMenu_Menu_KeybindActive = false
 
 -----------------------
 -- Hooks / Listeners --
@@ -66,6 +72,10 @@ EEex_Menu_AddMainFileLoadedListener(function()
 		B3EffectMenu_Close()
 		return oldActionbarOnClose()
 	end)
+end)
+
+EEex_Key_AddReleasedListener(function()
+	B3EffectMenu_Menu_KeybindActive = false
 end)
 
 ----------
@@ -206,12 +216,12 @@ function B3EffectMenu_Menu_Tick()
 	end
 
 	local object = EEex_GameObject_GetUnderCursor()
-	if EEex_Key_IsDown(B3EffectMenu_Key) and object and object:isSprite() then
+	if B3EffectMenu_Menu_KeybindActive and object and object:isSprite() then
 		if object.m_id ~= B3EffectMenu_CurrentActorID then
 			B3EffectMenu_CurrentActorID = object.m_id
 			B3EffectMenu_LaunchInfo()
 		end
-	elseif (not EEex_Key_IsDown(B3EffectMenu_Key)) or (not EEex_Menu_IsCursorWithin("B3EffectMenu_Menu", "B3EffectMenu_Menu_Background")) then
+	elseif (not B3EffectMenu_Menu_KeybindActive) or (not EEex_Menu_IsCursorWithin("B3EffectMenu_Menu", "B3EffectMenu_Menu_Background")) then
 		B3EffectMenu_Init()
 	end
 end

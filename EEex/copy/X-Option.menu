@@ -143,13 +143,26 @@ menu
 			enabled true
 			action "EEex_Options_TEMPLATE_KeybindButton_Action()"
 			actionAlt "EEex_Options_TEMPLATE_KeybindButton_Action()"
-			bam "GUIOSTCL"
-			text lua "EEex_Options_TEMPLATE_KeybindButton_Text()"
-			text style "button"
-			text align center center
-			pad 6 6 6 6
+			bam "X-KEYBND"
+			tooltip lua "EEex_Options_TEMPLATE_KeybindButton_Tooltip()"
+			sequence lua "EEex_Options_TEMPLATE_KeybindButton_Sequence()"
 			scaleToClip
 		}
 		name "EEex_Options_TEMPLATE_KeybindButton"
+	}
+
+	template
+	{
+		button
+		{
+			enabled true
+			action "EEex_Options_TEMPLATE_KeybindButtonUpDown_Action()"
+			actionAlt "EEex_Options_TEMPLATE_KeybindButtonUpDown_Action()"
+			bam "X-KEYBND"
+			tooltip lua "EEex_Options_TEMPLATE_KeybindButtonUpDown_Tooltip()"
+			sequence lua "EEex_Options_TEMPLATE_KeybindButtonUpDown_Sequence()"
+			scaleToClip
+		}
+		name "EEex_Options_TEMPLATE_KeybindButtonUpDown"
 	}
 }
