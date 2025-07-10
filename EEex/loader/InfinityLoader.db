@@ -1641,6 +1641,10 @@ Operations=ADD 17
 Pattern=BEFFFFFFFFEB11
 Operations=ADD 7
 
+[Hook-CGameAIBase::ExecuteAction()-DefaultJmp]
+Pattern=488BCBFF17
+Operations=ADD 31
+
 [Hook-CGameAIBase::ExecuteAction()-NormalBranch]
 Pattern=6689B3BA040000
 Operations=ADD -5

@@ -3,66 +3,54 @@
 -- located at [Hardcoded_InternalPatchLocation] in order to (potentially) initialize Lua, initialize
 -- hardcoded EEex state, and call this file.
 
--------------
--- Options --
--------------
-
-EEex_Main_MinimalStutterStartup = false
-
 ----------------------------------
 -- Startup Config (Do not edit) --
 ----------------------------------
 
 EEex_Main_Private_NormalStartupFiles = {
-	"EEex_Action",
-	"EEex_Action_Patch",
-	"EEex_Actionbar",
-	"EEex_Actionbar_Patch",
-	"EEex_AIBase",
-	"EEex_AIBase_Patch",
-	"EEex_Area",
-	"EEex_Fix",
-	"EEex_Fix_Patch",
-	"EEex_GameObject",
-	"EEex_GameObject_Patch",
-	"EEex_GameState",
-	"EEex_GameState_Patch",
-	"EEex_Key",
-	"EEex_Key_Patch",
-	"EEex_Keybinds",
-	"EEex_Menu",
-	"EEex_Menu_Patch",
-	"EEex_Mix_Patch",
-	"EEex_Object",
-	"EEex_Object_Patch",
-	"EEex_Opcode",
-	"EEex_Opcode_Patch",
-	"EEex_Projectile",
-	"EEex_Projectile_Patch",
-	"EEex_Resource",
-	"EEex_Script",
-	"EEex_Script_Patch",
-	"EEex_Sprite",
-	"EEex_Sprite_Patch",
-	"EEex_Stats",
-	"EEex_Stats_Patch",
-	"EEex_Test",
-	"EEex_Trigger",
-	"EEex_Trigger_Patch",
-	"EEex_Utility",
-	"EEex_Variable",
-	"EEex_Marshal",
-	"EEex_Debug",
-	"EEex_Options",
-}
-
-EEex_Main_Private_MinimalStutterStartupFiles = {
-	"EEex_GameState",
-	"EEex_GameState_Patch",
-	"EEex_Menu",
-	"EEex_Menu_Patch",
-	"EEex_Resource",
-	"EEex_Utility",
+	"EEex_Utility",          -- Here so all EEex files can immediately use utility functions
+	"EEex_Key",              -- Here because it is required by EEex_Options.lua
+	"EEex_Key_Patch",        --
+	"EEex_Options",          -- Here so most EEex files can register options
+	"EEex_Action",           --
+	"EEex_Action_Patch",     --
+	"EEex_Actionbar",        --
+	"EEex_Actionbar_Patch",  --
+	"EEex_AIBase",           --
+	"EEex_AIBase_Patch",     --
+	"EEex_Area",             --
+	"EEex_Fix",              --
+	"EEex_Fix_Patch",        --
+	"EEex_GameObject",       --
+	"EEex_GameObject_Patch", --
+	"EEex_GameState",        --
+	"EEex_GameState_Patch",  --
+	"EEex_Keybinds",         --
+	"EEex_Menu",             --
+	"EEex_Menu_Patch",       --
+	"EEex_Mix_Patch",        --
+	"EEex_Object",           --
+	"EEex_Object_Patch",     --
+	"EEex_Opcode",           --
+	"EEex_Opcode_Patch",     --
+	"EEex_Projectile",       --
+	"EEex_Projectile_Patch", --
+	"EEex_Resource",         --
+	"EEex_Script",           --
+	"EEex_Script_Patch",     --
+	"EEex_Sprite",           --
+	"EEex_Sprite_Patch",     --
+	"EEex_Stats",            --
+	"EEex_Stats_Patch",      --
+	"EEex_Test",             --
+	"EEex_Trigger",          --
+	"EEex_Trigger_Patch",    --
+	"EEex_Variable",         --
+	-- Late files
+	"EEex_Debug",            --
+	"EEex_Debug_Patch",      --
+	"EEex_Marshal",          --
+	"EEex_OptionsLate",      -- Here so it can register listeners provided by other EEex files
 }
 
 ----------
@@ -93,30 +81,24 @@ EEex_Main_Private_MinimalStutterStartupFiles = {
 	EEex_DoFile("EEex_MemoryManagerDefinitions")
 
 	-- Run EEex's other files (which each pertain to a specific category)
-	for _, fileName in ipairs(not EEex_Main_MinimalStutterStartup
-		and EEex_Main_Private_NormalStartupFiles
-		or  EEex_Main_Private_MinimalStutterStartupFiles)
-	do
+	for _, fileName in ipairs(EEex_Main_Private_NormalStartupFiles) do
 		EEex_DoFile(fileName)
 	end
 
-	if not EEex_Main_MinimalStutterStartup then
+	-- This file may run before the game is initialized.
+	-- The following listener runs files that need to
+	-- wait for the game to be somewhat initialized.
+	EEex_GameState_AddInitializedListener(function()
+		EEex_DoFile("EEex_UserDataGlobals")
+		EEex_DoFile("EEex_StutterDetector")
+	end)
 
-		-- This file may run before the game is initialized.
-		-- The following listener runs files that need to
-		-- wait for the game to be somewhat initialized.
-		EEex_GameState_AddInitializedListener(function()
-			EEex_DoFile("EEex_UserDataGlobals")
-			EEex_DoFile("EEex_StutterDetector")
-		end)
-
-		-- Run EEex_Modules.lua, which determines the enabled EEex modules
-		EEex_DoFile("EEex_Modules")
-		for moduleName, enabled in pairs(EEex_Modules) do
-			if enabled then
-				-- Load the enabled modules
-				EEex_DoFile(moduleName)
-			end
+	-- Run EEex_Modules.lua, which determines the enabled EEex modules
+	EEex_DoFile("EEex_Modules")
+	for moduleName, enabled in pairs(EEex_Modules) do
+		if enabled then
+			-- Load the enabled modules
+			EEex_DoFile(moduleName)
 		end
 	end
 

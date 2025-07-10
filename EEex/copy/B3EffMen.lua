@@ -5,38 +5,36 @@
 
 B3EffectMenu_RowCount = nil
 
-EEex_GameState_AddInitializedListener(function()
-	EEex_Options_AddTab("Effect Menu", {
-		{
-			EEex_Options_Option.new({
-				["id"]      = "B3EffectMenu_RowCount",
-				["name"]    = "Row Count",
-				["default"] = 4,
-				["type"] = EEex_Options_EditType.new({
-					["maxCharacters"] = 2,
-					["number"]        = true,
-				}),
-				["accessor"] = EEex_Options_ClampedAccessor.new({
-					["accessor"] = EEex_Options_GlobalAccessor.new({ ["name"] = "B3EffectMenu_RowCount" }),
-					["min"]      = 1,
-					["max"]      = 99,
-				}),
-				["storage"] = EEex_Options_IntegerINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
+EEex_Options_AddTab("Effect Menu", function() return {
+	{
+		EEex_Options_Option.new({
+			["id"]      = "B3EffectMenu_RowCount",
+			["name"]    = "Row Count",
+			["default"] = 4,
+			["type"] = EEex_Options_EditType.new({
+				["maxCharacters"] = 2,
+				["number"]        = true,
 			}),
-			EEex_Options_Option.new({
-				["id"]       = "B3EffectMenu_LaunchKeybind",
-				["name"]     = "Launch Keybind",
-				["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
-				["type"]     = EEex_Options_KeybindType.new({
-					["lockedType"] = false,
-					["callback"]   = function() B3EffectMenu_Menu_KeybindActive = true end,
-				}),
-				["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
-				["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Launch Keybind" }),
+			["accessor"] = EEex_Options_ClampedAccessor.new({
+				["accessor"] = EEex_Options_GlobalAccessor.new({ ["name"] = "B3EffectMenu_RowCount" }),
+				["min"]      = 1,
+				["max"]      = 99,
 			}),
-		},
-	})
-end)
+			["storage"] = EEex_Options_IntegerINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
+		}),
+		EEex_Options_Option.new({
+			["id"]       = "B3EffectMenu_LaunchKeybind",
+			["name"]     = "Launch Keybind",
+			["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
+			["type"]     = EEex_Options_KeybindType.new({
+				["lockedFireType"] = EEex_Options_KeybindFireType.DOWN,
+				["callback"]       = function() B3EffectMenu_Menu_KeybindActive = true end,
+			}),
+			["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
+			["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Launch Keybind" }),
+		}),
+	},
+} end)
 
 -------------
 -- Globals --

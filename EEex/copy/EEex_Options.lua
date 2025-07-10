@@ -1,4 +1,13 @@
 
+--=============
+-- Constants ==
+--=============
+
+EEex_Options_KeybindFireType = {
+	["UP"]   = true,
+	["DOWN"] = false,
+}
+
 --=========
 -- Types ==
 --=========
@@ -1051,23 +1060,23 @@ end
 function EEex_Options_TEMPLATE_KeybindButtonUpDown_Action()
 	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
 	local existingVal = option:get()
-	local upDown = existingVal[3]
-	existingVal[3] = not upDown
+	local fireType = existingVal[3]
+	existingVal[3] = not fireType
 	option:set(existingVal)
 end
 
 function EEex_Options_TEMPLATE_KeybindButtonUpDown_Tooltip()
 	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
-	local upDown = option:get()[3]
-	local result = upDown and "On Sequence Released" or "On Sequence Pressed"
-	return option.type.lockedType == nil and result or result.." (Locked)"
+	local fireType = option:get()[3]
+	local result = fireType and "On Sequence Released" or "On Sequence Pressed"
+	return option.type.lockedFireType == nil and result or result.." (Locked)"
 end
 
 function EEex_Options_TEMPLATE_KeybindButtonUpDown_Sequence()
 	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
-	local upDown = option:get()[3]
-	local sequence = upDown and 2 or 4
-	return option.type.lockedType == nil and sequence or sequence + 1
+	local fireType = option:get()[3]
+	local sequence = fireType and 2 or 4
+	return option.type.lockedFireType == nil and sequence or sequence + 1
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2040,15 +2049,15 @@ end
 ------------
 
 function EEex_Options_KeybindAccessor:get(option, newValue)
-	local modifierKeys, keys, upDown = EEex_Keybinds_GetBinding(self.keybindID)
-	return { modifierKeys, keys, upDown }
+	local modifierKeys, keys, fireType = EEex_Keybinds_GetBinding(self.keybindID)
+	return { modifierKeys, keys, fireType }
 end
 
 function EEex_Options_KeybindAccessor:set(option, newValue)
 
-	local lockedType = option.type.lockedType
-	if lockedType ~= nil then
-		newValue[3] = lockedType
+	local lockedFireType = option.type.lockedFireType
+	if lockedFireType ~= nil then
+		newValue[3] = lockedFireType
 	end
 
 	EEex_Keybinds_SetBinding(self.keybindID, newValue[1], newValue[2], newValue[3], option.type.callback)
@@ -3036,7 +3045,7 @@ function EEex_Options_Close()
 	EEex_Options_Private_MainInset:hide()
 end
 
-function EEex_Options_MarshalKeybind(modifierKeys, keys, upDown)
+function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType)
 
 	local parts = {}
 	local partsI = 1
@@ -3053,11 +3062,11 @@ function EEex_Options_MarshalKeybind(modifierKeys, keys, upDown)
 
 	local sequenceStr = table.concat(parts, "+")
 
-	if upDown == nil then
+	if fireType == nil then
 		return sequenceStr
 	end
 
-	return upDown and sequenceStr.."|Up" or sequenceStr.."|Down"
+	return fireType and sequenceStr.."|Up" or sequenceStr.."|Down"
 end
 
 function EEex_Options_UnmarshalKeybind(str)
@@ -3107,56 +3116,36 @@ function EEex_Options_UnmarshalKeybind(str)
 	return result
 end
 
-function EEex_Options_AddTab(text, options)
+function EEex_Options_AddTab(text, optionsProvider)
 
-	local menuName = "EEex_Options_Tab" .. EEex_Options_Private_TabInsertIndex
+	EEex_GameState_AddInitializedListener(function()
 
-	EEex_Menu_Eval([[
-		menu
-		{
-			name "]] .. menuName .. [["
-			ignoreEsc
-			label
+		local menuName = "EEex_Options_Tab" .. EEex_Options_Private_TabInsertIndex
+
+		EEex_Menu_Eval([[
+			menu
 			{
-				area 0 0 0 0
+				name "]] .. menuName .. [["
+				ignoreEsc
+				label
+				{
+					area 0 0 0 0
+				}
 			}
+		]])
+
+		local options = type(optionsProvider) == "function" and optionsProvider() or optionsProvider
+
+		EEex_Options_Private_Tabs[EEex_Options_Private_TabInsertIndex] = {
+			["name"] = text,
+			["layout"] = EEex_Options_Private_LayoutOptionsPanel.new({
+				["menuName"] = menuName,
+				["options"] = options,
+			})
+			:inset({ ["insetTop"] = 5, ["insetRight"] = 5, ["insetBottom"] = 5 }),
 		}
-	]])
 
-	EEex_Options_Private_Tabs[EEex_Options_Private_TabInsertIndex] = {
-		["name"] = text,
-		["layout"] = EEex_Options_Private_LayoutOptionsPanel.new({
-			["menuName"] = menuName,
-			["options"] = options,
-		})
-		:inset({ ["insetTop"] = 5, ["insetRight"] = 5, ["insetBottom"] = 5 }),
-	}
-
-	EEex_Options_Private_TabInsertIndex = EEex_Options_Private_TabInsertIndex + 1
-	EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(t) return t.name end)
-end
-
---=============
--- Listeners ==
---=============
-
-EEex_Menu_AddMainFileLoadedListener(function()
-	EEex_Menu_LoadFile("X-Option")
-end)
-
-EEex_Key_AddPressedListener(function(key)
-	if key == EEex_Key_GetFromName("\\") then
-		EEex_Options_Open()
-	end
-end)
-
-EEex_Menu_AddWindowSizeChangedListener(function()
-	if not Infinity_IsMenuOnStack("EEex_Options") then return end
-	EEex_Options_Private_Layout()
-end)
-
--- Hardcoded call from EEex_GameState.lua
-function EEex_Options_OnAfterGameStateInitialized()
-	EEex_Options_Private_BuildLayout()
-	EEex_Options_Private_ReadOptions()
+		EEex_Options_Private_TabInsertIndex = EEex_Options_Private_TabInsertIndex + 1
+		EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(t) return t.name end)
+	end)
 end

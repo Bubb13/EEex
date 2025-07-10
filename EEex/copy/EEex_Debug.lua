@@ -1,6 +1,18 @@
 
+--===========
+-- Options ==
+--===========
+
 EEex_Debug_DisableExtraCreatureMarshalling = false
 EEex_Debug_LogActions = false
+
+--===========
+-- General ==
+--===========
+
+------------
+-- Public --
+------------
 
 function EEex_Debug_DumpScriptEncoding(resref, bPlayerScript)
 	local script = EEex_Resource_LoadScript(resref, bPlayerScript)
@@ -58,6 +70,26 @@ function EEex_Debug_DumpScriptEncoding(resref, bPlayerScript)
 	end)
 end
 
+-------------
+-- Private --
+-------------
+
+function EEex_Debug_Private_DumpSprite()
+
+	local object = EEex_GameObject_GetUnderCursor()
+	if not EEex_GameObject_IsSprite(object) then return end
+
+	local str = string.format("[EEex] address:[%s], id:[%s], name:[%s]",
+		EEex_ToHex(EEex_UDToPtr(object)), EEex_ToHex(object.m_id), object.m_sName.m_pchData:get())
+
+	print(str)
+	Infinity_DisplayString(str)
+end
+
+--===============
+-- Conditional ==
+--===============
+
 (function()
 
 	if EEex_Debug_LogActions then
@@ -65,14 +97,14 @@ end
 		local actionNames = {}
 
 		EEex_GameState_AddInitializedListener(function()
-			local actions = EEex_Resource_LoadIDS("ACTION")
+			local actions = EEex_Resource_LoadIDS("ACTION", true)
 			for i = 0, actions:getCount() - 1 do
 				actionNames[i] = actions:getStart(i)
 			end
 			actions:free()
 		end)
 
-		EEex_Debug_LogAction = function(aiBase, bFromAIBase)
+		EEex_Debug_Hook_LogAction = function(aiBase, bFromAIBase)
 
 			local objectType = aiBase.m_objectType
 
@@ -106,77 +138,17 @@ end
 					aiBase.m_curResponseSetNum, aiBase.m_curResponseNum))
 			end
 		end
-
-		EEex_DisableCodeProtection()
-
-		--[[
-		+---------------------------------------------------------------------------------------------------------+
-		| Debug-log details about a CGameAIBase's action before it is executed                                    |
-		+---------------------------------------------------------------------------------------------------------+
-		|   [Lua] EEex_Debug_LogAction(executingObject: CGameAIBase|EEex_GameObject_CastUT, bFromAIBase: boolean) |
-		+---------------------------------------------------------------------------------------------------------+
-		--]]
-
-		EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), 0, {
-			{"hook_integrity_watchdog_ignore_registers", {
-				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
-				EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
-			}}},
-			EEex_FlattenTable({
-				{[[
-					#MAKE_SHADOW_SPACE(56)
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], r8
-				]]},
-				EEex_GenLuaCall("EEex_Debug_LogAction", {
-					["args"] = {
-						function(rspOffset) return {[[
-							mov qword ptr ss:[rsp+#$(1)], rbx
-						]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
-						function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], 1", {rspOffset}, "#ENDL"} end,
-					},
-				}),
-				{[[
-					call_error:
-					mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-					#DESTROY_SHADOW_SPACE
-					cmp r8d, 0x1D5
-				]]},
-			})
-		)
-
-		EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::ExecuteAction()-DefaultJmp"), 0, {
-			{"hook_integrity_watchdog_ignore_registers", {
-				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R11
-			}}},
-			EEex_FlattenTable({
-				{[[
-					#MAKE_SHADOW_SPACE(80)
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r9
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r10
-				]]},
-				EEex_GenLuaCall("EEex_Debug_LogAction", {
-					["args"] = {
-						function(rspOffset) return {[[
-							mov qword ptr ss:[rsp+#$(1)], rdi
-						]], {rspOffset}}, "CGameAIBase", "EEex_GameObject_CastUT" end,
-						function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], 0", {rspOffset}, "#ENDL"} end,
-					},
-				}),
-				{[[
-					call_error:
-					mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
-					mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-					mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-					#DESTROY_SHADOW_SPACE
-					cmp ecx, 0x1D7
-				]]},
-			})
-		)
-
-		EEex_EnableCodeProtection()
 	end
-
 end)()
+
+--=============
+-- Listeners ==
+--=============
+
+EEex_Key_AddPressedListener(function(key)
+	if worldScreen == e:GetActiveEngine() then
+		if key == EEex_Key_GetFromName("`") and EEex_Key_IsDown(EEex_Key_GetFromName("Left Alt")) then
+			EEex_Debug_Private_DumpSprite()
+		end
+	end
+end)

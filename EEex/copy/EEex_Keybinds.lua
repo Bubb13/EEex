@@ -15,32 +15,117 @@ for _, hotkeyDef in pairs(EEex_Keybinds_Private_Hotkeys) do
 	hotkeyDef[5] = 1
 end
 
--------------
--- Options --
--------------
+--===========
+-- Options ==
+--===========
 
-EEex_GameState_AddInitializedListener(function()
-	EEex_Options_AddTab("Miscellaneous", {
-		{
-			EEex_Options_Option.new({
-				["id"]       = "EEex_Keybinds_ToggleKeycodeOutput",
-				["name"]     = "Toggle Keycode Output",
-				["default"]  = EEex_Options_UnmarshalKeybind("`|Up"),
-				["type"]     = EEex_Options_KeybindType.new({
-					["callback"] = function() EEex_Keybinds_Private_TogglePrintKeys() end,
-				}),
-				["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "EEex_Keybinds_ToggleKeycodeOutput" }),
-				["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
+EEex_Options_AddTab("Miscellaneous", function() return {
+	{
+		EEex_Options_Option.new({
+			["id"]       = "EEex_Keybinds_ToggleKeycodeOutput",
+			["name"]     = "Toggle Keycode Output",
+			["default"]  = EEex_Options_UnmarshalKeybind("`|Up"),
+			["type"]     = EEex_Options_KeybindType.new({
+				["callback"] = function() EEex_Keybinds_Private_TogglePrintKeys() end,
 			}),
-		},
-	})
-end)
+			["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "EEex_Keybinds_ToggleKeycodeOutput" }),
+			["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
+		}),
+	},
+} end)
 
--------------
--- General --
--------------
+--===========
+-- Globals ==
+--===========
 
+EEex_Keybinds_Private_InternalCastResref = nil
+EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
 EEex_Keybinds_Private_PrintKeys = false
+
+--===========
+-- General ==
+--===========
+
+------------
+-- Public --
+------------
+
+function EEex_Keybinds_SetBinding(id, modifierKeys, keys, fireType, func)
+	local existingTable = EEex_Keybinds_Private_Hotkeys[id]
+	if existingTable ~= nil then
+		if func ~= nil then existingTable[1] = func end
+		existingTable[2] = modifierKeys
+		existingTable[3] = keys
+		existingTable[4] = fireType
+	else
+		EEex_Keybinds_Private_Hotkeys[id] = { func, modifierKeys, keys, fireType, 1 }
+	end
+end
+
+function EEex_Keybinds_GetBinding(id)
+	local existingTable = EEex_Keybinds_Private_Hotkeys[id]
+	if existingTable == nil then return nil, nil, nil, nil end
+	return existingTable[2], existingTable[3], existingTable[4], existingTable[1]
+end
+
+function EEex_Keybinds_Cast(resref)
+
+	if worldScreen ~= e:GetActiveEngine() then return false end
+
+	local sprite = EEex_Sprite_GetSelected()
+	if sprite == nil then return false end
+
+	if EEex_Keybinds_Private_UseCGameButtonList(sprite, sprite:GetQuickButtons(2, false), resref, false) then
+		return true
+	end
+
+	return EEex_Keybinds_Private_UseCGameButtonList(sprite, sprite:GetQuickButtons(4, false), resref, false)
+end
+
+function EEex_Keybinds_CastTwoStep(initial, second)
+	if not EEex_Keybinds_Cast(initial) then return end
+	EEex_Keybinds_Private_InternalCastResref = second
+end
+
+function EEex_Keybinds_SelectPortrait(portraitNum, dontUnselect)
+
+	local activeEngine = e:GetActiveEngine()
+	if worldScreen ~= activeEngine then
+		EEex_CastUD(activeEngine, "EEex_CBaldurEngine"):virtual_OnPortraitLClick(portraitNum)
+		return
+	end
+
+	local game = EngineGlobals.g_pBaldurChitin.m_pObjectGame
+	local spriteID = EEex_Sprite_GetInPortraitID(portraitNum)
+	local cursorState = game.m_nState
+
+	if cursorState == 0 then
+		local memberList = game.m_group.m_memberList
+		if memberList.m_nCount == 1 and memberList.m_pNodeHead.data == spriteID then
+			game:OnPortraitLDblClick(portraitNum)
+		else
+			if not dontUnselect then game:UnselectAll() end
+			game:SelectCharacter(spriteID, true) -- boolean bPlaySelectSound
+			game:SelectToolbar()
+		end
+	else
+		local sprite = EEex_GameObject_Get(spriteID)
+		if sprite == nil then return end
+
+		local visibleArea = EEex_Area_GetVisible()
+		if not EEex_UDEqual(visibleArea, sprite.m_pArea) then return end
+
+		if cursorState == 1 then
+			visibleArea:OnActionButtonClickGround(sprite.m_pos)
+		else
+			sprite:virtual_OnActionButton(sprite.m_pos)
+		end
+	end
+end
+
+-------------
+-- Private --
+-------------
 
 function EEex_Keybinds_Private_TogglePrintKeys()
 	if not EEex_Keybinds_Private_PrintKeys then
@@ -56,15 +141,14 @@ function EEex_Keybinds_Private_UseCGameButtonList(sprite, buttonList, resref, bO
 	local found = false
 
 	EEex_Utility_IterateCPtrList(buttonList, function(buttonData)
-		if buttonData.m_abilityId.m_res:get() == resref then
-			if bOffInternal then
-				sprite:ReadyOffInternalList(buttonData, false)
-			else
-				sprite:ReadySpell(buttonData, false)
-			end
-			found = true
-			return true -- breaks out of EEex_Utility_IterateCPtrList()
+		if buttonData.m_abilityId.m_res:get() ~= resref then return --[[ continue --]] end
+		if bOffInternal then
+			sprite:ReadyOffInternalList(buttonData, false)
+		else
+			sprite:ReadySpell(buttonData, false)
 		end
+		found = true
+		return true -- break
 	end)
 
 	EEex_Utility_FreeCPtrList(buttonList)
@@ -72,118 +156,35 @@ function EEex_Keybinds_Private_UseCGameButtonList(sprite, buttonList, resref, bO
 end
 
 function EEex_Keybinds_Private_CastOffInternal(resref)
-	if worldScreen == e:GetActiveEngine() then
-		local sprite = EEex_Sprite_GetSelected()
-		if sprite then
-			local spellButtonDataList = sprite:GetInternalButtonList()
-			if EEex_Keybinds_Private_UseCGameButtonList(sprite, spellButtonDataList, resref, true) then
-				EEex_Actionbar_RestoreLastState()
-				return true
-			end
-		end
+
+	if worldScreen ~= e:GetActiveEngine() then return false end
+
+	local sprite = EEex_Sprite_GetSelected()
+	if sprite == nil then return false end
+
+	if not EEex_Keybinds_Private_UseCGameButtonList(sprite, sprite:GetInternalButtonList(), resref, true) then
+		return false
 	end
-	return false
+
+	EEex_Actionbar_RestoreLastState()
+	return true
 end
 
-function EEex_Keybinds_SetBinding(id, modifierKeys, keys, upDown, func)
-	local existingTable = EEex_Keybinds_Private_Hotkeys[id]
-	if existingTable ~= nil then
-		if func ~= nil then existingTable[1] = func end
-		existingTable[2] = modifierKeys
-		existingTable[3] = keys
-		existingTable[4] = upDown
-	else
-		EEex_Keybinds_Private_Hotkeys[id] = { func, modifierKeys, keys, upDown, 1 }
-	end
-end
-
-function EEex_Keybinds_GetBinding(id)
-	local existingTable = EEex_Keybinds_Private_Hotkeys[id]
-	if existingTable == nil then return nil, nil, nil end
-	return existingTable[2], existingTable[3], existingTable[4], existingTable[1]
-end
-
-function EEex_Keybinds_Cast(resref)
-	if worldScreen == e:GetActiveEngine() then
-		local sprite = EEex_Sprite_GetSelected()
-		if sprite then
-			local spellButtonDataList = sprite:GetQuickButtons(2, false)
-			if EEex_Keybinds_Private_UseCGameButtonList(sprite, spellButtonDataList, resref, false) then return end
-			local innateButtonDataList = sprite:GetQuickButtons(4, false)
-			EEex_Keybinds_Private_UseCGameButtonList(sprite, innateButtonDataList, resref, false)
-		end
-	end
-end
-
-function EEex_Keybinds_CastTwoStep(initial, second)
-	EEex_Keybinds_Cast(initial)
-	EEex_Keybinds_Private_InternalCastResref = second
-end
-
-function EEex_Keybinds_SelectPortrait(portraitNum, dontUnselect)
-
-	local chitin = EngineGlobals.g_pBaldurChitin
-	local activeEngine = e:GetActiveEngine()
-
-	if worldScreen == activeEngine then
-
-		local game = chitin.m_pObjectGame
-		local spriteID = EEex_Sprite_GetInPortraitID(portraitNum)
-		local cursorState = game.m_nState
-
-		if cursorState == 0 then
-
-			local doSelect = true
-
-			local memberList = game.m_group.m_memberList
-			if memberList.m_nCount == 1 and memberList.m_pNodeHead.data == spriteID then
-				game:OnPortraitLDblClick(portraitNum)
-				doSelect = false
-			end
-
-			if doSelect then
-
-				if not dontUnselect then
-					game:UnselectAll()
-				end
-
-				-- boolean bPlaySelectSound
-				game:SelectCharacter(spriteID, true)
-				game:SelectToolbar()
-			end
-		else
-			local sprite = EEex_GameObject_Get(spriteID)
-			if not sprite then
-				return
-			end
-
-			local visibleArea = EEex_Area_GetVisible()
-			if EEex_UserDataEqual(visibleArea, sprite.m_pArea) then
-				if cursorState == 1 then
-					visibleArea:OnActionButtonClickGround(sprite.m_pos)
-				else
-					sprite:virtual_OnActionButton(sprite.m_pos)
-				end
-			end
-		end
-	else
-		EEex_CastUD(activeEngine, "EEex_CBaldurEngine"):virtual_OnPortraitLClick(portraitNum)
-	end
-end
-
----------------
--- Listeners --
----------------
-
-EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
+--=============
+-- Listeners ==
+--=============
 
 function EEex_Keybinds_Private_Run(hotkeyDef)
+
 	local hotkeyValue = hotkeyDef[1]
 	local hotkeyValueType = type(hotkeyValue)
+
 	if hotkeyValueType == "string" then
 		EEex_Keybinds_Cast(hotkeyValue)
 	elseif hotkeyValueType == "function" then
 		hotkeyValue()
+	else
+		EEex_Error("Unhandled keybind action type")
 	end
 end
 
@@ -300,19 +301,17 @@ EEex_Key_AddReleasedListener(function(key)
 	EEex_Keybinds_Private_Reset()
 end)
 
-EEex_Keybinds_Private_InternalCastResref = nil
-
 EEex_Actionbar_AddListener(function(config, state)
-	if config == 28 and EEex_Keybinds_Private_InternalCastResref then
-		local myCopy = EEex_Keybinds_Private_InternalCastResref
-		EEex_Keybinds_Private_InternalCastResref = nil
-		-- EEex_Keybinds_Private_CastOffInternal() causes the engine to reapply config 28 if
-		-- the ability target is the caster. We don't want other listeners to
-		-- detect this, especially the spell menu.
-		return EEex_Actionbar_RunWithListenersSuppressed(function()
-			-- Prevent future listeners from processing the event if we handled it.
-			-- Again, keep the spell menu from interfering.
-			return EEex_Keybinds_Private_CastOffInternal(myCopy)
-		end)
-	end
+
+	if EEex_Keybinds_Private_InternalCastResref == nil or config ~= 28 then return end
+
+	local myCopy = EEex_Keybinds_Private_InternalCastResref
+	EEex_Keybinds_Private_InternalCastResref = nil
+
+	-- EEex_Keybinds_Private_CastOffInternal() causes the engine to reapply config 28 if
+	-- the ability target is the caster. We don't want other listeners to
+	-- detect this, especially the spell menu.
+	return EEex_Actionbar_RunWithListenersSuppressed(function()
+		return EEex_Keybinds_Private_CastOffInternal(myCopy)
+	end)
 end)
