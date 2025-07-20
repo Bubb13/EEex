@@ -64,6 +64,12 @@ end
 -- Listeners --
 ---------------
 
+EEex_GameState_Private_BeforeIncludesListeners = {}
+
+function EEex_GameState_AddBeforeIncludesListener(listener)
+	table.insert(EEex_GameState_Private_BeforeIncludesListeners, listener)
+end
+
 EEex_GameState_Private_AlreadyInitialized = false
 EEex_GameState_Private_InitializedListeners = {}
 
@@ -99,6 +105,12 @@ end
 -----------
 -- Hooks --
 -----------
+
+function EEex_GameState_Hook_OnBeforeIncludes()
+	for _, listener in ipairs(EEex_GameState_Private_BeforeIncludesListeners) do
+		listener()
+	end
+end
 
 function EEex_GameState_LuaHook_OnInitialized()
 	for _, listener in ipairs(EEex_GameState_Private_InitializedListeners) do

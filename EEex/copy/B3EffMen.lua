@@ -3,35 +3,39 @@
 -- Options --
 -------------
 
-B3EffectMenu_RowCount = nil
+EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "B3EffectMenu_LaunchKeybind",
+	["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
+	["type"]     = EEex_Options_KeybindType.new({
+		["lockedFireType"] = EEex_Options_KeybindFireType.DOWN,
+		["callback"]       = function() B3EffectMenu_Menu_KeybindActive = true end,
+	}),
+	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
+	["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Launch Keybind" }),
+}))
 
-EEex_Options_AddTab("Effect Menu", function() return {
+B3EffectMenu_Private_RowCount = EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "B3EffectMenu_RowCount",
+	["default"]  = 4,
+	["type"]     = EEex_Options_EditType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"]  = 1, ["max"]  = 99, }),
+	["storage"]  = EEex_Options_NumberINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
+}))
+
+EEex_Options_AddTab("Effect Menu Module", function() return {
 	{
-		EEex_Options_Option.new({
-			["id"]      = "B3EffectMenu_RowCount",
-			["name"]    = "Row Count",
-			["default"] = 4,
-			["type"] = EEex_Options_EditType.new({
+		EEex_Options_DisplayEntry.new({
+			["name"]     = "Launch Keybind",
+			["optionID"] = "B3EffectMenu_LaunchKeybind",
+			["widget"]   = EEex_Options_KeybindWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["name"]     = "Row Count",
+			["optionID"] = "B3EffectMenu_RowCount",
+			["widget"]   = EEex_Options_EditWidget.new({
 				["maxCharacters"] = 2,
 				["number"]        = true,
 			}),
-			["accessor"] = EEex_Options_ClampedAccessor.new({
-				["accessor"] = EEex_Options_GlobalAccessor.new({ ["name"] = "B3EffectMenu_RowCount" }),
-				["min"]      = 1,
-				["max"]      = 99,
-			}),
-			["storage"] = EEex_Options_IntegerINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
-		}),
-		EEex_Options_Option.new({
-			["id"]       = "B3EffectMenu_LaunchKeybind",
-			["name"]     = "Launch Keybind",
-			["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
-			["type"]     = EEex_Options_KeybindType.new({
-				["lockedFireType"] = EEex_Options_KeybindFireType.DOWN,
-				["callback"]       = function() B3EffectMenu_Menu_KeybindActive = true end,
-			}),
-			["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
-			["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Launch Keybind" }),
 		}),
 	},
 } end)
@@ -98,7 +102,7 @@ function B3EffectMenu_Close()
 end
 
 function B3EffectMenu_DoLayout()
-	local rowTotal = 35 * B3EffectMenu_RowCount
+	local rowTotal = 35 * B3EffectMenu_Private_RowCount:get()
 	Infinity_SetArea("B3EffectMenu_Menu_Background", nil, nil, nil, rowTotal + 20)
 	Infinity_SetArea("B3EffectMenu_Menu_List", nil, nil, nil, rowTotal)
 end

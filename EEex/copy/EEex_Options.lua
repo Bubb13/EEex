@@ -87,7 +87,11 @@ function EEex_Options_Private_LayoutObject:getLayoutHeight()
 	return self._layoutHeight
 end
 
-function EEex_Options_Private_LayoutObject:show()
+function EEex_Options_Private_LayoutObject:showBeforeLayout()
+	-- Empty stub
+end
+
+function EEex_Options_Private_LayoutObject:showAfterLayout()
 	-- Empty stub
 end
 
@@ -166,9 +170,15 @@ function EEex_Options_Private_LayoutParent:doLayout()
 	end
 end
 
-function EEex_Options_Private_LayoutParent:show()
+function EEex_Options_Private_LayoutParent:showBeforeLayout()
 	for _, child in ipairs(self.children) do
-		child:show()
+		child:showBeforeLayout()
+	end
+end
+
+function EEex_Options_Private_LayoutParent:showAfterLayout()
+	for _, child in ipairs(self.children) do
+		child:showAfterLayout()
 	end
 end
 
@@ -257,8 +267,9 @@ function EEex_Options_Private_LayoutVerticalTabArea:_onTabSelected(index)
 	if tabEntry == nil then return end
 	self._openTabIndex = index
 	local tabLayout = tabEntry.layout
+	tabLayout:showBeforeLayout()
 	tabLayout:doLayout()
-	tabLayout:show()
+	tabLayout:showAfterLayout()
 end
 
 ------------
@@ -321,7 +332,7 @@ function EEex_Options_Private_LayoutVerticalTabArea:closeCurrentTab()
 	self._openTabIndex = nil
 end
 
-function EEex_Options_Private_LayoutVerticalTabArea:show(left, top, right, bottom)
+function EEex_Options_Private_LayoutVerticalTabArea:showBeforeLayout()
 	_G[self.tabsSelectionVarName] = 0
 end
 
@@ -855,7 +866,7 @@ end
 function EEex_Options_Private_LayoutKeybindBackground:_init()
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutKeybindBackground, "_init", self)
 	if self.menuName          == nil then EEex_Error("menuName required")         end
-	if self.option            == nil then EEex_Error("option required")           end
+	if self.displayEntry      == nil then EEex_Error("displayEntry required")     end
 	if self.startColor        == nil then self.startColor        = 0x406F6F70     end
 	if self.endColor          == nil then self.endColor          = 0x40FFFFFF     end
 	if self.pulseMilliseconds == nil then self.pulseMilliseconds = 500            end
@@ -881,14 +892,14 @@ function EEex_Options_Private_LayoutKeybindBackground:doLayout()
 
 	local instanceData = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_KeybindBackground", self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 
-	instanceData.option = self.option
+	instanceData.displayEntry = self.displayEntry
 	instanceData.startColor = self.startColor
 	instanceData.endColor = self.endColor
 	instanceData.pulseMilliseconds = self.pulseMilliseconds
 	instanceData.text = ""
 	EEex_Options_Private_KeybindResetPulse(instanceData)
 
-	local value = self.option:get()
+	local value = self.displayEntry:getWorkingValue()
 	EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
 
 	self.layoutCallback(instanceData)
@@ -976,9 +987,9 @@ function EEex_Options_TEMPLATE_KeybindButton_Action()
 	if instanceId == EEex_Options_Private_KeybindFocusedInstance then
 		EEex_Options_Private_KeybindEndFocus(backgroundInstanceData)
 	else
-		local option = backgroundInstanceData.option
-		local default = option:getDefault()
-		option:set(default)
+		local displayEntry = backgroundInstanceData.displayEntry
+		local default = displayEntry._option:getDefault()
+		default = displayEntry:setWorkingValue(default)
 		EEex_Options_Private_KeybindUpdateText(backgroundInstanceData, default[1], default[2])
 	end
 end
@@ -1051,32 +1062,32 @@ function EEex_Options_Private_LayoutKeybindUpDownButton:doLayout()
 	self.layoutCallback(instanceData)
 end
 
-function EEex_Options_Private_KeybindButtonUpDown_GetOption()
+function EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
 	local buttonInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindButtonUpDown"][instanceId]
 	local backgroundInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindBackground"][buttonInstanceData._pairedBackgroundInstance]
-	return backgroundInstanceData.option
+	return backgroundInstanceData.displayEntry
 end
 
 function EEex_Options_TEMPLATE_KeybindButtonUpDown_Action()
-	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
-	local existingVal = option:get()
+	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
+	local existingVal = displayEntry:getWorkingValue()
 	local fireType = existingVal[3]
 	existingVal[3] = not fireType
-	option:set(existingVal)
+	displayEntry:setWorkingValue(existingVal)
 end
 
 function EEex_Options_TEMPLATE_KeybindButtonUpDown_Tooltip()
-	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
-	local fireType = option:get()[3]
+	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
+	local fireType = displayEntry:getWorkingValue()[3]
 	local result = fireType and "On Sequence Released" or "On Sequence Pressed"
-	return option.type.lockedFireType == nil and result or result.." (Locked)"
+	return displayEntry._option.type.lockedFireType == nil and result or result.." (Locked)"
 end
 
 function EEex_Options_TEMPLATE_KeybindButtonUpDown_Sequence()
-	local option = EEex_Options_Private_KeybindButtonUpDown_GetOption()
-	local fireType = option:get()[3]
+	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
+	local fireType = displayEntry:getWorkingValue()[3]
 	local sequence = fireType and 2 or 4
-	return option.type.lockedFireType == nil and sequence or sequence + 1
+	return displayEntry._option.type.lockedFireType == nil and sequence or sequence + 1
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -1125,7 +1136,7 @@ function EEex_Options_Private_LayoutToggle:_init()
 	if self.height == nil then self.height = 32 end
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutToggle, "_init", self)
 
-	if self.option == nil then EEex_Error("option required") end
+	if self.displayEntry == nil then EEex_Error("displayEntry required") end
 end
 
 ------------
@@ -1133,7 +1144,7 @@ end
 ------------
 
 function EEex_Options_Private_LayoutToggle:doLayout()
-	EEex_Options_Private_CreateToggle(self.menuName, self.option, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+	EEex_Options_Private_CreateToggle(self.menuName, self.displayEntry, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -1170,14 +1181,14 @@ end
 
 function EEex_Options_Private_LayoutEdit:_init()
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutEdit, "_init", self)
-	if self.menuName  == nil then EEex_Error("menuName required") end
-	if self.font      == nil then EEex_Error("font required")     end
-	if self.point     == nil then EEex_Error("point required")    end
-	if self.option    == nil then EEex_Error("option required")   end
-	if self.padLeft   == nil then self.padLeft   = 3              end
-	if self.padTop    == nil then self.padTop    = 3              end
-	if self.padRight  == nil then self.padRight  = 3              end
-	if self.padBottom == nil then self.padBottom = 3              end
+	if self.menuName     == nil then EEex_Error("menuName required")     end
+	if self.font         == nil then EEex_Error("font required")         end
+	if self.point        == nil then EEex_Error("point required")        end
+	if self.displayEntry == nil then EEex_Error("displayEntry required") end
+	if self.padLeft      == nil then self.padLeft   = 3                  end
+	if self.padTop       == nil then self.padTop    = 3                  end
+	if self.padRight     == nil then self.padRight  = 3                  end
+	if self.padBottom    == nil then self.padBottom = 3                  end
 end
 
 ------------
@@ -1185,7 +1196,7 @@ end
 ------------
 
 function EEex_Options_Private_LayoutEdit:calculateLayout(left, top, right, bottom)
-	local editWidth, editHeight = EEex_Options_Private_GetMaxTextBounds(self.font, self.point, self.option.type.maxCharacters)
+	local editWidth, editHeight = EEex_Options_Private_GetMaxTextBounds(self.font, self.point, self.displayEntry.widget.maxCharacters)
 	editWidth  = editWidth  + self.padLeft + self.padRight
 	editHeight = editHeight + self.padTop  + self.padBottom
 	self._layoutLeft   = left
@@ -1200,7 +1211,7 @@ function EEex_Options_Private_LayoutEdit:doLayout()
 	local backgroundInstance = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_EditBackground",
 		self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 
-	local editInstance = EEex_Options_Private_CreateEdit(self.menuName, self.option,
+	local editInstance = EEex_Options_Private_CreateEdit(self.menuName, self.displayEntry,
 		self._layoutLeft   + self.padLeft,
 		self._layoutTop    + self.padTop,
 		self._layoutWidth  - self.padLeft - self.padRight,
@@ -1612,12 +1623,12 @@ function EEex_Options_Private_LayoutOptionsPanel:_init()
 	if self.uniformRowHeight == nil then self.uniformRowHeight = true end
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutOptionsPanel, "_init", self)
 
-	if self.menuName    == nil then EEex_Error("menuName required") end
-	if self.options     == nil then EEex_Error("options required")  end
-	if self.columnGap   == nil then self.columnGap   = 20           end
-	if self.layerIndent == nil then self.layerIndent = 20           end
-	if self.rowGap      == nil then self.rowGap      = 5            end
-	if self.widgetGap   == nil then self.widgetGap   = 10           end
+	if self.menuName       == nil then EEex_Error("menuName required")        end
+	if self.displayEntries == nil then EEex_Error("displayEntries required")  end
+	if self.columnGap      == nil then self.columnGap   = 20                  end
+	if self.layerIndent    == nil then self.layerIndent = 20                  end
+	if self.rowGap         == nil then self.rowGap      = 5                   end
+	if self.widgetGap      == nil then self.widgetGap   = 10                  end
 
 	self:_mapOptions()
 	self:_buildLayout()
@@ -1626,26 +1637,29 @@ end
 function EEex_Options_Private_LayoutOptionsPanel:_mapOptions()
 
 	local handleGroup
-	handleGroup = function(group, parentName)
+	handleGroup = function(group)
 
-		for _, option in ipairs(group) do
+		for _, displayEntry in ipairs(group) do
 
-			local optionName = string.format("%s%s", parentName, option.id)
-			EEex_Options_Private_OptionsMap[optionName] = option
+			local optionID = displayEntry.optionID
+			local option = EEex_Options_Get(optionID)
 
-			local optionType = option.type
-			if optionType ~= nil then
-				optionType:_onMap(option, optionName)
+			if option == nil then
+				EEex_Error(string.format("option with id \"%s\" not found", optionID))
 			end
 
-			if option.subOptions then
-				handleGroup(option.subOptions, string.format("%s.", optionName))
+			EEex_Options_Private_IdToDisplayEntry[optionID] = displayEntry
+			displayEntry._option = option
+			displayEntry.widget:_onMap(displayEntry, optionID)
+
+			if displayEntry.subOptions then
+				handleGroup(displayEntry.subOptions)
 			end
 		end
 	end
 
-	for _, columnGroup in ipairs(self.options) do
-		handleGroup(columnGroup, "")
+	for _, columnGroup in ipairs(self.displayEntries) do
+		handleGroup(columnGroup)
 	end
 end
 
@@ -1657,14 +1671,14 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 
 	local maxRowIndex = 0
 
-	for columnGroupIndex, columnGroup in ipairs(self.options) do
+	for columnGroupIndex, columnGroup in ipairs(self.displayEntries) do
 
 		local rowIndex = 1
 
 		local handleGroup
 		handleGroup = function(group, layer)
 
-			for _, option in ipairs(group) do
+			for _, displayEntry in ipairs(group) do
 
 				if rowIndex > maxRowIndex then
 					maxRowIndex = rowIndex
@@ -1676,7 +1690,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 					["menuName"] = self.menuName,
 					["font"]     = normalFont,
 					["point"]    = normalPoint,
-					["text"]     = option.name,
+					["text"]     = displayEntry.name,
 				})
 				:inset({ ["insetLeft"] = xOffset })
 
@@ -1690,16 +1704,15 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 				self:setCell(labelColumnIndex, rowIndex, optionLabel, EEex_Options_Private_LayoutGrid_Align.CENTER_LEFT)
 				self:setColumnPad(widgetColumnIndex, self.widgetGap)
 
-				local optionType = option.type
-				local widgetLayout = optionType ~= nil and optionType:_buildLayout(option, self.menuName) or nil
+				local widgetLayout = displayEntry.widget:_buildLayout(displayEntry, self.menuName)
 				if widgetLayout ~= nil then
 					self:setCell(widgetColumnIndex, rowIndex, widgetLayout, EEex_Options_Private_LayoutGrid_Align.CENTER_LEFT)
 				end
 
 				rowIndex = rowIndex + 1
 
-				if option.subOptions then
-					handleGroup(option.subOptions, layer + 1)
+				if displayEntry.subOptions then
+					handleGroup(displayEntry.subOptions, layer + 1)
 				end
 			end
 		end
@@ -1711,29 +1724,48 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 	end
 end
 
-function EEex_Options_Private_LayoutOptionsPanel:_onShow()
+function EEex_Options_Private_LayoutOptionsPanel:_onShowBeforeLayout()
 
 	local handleGroup
 	handleGroup = function(group)
 
-		for _, option in ipairs(group) do
+		for _, displayEntry in ipairs(group) do
 
-			if not option.deferTo then
-				option.old = option:get()
+			local widget = displayEntry.widget
+
+			if not widget.deferTo then
+				displayEntry:setWorkingValue(displayEntry._option:get())
 			end
 
-			local optionType = option.type
-			if optionType ~= nil then
-				optionType:_onShow(option)
-			end
+			widget:_onShowBeforeLayout(displayEntry)
 
-			if option.subOptions then
-				handleGroup(option.subOptions)
+			if displayEntry.subOptions then
+				handleGroup(displayEntry.subOptions)
 			end
 		end
 	end
 
-	for _, columnGroup in ipairs(self.options) do
+	for _, columnGroup in ipairs(self.displayEntries) do
+		handleGroup(columnGroup)
+	end
+end
+
+function EEex_Options_Private_LayoutOptionsPanel:_onShowAfterLayout()
+
+	local handleGroup
+	handleGroup = function(group)
+
+		for _, displayEntry in ipairs(group) do
+
+			displayEntry.widget:_onShowAfterLayout(displayEntry)
+
+			if displayEntry.subOptions then
+				handleGroup(displayEntry.subOptions)
+			end
+		end
+	end
+
+	for _, columnGroup in ipairs(self.displayEntries) do
 		handleGroup(columnGroup)
 	end
 end
@@ -1743,22 +1775,19 @@ function EEex_Options_Private_LayoutOptionsPanel:_writeNewValues()
 	local handleGroup
 	handleGroup = function(group)
 
-		for _, option in ipairs(group) do
+		for _, displayEntry in ipairs(group) do
 
-			if not option.deferTo then
-				option:write()
-				if option.onChange and option:get() ~= option.old then
-					option:onChange()
-				end
+			if not displayEntry.widget.deferTo then
+				displayEntry._option:set(displayEntry:getWorkingValue())
 			end
 
-			if option.subOptions then
-				handleGroup(option.subOptions)
+			if displayEntry.subOptions then
+				handleGroup(displayEntry.subOptions)
 			end
 		end
 	end
 
-	for _, columnGroup in ipairs(self.options) do
+	for _, columnGroup in ipairs(self.displayEntries) do
 		handleGroup(columnGroup)
 	end
 end
@@ -1774,11 +1803,10 @@ function EEex_Options_Private_TEMPLATE_Edit_Action()
 	end
 
 	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Edit"][instanceId]
-	local option = instanceData.option
-	local optionType = option.type
+	local displayEntry = instanceData.displayEntry
 
-	if optionType.number then
-		if letter_pressed ~= "-" and tonumber(letter_pressed) == nil then
+	if displayEntry.widget.number then
+		if letter_pressed ~= "-" and letter_pressed ~= "." and tonumber(letter_pressed) == nil then
 			return 0 -- Block
 		end
 	end
@@ -1806,25 +1834,25 @@ end
 --// EEex_Options_TEMPLATE_Toggle //
 --//////////////////////////////////
 
-function EEex_Options_Private_ToggleAction(option)
+function EEex_Options_Private_ToggleAction(displayEntry)
 
-	local optionType = option.type
-	local newToggleState = not optionType.toggleState
+	local widget = displayEntry.widget
+	local newToggleState = not widget.toggleState
 
-	if not newToggleState and optionType.disallowToggleOff then
+	if not newToggleState and widget.disallowToggleOff then
 		return
 	end
 
-	optionType.toggleState = newToggleState
+	widget.toggleState = newToggleState
 
-	local forceOthers = optionType.forceOthers
+	local forceOthers = widget.forceOthers
 
 	if forceOthers then
 
-		for _, forceEntry in ipairs(forceOthers[optionType.toggleState] or {}) do
+		for _, forceEntry in ipairs(forceOthers[widget.toggleState] or {}) do
 
-			local forceOption = EEex_Options_Private_OptionsMap[forceEntry[1]]
-			local forceOptionType = forceOption.type
+			local forceDisplayEntry = EEex_Options_Private_IdToDisplayEntry[forceEntry[1]]
+			local forceWidget = forceDisplayEntry.widget
 			local newForceToggleState = forceEntry[2]
 
 			if type(newForceToggleState) == "function" then
@@ -1833,39 +1861,39 @@ function EEex_Options_Private_ToggleAction(option)
 
 			if newForceToggleState ~= nil then
 
-				forceOptionType.toggleState = newForceToggleState
+				forceWidget.toggleState = newForceToggleState
 
-				if newForceToggleState or not forceOptionType.disallowToggleOff then
-					local mainForceOption = forceOption.deferTo and EEex_Options_Private_OptionsMap[forceOption.deferTo] or forceOption
-					local newForceVal = newForceToggleState and forceOptionType.toggleValue or 0
-					mainForceOption:set(newForceVal)
+				if newForceToggleState or not forceWidget.disallowToggleOff then
+					local mainForceDisplayEntry = forceWidget.deferTo and EEex_Options_Private_IdToDisplayEntry[forceWidget.deferTo] or forceDisplayEntry
+					local newForceVal = newForceToggleState and mainForceDisplayEntry.widget.toggleValue or 0
+					mainForceDisplayEntry:setWorkingValue(newForceVal)
 				end
 			end
 		end
 	end
 
-	local mainOption = option.deferTo and EEex_Options_Private_OptionsMap[option.deferTo] or option
-	local newVal = newToggleState and optionType.toggleValue or 0
-	mainOption:set(newVal)
+	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
+	local newVal = newToggleState and mainDisplayEntry.widget.toggleValue or 0
+	mainDisplayEntry:setWorkingValue(newVal)
 end
 
 function EEex_Options_Private_TEMPLATE_Toggle_Action()
 
-	local option = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].option
+	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
 
 	local doToggle = function()
-		EEex_Options_Private_ToggleAction(option)
+		EEex_Options_Private_ToggleAction(displayEntry)
 	end
 
-	local toggleWarning = option.type.toggleWarning
+	local toggleWarning = displayEntry.widget.toggleWarning
 	if toggleWarning == nil or not toggleWarning(doToggle) then
 		doToggle()
 	end
 end
 
 function EEex_Options_Private_TEMPLATE_Toggle_Frame()
-	local optionType = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].option.type
-	return optionType.toggleState and 2 or 0
+	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
+	return displayEntry.widget.toggleState and 2 or 0
 end
 
 ------------
@@ -1877,8 +1905,12 @@ function EEex_Options_Private_LayoutOptionsPanel:doLayout()
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutOptionsPanel, "doLayout", self)
 end
 
-function EEex_Options_Private_LayoutOptionsPanel:show()
-	self:_onShow()
+function EEex_Options_Private_LayoutOptionsPanel:showBeforeLayout()
+	self:_onShowBeforeLayout()
+end
+
+function EEex_Options_Private_LayoutOptionsPanel:showAfterLayout()
+	self:_onShowAfterLayout()
 	Infinity_PushMenu(self.menuName)
 end
 
@@ -1921,10 +1953,9 @@ end
 
 function EEex_Options_Option:_init()
 	EEex_Utility_CallSuper(EEex_Options_Option, "_init", self)
-	if self.id       == nil then EEex_Error("id required")       end
-	if self.name     == nil then EEex_Error("name required")     end
-	if self.default  == nil then EEex_Error("default required")  end
-	if self.accessor == nil then EEex_Error("accessor required") end
+	if self.id       == nil then EEex_Error("id required")                          end
+	if self.default  == nil then EEex_Error("default required")                     end
+	if self.accessor == nil then self.accessor = EEex_Options_PrivateAccessor.new() end
 	-- Optional
 	--   self.storage
 end
@@ -1942,7 +1973,21 @@ function EEex_Options_Option:get()
 end
 
 function EEex_Options_Option:set(newValue)
-	return self.accessor:set(self, newValue ~= nil and newValue or self.default)
+
+	local accessor = self.accessor
+	local oldValue = accessor:get()
+	newValue = accessor:set(self, newValue ~= nil and newValue or self.default)
+
+	local storage = self.storage
+	if storage ~= nil then
+		storage:write(self)
+	end
+
+	if self.onChange ~= nil and newValue ~= oldValue then
+		self:onChange()
+	end
+
+	return newValue
 end
 
 function EEex_Options_Option:read()
@@ -1951,15 +1996,139 @@ function EEex_Options_Option:read()
 	return storage:read(self)
 end
 
-function EEex_Options_Option:write()
-	local storage = self.storage
-	if storage == nil then return end
-	return storage:write(self)
-end
-
 --=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_Option  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_DisplayEntry  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_DisplayEntry = {}
+EEex_Options_DisplayEntry.__index = EEex_Options_DisplayEntry
+--setmetatable(EEex_Options_DisplayEntry, )
+--print("EEex_Options_DisplayEntry: "..tostring(EEex_Options_DisplayEntry))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_DisplayEntry.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_DisplayEntry)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_DisplayEntry:_init()
+	EEex_Utility_CallSuper(EEex_Options_DisplayEntry, "_init", self)
+	if self.name     == nil then EEex_Error("name required")     end
+	if self.optionID == nil then EEex_Error("optionID required") end
+	if self.widget   == nil then EEex_Error("widget required")   end
+	-- Derived
+	--   self._option
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_DisplayEntry:getWorkingValue()
+	return self._workingValue
+end
+
+function EEex_Options_DisplayEntry:setWorkingValue(newValue)
+	local option = self._option
+	newValue = option.accessor:validate(option, newValue)
+	self._workingValue = newValue
+	return newValue
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_DisplayEntry  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Accessor  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_Accessor = {}
+EEex_Options_Accessor.__index = EEex_Options_Accessor
+--setmetatable(EEex_Options_Accessor, )
+--print("EEex_Options_Accessor: "..tostring(EEex_Options_Accessor))
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_Accessor:_init()
+	-- Empty stub
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_Accessor:validate(option, newValue)
+	return newValue
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Accessor  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_PrivateAccessor ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_PrivateAccessor = {}
+EEex_Options_PrivateAccessor.__index = EEex_Options_PrivateAccessor
+setmetatable(EEex_Options_PrivateAccessor, EEex_Options_Accessor)
+--print("EEex_Options_PrivateAccessor: "..tostring(EEex_Options_PrivateAccessor))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_PrivateAccessor.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_PrivateAccessor)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+------------
+-- Public --
+------------
+
+function EEex_Options_PrivateAccessor:get(option)
+	return self._value
+end
+
+function EEex_Options_PrivateAccessor:set(option, newValue)
+	self._value = newValue
+	return newValue
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_PrivateAccessor ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_GlobalAccessor  ==
@@ -1967,7 +2136,7 @@ end
 
 EEex_Options_GlobalAccessor = {}
 EEex_Options_GlobalAccessor.__index = EEex_Options_GlobalAccessor
---setmetatable(EEex_Options_GlobalAccessor, )
+setmetatable(EEex_Options_GlobalAccessor, EEex_Options_Accessor)
 --print("EEex_Options_GlobalAccessor: "..tostring(EEex_Options_GlobalAccessor))
 
 --////////////
@@ -1998,7 +2167,7 @@ end
 -- Public --
 ------------
 
-function EEex_Options_GlobalAccessor:get(option, newValue)
+function EEex_Options_GlobalAccessor:get(option)
 	return _G[self.name]
 end
 
@@ -2017,7 +2186,7 @@ end
 
 EEex_Options_KeybindAccessor = {}
 EEex_Options_KeybindAccessor.__index = EEex_Options_KeybindAccessor
---setmetatable(EEex_Options_KeybindAccessor, )
+setmetatable(EEex_Options_KeybindAccessor, EEex_Options_Accessor)
 --print("EEex_Options_KeybindAccessor: "..tostring(EEex_Options_KeybindAccessor))
 
 --////////////
@@ -2048,18 +2217,21 @@ end
 -- Public --
 ------------
 
-function EEex_Options_KeybindAccessor:get(option, newValue)
+function EEex_Options_KeybindAccessor:validate(option, newValue)
+	local lockedFireType = option.type.lockedFireType
+	if lockedFireType ~= nil then
+		newValue[3] = lockedFireType
+	end
+	return newValue
+end
+
+function EEex_Options_KeybindAccessor:get(option)
 	local modifierKeys, keys, fireType = EEex_Keybinds_GetBinding(self.keybindID)
 	return { modifierKeys, keys, fireType }
 end
 
 function EEex_Options_KeybindAccessor:set(option, newValue)
-
-	local lockedFireType = option.type.lockedFireType
-	if lockedFireType ~= nil then
-		newValue[3] = lockedFireType
-	end
-
+	newValue = self:validate(option, newValue)
 	EEex_Keybinds_SetBinding(self.keybindID, newValue[1], newValue[2], newValue[3], option.type.callback)
 	return newValue
 end
@@ -2074,7 +2246,7 @@ end
 
 EEex_Options_ClampedAccessor = {}
 EEex_Options_ClampedAccessor.__index = EEex_Options_ClampedAccessor
---setmetatable(EEex_Options_ClampedAccessor, )
+setmetatable(EEex_Options_ClampedAccessor, EEex_Options_Accessor)
 --print("EEex_Options_ClampedAccessor: "..tostring(EEex_Options_ClampedAccessor))
 
 --////////////
@@ -2098,7 +2270,8 @@ end
 
 function EEex_Options_ClampedAccessor:_init()
 	EEex_Utility_CallSuper(EEex_Options_ClampedAccessor, "_init", self)
-	if self.accessor == nil then EEex_Error("accessor required") end
+	if self.accessor == nil then self.accessor = EEex_Options_PrivateAccessor.new() end
+	if self.floating == nil then self.floating = false                              end
 	-- Optional
 	--   self.min
 	--   self.max
@@ -2108,11 +2281,11 @@ end
 -- Public --
 ------------
 
-function EEex_Options_ClampedAccessor:get(option)
-	return self.accessor:get()
-end
+function EEex_Options_ClampedAccessor:validate(option, newValue)
 
-function EEex_Options_ClampedAccessor:set(option, newValue)
+	if not self.floating then
+		newValue = math.floor(newValue)
+	end
 
 	local min = self.min
 	if min ~= nil and newValue < min then
@@ -2124,6 +2297,15 @@ function EEex_Options_ClampedAccessor:set(option, newValue)
 		newValue = max
 	end
 
+	return newValue
+end
+
+function EEex_Options_ClampedAccessor:get(option)
+	return self.accessor:get()
+end
+
+function EEex_Options_ClampedAccessor:set(option, newValue)
+	newValue = self:validate(option, newValue)
 	return self.accessor:set(option, newValue)
 end
 
@@ -2167,21 +2349,21 @@ end
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- START EEex_Options_IntegerINIStorage ==
+-- START EEex_Options_NumberINIStorage  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
-EEex_Options_IntegerINIStorage = {}
-EEex_Options_IntegerINIStorage.__index = EEex_Options_IntegerINIStorage
-setmetatable(EEex_Options_IntegerINIStorage, EEex_Options_Private_INIStorage)
---print("EEex_Options_IntegerINIStorage: "..tostring(EEex_Options_IntegerINIStorage))
+EEex_Options_NumberINIStorage = {}
+EEex_Options_NumberINIStorage.__index = EEex_Options_NumberINIStorage
+setmetatable(EEex_Options_NumberINIStorage, EEex_Options_Private_INIStorage)
+--print("EEex_Options_NumberINIStorage: "..tostring(EEex_Options_NumberINIStorage))
 
 --////////////
 --// Static //
 --////////////
 
-EEex_Options_IntegerINIStorage.new = function(o)
+EEex_Options_NumberINIStorage.new = function(o)
 	if o == nil then o = {} end
-	setmetatable(o, EEex_Options_IntegerINIStorage)
+	setmetatable(o, EEex_Options_NumberINIStorage)
 	o:_init()
 	return o
 end
@@ -2194,12 +2376,14 @@ end
 -- Public --
 ------------
 
-function EEex_Options_IntegerINIStorage:read(option)
-	option:set(Infinity_GetINIValue(self.section, self.key, option:getDefault()))
+function EEex_Options_NumberINIStorage:read(option)
+	local strVal = Infinity_GetINIString(self.section, self.key, "X-DEFAULT")
+	local intVal = strVal ~= "X-DEFAULT" and tonumber(strVal) or nil
+	option:set(intVal or option:getDefault())
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- END EEex_Options_IntegerINIStorage ==
+-- END EEex_Options_NumberINIStorage  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2292,58 +2476,14 @@ end
 -- END EEex_Options_KeybindINIStorage ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- START EEex_Options_OptionType  ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Type  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
-EEex_Options_OptionType = {}
-EEex_Options_OptionType.__index = EEex_Options_OptionType
---setmetatable(EEex_Options_OptionType, )
---print("EEex_Options_OptionType: "..tostring(EEex_Options_OptionType))
-
---//////////////
---// Instance //
---//////////////
-
--------------
--- Private --
--------------
-
-function EEex_Options_OptionType:_onMap(option, optionName)
-	-- Empty stub
-end
-
-function EEex_Options_OptionType:_buildLayout(option, menuName)
-	-- Empty stub
-end
-
-function EEex_Options_OptionType:_onShow(option)
-	-- Empty stub
-end
-
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- END EEex_Options_OptionType  ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
-
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- START EEex_Options_ToggleType  ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
-
-EEex_Options_ToggleType = {}
-EEex_Options_ToggleType.__index = EEex_Options_ToggleType
-setmetatable(EEex_Options_ToggleType, EEex_Options_OptionType)
---print("EEex_Options_ToggleType: "..tostring(EEex_Options_ToggleType))
-
---////////////
---// Static //
---////////////
-
-EEex_Options_ToggleType.new = function(o)
-	if o == nil then o = {} end
-	setmetatable(o, EEex_Options_ToggleType)
-	o:_init()
-	return o
-end
+EEex_Options_Type = {}
+EEex_Options_Type.__index = EEex_Options_Type
+--setmetatable(EEex_Options_Type, )
+--print("EEex_Options_Type: "..tostring(EEex_Options_Type))
 
 --//////////////
 --// Instance //
@@ -2353,32 +2493,13 @@ end
 -- Private --
 -------------
 
-function EEex_Options_ToggleType:_init()
-	EEex_Utility_CallSuper(EEex_Options_ToggleType, "_init", self)
-	if self.disallowToggleOff == nil then self.disallowToggleOff = false end
-	if self.forceOthers       == nil then self.forceOthers       = {}    end
-	if self.toggleValue       == nil then self.toggleValue       = 1     end
-	-- Optional
-	--   self.toggleState
-	--   self.toggleWarning
+function EEex_Options_Type:_init()
+	-- Empty stub
 end
 
-function EEex_Options_ToggleType:_buildLayout(option, menuName)
-	return EEex_Options_Private_LayoutToggle.new({
-		["menuName"] = menuName,
-		["option"]   = option,
-	})
-end
-
-function EEex_Options_ToggleType:_onShow(option)
-	local optionType = option.type
-	local mainOption = option.deferTo and EEex_Options_Private_OptionsMap[option.deferTo] or option
-	optionType.toggleState = mainOption:get() == optionType.toggleValue
-end
-
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- END EEex_Options_ToggleType  ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+--=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Type  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_EditType  ==
@@ -2386,7 +2507,7 @@ end
 
 EEex_Options_EditType = {}
 EEex_Options_EditType.__index = EEex_Options_EditType
-setmetatable(EEex_Options_EditType, EEex_Options_OptionType)
+setmetatable(EEex_Options_EditType, EEex_Options_Type)
 --print("EEex_Options_EditType: "..tostring(EEex_Options_EditType))
 
 --////////////
@@ -2400,36 +2521,6 @@ EEex_Options_EditType.new = function(o)
 	return o
 end
 
---//////////////
---// Instance //
---//////////////
-
--------------
--- Private --
--------------
-
-function EEex_Options_EditType:_init()
-	EEex_Utility_CallSuper(EEex_Options_EditType, "_init", self)
-	if self.maxCharacters == nil then EEex_Error("maxCharacters required") end
-	if self.number        == nil then self.number = false                  end
-	-- Derived
-	--   self._editVar
-end
-
-function EEex_Options_EditType:_onMap(option, optionName)
-	self._editVar = "EEex_Options_Private_"..optionName:gsub("%.", "_").."_EditVar"
-end
-
-function EEex_Options_EditType:_buildLayout(option, menuName)
-	local normalStyle = styles.normal
-	return EEex_Options_Private_LayoutEdit.new({
-		["menuName"] = menuName,
-		["font"]     = normalStyle.font,
-		["point"]    = normalStyle.point,
-		["option"]   = option,
-	})
-end
-
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_EditType  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2440,7 +2531,7 @@ end
 
 EEex_Options_KeybindType = {}
 EEex_Options_KeybindType.__index = EEex_Options_KeybindType
-setmetatable(EEex_Options_KeybindType, EEex_Options_OptionType)
+setmetatable(EEex_Options_KeybindType, EEex_Options_Type)
 --print("EEex_Options_KeybindType: "..tostring(EEex_Options_KeybindType))
 
 --////////////
@@ -2465,9 +2556,162 @@ end
 function EEex_Options_KeybindType:_init()
 	EEex_Utility_CallSuper(EEex_Options_KeybindType, "_init", self)
 	if self.callback == nil then EEex_Error("callback required") end
+	-- Optional
+	--   self.lockedFireType
 end
 
-function EEex_Options_KeybindType:_buildLayout(option, menuName)
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_KeybindType ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_ToggleType  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_ToggleType = {}
+EEex_Options_ToggleType.__index = EEex_Options_ToggleType
+setmetatable(EEex_Options_ToggleType, EEex_Options_Type)
+--print("EEex_Options_ToggleType: "..tostring(EEex_Options_ToggleType))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_ToggleType.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_ToggleType)
+	o:_init()
+	return o
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_ToggleType  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Widget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_Widget = {}
+EEex_Options_Widget.__index = EEex_Options_Widget
+--setmetatable(EEex_Options_Widget, )
+--print("EEex_Options_Widget: "..tostring(EEex_Options_Widget))
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_Widget:_init()
+	-- Empty stub
+end
+
+function EEex_Options_Widget:_onMap(displayEntry, optionName)
+	-- Empty stub
+end
+
+function EEex_Options_Widget:_buildLayout(displayEntry, menuName)
+	-- Empty stub
+end
+
+function EEex_Options_Widget:_onShowBeforeLayout(displayEntry)
+	-- Empty stub
+end
+
+function EEex_Options_Widget:_onShowAfterLayout(displayEntry)
+	-- Empty stub
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Widget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_EditWidget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_EditWidget = {}
+EEex_Options_EditWidget.__index = EEex_Options_EditWidget
+setmetatable(EEex_Options_EditWidget, EEex_Options_Widget)
+--print("EEex_Options_EditWidget: "..tostring(EEex_Options_EditWidget))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_EditWidget.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_EditWidget)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_EditWidget:_init()
+	EEex_Utility_CallSuper(EEex_Options_EditWidget, "_init", self)
+	if self.maxCharacters == nil then EEex_Error("maxCharacters required") end
+	if self.number        == nil then self.number = false                  end
+	-- Derived
+	--   self._editVar
+end
+
+function EEex_Options_EditWidget:_onMap(displayEntry, optionID)
+	self._editVar = "EEex_Options_Private_"..optionID.."_EditVar"
+end
+
+function EEex_Options_EditWidget:_buildLayout(displayEntry, menuName)
+	local normalStyle = styles.normal
+	return EEex_Options_Private_LayoutEdit.new({
+		["menuName"]     = menuName,
+		["font"]         = normalStyle.font,
+		["point"]        = normalStyle.point,
+		["displayEntry"] = displayEntry,
+	})
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_EditWidget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_KeybindWidget ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_KeybindWidget = {}
+EEex_Options_KeybindWidget.__index = EEex_Options_KeybindWidget
+setmetatable(EEex_Options_KeybindWidget, EEex_Options_Widget)
+--print("EEex_Options_KeybindWidget: "..tostring(EEex_Options_KeybindWidget))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_KeybindWidget.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_KeybindWidget)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_KeybindWidget:_buildLayout(displayEntry, menuName)
 
 	local backgroundInstance
 
@@ -2484,7 +2728,7 @@ function EEex_Options_KeybindType:_buildLayout(option, menuName)
 			EEex_Options_Private_LayoutKeybindBackground.new({
 				["menuName"]       = menuName,
 				["layoutCallback"] = backgroundLayoutCallback,
-				["option"]         = option,
+				["displayEntry"]   = displayEntry,
 			}),
 			EEex_Options_Private_LayoutFixed.new({
 				["width"] = 5,
@@ -2504,18 +2748,74 @@ function EEex_Options_KeybindType:_buildLayout(option, menuName)
 	})
 end
 
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- END EEex_Options_KeybindType ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_KeybindWidget ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_ToggleWidget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_ToggleWidget = {}
+EEex_Options_ToggleWidget.__index = EEex_Options_ToggleWidget
+setmetatable(EEex_Options_ToggleWidget, EEex_Options_Widget)
+--print("EEex_Options_ToggleWidget: "..tostring(EEex_Options_ToggleWidget))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_ToggleWidget.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_ToggleWidget)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_ToggleWidget:_init()
+	EEex_Utility_CallSuper(EEex_Options_ToggleWidget, "_init", self)
+	if self.disallowToggleOff == nil then self.disallowToggleOff = false end
+	if self.forceOthers       == nil then self.forceOthers       = {}    end
+	if self.toggleValue       == nil then self.toggleValue       = 1     end
+	-- Optional
+	--   self.toggleState
+	--   self.toggleWarning
+end
+
+function EEex_Options_ToggleWidget:_buildLayout(displayEntry, menuName)
+	return EEex_Options_Private_LayoutToggle.new({
+		["menuName"]     = menuName,
+		["displayEntry"] = displayEntry,
+	})
+end
+
+function EEex_Options_ToggleWidget:_onShowBeforeLayout(displayEntry)
+	local widget = displayEntry.widget
+	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
+	widget.toggleState = mainDisplayEntry:getWorkingValue() == widget.toggleValue
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_ToggleWidget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --===========
 -- Globals ==
 --===========
 
 EEex_Options_Private_CapturedEdit            = nil -- uiItem
+EEex_Options_Private_IdToDisplayEntry        = {}
+EEex_Options_Private_IdToOption              = {}
 EEex_Options_Private_MainInset               = nil -- EEex_Options_Private_LayoutInset
 EEex_Options_Private_MainVerticalTabArea     = nil -- EEex_Options_Private_LayoutVerticalTabArea
-EEex_Options_Private_OptionsMap              = {}
 EEex_Options_Private_PendingEditFocus        = nil
 EEex_Options_Private_TabInsertIndex          = 1
 EEex_Options_Private_Tabs                    = {}
@@ -2593,18 +2893,18 @@ function EEex_Options_Private_CreateInstance(menuName, templateName, x, y, w, h)
 	return instanceEntry
 end
 
-function EEex_Options_Private_CreateEdit(menuName, option, x, y, w, h)
+function EEex_Options_Private_CreateEdit(menuName, displayEntry, x, y, w, h)
 
-	local optionType = option.type
+	local widget = displayEntry.widget
 
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_Edit", x, y, w, h)
-	instanceData.option = option
+	instanceData.displayEntry = displayEntry
 
 	local editUD = instanceData.uiItem.edit
-	editUD.var:pointTo(EEex_WriteStringCache(optionType._editVar))
-	if optionType.maxCharacters then editUD.maxchars = optionType.maxCharacters + 1 end
+	editUD.var:pointTo(EEex_WriteStringCache(widget._editVar))
+	if widget.maxCharacters then editUD.maxchars = widget.maxCharacters + 1 end
 
-	_G[optionType._editVar] = tostring(option:get())
+	_G[widget._editVar] = tostring(displayEntry:getWorkingValue())
 	return instanceData
 end
 
@@ -2631,9 +2931,9 @@ function EEex_Options_Private_CreateText(menuName, text, x, y, w, h, extraArgs)
 	return instanceData
 end
 
-function EEex_Options_Private_CreateToggle(menuName, option, x, y, w, h)
+function EEex_Options_Private_CreateToggle(menuName, displayEntry, x, y, w, h)
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_Toggle", x, y, w, h)
-	instanceData.option = option
+	instanceData.displayEntry = displayEntry
 	return instanceData
 end
 
@@ -2645,27 +2945,29 @@ end
 -- Edit --
 ----------
 
-function EEex_Options_Private_EditSetOption(option)
+function EEex_Options_Private_EditSetOption(displayEntry)
 
-	local optionType = option.type
-	local strVal = _G[optionType._editVar]
+	local option = displayEntry._option
+	local widget = displayEntry.widget
+	local strVal = _G[widget._editVar]
 
-	if optionType.number then
-		local setVal = option:set(tonumber(strVal))
-		strVal = tostring(setVal)
+	if widget.number then
+		-- Don't allow floating numbers to be set without a leading 0 (this bypasses character limits)
+		local toSetVal = strVal:find("^%s*%.") == nil and tonumber(strVal) or option:getDefault()
+		strVal = tostring(displayEntry:setWorkingValue(toSetVal))
 	else
 		strVal = strVal:gsub("^%s+", "")
 		strVal = strVal:gsub("%s+$", "")
-		option:set(strVal)
+		strVal = displayEntry:setWorkingValue(strVal)
 	end
 
-	_G[optionType._editVar] = strVal
+	_G[widget._editVar] = strVal
 end
 
 function EEex_Options_Private_EditCheckSetCapturedValue()
 	if EEex_Options_Private_CapturedEdit == nil then return end
 	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Edit"][EEex_Options_Private_CapturedEdit.instanceId]
-	EEex_Options_Private_EditSetOption(instanceData.option)
+	EEex_Options_Private_EditSetOption(instanceData.displayEntry)
 end
 
 -- On menu tick
@@ -2860,12 +3162,12 @@ end
 -- On keybind accepted (via Enter key or Submit button)
 function EEex_Options_Private_KeybindEndFocus(instanceData)
 
-	local option = instanceData.option
+	local displayEntry = instanceData.displayEntry
 
-	local existingVal = option:get()
+	local existingVal = displayEntry:getWorkingValue()
 	existingVal[1] = EEex_Options_Private_KeybindRecordedModifiers
 	existingVal[2] = EEex_Options_Private_KeybindRecordedKeys
-	option:set(existingVal)
+	displayEntry:setWorkingValue(existingVal)
 
 	EEex_Options_Private_KeybindKillFocus(instanceData, true)
 end
@@ -2880,7 +3182,7 @@ function EEex_Options_Private_KeybindKillFocus(instanceData, accepted)
 	EEex_Options_Private_KeybindRecordedKeys      = {}
 
 	if not accepted then
-		local value = instanceData.option:get()
+		local value = instanceData.displayEntry:getWorkingValue()
 		EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
 	end
 end
@@ -2989,10 +3291,8 @@ function EEex_Options_Private_BuildLayout()
 end
 
 function EEex_Options_Private_ReadOptions()
-	for _, option in pairs(EEex_Options_Private_OptionsMap) do
-		if not option.deferTo then
-			EEex_Utility_CallIfExists(option.read, option)
-		end
+	for _, option in pairs(EEex_Options_Private_IdToOption) do
+		option:read()
 	end
 end
 
@@ -3032,8 +3332,9 @@ end
 
 function EEex_Options_Open()
 	if Infinity_IsMenuOnStack("EEex_Options") then return end
+	EEex_Options_Private_MainInset:showBeforeLayout()
 	EEex_Options_Private_Layout()
-	EEex_Options_Private_MainInset:show()
+	EEex_Options_Private_MainInset:showAfterLayout()
 	Infinity_PushMenu("EEex_Options")
 end
 
@@ -3116,7 +3417,12 @@ function EEex_Options_UnmarshalKeybind(str)
 	return result
 end
 
-function EEex_Options_AddTab(text, optionsProvider)
+function EEex_Options_Register(option)
+	EEex_Options_Private_IdToOption[option.id] = option
+	return option
+end
+
+function EEex_Options_AddTab(text, displayEntriesProvider)
 
 	EEex_GameState_AddInitializedListener(function()
 
@@ -3134,13 +3440,13 @@ function EEex_Options_AddTab(text, optionsProvider)
 			}
 		]])
 
-		local options = type(optionsProvider) == "function" and optionsProvider() or optionsProvider
+		local displayEntries = type(displayEntriesProvider) == "function" and displayEntriesProvider() or displayEntriesProvider
 
 		EEex_Options_Private_Tabs[EEex_Options_Private_TabInsertIndex] = {
 			["name"] = text,
 			["layout"] = EEex_Options_Private_LayoutOptionsPanel.new({
-				["menuName"] = menuName,
-				["options"] = options,
+				["menuName"]       = menuName,
+				["displayEntries"] = displayEntries,
 			})
 			:inset({ ["insetTop"] = 5, ["insetRight"] = 5, ["insetBottom"] = 5 }),
 		}
@@ -3148,4 +3454,8 @@ function EEex_Options_AddTab(text, optionsProvider)
 		EEex_Options_Private_TabInsertIndex = EEex_Options_Private_TabInsertIndex + 1
 		EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(t) return t.name end)
 	end)
+end
+
+function EEex_Options_Get(id)
+	return EEex_Options_Private_IdToOption[id]
 end

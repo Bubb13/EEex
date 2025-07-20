@@ -71,6 +71,35 @@
 		]]}
 	)
 
+	--[[
+	+-----------------------------------------------------------------------+
+	| Call a hook before the engine executes includes.lua                   |
+	+-----------------------------------------------------------------------+
+	|   Used to implement listeners that need access to game resources, but |
+	|   should run before util.lua, BGEE.lua, M_*.lua files, and UI.MENU    |
+	+-----------------------------------------------------------------------+
+	|   [Lua] EEex_GameState_Hook_OnBeforeIncludes()                        |
+	+-----------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-dimmInit-uiDoFile()"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(40)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			]]},
+			EEex_GenLuaCall("EEex_GameState_Hook_OnBeforeIncludes"),
+			{[[
+				call_error:
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]}
+		})
+	)
 
 	EEex_EnableCodeProtection()
 

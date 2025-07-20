@@ -2105,6 +2105,10 @@ Operations=ADD 67
 ExeSwitch=1
 ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
+[Hook-dimmInit-uiDoFile()]
+Pattern=488B18EB03
+Operations=ADD 79
+
 [Hook-drawItem()-AfterEnabledCheck]
 Pattern=0F8403260000
 Operations=ADD 6

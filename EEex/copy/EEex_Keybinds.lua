@@ -19,17 +19,22 @@ end
 -- Options ==
 --===========
 
+EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "EEex_Keybinds_ToggleKeycodeOutput",
+	["default"]  = EEex_Options_UnmarshalKeybind("`|Up"),
+	["type"]     = EEex_Options_KeybindType.new({
+		["callback"] = function() EEex_Keybinds_Private_TogglePrintKeys() end,
+	}),
+	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "EEex_Keybinds_ToggleKeycodeOutput" }),
+	["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
+}))
+
 EEex_Options_AddTab("Miscellaneous", function() return {
 	{
-		EEex_Options_Option.new({
-			["id"]       = "EEex_Keybinds_ToggleKeycodeOutput",
+		EEex_Options_DisplayEntry.new({
 			["name"]     = "Toggle Keycode Output",
-			["default"]  = EEex_Options_UnmarshalKeybind("`|Up"),
-			["type"]     = EEex_Options_KeybindType.new({
-				["callback"] = function() EEex_Keybinds_Private_TogglePrintKeys() end,
-			}),
-			["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "EEex_Keybinds_ToggleKeycodeOutput" }),
-			["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
+			["optionID"] = "EEex_Keybinds_ToggleKeycodeOutput",
+			["widget"]   = EEex_Options_KeybindWidget.new(),
 		}),
 	},
 } end)

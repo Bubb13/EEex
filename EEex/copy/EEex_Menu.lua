@@ -384,7 +384,7 @@ function EEex_Menu_Hook_OnWindowSizeChanged()
 	end
 
 	if EEex_Modules["B3Scale"] then
-		B3Scale_DoSizeChange()
+		B3Scale_Private_DoSizeChange()
 	end
 
 	local width = CVidMode.SCREENWIDTH
