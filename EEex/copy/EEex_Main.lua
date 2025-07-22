@@ -7,7 +7,7 @@
 -- Startup Config (Do not edit) --
 ----------------------------------
 
-EEex_Main_Private_NormalStartupFiles = {
+EEex_Main_Private_StartupFiles = {
 	"EEex_Utility",          -- Here so all EEex files can immediately use utility functions
 	"EEex_Key",              -- Here because it is required by EEex_Options.lua
 	"EEex_Key_Patch",        --
@@ -50,7 +50,18 @@ EEex_Main_Private_NormalStartupFiles = {
 	"EEex_Debug",            --
 	"EEex_Debug_Patch",      --
 	"EEex_Marshal",          --
+	"EEex_Module",           --
 	"EEex_OptionsLate",      -- Here so it can register listeners provided by other EEex files
+}
+
+EEex_Main_Private_Modules = {
+	{ "B3EffMen",         "EEex_Module_EffectMenu"     },
+	{ "B3EmptyContainer", "EEex_Module_EmptyContainer" },
+	{ "B3Hotkey",         nil                          },
+	{ "B3Invis",          nil                          },
+	{ "B3Scale",          "EEex_Module_Scale"          },
+	{ "B3TimeStep",       "EEex_Module_TimeStep"       },
+	{ "B3Timer",          "EEex_Module_Timer"          },
 }
 
 ----------
@@ -81,7 +92,7 @@ EEex_Main_Private_NormalStartupFiles = {
 	EEex_DoFile("EEex_MemoryManagerDefinitions")
 
 	-- Run EEex's other files (which each pertain to a specific category)
-	for _, fileName in ipairs(EEex_Main_Private_NormalStartupFiles) do
+	for _, fileName in ipairs(EEex_Main_Private_StartupFiles) do
 		EEex_DoFile(fileName)
 	end
 
@@ -93,12 +104,23 @@ EEex_Main_Private_NormalStartupFiles = {
 		EEex_DoFile("EEex_StutterDetector")
 	end)
 
-	-- Run EEex_Modules.lua, which determines the enabled EEex modules
+	-- Run EEex_Modules.lua, which determines the legacy-enabled EEex modules
 	EEex_DoFile("EEex_Modules")
-	for moduleName, enabled in pairs(EEex_Modules) do
-		if enabled then
-			-- Load the enabled modules
-			EEex_DoFile(moduleName)
+
+	for _, moduleEntry in ipairs(EEex_Main_Private_Modules) do
+
+		local moduleFile = moduleEntry[1]
+		local moduleOptionName = moduleEntry[2]
+
+		local legacyEnabled = EEex_Modules[moduleFile]
+		local option = EEex_Options_Get(moduleOptionName)
+
+		if legacyEnabled and option ~= nil then
+			option:_set(1, true)
+		end
+
+		if legacyEnabled or (option ~= nil and option:get() == 1) then
+			EEex_DoFile(moduleFile)
 		end
 	end
 

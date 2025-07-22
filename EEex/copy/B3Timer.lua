@@ -3,24 +3,75 @@
 -- Options --
 -------------
 
-B3Timer_ShowModalTimer = false
-B3Timer_ShowContingencyTimer = false
-B3Timer_ShowCastTimer = false
+B3Timer_Private_HugPortraits = EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "B3Timer_HugPortraits",
+	["default"]  = 0,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"]  = 0, ["max"]  = 1, }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Hug Portraits" }),
+}))
 
-B3Timer_HugPortraits = false
+B3Timer_Private_ShowCastTimer = EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "B3Timer_ShowCastTimer",
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"]  = 0, ["max"]  = 1, }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Cast" }),
+}))
+
+B3Timer_Private_ShowContingencyTimer = EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "B3Timer_ShowContingencyTimer",
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"]  = 0, ["max"]  = 1, }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Contingency" }),
+}))
+
+B3Timer_Private_ShowModalTimer = EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "B3Timer_ShowModalTimer",
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"]  = 0, ["max"]  = 1, }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Modal" }),
+}))
+
+EEex_Options_AddTab("Module: Timer", function() return {
+	{
+		EEex_Options_DisplayEntry.new({
+			["name"]     = "Hug Portraits",
+			["optionID"] = "B3Timer_HugPortraits",
+			["widget"]   = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["name"]     = "Show Cast Timer",
+			["optionID"] = "B3Timer_ShowCastTimer",
+			["widget"]   = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["name"]     = "Show Contingency Timer",
+			["optionID"] = "B3Timer_ShowContingencyTimer",
+			["widget"]   = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["name"]     = "Show Modal Timer",
+			["optionID"] = "B3Timer_ShowModalTimer",
+			["widget"]   = EEex_Options_ToggleWidget.new(),
+		}),
+	},
+} end)
 
 -----------------------
 -- Template Handling --
 -----------------------
 
-B3Timer_TemplateInstances = {}
+B3Timer_Private_TemplateInstances = {}
 
-function B3Timer_CreateInstance(menuName, templateName, x, y, w, h)
+function B3Timer_Private_CreateInstance(menuName, templateName, x, y, w, h)
 
-	local menuEntry = B3Timer_TemplateInstances[menuName]
+	local menuEntry = B3Timer_Private_TemplateInstances[menuName]
 	if not menuEntry then
 		menuEntry = {}
-		B3Timer_TemplateInstances[menuName] = menuEntry
+		B3Timer_Private_TemplateInstances[menuName] = menuEntry
 	end
 
 	local entry = menuEntry[templateName]
@@ -43,15 +94,15 @@ function B3Timer_CreateInstance(menuName, templateName, x, y, w, h)
 	return instanceEntry
 end
 
-B3Timer_TemplateInstancesByPortrait = {}
+B3Timer_Private_TemplateInstancesByPortrait = {}
 
-function B3Timer_CreateInstanceForPortrait(menuName, templateName, x, y, w, h, portraitItem)
-	local instanceEntry = B3Timer_CreateInstance(menuName, templateName, x, y, w, h)
+function B3Timer_Private_CreateInstanceForPortrait(menuName, templateName, x, y, w, h, portraitItem)
+	local instanceEntry = B3Timer_Private_CreateInstance(menuName, templateName, x, y, w, h)
 	instanceEntry.portraitItem = portraitItem
 	instanceEntry.portraitEnabledFunc = EEex_Menu_GetItemFunction(portraitItem.reference_enabled)
 	instanceEntry.portraitIndex = EEex_Menu_GetItemVariant(portraitItem.button.portrait)
 	instanceEntry.enabled = false
-	local portraitEntry = EEex_Utility_GetOrCreate(B3Timer_TemplateInstancesByPortrait, instanceEntry.portraitIndex, {})
+	local portraitEntry = EEex_Utility_GetOrCreate(B3Timer_Private_TemplateInstancesByPortrait, instanceEntry.portraitIndex, {})
 	local instanceEntries = EEex_Utility_GetOrCreate(portraitEntry, templateName, {})
 	table.insert(instanceEntries, instanceEntry)
 end
@@ -60,54 +111,48 @@ end
 -- Listeners --
 ---------------
 
-B3Timer_InjectingMenu = "RIGHT_SIDEBAR"
+B3Timer_Private_InjectingMenu = "RIGHT_SIDEBAR"
 
-function B3Timer_InstallBars()
-
-	-- Dragonspear UI++
-	B3Timer_HugPortraits = B3Timer_HugPortraits or nameToItem["portrait1ButtonBig"] ~= nil
-
+EEex_Menu_AddMainFileLoadedListener(function()
 	EEex_Menu_LoadFile("B3Timer")
-
-	local item = EEex_Menu_Find(B3Timer_InjectingMenu).items
+	local item = EEex_Menu_Find(B3Timer_Private_InjectingMenu).items
 	while item do
 		local portrait = item.button.portrait
 		if portrait then
 			local area = item.area
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background",       nil, nil, 10, nil, item)
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerModal",       nil, nil, 2,  nil, item)
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerContingency", nil, nil, 2,  nil, item)
-			B3Timer_CreateInstanceForPortrait(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerCast",        nil, nil, 2,  nil, item)
+			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background",       nil, nil, 10, nil, item)
+			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerModal",       nil, nil, 2,  nil, item)
+			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerContingency", nil, nil, 2,  nil, item)
+			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerCast",        nil, nil, 2,  nil, item)
 		end
 		item = item.next
 	end
-end
-EEex_Menu_AddMainFileLoadedListener(B3Timer_InstallBars)
+end)
 
-function B3Timer_PushMenuListener()
+function B3Timer_Private_PushMenuListener()
 	Infinity_PushMenu("B3Timer_Menu")
 end
-EEex_GameState_AddInitializedListener(B3Timer_PushMenuListener)
-EEex_Menu_AddAfterMainFileReloadedListener(B3Timer_PushMenuListener)
+EEex_GameState_AddInitializedListener(B3Timer_Private_PushMenuListener)
+EEex_Menu_AddAfterMainFileReloadedListener(B3Timer_Private_PushMenuListener)
 
 --------------------
 -- Menu Functions --
 --------------------
 
-B3Timer_NextUpdateTick = -1
+B3Timer_Private_NextUpdateTick = -1
 
-function B3Timer_Menu_Tick()
+function B3Timer_Private_Menu_Tick()
 
 	-- Game lags when this function is spammed, limit to 30tps.
 	local curTick = Infinity_GetClockTicks()
-	if curTick < B3Timer_NextUpdateTick then
+	if curTick < B3Timer_Private_NextUpdateTick then
 		return
 	end
-	B3Timer_NextUpdateTick = curTick + 33
+	B3Timer_Private_NextUpdateTick = curTick + 33
 
 	for portraitIndex = 0, 5, 1 do
 
-		local portraitEntry = B3Timer_TemplateInstancesByPortrait[portraitIndex]
+		local portraitEntry = B3Timer_Private_TemplateInstancesByPortrait[portraitIndex]
 		local sprite = EEex_Sprite_GetInPortrait(portraitIndex)
 
 		if sprite then
@@ -123,7 +168,7 @@ function B3Timer_Menu_Tick()
 
 					local curX = portraitInstanceCurX[i]
 					if not curX then
-						local startX = (B3Timer_HugPortraits and portraitArea.x or 0) - 3
+						local startX = (B3Timer_Private_HugPortraits:get() == 1 and portraitArea.x or 0) - 3
 						curX = startX
 						portraitInstanceStartX[i] = startX
 						portraitInstanceCurX[i] = curX
@@ -133,16 +178,16 @@ function B3Timer_Menu_Tick()
 					if (not portraitEnabledFunc or portraitEnabledFunc()) and condition then
 						instanceEntry.enabled = true
 						portraitInstanceCurX[i] = curX - 3
-						EEex_Menu_SetTemplateArea(B3Timer_InjectingMenu, templateName, instanceEntry.id, curX, portraitArea.y, nil, portraitArea.h)
+						EEex_Menu_SetTemplateArea(B3Timer_Private_InjectingMenu, templateName, instanceEntry.id, curX, portraitArea.y, nil, portraitArea.h)
 					else
 						instanceEntry.enabled = false
 					end
 				end
 			end
 
-			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerCast",        B3Timer_ShowCastTimer        and sprite:getCastTimerPercentage() > 0                     )
-			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerContingency", B3Timer_ShowContingencyTimer and sprite:getActiveStats().m_cContingencyList.m_nCount > 0 )
-			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerModal",       B3Timer_ShowModalTimer       and sprite:getModalState() ~= 0                             )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerCast",        B3Timer_Private_ShowCastTimer:get()        == 1 and sprite:getCastTimerPercentage() > 0                     )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerContingency", B3Timer_Private_ShowContingencyTimer:get() == 1 and sprite:getActiveStats().m_cContingencyList.m_nCount > 0 )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerModal",       B3Timer_Private_ShowModalTimer:get()       == 1 and sprite:getModalState() ~= 0                             )
 
 			for i, backgroundEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_Background"]) do
 				local startX = portraitInstanceStartX[i]
@@ -150,7 +195,7 @@ function B3Timer_Menu_Tick()
 				if curX ~= startX then
 					backgroundEntry.enabled = true
 					local portraitArea = backgroundEntry.portraitItem.area
-					EEex_Menu_SetTemplateArea(B3Timer_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background", backgroundEntry.id, curX + 2, portraitArea.y, startX - curX + 1, portraitArea.h)
+					EEex_Menu_SetTemplateArea(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background", backgroundEntry.id, curX + 2, portraitArea.y, startX - curX + 1, portraitArea.h)
 				else
 					backgroundEntry.enabled = false
 				end
@@ -171,33 +216,33 @@ function B3Timer_Menu_Tick()
 	end
 end
 
-function B3Timer_Menu_TEMPLATE_Background_Enabled()
-	return B3Timer_TemplateInstances[B3Timer_InjectingMenu]["B3Timer_Menu_TEMPLATE_Background"].instanceData[instanceId].enabled
+function B3Timer_Private_Menu_TEMPLATE_Background_Enabled()
+	return B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_Background"].instanceData[instanceId].enabled
 end
 
-function B3Timer_Menu_TEMPLATE_TimerModal_Enabled()
-	return B3Timer_TemplateInstances[B3Timer_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerModal"].instanceData[instanceId].enabled
+function B3Timer_Private_Menu_TEMPLATE_TimerModal_Enabled()
+	return B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerModal"].instanceData[instanceId].enabled
 end
 
-function B3Timer_Menu_TEMPLATE_TimerModal_Frame()
-	local portraitIndex = B3Timer_TemplateInstances[B3Timer_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerModal"].instanceData[instanceId].portraitIndex
+function B3Timer_Private_Menu_TEMPLATE_TimerModal_Frame()
+	local portraitIndex = B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerModal"].instanceData[instanceId].portraitIndex
 	return math.floor(90 * EEex_Sprite_GetModalTimerPercentage(EEex_Sprite_GetInPortrait(portraitIndex)) + 0.5)
 end
 
-function B3Timer_Menu_TEMPLATE_TimerContingency_Enabled()
-	return B3Timer_TemplateInstances[B3Timer_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerContingency"].instanceData[instanceId].enabled
+function B3Timer_Private_Menu_TEMPLATE_TimerContingency_Enabled()
+	return B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerContingency"].instanceData[instanceId].enabled
 end
 
-function B3Timer_Menu_TEMPLATE_TimerContingency_Frame()
-	local portraitIndex = B3Timer_TemplateInstances[B3Timer_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerContingency"].instanceData[instanceId].portraitIndex
+function B3Timer_Private_Menu_TEMPLATE_TimerContingency_Frame()
+	local portraitIndex = B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerContingency"].instanceData[instanceId].portraitIndex
 	return math.floor(90 * EEex_Sprite_GetContingencyTimerPercentage(EEex_Sprite_GetInPortrait(portraitIndex)) + 0.5)
 end
 
-function B3Timer_Menu_TEMPLATE_TimerCast_Enabled()
-	return B3Timer_TemplateInstances[B3Timer_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerCast"].instanceData[instanceId].enabled
+function B3Timer_Private_Menu_TEMPLATE_TimerCast_Enabled()
+	return B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerCast"].instanceData[instanceId].enabled
 end
 
-function B3Timer_Menu_TEMPLATE_TimerCast_Frame()
-	local portraitIndex = B3Timer_TemplateInstances[B3Timer_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerCast"].instanceData[instanceId].portraitIndex
+function B3Timer_Private_Menu_TEMPLATE_TimerCast_Frame()
+	local portraitIndex = B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerCast"].instanceData[instanceId].portraitIndex
 	return math.floor(90 * EEex_Sprite_GetCastTimerPercentage(EEex_Sprite_GetInPortrait(portraitIndex)) + 0.5)
 end

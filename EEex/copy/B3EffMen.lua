@@ -8,10 +8,10 @@ EEex_Options_Register(EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
 	["type"]     = EEex_Options_KeybindType.new({
 		["lockedFireType"] = EEex_Options_KeybindFireType.DOWN,
-		["callback"]       = function() B3EffectMenu_Menu_KeybindActive = true end,
+		["callback"]       = function() B3EffectMenu_Private_Menu_KeybindActive = true end,
 	}),
 	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
-	["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Launch Keybind" }),
+	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Module: Launch Keybind" }),
 }))
 
 B3EffectMenu_Private_RowCount = EEex_Options_Register(EEex_Options_Option.new({
@@ -19,10 +19,10 @@ B3EffectMenu_Private_RowCount = EEex_Options_Register(EEex_Options_Option.new({
 	["default"]  = 4,
 	["type"]     = EEex_Options_EditType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"]  = 1, ["max"]  = 99, }),
-	["storage"]  = EEex_Options_NumberINIStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Row Count" }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Module: Row Count" }),
 }))
 
-EEex_Options_AddTab("Effect Menu Module", function() return {
+EEex_Options_AddTab("Module: Effect Menu", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
 			["name"]     = "Launch Keybind",
@@ -44,16 +44,16 @@ EEex_Options_AddTab("Effect Menu Module", function() return {
 -- Globals --
 -------------
 
-B3EffectMenu_Menu_Enabled       = false
-B3EffectMenu_Menu_KeybindActive = false
+B3EffectMenu_Private_Menu_Enabled       = false
+B3EffectMenu_Private_Menu_KeybindActive = false
 
 -----------------------
 -- Hooks / Listeners --
 -----------------------
 
-B3EffectMenu_OldIsActorTooltipDisabled = EEex_Sprite_Hook_CheckSuppressTooltip
+B3EffectMenu_Private_OldIsActorTooltipDisabled = EEex_Sprite_Hook_CheckSuppressTooltip
 EEex_Sprite_Hook_CheckSuppressTooltip = function()
-	return B3EffectMenu_Menu_Enabled or B3EffectMenu_OldIsActorTooltipDisabled()
+	return B3EffectMenu_Private_Menu_Enabled or B3EffectMenu_Private_OldIsActorTooltipDisabled()
 end
 
 EEex_Menu_AddMainFileLoadedListener(function()
@@ -65,54 +65,54 @@ EEex_Menu_AddMainFileLoadedListener(function()
 	local oldActionbarOnOpen = EEex_Menu_GetItemFunction(actionbarMenu.reference_onOpen)
 	EEex_Menu_SetItemFunction(actionbarMenu.reference_onOpen, function()
 		local openResult = oldActionbarOnOpen()
-		B3EffectMenu_Open()
+		B3EffectMenu_Private_Open()
 		return openResult
 	end)
 
 	local oldActionbarOnClose = EEex_Menu_GetItemFunction(actionbarMenu.reference_onClose)
 	EEex_Menu_SetItemFunction(actionbarMenu.reference_onClose, function()
-		B3EffectMenu_Close()
+		B3EffectMenu_Private_Close()
 		return oldActionbarOnClose()
 	end)
 end)
 
 EEex_Key_AddReleasedListener(function()
-	B3EffectMenu_Menu_KeybindActive = false
+	B3EffectMenu_Private_Menu_KeybindActive = false
 end)
 
 ----------
 -- Main --
 ----------
 
-function B3EffectMenu_Init()
-	B3EffectMenu_CurrentActorID = nil
-	B3EffectMenu_EnableDelay = -1
-	B3EffectMenu_Menu_Enabled = false
+function B3EffectMenu_Private_Init()
+	B3EffectMenu_Private_CurrentActorID = nil
+	B3EffectMenu_Private_EnableDelay = -1
+	B3EffectMenu_Private_Menu_Enabled = false
 end
-B3EffectMenu_Init()
+B3EffectMenu_Private_Init()
 
-function B3EffectMenu_Open()
-	B3EffectMenu_Init()
+function B3EffectMenu_Private_Open()
+	B3EffectMenu_Private_Init()
 	Infinity_PushMenu("B3EffectMenu_Menu")
 end
 
-function B3EffectMenu_Close()
+function B3EffectMenu_Private_Close()
 	Infinity_PopMenu("B3EffectMenu_Menu")
-	B3EffectMenu_Init()
+	B3EffectMenu_Private_Init()
 end
 
-function B3EffectMenu_DoLayout()
+function B3EffectMenu_Private_DoLayout()
 	local rowTotal = 35 * B3EffectMenu_Private_RowCount:get()
 	Infinity_SetArea("B3EffectMenu_Menu_Background", nil, nil, nil, rowTotal + 20)
 	Infinity_SetArea("B3EffectMenu_Menu_List", nil, nil, nil, rowTotal)
 end
 
-function B3EffectMenu_LaunchInfo()
+function B3EffectMenu_Private_LaunchInfo()
 
-	B3EffectMenu_DoLayout()
+	B3EffectMenu_Private_DoLayout()
 
-	B3EffectMenu_Menu_List_Table = {}
-	local sprite = EEex_GameObject_Get(B3EffectMenu_CurrentActorID)
+	B3EffectMenu_Private_Menu_List_Table = {}
+	local sprite = EEex_GameObject_Get(B3EffectMenu_Private_CurrentActorID)
 
 	local pos = sprite.m_pos
 	local screenX, screenY = EEex_Menu_TranslateXYFromGame(pos.x, pos.y)
@@ -167,32 +167,14 @@ function B3EffectMenu_LaunchInfo()
 			["text"] = spellName,
 		}
 
-		table.insert(B3EffectMenu_Menu_List_Table, listData)
+		table.insert(B3EffectMenu_Private_Menu_List_Table, listData)
 	end)
 
-	-- Alphanumeric sort
-	table.sort(B3EffectMenu_Menu_List_Table, function(a, b)
-		local conv = function(s)
-			local res, dot = "", ""
-			for n, m, c in tostring(s):gmatch("(0*(%d*))(.?)") do
-				if n == "" then
-					dot, c = "", dot..c
-				else
-					res = res..(dot == "" and ("%03d%s"):format(#m, m) or "."..n)
-					dot, c = c:match("(%.?)(.*)")
-				end
-				res = res..c:gsub(".", "\0%0")
-			end
-			return res
-		end
-		local ca, cb = conv(a.tooltip), conv(b.tooltip)
-		return (a.text <= b.text) and (ca <= cb and a.text < b.text)
-	end)
-
-	B3EffectMenu_EnableDelay = 0
+	EEex_Utility_AlphanumericSortTable(B3EffectMenu_Private_Menu_List_Table, function(t) return t.text end)
+	B3EffectMenu_Private_EnableDelay = 0
 end
 
-function B3EffectMenu_ClearWorldTooltip()
+function B3EffectMenu_Private_ClearWorldTooltip()
 	EEex_EngineGlobal_CBaldurChitin.m_pObjectGame.m_tempCursor = 4
 end
 
@@ -204,26 +186,26 @@ end
 -- B3EffectMenu_Menu --
 -----------------------
 
-function B3EffectMenu_Menu_Tick()
+function B3EffectMenu_Private_Menu_Tick()
 
 	if worldScreen ~= e:GetActiveEngine() then return end
 
-	if B3EffectMenu_EnableDelay > -1 then
-		B3EffectMenu_EnableDelay = B3EffectMenu_EnableDelay + 1
-		if B3EffectMenu_EnableDelay == 1 then
-			B3EffectMenu_Menu_Enabled = true
-			B3EffectMenu_ClearWorldTooltip()
-			B3EffectMenu_EnableDelay = -1
+	if B3EffectMenu_Private_EnableDelay > -1 then
+		B3EffectMenu_Private_EnableDelay = B3EffectMenu_Private_EnableDelay + 1
+		if B3EffectMenu_Private_EnableDelay == 1 then
+			B3EffectMenu_Private_Menu_Enabled = true
+			B3EffectMenu_Private_ClearWorldTooltip()
+			B3EffectMenu_Private_EnableDelay = -1
 		end
 	end
 
 	local object = EEex_GameObject_GetUnderCursor()
-	if B3EffectMenu_Menu_KeybindActive and object and object:isSprite() then
-		if object.m_id ~= B3EffectMenu_CurrentActorID then
-			B3EffectMenu_CurrentActorID = object.m_id
-			B3EffectMenu_LaunchInfo()
+	if B3EffectMenu_Private_Menu_KeybindActive and object and object:isSprite() then
+		if object.m_id ~= B3EffectMenu_Private_CurrentActorID then
+			B3EffectMenu_Private_CurrentActorID = object.m_id
+			B3EffectMenu_Private_LaunchInfo()
 		end
-	elseif (not B3EffectMenu_Menu_KeybindActive) or (not EEex_Menu_IsCursorWithin("B3EffectMenu_Menu", "B3EffectMenu_Menu_Background")) then
-		B3EffectMenu_Init()
+	elseif (not B3EffectMenu_Private_Menu_KeybindActive) or (not EEex_Menu_IsCursorWithin("B3EffectMenu_Menu", "B3EffectMenu_Menu_Background")) then
+		B3EffectMenu_Private_Init()
 	end
 end

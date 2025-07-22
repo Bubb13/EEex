@@ -383,7 +383,7 @@ function EEex_Menu_Hook_OnWindowSizeChanged()
 		return
 	end
 
-	if EEex_Modules["B3Scale"] then
+	if EEex_Options_Check("EEex_Module_Scale", 1) then
 		B3Scale_Private_DoSizeChange()
 	end
 

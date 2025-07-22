@@ -9,14 +9,14 @@ menu
 	label
 	{
 		area 0 0 2147483647 2147483647
-		enabled "B3Timer_Menu_Tick()"
+		enabled "B3Timer_Private_Menu_Tick()"
 	}
 
 	template
 	{
 		label
 		{
-			enabled "B3Timer_Menu_TEMPLATE_Background_Enabled()"
+			enabled "B3Timer_Private_Menu_TEMPLATE_Background_Enabled()"
 			bam "B3TBACKG"
 			scaleToClip
 		}
@@ -27,10 +27,10 @@ menu
 	{
 		label
 		{
-			enabled "B3Timer_Menu_TEMPLATE_TimerModal_Enabled()"
+			enabled "B3Timer_Private_Menu_TEMPLATE_TimerModal_Enabled()"
 			bam "B3TMODAL"
 			scaleToClip
-			frame lua "B3Timer_Menu_TEMPLATE_TimerModal_Frame()"
+			frame lua "B3Timer_Private_Menu_TEMPLATE_TimerModal_Frame()"
 		}
 		name "B3Timer_Menu_TEMPLATE_TimerModal"
 	}
@@ -39,10 +39,10 @@ menu
 	{
 		label
 		{
-			enabled "B3Timer_Menu_TEMPLATE_TimerContingency_Enabled()"
+			enabled "B3Timer_Private_Menu_TEMPLATE_TimerContingency_Enabled()"
 			bam "B3TCONTI"
 			scaleToClip
-			frame lua "B3Timer_Menu_TEMPLATE_TimerContingency_Frame()"
+			frame lua "B3Timer_Private_Menu_TEMPLATE_TimerContingency_Frame()"
 		}
 		name "B3Timer_Menu_TEMPLATE_TimerContingency"
 	}
@@ -51,10 +51,10 @@ menu
 	{
 		label
 		{
-			enabled "B3Timer_Menu_TEMPLATE_TimerCast_Enabled()"
+			enabled "B3Timer_Private_Menu_TEMPLATE_TimerCast_Enabled()"
 			bam "B3TAURA"
 			scaleToClip
-			frame lua "B3Timer_Menu_TEMPLATE_TimerCast_Frame()"
+			frame lua "B3Timer_Private_Menu_TEMPLATE_TimerCast_Frame()"
 		}
 		name "B3Timer_Menu_TEMPLATE_TimerCast"
 	}

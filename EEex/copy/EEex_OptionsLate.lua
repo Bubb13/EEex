@@ -3,8 +3,10 @@
 -- Listeners ==
 --=============
 
+EEex_Options_Private_ReadOptions(true)
+
 EEex_GameState_AddBeforeIncludesListener(function()
-	EEex_Options_Private_ReadOptions()
+	EEex_Options_Private_ReadOptions(false)
 end)
 
 EEex_Menu_AddMainFileLoadedListener(function()
@@ -13,6 +15,7 @@ end)
 
 -- Hardcoded call from EEex_GameState.lua
 function EEex_Options_OnAfterGameStateInitialized()
+	EEex_Options_Private_SpecialSortTabs()
 	EEex_Options_Private_BuildLayout()
 end
 

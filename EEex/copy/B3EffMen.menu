@@ -10,7 +10,7 @@ menu
 
 	label
 	{
-		enabled "B3EffectMenu_Menu_Tick()"
+		enabled "B3EffectMenu_Private_Menu_Tick()"
 		area 0 0 2147483647 2147483647
 	}
 
@@ -18,7 +18,7 @@ menu
 	{
 		area 0 0 220 160
 		name "B3EffectMenu_Menu_Background"
-		enabled "B3EffectMenu_Menu_Enabled"
+		enabled "B3EffectMenu_Private_Menu_Enabled"
 		rectangle 5
 		rectangle opacity 750
 	}
@@ -31,7 +31,7 @@ menu
 			label
 			{
 				area 0 0 32 32
-				bam lua "B3EffectMenu_Menu_List_Table[rowNumber].bam"
+				bam lua "B3EffectMenu_Private_Menu_List_Table[rowNumber].bam"
 				scaleToClip
 			}
 		}
@@ -41,7 +41,7 @@ menu
 			label
 			{
 				area 0 0 147 30
-				text lua "B3EffectMenu_Menu_List_Table[rowNumber].text"
+				text lua "B3EffectMenu_Private_Menu_List_Table[rowNumber].text"
 				text align left center
 				text useFontZoom 0
 			}
@@ -49,9 +49,9 @@ menu
 
 		area 10 10 210 140
 		name "B3EffectMenu_Menu_List"
-		enabled "B3EffectMenu_Menu_Enabled"
-		table "B3EffectMenu_Menu_List_Table"
-		var "B3EffectMenu_Menu_List_SelectedRow"
+		enabled "B3EffectMenu_Private_Menu_Enabled"
+		table "B3EffectMenu_Private_Menu_List_Table"
+		var "B3EffectMenu_Private_Menu_List_SelectedRow"
 		scrollbar "GUISCRC"
 		scrollbar clunkyScroll 35
 		rowheight 35

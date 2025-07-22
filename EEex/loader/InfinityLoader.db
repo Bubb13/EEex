@@ -1609,6 +1609,10 @@ Operations=ADD 11
 Pattern=0F85B3F2FFFF
 Operations=ADD -7
 
+[Hook-CChitin::ShutDown()-FirstInstruction]
+Pattern=8987A0000000488B5F60
+Operations=ADD -59
+
 [Hook-CDerivedStats::Construct()-FirstCall]
 Pattern=48894C24085741544155415641574883EC20488BF1
 Operations=ADD 28

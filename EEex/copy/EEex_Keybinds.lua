@@ -26,7 +26,7 @@ EEex_Options_Register(EEex_Options_Option.new({
 		["callback"] = function() EEex_Keybinds_Private_TogglePrintKeys() end,
 	}),
 	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "EEex_Keybinds_ToggleKeycodeOutput" }),
-	["storage"]  = EEex_Options_KeybindINIStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
+	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
 }))
 
 EEex_Options_AddTab("Miscellaneous", function() return {

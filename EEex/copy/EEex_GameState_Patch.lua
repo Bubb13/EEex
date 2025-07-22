@@ -101,6 +101,41 @@
 		})
 	)
 
+	--[[
+	+--------------------------------------------------------------------------------+
+	| Call a hook before the engine shuts down in response to user input             |
+	+--------------------------------------------------------------------------------+
+	|   Used to implement listeners that need to finalize before the game shuts down |
+	+--------------------------------------------------------------------------------+
+	|   [Lua] EEex_GameState_Hook_OnBeforeShutdown()                                 |
+	+--------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CChitin::ShutDown()-FirstInstruction"), 0, 6, 6, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(64)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+			]]},
+			EEex_GenLuaCall("EEex_GameState_Hook_OnBeforeShutdown"),
+			{[[
+				call_error:
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]}
+		})
+	)
+
 	EEex_EnableCodeProtection()
 
 end)()

@@ -13,6 +13,8 @@
 !/EEex/*.*
 !/EEex/copy
 !/EEex/copy/*.*
+!/EEex/lib
+!/EEex/lib/*.*
 !/EEex/loader
 !/EEex/loader/*.*
 !/EEex/loader/Lua52

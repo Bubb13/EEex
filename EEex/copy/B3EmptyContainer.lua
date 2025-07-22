@@ -1,5 +1,5 @@
 
-function B3EmptyContainer_OnBeforeContainerOutlineRender(container, color)
+function B3EmptyContainer_Hook_OnBeforeContainerOutlineRender(container, color)
 	if color.value ~= 0xFF00 and container.m_lstItems.m_nCount == 0 then
 		color.value = 0x808080
 	end
@@ -21,7 +21,7 @@ end
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 			]]},
-			EEex_GenLuaCall("B3EmptyContainer_OnBeforeContainerOutlineRender", {
+			EEex_GenLuaCall("B3EmptyContainer_Hook_OnBeforeContainerOutlineRender", {
 				["args"] = {
 					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r14", {rspOffset}, "#ENDL"}, "CGameContainer" end,
 					function(rspOffset) return {[[

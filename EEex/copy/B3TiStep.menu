@@ -5,6 +5,6 @@ menu
 	ignoreEsc
 	label
 	{
-		enabled "B3TimeStep_Tick()"
+		enabled "B3TimeStep_Private_Tick()"
 	}
 }

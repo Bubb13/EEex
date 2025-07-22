@@ -1,7 +1,7 @@
 
-B3Invis_RenderAsInvisible = true
+B3Invis_Private_RenderAsInvisible = true
 
-function B3Invis_CanSelectedSeeInvis()
+function B3Invis_Private_CanSelectedSeeInvis()
 	local toReturn = false
 	EEex_Sprite_IterateSelected(function(sprite)
 		if sprite:getActiveStats().m_bSeeInvisible ~= 0 then
@@ -13,11 +13,11 @@ function B3Invis_CanSelectedSeeInvis()
 end
 
 function B3Invis_Hook_CanSeeInvisible()
-	return B3Invis_CanSelectedSeeInvis()
+	return B3Invis_Private_CanSelectedSeeInvis()
 end
 
 function B3Invis_Hook_ForceCircle(target)
-	return target.m_bInvisible ~= 0 and B3Invis_CanSelectedSeeInvis()
+	return target.m_bInvisible ~= 0 and B3Invis_Private_CanSelectedSeeInvis()
 end
 
 (function()
@@ -103,7 +103,7 @@ end
 		})
 	)
 
-	if B3Invis_RenderAsInvisible then
+	if B3Invis_Private_RenderAsInvisible then
 
 		--[[
 		+---------------------------------------------------------------------------------------------------------------------+

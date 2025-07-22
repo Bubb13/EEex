@@ -1,5 +1,5 @@
 
-function EEex_Utility_AlphanumericSortTable(o, stringAccessor)
+function EEex_Utility_AlphanumericCompare(a, b)
 	local conv = function(s)
 		local result, lastPeriod = "", ""
 		for digits, nonZeroDigits, anythingChar in tostring(s):gmatch("(0*(%d*))(.?)") do
@@ -13,11 +13,12 @@ function EEex_Utility_AlphanumericSortTable(o, stringAccessor)
 		end
 		return result
 	end
-	table.sort(o, function(a, b)
-		local aString, bString = stringAccessor(a), stringAccessor(b)
-		local ca, cb = conv(aString), conv(bString)
-		return ca < cb or (ca == cb and aString < bString)
-	end)
+	local ca, cb = conv(a), conv(b)
+	return ca < cb or (ca == cb and a < b)
+end
+
+function EEex_Utility_AlphanumericSortTable(o, stringAccessor)
+	table.sort(o, function(a, b) return EEex_Utility_AlphanumericCompare(stringAccessor(a), stringAccessor(b)) end)
 	return o
 end
 

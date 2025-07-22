@@ -1,0 +1,9 @@
+
+DEFINE_PATCH_FUNCTION SetINIString
+	STR_VAR
+		section=~~
+		key=~~
+		value=~~
+	BEGIN
+		REPLACE_EVALUATE ~\(\[[ %TAB%]*%section%[ %TAB%]*\][^\[\]]*[%WNL%]+[ %TAB%]*%key%[ %TAB%]*=[ %TAB%]*\)[^%WNL%]*~ BEGIN END ~%MATCH1%%value%~
+END

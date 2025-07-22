@@ -102,6 +102,12 @@ function EEex_GameState_AddDestroyedListener(listener)
 	table.insert(EEex_GameState_DestroyedListeners, listener)
 end
 
+EEex_GameState_ShutdownListeners = {}
+
+function EEex_GameState_AddShutdownListener(listener)
+	table.insert(EEex_GameState_ShutdownListeners, listener)
+end
+
 -----------
 -- Hooks --
 -----------
@@ -124,6 +130,12 @@ end
 
 function EEex_GameState_Hook_OnDestroyed()
 	for _, listener in ipairs(EEex_GameState_DestroyedListeners) do
+		listener()
+	end
+end
+
+function EEex_GameState_Hook_OnBeforeShutdown()
+	for _, listener in ipairs(EEex_GameState_ShutdownListeners) do
 		listener()
 	end
 end
