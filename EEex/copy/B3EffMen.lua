@@ -18,7 +18,7 @@ B3EffectMenu_Private_RowCount = EEex_Options_Register(EEex_Options_Option.new({
 	["id"]       = "B3EffectMenu_RowCount",
 	["default"]  = 4,
 	["type"]     = EEex_Options_EditType.new(),
-	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"]  = 1, ["max"]  = 99, }),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 1, ["max"] = 99 }),
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Module: Row Count" }),
 }))
 
