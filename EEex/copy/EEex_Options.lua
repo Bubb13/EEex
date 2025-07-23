@@ -831,7 +831,7 @@ end
 function EEex_Options_Private_TEMPLATE_DelayIcon_Enabled()
 	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_DelayIcon"][instanceId]
 	local option = instanceData.displayEntry._option
-	return option:_getWorkingValue() ~= option:get()
+	return option:_getWorkingValue() ~= option:_get()
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -956,7 +956,7 @@ function EEex_Options_Private_LayoutKeybindBackground:doLayout()
 	instanceData.text = ""
 	EEex_Options_Private_KeybindResetPulse(instanceData)
 
-	local value = self.displayEntry:getWorkingValue()
+	local value = self.displayEntry:_getWorkingValue()
 	EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
 
 	self.layoutCallback(instanceData)
@@ -1045,8 +1045,7 @@ function EEex_Options_Private_TEMPLATE_KeybindButton_Action()
 		EEex_Options_Private_KeybindEndFocus(backgroundInstanceData)
 	else
 		local displayEntry = backgroundInstanceData.displayEntry
-		local default = displayEntry._option:getDefault()
-		default = displayEntry:setWorkingValue(default)
+		local default = displayEntry:_setWorkingValue(displayEntry:_getDefault())
 		EEex_Options_Private_KeybindUpdateText(backgroundInstanceData, default[1], default[2])
 	end
 end
@@ -1127,22 +1126,22 @@ end
 
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Action()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
-	local existingVal = displayEntry:getWorkingValue()
+	local existingVal = EEex.DeepCopy(displayEntry:_getWorkingValue()) -- Copy for subsequent modification
 	local fireType = existingVal[3]
 	existingVal[3] = not fireType
-	displayEntry:setWorkingValue(existingVal)
+	displayEntry:_setWorkingValue(existingVal)
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Tooltip()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
-	local fireType = displayEntry:getWorkingValue()[3]
+	local fireType = displayEntry:_getWorkingValue()[3]
 	local result = fireType and "On Sequence Released" or "On Sequence Pressed"
 	return displayEntry._option.type.lockedFireType == nil and result or result.." (Locked)"
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Sequence()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
-	local fireType = displayEntry:getWorkingValue()[3]
+	local fireType = displayEntry:_getWorkingValue()[3]
 	local sequence = fireType and 2 or 4
 	return displayEntry._option.type.lockedFireType == nil and sequence or sequence + 1
 end
@@ -1846,7 +1845,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_writeNewValues()
 		for _, displayEntry in ipairs(group) do
 
 			if not displayEntry.widget.deferTo then
-				displayEntry._option:set(displayEntry:getWorkingValue())
+				displayEntry:_set(displayEntry:_getWorkingValue())
 			end
 
 			if displayEntry.subOptions then
@@ -1934,7 +1933,7 @@ function EEex_Options_Private_ToggleAction(displayEntry)
 				if newForceToggleState or not forceWidget.disallowToggleOff then
 					local mainForceDisplayEntry = forceWidget.deferTo and EEex_Options_Private_IdToDisplayEntry[forceWidget.deferTo] or forceDisplayEntry
 					local newForceVal = newForceToggleState and mainForceDisplayEntry.widget.toggleValue or 0
-					mainForceDisplayEntry:setWorkingValue(newForceVal)
+					mainForceDisplayEntry:_setWorkingValue(newForceVal)
 				end
 			end
 		end
@@ -1942,7 +1941,7 @@ function EEex_Options_Private_ToggleAction(displayEntry)
 
 	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
 	local newVal = newToggleState and mainDisplayEntry.widget.toggleValue or 0
-	mainDisplayEntry:setWorkingValue(newVal)
+	mainDisplayEntry:_setWorkingValue(newVal)
 end
 
 function EEex_Options_Private_TEMPLATE_Toggle_Action()
@@ -2035,6 +2034,14 @@ function EEex_Options_Option:_canReadEarly()
 	return storage:canReadEarly()
 end
 
+function EEex_Options_Option:_get()
+	return self.accessor:get(self)
+end
+
+function EEex_Options_Option:_getDefault()
+	return self.default
+end
+
 function EEex_Options_Option:_getWorkingValue()
 	return self._workingValue
 end
@@ -2045,16 +2052,16 @@ function EEex_Options_Option:_read()
 	return storage:read(self)
 end
 
-function EEex_Options_Option:_set(newValue, fromRead)
+function EEex_Options_Option:_set(newValue, fromRead, needCopy)
 
 	if not fromRead and self.requiresRestart then
-		newValue = self:_setWorkingValue(newValue)
+		newValue = self:_setWorkingValue(newValue, needCopy)
 		self:_write(newValue)
 		return newValue
 	end
 
-	local oldValue = self:get()
-	newValue = self.accessor:set(self, newValue)
+	local oldValue = self:_get()
+	newValue = self.accessor:set(self, newValue, needCopy)
 	self._workingValue = newValue
 
 	if not fromRead then
@@ -2068,8 +2075,8 @@ function EEex_Options_Option:_set(newValue, fromRead)
 	return newValue
 end
 
-function EEex_Options_Option:_setWorkingValue(newValue)
-	newValue = self.accessor:validate(self, newValue)
+function EEex_Options_Option:_setWorkingValue(newValue, needCopy)
+	newValue = self.accessor:validate(self, newValue, needCopy)
 	self._workingValue = newValue
 	return newValue
 end
@@ -2085,15 +2092,19 @@ end
 ------------
 
 function EEex_Options_Option:getDefault()
-	return self.default
+	-- Copy so the user can't modify internal state via a reference
+	return EEex.DeepCopy(self:_getDefault())
 end
 
 function EEex_Options_Option:get()
-	return self.accessor:get(self)
+	-- Copy so the user can't modify internal state via a reference
+	return EEex.DeepCopy(self:_get())
 end
 
 function EEex_Options_Option:set(newValue)
-	return self:_set(newValue ~= nil and newValue or self:getDefault())
+	if newValue == nil then return self:_set(self:_getDefault()) end
+	-- Copy `newValue` if it is used so the user can't modify it via a reference
+	return self:_set(newValue, false, true)
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2137,16 +2148,20 @@ function EEex_Options_DisplayEntry:_init()
 	--   self._option
 end
 
-------------
--- Public --
-------------
+function EEex_Options_DisplayEntry:_getDefault()
+	return self._option:_getDefault()
+end
 
-function EEex_Options_DisplayEntry:getWorkingValue()
+function EEex_Options_DisplayEntry:_getWorkingValue()
 	return self._option:_getWorkingValue()
 end
 
-function EEex_Options_DisplayEntry:setWorkingValue(newValue)
-	return self._option:_setWorkingValue(newValue)
+function EEex_Options_DisplayEntry:_set(newValue, fromRead, needCopy)
+	return self._option:_set(newValue, fromRead, needCopy)
+end
+
+function EEex_Options_DisplayEntry:_setWorkingValue(newValue, needCopy)
+	return self._option:_setWorkingValue(newValue, needCopy)
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2178,8 +2193,8 @@ end
 -- Public --
 ------------
 
-function EEex_Options_Accessor:validate(option, newValue)
-	return newValue
+function EEex_Options_Accessor:validate(option, newValue, needCopy)
+	return needCopy and EEex.DeepCopy(newValue) or newValue
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2218,7 +2233,7 @@ function EEex_Options_PrivateAccessor:get(option)
 	return self._value
 end
 
-function EEex_Options_PrivateAccessor:set(option, newValue)
+function EEex_Options_PrivateAccessor:set(option, newValue, needCopy)
 	self._value = newValue
 	return newValue
 end
@@ -2268,7 +2283,7 @@ function EEex_Options_GlobalAccessor:get(option)
 	return _G[self.name]
 end
 
-function EEex_Options_GlobalAccessor:set(option, newValue)
+function EEex_Options_GlobalAccessor:set(option, newValue, needCopy)
 	_G[self.name] = newValue
 	return newValue
 end
@@ -2314,12 +2329,14 @@ end
 -- Public --
 ------------
 
-function EEex_Options_KeybindAccessor:validate(option, newValue)
+function EEex_Options_KeybindAccessor:validate(option, newValue, needCopy)
 	local lockedFireType = option.type.lockedFireType
-	if lockedFireType ~= nil then
+	if lockedFireType ~= nil and newValue[3] ~= lockedFireType then
+		newValue = EEex.DeepCopy(newValue) -- Copy for subsequent modification
 		newValue[3] = lockedFireType
+		return newValue
 	end
-	return newValue
+	return EEex_Utility_CallSuper(EEex_Options_KeybindAccessor, "validate", self, option, newValue, needCopy)
 end
 
 function EEex_Options_KeybindAccessor:get(option)
@@ -2327,8 +2344,8 @@ function EEex_Options_KeybindAccessor:get(option)
 	return { modifierKeys, keys, fireType }
 end
 
-function EEex_Options_KeybindAccessor:set(option, newValue)
-	newValue = self:validate(option, newValue)
+function EEex_Options_KeybindAccessor:set(option, newValue, needCopy)
+	newValue = self:validate(option, newValue, needCopy)
 	EEex_Keybinds_SetBinding(self.keybindID, newValue[1], newValue[2], newValue[3], option.type.callback)
 	return newValue
 end
@@ -2378,7 +2395,7 @@ end
 -- Public --
 ------------
 
-function EEex_Options_ClampedAccessor:validate(option, newValue)
+function EEex_Options_ClampedAccessor:validate(option, newValue, needCopy)
 
 	if not self.floating then
 		newValue = math.floor(newValue)
@@ -2401,8 +2418,8 @@ function EEex_Options_ClampedAccessor:get(option)
 	return self.accessor:get()
 end
 
-function EEex_Options_ClampedAccessor:set(option, newValue)
-	newValue = self:validate(option, newValue)
+function EEex_Options_ClampedAccessor:set(option, newValue, needCopy)
+	newValue = self:validate(option, newValue, needCopy)
 	return self.accessor:set(option, newValue)
 end
 
@@ -2501,7 +2518,7 @@ end
 function EEex_Options_NumberLuaStorage:read(option)
 	local strVal = Infinity_GetINIString(self.section, self.key, "X-DEFAULT")
 	local intVal = strVal ~= "X-DEFAULT" and tonumber(strVal) or nil
-	return intVal or option:getDefault()
+	return intVal or option:_getDefault()
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2537,7 +2554,7 @@ end
 ------------
 
 function EEex_Options_StringLuaStorage:read(option)
-	return Infinity_GetINIString(self.section, self.key, option:getDefault())
+	return Infinity_GetINIString(self.section, self.key, option:_getDefault())
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2615,7 +2632,7 @@ end
 function EEex_Options_NumberINIStorage:read(option)
 	local strVal = EEex.GetINIString(self.path, self.section, self.key, "X-DEFAULT")
 	local intVal = strVal ~= "X-DEFAULT" and tonumber(strVal) or nil
-	return intVal or option:getDefault()
+	return intVal or option:_getDefault()
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2651,7 +2668,7 @@ end
 ------------
 
 function EEex_Options_StringINIStorage:read(option)
-	return EEex.GetINIString(self.path, self.section, self.key, option:getDefault())
+	return EEex.GetINIString(self.path, self.section, self.key, option:_getDefault())
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2695,7 +2712,7 @@ function EEex_Options_KeybindLuaStorage:read(option)
 		result = EEex_Options_UnmarshalKeybind(str)
 	end
 
-	return result or option:getDefault()
+	return result or option:_getDefault()
 end
 
 function EEex_Options_KeybindLuaStorage:write(option, value)
@@ -3031,7 +3048,7 @@ end
 function EEex_Options_ToggleWidget:_onShowBeforeLayout(displayEntry)
 	local widget = displayEntry.widget
 	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
-	widget.toggleState = mainDisplayEntry:getWorkingValue() == widget.toggleValue
+	widget.toggleState = mainDisplayEntry:_getWorkingValue() == widget.toggleValue
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -3141,7 +3158,7 @@ function EEex_Options_Private_CreateEdit(menuName, displayEntry, x, y, w, h)
 	editUD.var:pointTo(EEex_WriteStringCache(widget._editVar))
 	if widget.maxCharacters then editUD.maxchars = widget.maxCharacters + 1 end
 
-	_G[widget._editVar] = tostring(displayEntry:getWorkingValue())
+	_G[widget._editVar] = tostring(displayEntry:_getWorkingValue())
 	return instanceData
 end
 
@@ -3190,12 +3207,12 @@ function EEex_Options_Private_EditSetOption(displayEntry)
 
 	if widget.number then
 		-- Don't allow floating numbers to be set without a leading 0 (this bypasses character limits)
-		local toSetVal = strVal:find("^%s*%.") == nil and tonumber(strVal) or option:getDefault()
-		strVal = tostring(displayEntry:setWorkingValue(toSetVal))
+		local toSetVal = strVal:find("^%s*%.") == nil and tonumber(strVal) or option:_getDefault()
+		strVal = tostring(displayEntry:_setWorkingValue(toSetVal))
 	else
 		strVal = strVal:gsub("^%s+", "")
 		strVal = strVal:gsub("%s+$", "")
-		strVal = displayEntry:setWorkingValue(strVal)
+		strVal = displayEntry:_setWorkingValue(strVal)
 	end
 
 	_G[widget._editVar] = strVal
@@ -3401,10 +3418,10 @@ function EEex_Options_Private_KeybindEndFocus(instanceData)
 
 	local displayEntry = instanceData.displayEntry
 
-	local existingVal = displayEntry:getWorkingValue()
+	local existingVal = EEex.DeepCopy(displayEntry:_getWorkingValue()) -- Copy for subsequent modification
 	existingVal[1] = EEex_Options_Private_KeybindRecordedModifiers
 	existingVal[2] = EEex_Options_Private_KeybindRecordedKeys
-	displayEntry:setWorkingValue(existingVal)
+	displayEntry:_setWorkingValue(existingVal)
 
 	EEex_Options_Private_KeybindKillFocus(instanceData, true)
 end
@@ -3419,7 +3436,7 @@ function EEex_Options_Private_KeybindKillFocus(instanceData, accepted)
 	EEex_Options_Private_KeybindRecordedKeys      = {}
 
 	if not accepted then
-		local value = instanceData.displayEntry:getWorkingValue()
+		local value = instanceData.displayEntry:_getWorkingValue()
 		EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
 	end
 end
@@ -3731,5 +3748,5 @@ end
 function EEex_Options_Check(optionName, value)
 	local option = EEex_Options_Get(optionName)
 	if option == nil then return value == nil end
-	return option:get() == value
+	return option:_get() == value
 end
