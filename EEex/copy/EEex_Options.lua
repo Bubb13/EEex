@@ -136,9 +136,13 @@ function EEex_Options_Private_LayoutParent:_init()
 	if self.children == nil then self.children = {} end
 end
 
+function EEex_Options_Private_LayoutParent:_getChildLayout(child)
+	return child
+end
+
 function EEex_Options_Private_LayoutParent:_onInitLayout()
 	for _, child in ipairs(self.children) do
-		child:_onInitLayout()
+		self:_getChildLayout(child):_onInitLayout()
 	end
 end
 
@@ -155,8 +159,9 @@ function EEex_Options_Private_LayoutParent:calculateLayout(left, top, right, bot
 	self:_calculateDerivedLayout()
 
 	for _, child in ipairs(self.children) do
-		child:calculateLayout(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
-		child:_onParentLayoutCalculated(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
+		local childLayout = self:_getChildLayout(child)
+		childLayout:calculateLayout(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
+		childLayout:_onParentLayoutCalculated(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom)
 		-- TODO: Re-layout child
 	end
 
@@ -166,25 +171,25 @@ end
 
 function EEex_Options_Private_LayoutParent:doLayout()
 	for _, child in ipairs(self.children) do
-		child:doLayout()
+		self:_getChildLayout(child):doLayout()
 	end
 end
 
 function EEex_Options_Private_LayoutParent:showBeforeLayout()
 	for _, child in ipairs(self.children) do
-		child:showBeforeLayout()
+		self:_getChildLayout(child):showBeforeLayout()
 	end
 end
 
 function EEex_Options_Private_LayoutParent:showAfterLayout()
 	for _, child in ipairs(self.children) do
-		child:showAfterLayout()
+		self:_getChildLayout(child):showAfterLayout()
 	end
 end
 
 function EEex_Options_Private_LayoutParent:hide()
 	for _, child in ipairs(self.children) do
-		child:hide()
+		self:_getChildLayout(child):hide()
 	end
 end
 
@@ -343,6 +348,190 @@ end
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_Private_LayoutVerticalTabArea ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Private_LayoutStacking  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_Private_LayoutStacking = {}
+EEex_Options_Private_LayoutStacking.__index = EEex_Options_Private_LayoutStacking
+setmetatable(EEex_Options_Private_LayoutStacking, EEex_Options_Private_LayoutParent)
+--print("EEex_Options_Private_LayoutStacking: "..tostring(EEex_Options_Private_LayoutStacking))
+
+EEex_Options_Private_LayoutStacking_AlignFlags = {
+	["HORIZONTAL_CENTER"] = 0x1,
+	["HORIZONTAL_RIGHT"]  = 0x2,
+	["VERTICAL_CENTER"]   = 0x4,
+	["VERTICAL_BOTTOM"]   = 0x8,
+}
+
+EEex_Options_Private_LayoutStacking_Align = {
+	["TOP_LEFT"]      = EEex_Flags({                                                                                                                                  }),
+	["TOP_CENTER"]    = EEex_Flags({                                                                 EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_CENTER }),
+	["TOP_RIGHT"]     = EEex_Flags({                                                                 EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_RIGHT  }),
+	["CENTER_RIGHT"]  = EEex_Flags({ EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_CENTER, EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_RIGHT  }),
+	["BOTTOM_RIGHT"]  = EEex_Flags({ EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_BOTTOM, EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_RIGHT  }),
+	["BOTTOM_CENTER"] = EEex_Flags({ EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_BOTTOM, EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_CENTER }),
+	["BOTTOM_LEFT"]   = EEex_Flags({ EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_BOTTOM                                                                   }),
+	["CENTER_LEFT"]   = EEex_Flags({ EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_CENTER                                                                   }),
+	["CENTER_CENTER"] = EEex_Flags({ EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_CENTER, EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_CENTER }),
+}
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_Private_LayoutStacking.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_Private_LayoutStacking)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_Private_LayoutStacking:_init()
+	-- EEex_Options_Private_LayoutParent
+	--   self.children
+	EEex_Utility_CallSuper(EEex_Options_Private_LayoutStacking, "_init", self)
+	if self.growHorizontally == nil then self.growHorizontally = false end
+	if self.growVertically   == nil then self.growVertically   = false end
+	-- Derived
+	--   self._curLayoutWidth
+	--   self._curLayoutHeight
+end
+
+function EEex_Options_Private_LayoutStacking:_getChildLayout(child)
+	return child.layout
+end
+
+function EEex_Options_Private_LayoutStacking:_onInitLayout()
+	EEex_Utility_CallSuper(EEex_Options_Private_LayoutStacking, "_onInitLayout", self)
+	self._curLayoutWidth  = nil
+	self._curLayoutHeight = nil
+end
+
+function EEex_Options_Private_LayoutStacking:_onParentLayoutCalculated(left, top, right, bottom)
+	self._curLayoutWidth  = right  - self._layoutLeft
+	self._curLayoutHeight = bottom - self._layoutTop
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_Private_LayoutStacking:calculateLayout(left, top, right, bottom)
+
+	local calculateLayoutFromChildren = function()
+
+		self._layoutLeft = left
+		self._layoutTop  = top
+
+		if not self.growHorizontally or self._curLayoutWidth == nil then
+
+			local maxChildRight  = 0
+
+			for _, child in ipairs(self.children) do
+				local childLayout = child.layout
+				childLayout:calculateLayout(left, top, right, bottom)
+				local childRight = childLayout:getLayoutRight()
+				if childRight > maxChildRight then maxChildRight = childRight end
+			end
+
+			self._layoutRight = maxChildRight
+		else
+			self._layoutRight = self._layoutLeft + self._curLayoutWidth
+		end
+
+		if not self.growVertically or self._curLayoutHeight == nil then
+
+			local maxChildBottom = 0
+
+			for _, child in ipairs(self.children) do
+				local childLayout = child.layout
+				childLayout:calculateLayout(left, top, right, bottom)
+				local childBottom = childLayout:getLayoutBottom()
+				if childBottom > maxChildBottom then maxChildBottom = childBottom end
+			end
+
+			self._layoutBottom = maxChildBottom
+		else
+
+			for _, child in ipairs(self.children) do
+				local childLayout = child.layout
+				child.layout:calculateLayout(left, top, right, bottom)
+				local childBottom = childLayout:getLayoutBottom()
+				if childBottom > maxChildBottom then maxChildBottom = childBottom end
+			end
+
+			self._layoutBottom = self._layoutTop + self._curLayoutHeight
+		end
+
+		self:_calculateDerivedLayout()
+	end
+
+	while true do
+
+		calculateLayoutFromChildren()
+
+		local dirty = false
+		for _, child in ipairs(self.children) do
+			if child.layout:_onParentLayoutCalculated(self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom) then
+				dirty = true
+			end
+		end
+
+		if not dirty then
+			break
+		end
+	end
+
+	if self._curLayoutWidth ~= nil or self._curLayoutHeight ~= nil then
+
+		for _, child in ipairs(self.children) do
+
+			local childAlign  = child.align
+
+			if childAlign then
+
+				local childLayout = child.layout
+				local childLeft   = childLayout:getLayoutLeft()
+				local childTop    = childLayout:getLayoutTop()
+				local childRight  = childLayout:getLayoutRight()
+				local childBottom = childLayout:getLayoutBottom()
+
+				if EEex_IsMaskSet(childAlign, EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_CENTER) then
+					local centerOffset = (self._layoutHeight - childLayout:getLayoutHeight()) / 2
+					childLayout:calculateLayout(childLeft, childTop + centerOffset, childRight, childBottom + centerOffset)
+				elseif EEex_IsMaskSet(childAlign, EEex_Options_Private_LayoutStacking_AlignFlags.VERTICAL_BOTTOM) then
+					local bottomOffset = self._layoutHeight - childLayout:getLayoutHeight()
+					childLayout:calculateLayout(childLeft, childTop + bottomOffset, childRight, childBottom + bottomOffset)
+				end
+
+				if EEex_IsMaskSet(childAlign, EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_CENTER) then
+					local centerOffset = (self._layoutWidth - childLayout:getLayoutWidth()) / 2
+					childLayout:calculateLayout(childLeft + centerOffset, childTop, childRight + centerOffset, childBottom)
+				elseif EEex_IsMaskSet(childAlign, EEex_Options_Private_LayoutStacking_AlignFlags.HORIZONTAL_RIGHT) then
+					local rightOffset = self._layoutWidth - childLayout:getLayoutWidth()
+					childLayout:calculateLayout(childLeft + rightOffset, childTop, childRight + rightOffset, childBottom)
+				end
+			end
+		end
+	end
+
+	--print(string.format("[EEex_Options_Private_LayoutStacking:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
+	--	self._layoutLeft, self._layoutTop, self._layoutRight, self._layoutBottom, self._layoutWidth, self._layoutHeight))
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Private_LayoutStacking  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_Private_LayoutVBox  ==
@@ -567,61 +756,87 @@ function EEex_Options_Private_LayoutInset:_init()
 end
 
 function EEex_Options_Private_LayoutInset:_onParentLayoutCalculated(left, top, right, bottom)
+
 	if not self.growToParent then return end
-	self:calculateLayout(left, top, right, bottom, false) -- TODO
+
+	local innerLeft   = left   + self.insetLeft
+	local innerTop    = top    + self.insetTop
+	local innerRight  = right  - self.insetRight
+	local innerBottom = bottom - self.insetBottom
+
+	local dirty = false
+	for _, child in ipairs(self.children) do
+		if child:_onParentLayoutCalculated(innerLeft, innerTop, innerRight, innerBottom) then
+			dirty = true
+		end
+	end
+
+	return dirty
 end
 
 ------------
 -- Public --
 ------------
 
-function EEex_Options_Private_LayoutInset:calculateLayout(left, top, right, bottom, shrinkToChildrenOverride)
+function EEex_Options_Private_LayoutInset:calculateLayout(left, top, right, bottom)
 
-	self._layoutLeft   = left
-	self._layoutTop    = top
-	self._layoutRight  = right
-	self._layoutBottom = bottom
+	local innerLeft   = left   + self.insetLeft
+	local innerTop    = top    + self.insetTop
+	local innerRight  = right  - self.insetRight
+	local innerBottom = bottom - self.insetBottom
 
-	local innerLeft   = self._layoutLeft   + self.insetLeft
-	local innerTop    = self._layoutTop    + self.insetTop
-	local innerRight  = self._layoutRight  - self.insetRight
-	local innerBottom = self._layoutBottom - self.insetBottom
+	local calculateLayoutFromChildren = function()
 
-	local effectiveShrinkToChildren = shrinkToChildrenOverride == nil and self.shrinkToChildren or shrinkToChildrenOverride
+		self._layoutLeft   = left
+		self._layoutTop    = top
+		self._layoutRight  = right
+		self._layoutBottom = bottom
 
-	if effectiveShrinkToChildren then
+		if self.shrinkToChildren then
 
-		local maxChildRight = 0
-		local maxChildBottom = 0
+			local maxChildRight  = 0
+			local maxChildBottom = 0
 
-		for _, child in ipairs(self.children) do
-			child:calculateLayout(innerLeft, innerTop, innerRight, innerBottom)
-			local childRight = child:getLayoutRight()
-			local childBottom = child:getLayoutBottom()
-			if childRight > maxChildRight then maxChildRight = childRight end
-			if childBottom > maxChildBottom then maxChildBottom = childBottom end
+			for _, child in ipairs(self.children) do
+				child:calculateLayout(innerLeft, innerTop, innerRight, innerBottom)
+				local childRight  = child:getLayoutRight()
+				local childBottom = child:getLayoutBottom()
+				if childRight  > maxChildRight  then maxChildRight  = childRight  end
+				if childBottom > maxChildBottom then maxChildBottom = childBottom end
+			end
+
+			if maxChildRight < self._layoutRight then
+				self._layoutRight = maxChildRight     + self.insetRight
+				innerRight        = self._layoutRight - self.insetRight
+			end
+
+			if maxChildBottom < self._layoutBottom then
+				self._layoutBottom = maxChildBottom     + self.insetBottom
+				innerBottom        = self._layoutBottom - self.insetBottom
+			end
+		else
+			for _, child in ipairs(self.children) do
+				child:calculateLayout(innerLeft, innerTop, innerRight, innerBottom)
+			end
 		end
 
-		if maxChildRight < self._layoutRight then
-			self._layoutRight = maxChildRight + self.insetRight
-			innerRight  = self._layoutRight - self.insetRight
-		end
-
-		if maxChildBottom < self._layoutBottom then
-			self._layoutBottom = maxChildBottom + self.insetBottom
-			innerBottom = self._layoutBottom - self.insetBottom
-		end
-	else
-		for _, child in ipairs(self.children) do
-			child:calculateLayout(innerLeft, innerTop, innerRight, innerBottom)
-		end
+		self:_calculateDerivedLayout()
 	end
 
-	self:_calculateDerivedLayout()
+	while true do
 
-	for _, child in ipairs(self.children) do
-		child:_onParentLayoutCalculated(innerLeft, innerTop, innerRight, innerBottom)
-		-- TODO: Re-layout child
+		calculateLayoutFromChildren()
+
+		local dirty = false
+		for _, child in ipairs(self.children) do
+			if child:_onParentLayoutCalculated(innerLeft, innerTop, innerRight, innerBottom) then
+				dirty = true
+			end
+		end
+
+		if not dirty then
+			break
+		end
 	end
 
 	--print(string.format("[EEex_Options_Private_LayoutInset:calculateLayout] (%d,%d,%d,%d) (%d,%d)",
@@ -834,9 +1049,71 @@ function EEex_Options_Private_TEMPLATE_DelayIcon_Enabled()
 	return option:_getWorkingValue() ~= option:_get()
 end
 
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- END EEex_Options_Private_LayoutKeybindUpDownButton ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Private_LayoutDelayIcon ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_Private_LayoutExitButton  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_Private_LayoutExitButton = {}
+EEex_Options_Private_LayoutExitButton.__index = EEex_Options_Private_LayoutExitButton
+setmetatable(EEex_Options_Private_LayoutExitButton, EEex_Options_Private_LayoutTemplate)
+--print("EEex_Options_Private_LayoutExitButton: "..tostring(EEex_Options_Private_LayoutExitButton))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_Private_LayoutExitButton.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_Private_LayoutExitButton)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_Private_LayoutExitButton:_onParentLayoutCalculated(left, top, right, bottom)
+
+	local parentHeight = bottom - top
+	local dirty = false
+
+	if self._curLayoutWidth ~= parentHeight then
+		self._curLayoutWidth = parentHeight
+		dirty = true
+	end
+
+	if self._curLayoutHeight ~= parentHeight then
+		self._curLayoutHeight = parentHeight
+		dirty = true
+	end
+
+	return dirty
+end
+
+------------
+-- Public --
+------------
+
+function EEex_Options_Private_LayoutExitButton:doLayout()
+	EEex_Options_Private_CreateExitButton(self.menuName, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+end
+
+function EEex_Options_Private_TEMPLATE_ExitButton_Action()
+	EEex_Options_Close()
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_Private_LayoutExitButton  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_Private_LayoutSeparator ==
@@ -1355,8 +1632,8 @@ function EEex_Options_Private_LayoutText:calculateLayout(left, top, right, botto
 
 	if width == nil or height == nil then
 		local textWidth, textHeight = EEex_Options_Private_GetTextWidthHeight(self.font, self.point, self.text)
-		if width  == nil then width  = textWidth  end
-		if height == nil then height = textHeight end
+		if width  == nil then self._curLayoutWidth  = textWidth;  width  = textWidth   end
+		if height == nil then self._curLayoutHeight = textHeight; height = textHeight  end
 	end
 
 	self._layoutLeft   = left
@@ -1370,8 +1647,26 @@ function EEex_Options_Private_LayoutText:calculateLayout(left, top, right, botto
 end
 
 function EEex_Options_Private_LayoutText:_onParentLayoutCalculated(left, top, right, bottom)
-	if self.horizontalAlign ~= EEex_Options_Private_LayoutText_HorizontalAlign.LEFT then self._curLayoutWidth  = right  - self._layoutLeft end
-	if self.verticalAlign   ~= EEex_Options_Private_LayoutText_VerticalAlign.TOP    then self._curLayoutHeight = bottom - self._layoutTop  end
+
+	local dirty = false
+
+	if self.horizontalAlign ~= EEex_Options_Private_LayoutText_HorizontalAlign.LEFT then
+		local newVal = right - self._layoutLeft
+		if self._curLayoutWidth ~= newVal then
+			self._curLayoutWidth = newVal
+			dirty = true
+		end
+	end
+
+	if self.verticalAlign ~= EEex_Options_Private_LayoutText_VerticalAlign.TOP then
+		local newVal = bottom - self._layoutTop
+		if self._curLayoutHeight ~= newVal then
+			self._curLayoutHeight = newVal
+			dirty = true
+		end
+	end
+
+	return dirty
 end
 
 function EEex_Options_Private_LayoutText:doLayout()
@@ -3162,6 +3457,11 @@ function EEex_Options_Private_CreateEdit(menuName, displayEntry, x, y, w, h)
 	return instanceData
 end
 
+function EEex_Options_Private_CreateExitButton(menuName, x, y, w, h)
+	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_ExitButton", x, y, w, h)
+	return instanceData
+end
+
 function EEex_Options_Private_CreateSeparator(menuName, color, x, y, w, h)
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_Separator", x, y, w, h)
 	instanceData.color = color or 0x406F6F70
@@ -3529,12 +3829,24 @@ function EEex_Options_Private_BuildLayout()
 	EEex_Options_Private_MainInset = EEex_Options_Private_LayoutVBox.new({
 		["children"] = {
 			EEex_Options_Private_LayoutFixed.new({ ["height"] = 4 }),
-			EEex_Options_Private_LayoutText.new({
-				["menuName"]        = "EEex_Options",
-				["font"]            = styles.normal.font,
-				["point"]           = 16,
-				["horizontalAlign"] = EEex_Options_Private_LayoutText_HorizontalAlign.CENTER,
-				["text"]            = "EEex Options",
+			EEex_Options_Private_LayoutStacking.new({
+				["growHorizontally"] = true,
+				["children"] = {
+					{
+						["layout"] = EEex_Options_Private_LayoutText.new({
+							["menuName"]        = "EEex_Options",
+							["font"]            = styles.normal.font,
+							["point"]           = 16,
+							["horizontalAlign"] = EEex_Options_Private_LayoutText_HorizontalAlign.CENTER,
+							["text"]            = "EEex Options",
+						}),
+					},
+					{
+						["align"]  = EEex_Options_Private_LayoutStacking_Align.TOP_RIGHT,
+						["layout"] = EEex_Options_Private_LayoutExitButton.new({ ["menuName"] = "EEex_Options" })
+									 :inset({ ["growToParent"] = true, ["insetRight"] = 5 }),
+					},
+				},
 			}),
 			EEex_Options_Private_LayoutFixed.new({ ["height"] = 7 }),
 			EEex_Options_Private_LayoutSeparator.new({ ["menuName"] = "EEex_Options", ["height"] = 2 }),
@@ -3610,9 +3922,6 @@ function EEex_Options_Private_Layout()
 
 	-- Move the background
 	Infinity_SetArea("EEex_Options_Background", popupLeft, popupTop, layoutWidth, layoutHeight)
-
-	-- Move the exit button
-	EEex_Options_Private_TopRightAlign("EEex_Options_Exit", screenWidth, 0)
 end
 
 function EEex_Options_Open()

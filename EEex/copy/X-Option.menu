@@ -22,17 +22,6 @@ menu
 		rectangle 0
 	}
 
-	button
-	{
-		name "EEex_Options_Exit"
-		area 0 0 201 42
-		on escape
-		action "EEex_Options_Close()"
-		bam "GUIOSTLM"
-		text "Exit"
-		text style "button"
-	}
-
 	list
 	{
 		column
@@ -95,6 +84,21 @@ menu
 			actionAlt "EEex_Options_Private_TEMPLATE_EditBackground_Action()"
 		}
 		name "EEex_Options_TEMPLATE_EditBackground"
+	}
+
+	template
+	{
+		button
+		{
+			enabled true
+			on escape
+			action "EEex_Options_Private_TEMPLATE_ExitButton_Action()"
+			actionAlt "EEex_Options_Private_TEMPLATE_ExitButton_Action()"
+			bam "X-X"
+			tooltip "Exit"
+			scaleToClip
+		}
+		name "EEex_Options_TEMPLATE_ExitButton"
 	}
 
 	template
