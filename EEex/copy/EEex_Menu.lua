@@ -122,12 +122,14 @@ function EEex_Menu_SetItemFunction(funcRef, func)
 end
 
 function EEex_Menu_GetItemVariant(variant)
-	if variant.type == uiVariantType.UIVAR_INT then
+	if variant == nil then
+		return nil
+	elseif variant.type == uiVariantType.UIVAR_INT then
 		return variant.value.intVal
 	elseif variant.type == uiVariantType.UIVAR_FUNCTION then
 		return EEex_GetLuaRegistryIndex(variant.value.luaFunc)
 	elseif variant.type == uiVariantType.UIVAR_STRING then
-		return variant.value.strVal
+		return variant.value.strVal:get()
 	elseif variant.type == uiVariantType.UIVAR_FLOAT then
 		return variant.value.floatVal
 	else

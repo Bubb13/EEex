@@ -462,14 +462,6 @@ function EEex_Options_Private_LayoutStacking:calculateLayout(left, top, right, b
 
 			self._layoutBottom = maxChildBottom
 		else
-
-			for _, child in ipairs(self.children) do
-				local childLayout = child.layout
-				child.layout:calculateLayout(left, top, right, bottom)
-				local childBottom = childLayout:getLayoutBottom()
-				if childBottom > maxChildBottom then maxChildBottom = childBottom end
-			end
-
 			self._layoutBottom = self._layoutTop + self._curLayoutHeight
 		end
 
@@ -3011,7 +3003,7 @@ function EEex_Options_KeybindLuaStorage:read(option)
 end
 
 function EEex_Options_KeybindLuaStorage:write(option, value)
-	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3])
+	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3], true)
 	Infinity_SetINIValue(self.section, self.key, marshalled)
 end
 
@@ -3893,11 +3885,6 @@ function EEex_Options_Private_ReadOptions(early)
 	end
 end
 
-function EEex_Options_Private_TopRightAlign(itemName, x, y)
-	local _, _, w, h = Infinity_GetArea(itemName)
-	Infinity_SetArea(itemName, x - w, y, nil, nil)
-end
-
 function EEex_Options_Private_Layout()
 
 	-- Reset top level instances
@@ -3924,6 +3911,325 @@ function EEex_Options_Private_Layout()
 	Infinity_SetArea("EEex_Options_Background", popupLeft, popupTop, layoutWidth, layoutHeight)
 end
 
+function EEex_Options_Private_FindItemByBam(menu, toFindBam)
+	if menu == nil then return end
+	local item = menu.items
+	while item ~= nil do
+		if EEex_Menu_GetItemVariant(item.bam.resref) == toFindBam then
+			return item
+		end
+		item = item.next
+	end
+end
+
+function EEex_Options_Private_FindItemByListTable(menu, toFindListTable)
+	if menu == nil then return end
+	local item = menu.items
+	while item ~= nil do
+		if item.type == uiItemType.ITEM_LIST and EEex_GetLuaRegistryIndex(item.list.table)() == toFindListTable then
+			return item
+		end
+		item = item.next
+	end
+end
+
+function EEex_Options_Private_FindItemByName(menu, toFindName)
+	if menu == nil then return end
+	local item = menu.items
+	while item ~= nil do
+		if item.name:get() == toFindName then
+			return item
+		end
+		item = item.next
+	end
+end
+
+function EEex_Options_Private_FindItemByText(menu, toFindText)
+	if menu == nil then return end
+	local item = menu.items
+	while item ~= nil do
+		local text = EEex_Menu_GetItemVariant(item.text.text)
+		if type(text) == "function" then text = text() end
+		if text == toFindText then
+			return item
+		end
+		item = item.next
+	end
+end
+
+function EEex_Options_Private_FindItemByType(menu, toFindType)
+	if menu == nil then return end
+	local item = menu.items
+	while item ~= nil do
+		if item.type == toFindType then
+			return item
+		end
+		item = item.next
+	end
+end
+
+function EEex_Options_Private_InstallButtons()
+
+	local injectCopyButton = function(existingMenuName, existingButton, mode)
+
+		local existingMenu = EEex_Menu_Find(existingMenuName)
+		if existingMenu == nil then return false end
+
+		local existingButtonArea = existingButton.area
+		local existingButtonBam  = existingButton.bam
+		local existingButtonPad  = existingButton.pad
+
+		local injectButton = function()
+
+			local injectedButton = EEex_Menu_InjectTemplateInstance(existingMenuName, "EEex_Options_TEMPLATE_OpenButton", 0, 0, 0)
+			local injectedButtonArea = injectedButton.area
+			local injectedButtonBam  = injectedButton.bam
+			local injectedButtonPad  = injectedButton.pad
+
+			injectedButtonBam.resref   = existingButtonBam.resref
+			injectedButtonBam.sequence = existingButtonBam.sequence
+
+			injectedButtonPad.x = existingButtonPad.x
+			injectedButtonPad.y = existingButtonPad.y
+			injectedButtonPad.w = existingButtonPad.w
+			injectedButtonPad.h = existingButtonPad.h
+
+			return injectedButtonArea
+		end
+
+		local existingOnOpen = EEex_Menu_GetItemFunction(existingMenu.reference_onOpen)
+
+		if mode == 0 then
+
+			local injectedButtonArea = injectButton()
+
+			EEex_Menu_SetItemFunction(existingMenu.reference_onOpen, function()
+				if existingOnOpen ~= nil then existingOnOpen() end
+				injectedButtonArea.x = existingButtonArea.x
+				injectedButtonArea.y = existingButtonArea.y
+				injectedButtonArea.w = existingButtonArea.w
+				injectedButtonArea.h = existingButtonArea.h
+			end)
+
+		elseif mode == 1 then
+
+			local logo = EEex_Options_Private_FindItemByBam(existingMenu, "BIGLOGO")
+			if logo == nil then return false end
+
+			local logoArea = logo.area
+			local injectedButtonArea = injectButton()
+
+			EEex_Menu_SetItemFunction(existingMenu.reference_onOpen, function()
+				if existingOnOpen ~= nil then existingOnOpen() end
+				local existingHeight = existingButtonArea.h
+				injectedButtonArea.x = logoArea.x + (logoArea.w - existingButtonArea.w) / 2
+				injectedButtonArea.y = logoArea.y + logoArea.h + 13
+				injectedButtonArea.w = existingButtonArea.w
+				injectedButtonArea.h = existingHeight
+			end)
+
+		elseif mode == 2 or mode == 3 or mode == 4 then
+
+			local buttonGap = 5
+
+			if mode == 3 or mode == 4 then
+
+				local buttonShrinkAmount = 3
+				local specialAdj = 0
+				local optionsListItem
+
+				if mode == 3 then
+					specialAdj = 14
+					optionsListItem = EEex_Options_Private_FindItemByListTable(existingMenu, OptionsButtons)
+				elseif mode == 4 then
+					optionsListItem = EEex_Options_Private_FindItemByName(existingMenu, "MenuOptionsArea")
+				end
+
+				if optionsListItem == nil then return false end
+				local optionsList = optionsListItem.list
+
+				local columns = optionsList.columns
+				if columns == nil then return false end
+
+				local columnItem = columns.items
+				if columnItem == nil then return false end
+
+				local rowHeight = optionsList.rowheight
+				optionsList.rowheight = rowHeight - buttonShrinkAmount
+
+				local buttonHeight
+
+				repeat
+					local columnItemArea = columnItem.area
+					buttonHeight = columnItemArea.h
+					columnItemArea.h = buttonHeight - buttonShrinkAmount
+					columnItem.bam.scaletoclip = 1
+					columnItem = columnItem.next
+				until columnItem == nil
+
+				buttonGap = rowHeight - buttonHeight
+
+				local existingButtonArea = existingButton.area
+				existingButtonArea.h = existingButtonArea.h - buttonShrinkAmount
+				existingButtonArea.y = existingButtonArea.y - #OptionsButtons * buttonShrinkAmount + existingButtonArea.h + buttonGap - specialAdj
+				existingButton.bam.scaletoclip = 1
+			end
+
+			local injectedButtonArea = injectButton()
+
+			EEex_Menu_SetItemFunction(existingMenu.reference_onOpen, function()
+				if existingOnOpen ~= nil then existingOnOpen() end
+				local existingHeight = existingButtonArea.h
+				injectedButtonArea.x = existingButtonArea.x
+				injectedButtonArea.y = existingButtonArea.y - existingHeight - buttonGap
+				injectedButtonArea.w = existingButtonArea.w
+				injectedButtonArea.h = existingHeight
+			end)
+		end
+
+		return true
+	end
+
+	-- Infinity UI++
+	local modifyInfinityUI = function()
+
+		local optionsBarMenu = EEex_Menu_Find("RG_START_OPTIONS_BAR")
+		if optionsBarMenu == nil then return false end
+
+		if type(rgString) ~= "function" then return false end
+
+		local existingButton = EEex_Options_Private_FindItemByText(optionsBarMenu, rgString("RG_UI_SETTINGS"))
+		if existingButton == nil then return false end
+
+		local existingButtonArea = existingButton.area
+		local existingButtonBam  = existingButton.bam
+		local existingButtonPad  = existingButton.pad
+
+		local injectedButton = EEex_Menu_InjectTemplateInstance("RG_START_OPTIONS_BAR", "EEex_Options_TEMPLATE_OpenButton", 0, 0, 0)
+		local injectedButtonArea = injectedButton.area
+		local injectedButtonBam  = injectedButton.bam
+		local injectedButtonPad  = injectedButton.pad
+
+		injectedButtonPad.x = existingButtonPad.x
+		injectedButtonPad.y = existingButtonPad.y
+		injectedButtonPad.w = existingButtonPad.w
+		injectedButtonPad.h = existingButtonPad.h
+
+		injectedButtonBam.resref = existingButtonBam.resref
+		injectedButtonBam.sequence = existingButtonBam.sequence
+
+		local textVariant = EEex_NewUD("uiVariant")
+		textVariant.type = uiVariantType.UIVAR_FUNCTION
+		textVariant.value.luaFunc = EEex_AddToLuaRegistry(function() return rgString("EEex Options") end)
+		injectedButton.text.text = textVariant
+
+		local existingOnOpen = EEex_Menu_GetItemFunction(optionsBarMenu.reference_onOpen)
+
+		EEex_Menu_SetItemFunction(optionsBarMenu.reference_onOpen, function()
+			if existingOnOpen ~= nil then existingOnOpen() end
+			local existingHeight = existingButtonArea.h
+			injectedButtonArea.x = existingButtonArea.x
+			injectedButtonArea.y = existingButtonArea.y + existingHeight
+			injectedButtonArea.w = existingButtonArea.w
+			injectedButtonArea.h = existingHeight
+		end)
+
+		return true
+	end
+
+	-- Dragonspear UI++
+	local modifyDragonspearUI = function()
+
+		local escapeMenu = EEex_Menu_Find("ESC_MENU")
+		if escapeMenu == nil then return false end
+
+		local startOptionsMenu = EEex_Menu_Find("START_OPTIONS")
+		if startOptionsMenu == nil then return false end
+
+		if EEex_Options_Private_FindItemByName(escapeMenu, "RGESCLOGO") == nil then return end
+
+		local logo = EEex_Options_Private_FindItemByBam(escapeMenu, "BIGLOGO")
+		if logo == nil then return false end
+
+		local startOptionsBackButton = EEex_Options_Private_FindItemByName(startOptionsMenu, "MenuButton5OP")
+		if startOptionsBackButton == nil then return false end
+
+		local logoArea = logo.area
+
+		local injectedButton = EEex_Menu_InjectTemplateInstance("ESC_MENU", "EEex_Options_TEMPLATE_OpenButton", 0, 0, 0)
+		local injectedButtonArea = injectedButton.area
+		local injectedButtonBam  = injectedButton.bam
+
+		local bamResrefVariant = EEex_NewUD("uiVariant")
+		bamResrefVariant.type = uiVariantType.UIVAR_STRING
+		bamResrefVariant.value.strVal:set("GUIBUTWT")
+		injectedButtonBam.resref = bamResrefVariant
+
+		local existingOnOpen = EEex_Menu_GetItemFunction(escapeMenu.reference_onOpen)
+
+		EEex_Menu_SetItemFunction(escapeMenu.reference_onOpen, function()
+			if existingOnOpen ~= nil then existingOnOpen() end
+			injectedButtonArea.x = logoArea.x + (logoArea.w - 300) / 2
+			injectedButtonArea.y = logoArea.y + logoArea.h
+			injectedButtonArea.w = 300
+			injectedButtonArea.h = 44
+		end)
+
+		injectCopyButton("START_OPTIONS", startOptionsBackButton, 4)
+		return true
+	end
+
+	-- BG:EE (with/without SoD), BG2:EE, IWD:EE, EET (with/without EET_gui), LeUI-BG1, LeUI-SoD, LeUI-BG2, LeUI-IWD
+	local modifyNormal = function()
+
+		local escapeMenu = EEex_Menu_Find("ESC_MENU")
+		if escapeMenu == nil then return false end
+
+		local startOptionsMenu = EEex_Menu_Find("START_OPTIONS")
+		if startOptionsMenu == nil then return false end
+
+		local existingButton = EEex_Options_Private_FindItemByText(escapeMenu, t("RETURN_GAME_BUTTON"))
+		if existingButton == nil then return false end
+
+		if EEex_Options_Private_FindItemByListTable(startOptionsMenu, OptionsButtons) == nil then
+
+			if EEex_Options_Private_FindItemByBam(startOptionsMenu, "BIGLOGO") ~= nil then
+				-- BG2:EE, IWD:EE, EET (without EET_gui), LeUI-BG1, LeUI-SoD, LeUI-BG2, LeUI-IWD
+				injectCopyButton("ESC_MENU",      existingButton, 2)
+				injectCopyButton("START_OPTIONS", existingButton, 1)
+			else
+				-- BG:EE (without SoD)
+				local startMainMenu = EEex_Menu_Find("START_MAIN")
+				if startMainMenu == nil then return false end
+
+				local continueButton = EEex_Options_Private_FindItemByText(startMainMenu, t("CONTINUE_BUTTON"))
+				if continueButton == nil then return false end
+
+				injectCopyButton("ESC_MENU",      existingButton, 2)
+				injectCopyButton("START_OPTIONS", continueButton, 0)
+			end
+		else
+			-- Dragonspear UI (BG:EE with SoD or EET with EET_gui)
+			local backButton = EEex_Options_Private_FindItemByText(startOptionsMenu, t("BACK_BUTTON"))
+			if backButton == nil then return false end
+
+			injectCopyButton("ESC_MENU",      existingButton, 2)
+			injectCopyButton("START_OPTIONS", backButton,     3)
+		end
+
+		return true
+	end
+
+	local modifyExisting = function()
+		if modifyInfinityUI()    then return true end
+		if modifyDragonspearUI() then return true end
+		if modifyNormal()        then return true end
+		return false
+	end
+
+	modifyExisting()
+end
+
 function EEex_Options_Open()
 	if Infinity_IsMenuOnStack("EEex_Options") then return end
 	EEex_Options_Private_MainInset:showBeforeLayout()
@@ -3940,7 +4246,7 @@ function EEex_Options_Close()
 	EEex_Options_Private_MainInset:hide()
 end
 
-function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType)
+function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType, escape)
 
 	local parts = {}
 	local partsI = 1
@@ -3957,11 +4263,11 @@ function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType)
 
 	local sequenceStr = table.concat(parts, "+")
 
-	if fireType == nil then
-		return sequenceStr
+	if fireType ~= nil then
+		sequenceStr = fireType and sequenceStr.."|Up" or sequenceStr.."|Down"
 	end
 
-	return fireType and sequenceStr.."|Up" or sequenceStr.."|Down"
+	return escape and sequenceStr:gsub("\\", "\\\\") or sequenceStr
 end
 
 function EEex_Options_UnmarshalKeybind(str)

@@ -20,6 +20,16 @@ end
 --===========
 
 EEex_Options_Register(EEex_Options_Option.new({
+	["id"]       = "EEex_Keybinds_OpenOptions",
+	["default"]  = EEex_Options_UnmarshalKeybind("\\|Up"),
+	["type"]     = EEex_Options_KeybindType.new({
+		["callback"] = function() EEex_Options_Open() end,
+	}),
+	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "EEex_Keybinds_OpenOptions" }),
+	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Open Options Keybind" }),
+}))
+
+EEex_Options_Register(EEex_Options_Option.new({
 	["id"]       = "EEex_Keybinds_ToggleKeycodeOutput",
 	["default"]  = EEex_Options_UnmarshalKeybind("`|Up"),
 	["type"]     = EEex_Options_KeybindType.new({
@@ -29,8 +39,13 @@ EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
 }))
 
-EEex_Options_AddTab("Miscellaneous", function() return {
+EEex_Options_AddTab("Miscellaneous Keybinds", function() return {
 	{
+		EEex_Options_DisplayEntry.new({
+			["name"]     = "Open Options",
+			["optionID"] = "EEex_Keybinds_OpenOptions",
+			["widget"]   = EEex_Options_KeybindWidget.new(),
+		}),
 		EEex_Options_DisplayEntry.new({
 			["name"]     = "Toggle Keycode Output",
 			["optionID"] = "EEex_Keybinds_ToggleKeycodeOutput",

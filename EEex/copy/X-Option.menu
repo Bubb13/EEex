@@ -149,6 +149,20 @@ menu
 
 	template
 	{
+		button
+		{
+			enabled true
+			action "EEex_Options_Open()"
+			actionAlt "EEex_Options_Open()"
+			text "EEex Options"
+			text style "button"
+			scaleToClip
+		}
+		name "EEex_Options_TEMPLATE_OpenButton"
+	}
+
+	template
+	{
 		label
 		{
 			enabled true
