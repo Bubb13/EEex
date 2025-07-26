@@ -19,8 +19,6 @@ EEex_Main_Private_StartupFiles = {
 	"EEex_AIBase",           --
 	"EEex_AIBase_Patch",     --
 	"EEex_Area",             --
-	"EEex_Fix",              --
-	"EEex_Fix_Patch",        --
 	"EEex_GameObject",       --
 	"EEex_GameObject_Patch", --
 	"EEex_GameState",        --
@@ -49,6 +47,8 @@ EEex_Main_Private_StartupFiles = {
 	-- Late files
 	"EEex_Debug",            --
 	"EEex_Debug_Patch",      --
+	"EEex_Fix",              --
+	"EEex_Fix_Patch",        --
 	"EEex_Marshal",          --
 	"EEex_Module",           --
 	"EEex_OptionsLate",      -- Here so it can register listeners provided by other EEex files

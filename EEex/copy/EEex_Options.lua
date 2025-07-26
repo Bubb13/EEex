@@ -3003,7 +3003,7 @@ function EEex_Options_KeybindLuaStorage:read(option)
 end
 
 function EEex_Options_KeybindLuaStorage:write(option, value)
-	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3], true)
+	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3])
 	Infinity_SetINIValue(self.section, self.key, marshalled)
 end
 
@@ -4246,7 +4246,7 @@ function EEex_Options_Close()
 	EEex_Options_Private_MainInset:hide()
 end
 
-function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType, escape)
+function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType)
 
 	local parts = {}
 	local partsI = 1
@@ -4263,11 +4263,11 @@ function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType, escape)
 
 	local sequenceStr = table.concat(parts, "+")
 
-	if fireType ~= nil then
-		sequenceStr = fireType and sequenceStr.."|Up" or sequenceStr.."|Down"
+	if fireType == nil then
+		return sequenceStr
 	end
 
-	return escape and sequenceStr:gsub("\\", "\\\\") or sequenceStr
+	return fireType and sequenceStr.."|Up" or sequenceStr.."|Down"
 end
 
 function EEex_Options_UnmarshalKeybind(str)
@@ -4293,8 +4293,7 @@ function EEex_Options_UnmarshalKeybind(str)
 		local key = EEex_Key_GetFromName(keyStr)
 
 		if key == 0 then
-			result = nil
-			break
+			return nil
 		end
 
 		if EEex_Options_Private_ModifierKeys[key] then
