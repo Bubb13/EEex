@@ -263,11 +263,24 @@ end
 -- Listeners --
 ---------------
 
-EEex_Menu_MainFileLoadedListeners = {}
+EEex_Menu_BeforeMainFileLoadedListeners = {}
+
+-- Given listener function is called before initial UI.MENU load and when an F5 UI reload is executed.
+function EEex_Menu_AddBeforeMainFileLoadedListener(listener)
+	table.insert(EEex_Menu_BeforeMainFileLoadedListeners, listener)
+end
+
+EEex_Menu_AfterMainFileLoadedListeners = {}
 
 -- Given listener function is called after initial UI.MENU load and when an F5 UI reload is executed.
+function EEex_Menu_AddAfterMainFileLoadedListener(listener)
+	table.insert(EEex_Menu_AfterMainFileLoadedListeners, listener)
+end
+
+-- @bubb_doc { EEex_Menu_AddMainFileLoadedListener }
+-- @deprecated: Use ``EEex_Menu_AddAfterMainFileLoadedListener()`` instead.
 function EEex_Menu_AddMainFileLoadedListener(listener)
-	table.insert(EEex_Menu_MainFileLoadedListeners, listener)
+	EEex_Menu_AddAfterMainFileLoadedListener(listener)
 end
 
 EEex_Menu_BeforeMainFileReloadedListeners = {}
@@ -304,6 +317,13 @@ function EEex_Menu_AddWindowSizeChangedListener(listener)
 	table.insert(EEex_Menu_WindowSizeChangedListeners, listener)
 end
 
+EEex_Menu_TranslationLoadedListeners = {}
+
+-- Given listener function is called after the engine loads the UI translation file for a language.
+function EEex_Menu_AddTranslationLoadedListener(listener)
+	table.insert(EEex_Menu_TranslationLoadedListeners, listener)
+end
+
 -----------
 -- Hooks --
 -----------
@@ -317,6 +337,12 @@ function EEex_Menu_Hook_CheckSaveMenuItem(menu, item)
 	return EEex_Menu_IsNative(menu.name:get())
 end
 
+function EEex_Menu_Hook_BeforeMainFileLoaded()
+	for _, listener in ipairs(EEex_Menu_BeforeMainFileLoadedListeners) do
+		listener()
+	end
+end
+
 function EEex_Menu_Hook_AfterMainFileLoaded()
 
 	local numMenus = EngineGlobals.numMenus
@@ -327,22 +353,25 @@ function EEex_Menu_Hook_AfterMainFileLoaded()
 		EEex_Menu_NativeMap[menu.name:get()] = true
 	end
 
-	for i, listener in ipairs(EEex_Menu_MainFileLoadedListeners) do
+	for _, listener in ipairs(EEex_Menu_AfterMainFileLoadedListeners) do
 		listener()
 	end
 end
 
 function EEex_Menu_Hook_BeforeMenuStackSave()
-	for i, listener in ipairs(EEex_Menu_BeforeMainFileReloadedListeners) do
+	for _, listener in ipairs(EEex_Menu_BeforeMainFileLoadedListeners) do
+		listener()
+	end
+	for _, listener in ipairs(EEex_Menu_BeforeMainFileReloadedListeners) do
 		listener()
 	end
 end
 
 function EEex_Menu_Hook_AfterMenuStackRestore()
-	for i, listener in ipairs(EEex_Menu_MainFileLoadedListeners) do
+	for _, listener in ipairs(EEex_Menu_AfterMainFileLoadedListeners) do
 		listener()
 	end
-	for i, listener in ipairs(EEex_Menu_AfterMainFileReloadedListeners) do
+	for _, listener in ipairs(EEex_Menu_AfterMainFileReloadedListeners) do
 		listener()
 	end
 end
@@ -400,3 +429,26 @@ end
 function EEex_Menu_Hook_SaveInstanceId(item)
 	instanceId = item.instanceId
 end
+
+function EEex_Menu_LuaHook_AfterTranslationLoaded()
+
+	-- Fix language set via Infinity_SetLanguage() reverting after UI.MENU reload
+	local lang = Infinity_GetINIString("Language", "Text", "")
+	uiTranslationFile = EEex_Resource_Fetch("L_"..lang, "LUA") ~= nil and lang or nil
+
+	for _, listener in ipairs(EEex_Menu_TranslationLoadedListeners) do
+		listener()
+	end
+end
+
+----------
+-- Code --
+----------
+
+EEex_Menu_AddTranslationLoadedListener(function()
+	if uiTranslationFile then
+		Infinity_DoFile("X-"..uiTranslationFile)
+	else
+		Infinity_DoFile("X-en_US")
+	end
+end)

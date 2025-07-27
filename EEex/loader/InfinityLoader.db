@@ -610,6 +610,10 @@ Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
 Pattern=0F57C9488B9090100000
 Operations=ADD 19, PUSH, READ DWORD, ADD, ADD 4
 
+[CChitin::m_sGameName]
+Pattern=4533C048897C2468
+Operations=ADD 11, PUSH, READ DWORD, ADD, ADD 4
+
 [CGameObject::DEFAULT_TERRAIN_TABLE]
 Pattern=480FBFC085C0786A
 Operations=ADD 71, PUSH, READ DWORD, ADD, ADD 4
@@ -661,6 +665,10 @@ Operations=ADD 12, PUSH, READ DWORD, ADD, ADD 4
 [g_pBaldurChitin]
 Pattern=48895C2430488B5E10
 Operations=ADD 30, PUSH, READ DWORD, ADD, ADD 4
+
+[lang]
+Pattern=FFC64883C728
+Operations=ADD 38, PUSH, READ DWORD, ADD, ADD 4
 
 [menuLength]
 Pattern=3D020400000F8556010000
@@ -992,6 +1000,10 @@ Operations=ADD -49
 Pattern=41564883EC3083795800
 Operations=ADD -15
 
+[CString::Format]
+Pattern=448BC54889442420488D4C2420
+Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
+
 [Chitin_GetSectionCallback]
 Pattern=4889742418574883EC20BA01000000
 Operations=ADD -10
@@ -1023,6 +1035,14 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 [DrawPushState]
 Pattern=488945EF448B6D6F
 Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
+
+[SDL_Log]
+Pattern=4C894C24204883EC284C8BC1
+Operations=ADD -15
+
+[SDL_ShowSimpleMessageBox]
+Pattern=4889742418574883EC70488BFA
+Operations=ADD -10
 
 [bootstrapLua]
 Pattern=B918190000
@@ -2132,6 +2152,10 @@ Operations=ADD 10
 [Hook-saveMenus()-CheckItemSave]
 Pattern=498B1E4885DB0F8482000000
 Operations=ADD 25
+
+[Hook-uiDoFile()-FirstInstruction]
+Pattern=48894424304C8BC1
+Operations=ADD -42
 
 [Hook-uiRefreshMenu()-restoreMenuStack()]
 Pattern=85FF0F8E94000000

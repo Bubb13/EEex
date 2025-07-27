@@ -65,24 +65,41 @@
 
 	--[[
 	+------------------------------------------------------------------------------------------------------------+
-	| Call a hook after the engine loads UI.MENU                                                                 |
+	| Call a hook before/after the engine loads UI.MENU                                                          |
 	+------------------------------------------------------------------------------------------------------------+
 	|   * Allows EEex to distinguish "native" menus (those in UI.MENU) from those that were dynamically injected |
 	|   * Used to implement listeners that dynamically load additional menus / edit existing menus               |
 	+------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Menu_Hook_BeforeMainFileLoaded()                                                              |
 	|   [Lua] EEex_Menu_Hook_AfterMainFileLoaded()                                                               |
 	+------------------------------------------------------------------------------------------------------------+
 	--]]
 
-	EEex_HookAfterCallWithLabels(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), {
-		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-dimmInit()-uiLoadMenu()"), {
+		{"hook_integrity_watchdog_ignore_registers_0", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}},
+		{"hook_integrity_watchdog_ignore_registers_1", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(40)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			]]},
+			EEex_GenLuaCall("EEex_Menu_Hook_BeforeMainFileLoaded", { ["labelSuffix"] = "_1" }),
+			{[[
+				call_error_1:
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		}),
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(32)
 			]]},
-			EEex_GenLuaCall("EEex_Menu_Hook_AfterMainFileLoaded"),
+			EEex_GenLuaCall("EEex_Menu_Hook_AfterMainFileLoaded", { ["labelSuffix"] = "_2" }),
 			{[[
-				call_error:
+				call_error_2:
 				#DESTROY_SHADOW_SPACE
 			]]},
 		})
@@ -455,6 +472,21 @@
 			]]},
 		})
 	)
+
+	--[[
+	+---------------------------------------------------------------------------+
+	| Call a hook after the engine loads the UI translation file for a language |
+	+---------------------------------------------------------------------------+
+	|   Allows mods to easily load custom UI translation files                  |
+	+---------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Override_uiDoFile(fileName: char*)                     |
+	|   [Lua] EEex_Menu_LuaHook_AfterTranslationLoaded()                        |
+	+---------------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-uiDoFile()-FirstInstruction"), {[[
+		jmp #L(EEex::Override_uiDoFile)
+	]]})
 
 	EEex_EnableCodeProtection()
 
