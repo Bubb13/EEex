@@ -256,7 +256,7 @@ function EEex_Options_Private_LayoutVerticalTabArea:_calculateSidebarWidth()
 	local maxWidth = 0
 
 	for _, v in ipairs(self.tabs) do
-		local width = EEex_Options_Private_GetTextWidthHeight(styles.normal.font, styles.normal.point, v.name)
+		local width = EEex_Options_Private_GetTextWidthHeight(styles.normal.font, styles.normal.point, t(v.label))
 		if width > maxWidth then
 			maxWidth = width
 		end
@@ -1320,7 +1320,7 @@ function EEex_Options_Private_TEMPLATE_KeybindButton_Action()
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButton_Tooltip()
-	return instanceId == EEex_Options_Private_KeybindFocusedInstance and "Accept" or "Reset to Default"
+	return instanceId == EEex_Options_Private_KeybindFocusedInstance and t("EEex_Options_TRANSLATION_Accept") or t("EEex_Options_TRANSLATION_Reset_to_Default")
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButton_Sequence()
@@ -1404,8 +1404,8 @@ end
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Tooltip()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
 	local fireType = displayEntry:_getWorkingValue()[3]
-	local result = fireType and "On Sequence Released" or "On Sequence Pressed"
-	return displayEntry._option.type.lockedFireType == nil and result or result.." (Locked)"
+	local result = fireType and t("EEex_Options_TRANSLATION_On_Sequence_Released") or t("EEex_Options_TRANSLATION_On_Sequence_Pressed")
+	return displayEntry._option.type.lockedFireType == nil and result or result.." "..t("EEex_Options_TRANSLATION_Locked")
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Sequence()
@@ -1601,6 +1601,7 @@ function EEex_Options_Private_LayoutText:_init()
 	if self.font            == nil then EEex_Error("font required")                                                 end
 	if self.point           == nil then EEex_Error("point required")                                                end
 	if self.text            == nil then EEex_Error("text required")                                                 end
+	if self.translate       == nil then self.translate = false                                                      end
 	if self.horizontalAlign == nil then self.horizontalAlign = EEex_Options_Private_LayoutText_HorizontalAlign.LEFT end
 	if self.verticalAlign   == nil then self.verticalAlign   = EEex_Options_Private_LayoutText_VerticalAlign.TOP    end
 	-- Derived
@@ -1623,7 +1624,8 @@ function EEex_Options_Private_LayoutText:calculateLayout(left, top, right, botto
 	local height = self._curLayoutHeight
 
 	if width == nil or height == nil then
-		local textWidth, textHeight = EEex_Options_Private_GetTextWidthHeight(self.font, self.point, self.text)
+		local text = self.translate and t(self.text) or self.text
+		local textWidth, textHeight = EEex_Options_Private_GetTextWidthHeight(self.font, self.point, text)
 		if width  == nil then self._curLayoutWidth  = textWidth;  width  = textWidth   end
 		if height == nil then self._curLayoutHeight = textHeight; height = textHeight  end
 	end
@@ -1662,7 +1664,8 @@ function EEex_Options_Private_LayoutText:_onParentLayoutCalculated(left, top, ri
 end
 
 function EEex_Options_Private_LayoutText:doLayout()
-	EEex_Options_Private_CreateText(self.menuName, self.text, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight, {
+	local text = self.translate and t(self.text) or self.text
+	EEex_Options_Private_CreateText(self.menuName, text, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight, {
 		["font"]            = self.font,
 		["point"]           = self.point,
 		["horizontalAlign"] = self.horizontalAlign,
@@ -2032,10 +2035,11 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 				local xOffset = layer * self.layerIndent
 
 				local optionLabel = EEex_Options_Private_LayoutText.new({
-					["menuName"] = self.menuName,
-					["font"]     = normalFont,
-					["point"]    = normalPoint,
-					["text"]     = displayEntry.name,
+					["menuName"]  = self.menuName,
+					["font"]      = normalFont,
+					["point"]     = normalPoint,
+					["text"]      = displayEntry.label,
+					["translate"] = true,
 				})
 				:inset({ ["insetLeft"] = xOffset })
 
@@ -2428,7 +2432,7 @@ end
 
 function EEex_Options_DisplayEntry:_init()
 	EEex_Utility_CallSuper(EEex_Options_DisplayEntry, "_init", self)
-	if self.name     == nil then EEex_Error("name required")     end
+	if self.label    == nil then EEex_Error("label required")    end
 	if self.optionID == nil then EEex_Error("optionID required") end
 	if self.widget   == nil then EEex_Error("widget required")   end
 	-- Derived
@@ -3830,7 +3834,8 @@ function EEex_Options_Private_BuildLayout()
 							["font"]            = styles.normal.font,
 							["point"]           = 16,
 							["horizontalAlign"] = EEex_Options_Private_LayoutText_HorizontalAlign.CENTER,
-							["text"]            = "EEex Options",
+							["text"]            = "EEex_Options_TRANSLATION_Options",
+							["translate"]       = true,
 						}),
 					},
 					{
@@ -3854,14 +3859,14 @@ function EEex_Options_Private_SpecialSortTabs()
 	local firstModuleTabIndex
 
 	for i, tabEntry in ipairs(EEex_Options_Private_Tabs) do
-		if tabEntry.name == "Modules" then
+		if tabEntry.label == "EEex_Options_TRANSLATION_Modules" then
 			modulesTabIndex = i
 			break
 		end
 	end
 
 	for i, tabEntry in ipairs(EEex_Options_Private_Tabs) do
-		local tabName = tabEntry.name
+		local tabName = t(tabEntry.label)
 		if #tabName >= 8 and tabName:sub(1, 8) == "Module: " then
 			firstModuleTabIndex = i
 			break
@@ -4321,7 +4326,7 @@ function EEex_Options_Register(option)
 	return option
 end
 
-function EEex_Options_AddTab(text, displayEntriesProvider)
+function EEex_Options_AddTab(label, displayEntriesProvider)
 
 	EEex_GameState_AddInitializedListener(function()
 
@@ -4342,7 +4347,7 @@ function EEex_Options_AddTab(text, displayEntriesProvider)
 		local displayEntries = type(displayEntriesProvider) == "function" and displayEntriesProvider() or displayEntriesProvider
 
 		EEex_Options_Private_Tabs[EEex_Options_Private_TabInsertIndex] = {
-			["name"] = text,
+			["label"] = label,
 			["layout"] = EEex_Options_Private_LayoutOptionsPanel.new({
 				["menuName"]       = menuName,
 				["displayEntries"] = displayEntries,
@@ -4351,7 +4356,7 @@ function EEex_Options_AddTab(text, displayEntriesProvider)
 		}
 
 		EEex_Options_Private_TabInsertIndex = EEex_Options_Private_TabInsertIndex + 1
-		EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(t) return t.name end)
+		EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(tab) return t(tab.label) end)
 	end)
 end
 

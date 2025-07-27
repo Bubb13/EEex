@@ -10,8 +10,11 @@ ALWAYS
 	END
 END
 
-BEGIN ~EEex~ LABEL ~B3-EEex-Main~
-REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) ~Game not supported.~
+AUTO_TRA ~EEex/language/%s~
+LANGUAGE ~English~ ~english~ ~EEex/language/english/setup.tra~
+
+BEGIN @0 LABEL ~B3-EEex-Main~
+REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) @1000
 
 	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER BEGIN
 		COPY ~EEex/patch/%file%.IDS~ ~EEex/patch~
@@ -56,8 +59,8 @@ REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.
 	COPY ~EEex/copy~ ~override~
 
 
-BEGIN ~Experimental - Use LuaJIT (can help stuttering)~ LABEL ~B3-EEex-LuaJIT~
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+BEGIN @1 LABEL ~B3-EEex-LuaJIT~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1001
 
 	COPY ~InfinityLoader.ini~ ~.~
 		REPLACE_TEXTUALLY ~^\(LuaLibrary=\).*~ ~\1lua51.dll~
@@ -68,48 +71,48 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-M
 	COPY ~EEex/loader/LuaJIT~ ~.~
 
 
-BEGIN ~Enable effect menu module - LShift-on-hover to view spells affecting creature~ LABEL ~B3-EEex-Module-Effect-Menu~
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+BEGIN @2 LABEL ~B3-EEex-Module-Effect-Menu~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1001
 
 	COPY ~EEex.ini~ ~.~
 		LPF SetINIString STR_VAR section=~Effect Menu Module~ key=~Enable~ value=~1~ END
 	BUT_ONLY
 
 
-BEGIN ~Enable empty container module - Highlight empty containers in gray instead of cyan~ LABEL ~B3-EEex-Module-Empty-Containers~
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+BEGIN @3 LABEL ~B3-EEex-Module-Empty-Containers~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1001
 
 	COPY ~EEex.ini~ ~.~
 		LPF SetINIString STR_VAR section=~Empty Container Module~ key=~Enable~ value=~1~ END
 	BUT_ONLY
 
 
-BEGIN ~Enable hotkey module - Edit override/B3Hotkey.lua to create advanced spell hotkeys~ LABEL ~B3-EEex-Module-Hotkey~
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+BEGIN @4 LABEL ~B3-EEex-Module-Hotkey~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1001
 
 	COPY ~override/EEex_Modules.lua~ ~override~
 		REPLACE_TEXTUALLY ~^\([ %TAB%]+\["B3Hotkey"\][ %TAB%]+=[ %TAB%]+\)false~ ~\1true~
 	BUT_ONLY
 
 
-BEGIN ~Enable scale module - Customizable UI scaling factor~ LABEL ~B3-EEex-Module-Scale~
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+BEGIN @5 LABEL ~B3-EEex-Module-Scale~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1001
 
 	COPY ~EEex.ini~ ~.~
 		LPF SetINIString STR_VAR section=~Scale Module~ key=~Enable~ value=~1~ END
 	BUT_ONLY
 
 
-BEGIN ~Enable time step module - Advance 1 game tick on keypress~ LABEL ~B3-EEex-Module-Time-Step~
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+BEGIN @6 LABEL ~B3-EEex-Module-Time-Step~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1001
 
 	COPY ~EEex.ini~ ~.~
 		LPF SetINIString STR_VAR section=~Time Step Module~ key=~Enable~ value=~1~ END
 	BUT_ONLY
 
 
-BEGIN ~Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns~ LABEL ~B3-EEex-Module-Timer-Main~
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) ~This component requires the main component to be installed.~
+BEGIN @7 LABEL ~B3-EEex-Module-Timer-Main~
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1001
 
 	COPY ~EEex.ini~ ~.~
 		LPF SetINIString STR_VAR section=~Timer Module~ key=~Enable~ value=~1~ END

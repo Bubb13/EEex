@@ -12,10 +12,10 @@ B3Scale_Private_Percentage = EEex_Options_Register(EEex_Options_Option.new({
 	["onChange"] = function() B3Scale_Private_PokeEngine() end,
 }))
 
-EEex_Options_AddTab("Module: Scale", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Module_Scale", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Scale Percentage [0-1]",
+			["label"]    = "EEex_Options_TRANSLATION_Scale_Percentage",
 			["optionID"] = "B3Scale_Percentage",
 			["widget"]   = EEex_Options_EditWidget.new({
 				["maxCharacters"] = 5,

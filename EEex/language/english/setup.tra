@@ -1,0 +1,16 @@
+
+//////////////
+// EEex.tp2 //
+//////////////
+
+@0 = ~EEex~
+@1 = ~Experimental - Use LuaJIT (can help stuttering)~
+@2 = ~Enable effect menu module - LShift-on-hover to view spells affecting creature~
+@3 = ~Enable empty container module - Highlight empty containers in gray instead of cyan~
+@4 = ~Enable hotkey module - Edit override/B3Hotkey.lua to create advanced spell hotkeys~
+@5 = ~Enable scale module - Customizable UI scaling factor~
+@6 = ~Enable time step module - Advance 1 game tick on keypress~
+@7 = ~Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns~
+
+@1000 = ~Game not supported.~
+@1001 = ~This component requires the main component to be installed.~

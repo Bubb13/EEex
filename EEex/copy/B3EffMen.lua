@@ -22,15 +22,15 @@ B3EffectMenu_Private_RowCount = EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Module: Row Count" }),
 }))
 
-EEex_Options_AddTab("Module: Effect Menu", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Module_Effect_Menu", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Launch Keybind",
+			["label"]    = "EEex_Options_TRANSLATION_Launch_Keybind",
 			["optionID"] = "B3EffectMenu_LaunchKeybind",
 			["widget"]   = EEex_Options_KeybindWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Row Count",
+			["label"]    = "EEex_Options_TRANSLATION_Row_Count",
 			["optionID"] = "B3EffectMenu_RowCount",
 			["widget"]   = EEex_Options_EditWidget.new({
 				["maxCharacters"] = 2,
@@ -156,7 +156,7 @@ function B3EffectMenu_Private_LaunchInfo()
 		end
 
 		local spellName = Infinity_FetchString(spellHeader.genericName)
-		if spellName == "" then spellName = "(No Name)" end
+		if spellName == "" then spellName = t("B3EffectMenu_TRANSLATION_No_Name") end
 
 		-- Skip no-icon spells (to hide behind-the-scenes spells)
 		local spellIcon = abilityData.quickSlotIcon:get()

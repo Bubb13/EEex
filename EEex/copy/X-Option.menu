@@ -30,7 +30,7 @@ menu
 			label
 			{
 				area 0 0 -1 36
-				text lua "EEex_Options_Private_Tabs[rowNumber].name"
+				text lua "t(EEex_Options_Private_Tabs[rowNumber].label)"
 				text style "normal"
 				text align left center
 			}
@@ -56,7 +56,7 @@ menu
 		{
 			enabled "EEex_Options_Private_TEMPLATE_DelayIcon_Enabled()"
 			bam "X-DELAY"
-			tooltip "Requires Restart"
+			tooltip lua "t('EEex_Options_TRANSLATION_Requires_Restart')"
 			scaleToClip
 		}
 		name "EEex_Options_TEMPLATE_DelayIcon"
@@ -95,7 +95,7 @@ menu
 			action "EEex_Options_Private_TEMPLATE_ExitButton_Action()"
 			actionAlt "EEex_Options_Private_TEMPLATE_ExitButton_Action()"
 			bam "X-X"
-			tooltip "Exit"
+			tooltip lua "t('EEex_Options_TRANSLATION_Exit')"
 			scaleToClip
 		}
 		name "EEex_Options_TEMPLATE_ExitButton"
@@ -154,7 +154,7 @@ menu
 			enabled true
 			action "EEex_Options_Open()"
 			actionAlt "EEex_Options_Open()"
-			text "EEex Options"
+			text "EEex_Options_TRANSLATION_Options"
 			text style "button"
 			scaleToClip
 		}

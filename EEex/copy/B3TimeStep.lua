@@ -16,10 +16,10 @@ EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Time Step Module: Keybind" }),
 }))
 
-EEex_Options_AddTab("Module: Time Step", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Module_Time_Step", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Keybind",
+			["label"]    = "EEex_Options_TRANSLATION_Keybind",
 			["optionID"] = "B3TimeStep_Keybind",
 			["widget"]   = EEex_Options_KeybindWidget.new(),
 		}),

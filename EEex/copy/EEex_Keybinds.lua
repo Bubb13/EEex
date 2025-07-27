@@ -39,15 +39,15 @@ EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
 }))
 
-EEex_Options_AddTab("Miscellaneous Keybinds", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Miscellaneous_Keybinds", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Open Options",
+			["label"]    = "EEex_Options_TRANSLATION_Open_Options",
 			["optionID"] = "EEex_Keybinds_OpenOptions",
 			["widget"]   = EEex_Options_KeybindWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Toggle Keycode Output",
+			["label"]    = "EEex_Options_TRANSLATION_Toggle_Keycode_Output",
 			["optionID"] = "EEex_Keybinds_ToggleKeycodeOutput",
 			["widget"]   = EEex_Options_KeybindWidget.new(),
 		}),

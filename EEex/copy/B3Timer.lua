@@ -35,25 +35,25 @@ B3Timer_Private_ShowModalTimer = EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Modal" }),
 }))
 
-EEex_Options_AddTab("Module: Timer", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Module_Timer", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Hug Portraits",
+			["label"]    = "EEex_Options_TRANSLATION_Hug_Portraits",
 			["optionID"] = "B3Timer_HugPortraits",
 			["widget"]   = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Show Cast Timer",
+			["label"]    = "EEex_Options_TRANSLATION_Show_Cast_Timer",
 			["optionID"] = "B3Timer_ShowCastTimer",
 			["widget"]   = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Show Contingency Timer",
+			["label"]    = "EEex_Options_TRANSLATION_Show_Contingency_Timer",
 			["optionID"] = "B3Timer_ShowContingencyTimer",
 			["widget"]   = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["name"]     = "Show Modal Timer",
+			["label"]    = "EEex_Options_TRANSLATION_Show_Modal_Timer",
 			["optionID"] = "B3Timer_ShowModalTimer",
 			["widget"]   = EEex_Options_ToggleWidget.new(),
 		}),

@@ -13,6 +13,10 @@
 !/EEex/*.*
 !/EEex/copy
 !/EEex/copy/*.*
+!/EEex/language
+!/EEex/language/*.*
+!/EEex/language/english
+!/EEex/language/english/*.*
 !/EEex/lib
 !/EEex/lib/*.*
 !/EEex/loader

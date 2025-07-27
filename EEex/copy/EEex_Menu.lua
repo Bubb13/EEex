@@ -446,9 +446,8 @@ end
 ----------
 
 EEex_Menu_AddTranslationLoadedListener(function()
-	if uiTranslationFile then
-		Infinity_DoFile("X-"..uiTranslationFile)
-	else
-		Infinity_DoFile("X-en_US")
-	end
+	Infinity_DoFile("X-en_US")
+	local lang = Infinity_GetINIString("Language", "Text", "")
+	if lang:lower() == "en_us" then return end
+	Infinity_DoFile("X-"..lang)
 end)
