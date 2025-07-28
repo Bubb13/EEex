@@ -602,6 +602,14 @@ Operations=ADD -8
 ;-- Bound Engine Globals --
 ;--------------------------
 
+[!ExeSwitch-Baldur.exe-lang]
+Pattern=FFC64883C728
+Operations=ADD 38, PUSH, READ DWORD, ADD, ADD 4
+
+[!ExeSwitch-icewind.exe-lang]
+Pattern=FFC64883C728
+Operations=ADD 46, PUSH, READ DWORD, ADD, ADD 4
+
 [CAIObjectType::NOONE]
 Pattern=E988040000
 Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
@@ -667,8 +675,8 @@ Pattern=48895C2430488B5E10
 Operations=ADD 30, PUSH, READ DWORD, ADD, ADD 4
 
 [lang]
-Pattern=FFC64883C728
-Operations=ADD 38, PUSH, READ DWORD, ADD, ADD 4
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [menuLength]
 Pattern=3D020400000F8556010000
@@ -1562,6 +1570,10 @@ Operations=ADD -37
 ;-- Hooks --
 ;-----------
 
+[!ExeSwitch-Baldur.exe-Hook-CChitin::ShutDown()-FirstInstruction]
+Pattern=8987A0000000488B5F60
+Operations=ADD -59
+
 [!ExeSwitch-Baldur.exe-Hook-OpenIniFile()-_wfopen()]
 Pattern=488BC3488B8C2450040000
 Operations=ADD -41
@@ -1569,6 +1581,10 @@ Operations=ADD -41
 [!ExeSwitch-Baldur.exe-Hook-dimmInit()-uiLoadMenu()]
 Pattern=74034C8B30
 Operations=ADD 34
+
+[!ExeSwitch-icewind.exe-Hook-CChitin::ShutDown()-FirstInstruction]
+Pattern=8987A0000000488B5F60
+Operations=ADD -73
 
 [!ExeSwitch-icewind.exe-Hook-OpenIniFile()-_wfopen()]
 Pattern=488BC3488B8C2450040000
@@ -1630,8 +1646,8 @@ Pattern=0F85B3F2FFFF
 Operations=ADD -7
 
 [Hook-CChitin::ShutDown()-FirstInstruction]
-Pattern=8987A0000000488B5F60
-Operations=ADD -59
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [Hook-CDerivedStats::Construct()-FirstCall]
 Pattern=48894C24085741544155415641574883EC20488BF1
