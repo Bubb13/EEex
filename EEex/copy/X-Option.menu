@@ -19,7 +19,6 @@ menu
 	label
 	{
 		name "EEex_Options_Background"
-		rectangle 0
 	}
 
 	list

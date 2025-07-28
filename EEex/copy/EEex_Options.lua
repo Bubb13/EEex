@@ -3808,6 +3808,25 @@ function EEex_Options_Private_Tick()
 	return 1
 end
 
+EEex.RegisterSlicedRect("EEex_Options_BackgroundRect", {
+	["topLeft"]     = {  0,  0, 32, 32 },
+	["top"]         = { 16,  0, 32, 32 },
+	["topRight"]    = { 32,  0, 32, 32 },
+	["right"]       = { 32, 16, 32, 32 },
+	["bottomRight"] = { 32, 32, 32, 32 },
+	["bottom"]      = { 16, 32, 32, 32 },
+	["bottomLeft"]  = {  0, 32, 32, 32 },
+	["left"]        = {  0, 16, 32, 32 },
+	["center"]      = { 16, 16, 32, 32 },
+	["dimensions"]  = { 64, 64 },
+	["resref"]      = "X-OPTBOX",
+	["flags"]       = 0,
+})
+
+function EEex_Options_Private_Background_Render(item)
+	EEex.DrawSlicedRect("EEex_Options_BackgroundRect", { item:getArea() })
+end
+
 function EEex_Options_Private_BuildLayout()
 
 	EEex_Options_Private_MainVerticalTabArea = EEex_Options_Private_LayoutVerticalTabArea.new({

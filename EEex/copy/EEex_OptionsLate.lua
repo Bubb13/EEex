@@ -24,3 +24,5 @@ EEex_Menu_AddWindowSizeChangedListener(function()
 	if not Infinity_IsMenuOnStack("EEex_Options") then return end
 	EEex_Options_Private_Layout()
 end)
+
+EEex_Menu_AddBeforeUIItemRenderListener("EEex_Options_Background", EEex_Options_Private_Background_Render)
