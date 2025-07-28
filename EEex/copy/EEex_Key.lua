@@ -999,12 +999,14 @@ end
 
 function EEex_Key_Private_OnReleased(key)
 
+	-- Always remove, even if in capture mode, so keys pressed before a capture mode
+	-- and released during the capture mode don't become "permanently" stuck down.
+	EEex_Key_IsDownMap[key] = false
+	EEex_Key_Private_RemoveFromPressedStack(key)
+
 	if EEex_Key_Private_CaptureFunc ~= nil then
 		return true -- Consume event
 	end
-
-	EEex_Key_IsDownMap[key] = false
-	EEex_Key_Private_RemoveFromPressedStack(key)
 
 	for i, func in ipairs(EEex_Key_ReleasedListeners) do
 		if func(key) then
