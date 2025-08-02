@@ -2766,17 +2766,80 @@ function EEex_Options_Private_LuaStorage:_init()
 	if self.key     == nil then EEex_Error("key required")     end
 end
 
+function EEex_Options_Private_LuaStorage:_escape(str)
+	str = tostring(str)
+	str = str:gsub("%%", "%%%%")
+	return str:gsub("[\\]", function(char)
+		return "%"..string.byte(char)
+	end)
+end
+
+function EEex_Options_Private_LuaStorage:_unescape(str)
+	str = str:gsub("(%%*)%%(%d+)", function(extraEscapeChars, escapedCode)
+		if #extraEscapeChars % 2 ~= 0 then return end
+		return extraEscapeChars..string.char(escapedCode)
+	end)
+	return str:gsub("%%%%", "%%")
+end
+
 ------------
 -- Public --
 ------------
 
+function EEex_Options_Private_LuaStorage:read(option)
+	local str = Infinity_GetINIString(self.section, self.key, "X-DEFAULT")
+	return str ~= "X-DEFAULT" and self:_unescape(str) or nil
+end
+
 function EEex_Options_Private_LuaStorage:write(option, value)
-	Infinity_SetINIValue(self.section, self.key, value)
+	Infinity_SetINIValue(self.section, self.key, self:_escape(value))
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_Private_LuaStorage  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_KeybindLuaStorage ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_KeybindLuaStorage = {}
+EEex_Options_KeybindLuaStorage.__index = EEex_Options_KeybindLuaStorage
+setmetatable(EEex_Options_KeybindLuaStorage, EEex_Options_Private_LuaStorage)
+--print("EEex_Options_KeybindLuaStorage: "..tostring(EEex_Options_KeybindLuaStorage))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_KeybindLuaStorage.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_KeybindLuaStorage)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+------------
+-- Public --
+------------
+
+function EEex_Options_KeybindLuaStorage:read(option)
+	local str = EEex_Utility_CallSuper(EEex_Options_KeybindLuaStorage, "read", self, option)
+	return str ~= nil and EEex_Options_UnmarshalKeybind(str) or option:_getDefault()
+end
+
+function EEex_Options_KeybindLuaStorage:write(option, value)
+	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3])
+	EEex_Utility_CallSuper(EEex_Options_KeybindLuaStorage, "write", self, option, marshalled)
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_KeybindLuaStorage ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_NumberLuaStorage  ==
@@ -2807,9 +2870,8 @@ end
 ------------
 
 function EEex_Options_NumberLuaStorage:read(option)
-	local strVal = Infinity_GetINIString(self.section, self.key, "X-DEFAULT")
-	local intVal = strVal ~= "X-DEFAULT" and tonumber(strVal) or nil
-	return intVal or option:_getDefault()
+	local strVal = EEex_Utility_CallSuper(EEex_Options_NumberLuaStorage, "read", self, option)
+	return tonumber(strVal) or option:_getDefault()
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2845,7 +2907,8 @@ end
 ------------
 
 function EEex_Options_StringLuaStorage:read(option)
-	return Infinity_GetINIString(self.section, self.key, option:_getDefault())
+	local str = EEex_Utility_CallSuper(EEex_Options_StringLuaStorage, "read", self, option)
+	return str or option:_getDefault()
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2964,55 +3027,6 @@ end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_StringINIStorage  ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
-
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- START EEex_Options_KeybindLuaStorage ==
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
-
-EEex_Options_KeybindLuaStorage = {}
-EEex_Options_KeybindLuaStorage.__index = EEex_Options_KeybindLuaStorage
-setmetatable(EEex_Options_KeybindLuaStorage, EEex_Options_Private_LuaStorage)
---print("EEex_Options_KeybindLuaStorage: "..tostring(EEex_Options_KeybindLuaStorage))
-
---////////////
---// Static //
---////////////
-
-EEex_Options_KeybindLuaStorage.new = function(o)
-	if o == nil then o = {} end
-	setmetatable(o, EEex_Options_KeybindLuaStorage)
-	o:_init()
-	return o
-end
-
---//////////////
---// Instance //
---//////////////
-
-------------
--- Public --
-------------
-
-function EEex_Options_KeybindLuaStorage:read(option)
-
-	local result
-
-	local str = Infinity_GetINIString(self.section, self.key, "X-DEFAULT")
-	if str ~= "X-DEFAULT" then
-		result = EEex_Options_UnmarshalKeybind(str)
-	end
-
-	return result or option:_getDefault()
-end
-
-function EEex_Options_KeybindLuaStorage:write(option, value)
-	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3])
-	Infinity_SetINIValue(self.section, self.key, marshalled)
-end
-
---=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
--- END EEex_Options_KeybindLuaStorage ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-==
