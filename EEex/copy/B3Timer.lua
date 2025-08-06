@@ -35,27 +35,31 @@ B3Timer_Private_ShowModalTimer = EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Modal" }),
 }))
 
-EEex_Options_AddTab("EEex_Options_TRANSLATION_Module_Timer", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Timer_TabTitle", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Hug_Portraits",
-			["optionID"] = "B3Timer_HugPortraits",
-			["widget"]   = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "B3Timer_HugPortraits",
+			["label"]       = "EEex_Options_TRANSLATION_Timer_HugPortraits",
+			["description"] = "EEex_Options_TRANSLATION_Timer_HugPortraits_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Show_Cast_Timer",
-			["optionID"] = "B3Timer_ShowCastTimer",
-			["widget"]   = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "B3Timer_ShowCastTimer",
+			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowCastTimer",
+			["description"] = "EEex_Options_TRANSLATION_Timer_ShowCastTimer_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Show_Contingency_Timer",
-			["optionID"] = "B3Timer_ShowContingencyTimer",
-			["widget"]   = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "B3Timer_ShowContingencyTimer",
+			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowContingencyTimer",
+			["description"] = "EEex_Options_TRANSLATION_Timer_ShowContingencyTimer_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Show_Modal_Timer",
-			["optionID"] = "B3Timer_ShowModalTimer",
-			["widget"]   = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "B3Timer_ShowModalTimer",
+			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowModalTimer",
+			["description"] = "EEex_Options_TRANSLATION_Timer_ShowModalTimer_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 	},
 } end)

@@ -1091,6 +1091,10 @@ Operations=ADD -6
 [panic]
 Pattern=4883EC284533C0418D50FF
 
+[strtoul]
+Pattern=488B08448D420A
+Operations=ADD 8, PUSH, READ DWORD, ADD, ADD 4
+
 [uiDrawSlicedRect]
 Pattern=405553565741554156488D6C24D1
 
@@ -1101,6 +1105,10 @@ Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
 [uiVariantAsInt]
 Pattern=C3833900
 Operations=ADD -15
+
+[va]
+Pattern=48895424104C894424184C894C24205355
+Operations=ADD -5
 
 ;---------------------
 ;-- Engine VFTables --

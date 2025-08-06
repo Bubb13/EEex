@@ -153,7 +153,7 @@ menu
 			enabled true
 			action "EEex_Options_Open()"
 			actionAlt "EEex_Options_Open()"
-			text "EEex_Options_TRANSLATION_Options"
+			text "EEex_Options_TRANSLATION_EEex_Options"
 			text style "button"
 			scaleToClip
 		}
@@ -167,9 +167,25 @@ menu
 			enabled true
 			text lua "EEex_Options_Private_TEMPLATE_Text_Text()"
 			text style "normal"
+			text color lua "EEex_Options_Private_TEMPLATE_Text_Color()"
 			text useFontZoom 0
 		}
 		name "EEex_Options_TEMPLATE_Text"
+	}
+
+	template
+	{
+		text
+		{
+			enabled true
+			action "EEex_Options_Private_TEMPLATE_TextButton_Action()"
+			actionAlt "EEex_Options_Private_TEMPLATE_TextButton_Action()"
+			text lua "EEex_Options_Private_TEMPLATE_TextButton_Text()"
+			text style "normal"
+			text color lua "EEex_Options_Private_TEMPLATE_TextButton_Color()"
+			text useFontZoom 0
+		}
+		name "EEex_Options_TEMPLATE_TextButton"
 	}
 
 	template
@@ -193,5 +209,28 @@ menu
 			fill lua "EEex_Options_Private_TEMPLATE_Separator_Fill()"
 		}
 		name "EEex_Options_TEMPLATE_Separator"
+	}
+
+	template
+	{
+		list
+		{
+			column
+			{
+				width 100
+				label
+				{
+					area 0 0 -1 -1
+					text lua ""
+					text style "normal"
+				}
+			}
+
+			rowheight dynamic
+			hidehighlight
+			scrollbar "GUISCRC"
+			scrollbar respectConstraints
+		}
+		name "EEex_Options_TEMPLATE_TextArea"
 	}
 }

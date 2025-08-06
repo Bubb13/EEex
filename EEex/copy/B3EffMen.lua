@@ -22,17 +22,19 @@ B3EffectMenu_Private_RowCount = EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Module: Row Count" }),
 }))
 
-EEex_Options_AddTab("EEex_Options_TRANSLATION_Module_Effect_Menu", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_EffectMenu_TabTitle", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Launch_Keybind",
-			["optionID"] = "B3EffectMenu_LaunchKeybind",
-			["widget"]   = EEex_Options_KeybindWidget.new(),
+			["optionID"]    = "B3EffectMenu_LaunchKeybind",
+			["label"]       = "EEex_Options_TRANSLATION_EffectMenu_LaunchKeybind",
+			["description"] = "EEex_Options_TRANSLATION_EffectMenu_LaunchKeybind_Description",
+			["widget"]      = EEex_Options_KeybindWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Row_Count",
-			["optionID"] = "B3EffectMenu_RowCount",
-			["widget"]   = EEex_Options_EditWidget.new({
+			["optionID"]    = "B3EffectMenu_RowCount",
+			["label"]       = "EEex_Options_TRANSLATION_EffectMenu_RowCount",
+			["description"] = "EEex_Options_TRANSLATION_EffectMenu_RowCount_Description",
+			["widget"]      = EEex_Options_EditWidget.new({
 				["maxCharacters"] = 2,
 				["number"]        = true,
 			}),

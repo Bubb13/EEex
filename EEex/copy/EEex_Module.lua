@@ -44,32 +44,37 @@ EEex_Module_Private_Timer = EEex_Options_Register(EEex_Options_Option.new({
 	["requiresRestart"] = true,
 }))
 
-EEex_Options_AddTab("EEex_Options_TRANSLATION_Modules", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Modules_TabTitle", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["label"]           = "EEex_Options_TRANSLATION_Enable_Effect_Menu_Module",
-			["optionID"]        = "EEex_Module_EffectMenu",
-			["widget"]          = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "EEex_Module_EffectMenu",
+			["label"]       = "EEex_Options_TRANSLATION_Modules_EnableEffectMenu",
+			["description"] = "EEex_Options_TRANSLATION_Modules_EnableEffectMenu_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]           = "EEex_Options_TRANSLATION_Enable_Empty_Container_Module",
-			["optionID"]        = "EEex_Module_EmptyContainer",
-			["widget"]          = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "EEex_Module_EmptyContainer",
+			["label"]       = "EEex_Options_TRANSLATION_Modules_EnableEmptyContainer",
+			["description"] = "EEex_Options_TRANSLATION_Modules_EnableEmptyContainer_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]           = "EEex_Options_TRANSLATION_Enable_Scale_Module",
-			["optionID"]        = "EEex_Module_Scale",
-			["widget"]          = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "EEex_Module_Scale",
+			["label"]       = "EEex_Options_TRANSLATION_Modules_EnableScaleModule",
+			["description"] = "EEex_Options_TRANSLATION_Modules_EnableScaleModule_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]           = "EEex_Options_TRANSLATION_Enable_Time_Step_Module",
-			["optionID"]        = "EEex_Module_TimeStep",
-			["widget"]          = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "EEex_Module_TimeStep",
+			["label"]       = "EEex_Options_TRANSLATION_Modules_EnableTimeStep",
+			["description"] = "EEex_Options_TRANSLATION_Modules_EnableTimeStep_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]           = "EEex_Options_TRANSLATION_Enable_Timer_Module",
-			["optionID"]        = "EEex_Module_Timer",
-			["widget"]          = EEex_Options_ToggleWidget.new(),
+			["optionID"]    = "EEex_Module_Timer",
+			["label"]       = "EEex_Options_TRANSLATION_Modules_EnableTimerModule",
+			["description"] = "EEex_Options_TRANSLATION_Modules_EnableTimerModule_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 	},
 } end)

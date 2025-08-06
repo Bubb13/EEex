@@ -39,17 +39,19 @@ EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Toggle Keycode Output" }),
 }))
 
-EEex_Options_AddTab("EEex_Options_TRANSLATION_Miscellaneous_Keybinds", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Keybinds_TabTitle", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Open_Options",
-			["optionID"] = "EEex_Keybinds_OpenOptions",
-			["widget"]   = EEex_Options_KeybindWidget.new(),
+			["optionID"]    = "EEex_Keybinds_OpenOptions",
+			["label"]       = "EEex_Options_TRANSLATION_Keybinds_OpenOptions",
+			["description"] = "EEex_Options_TRANSLATION_Keybinds_OpenOptions_Description",
+			["widget"]      = EEex_Options_KeybindWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
-			["label"]    = "EEex_Options_TRANSLATION_Toggle_Keycode_Output",
-			["optionID"] = "EEex_Keybinds_ToggleKeycodeOutput",
-			["widget"]   = EEex_Options_KeybindWidget.new(),
+			["optionID"]    = "EEex_Keybinds_ToggleKeycodeOutput",
+			["label"]       = "EEex_Options_TRANSLATION_Keybinds_ToggleKeycodeOutput",
+			["description"] = "EEex_Options_TRANSLATION_Keybinds_ToggleKeycodeOutput_Description",
+			["widget"]      = EEex_Options_KeybindWidget.new(),
 		}),
 	},
 } end)
