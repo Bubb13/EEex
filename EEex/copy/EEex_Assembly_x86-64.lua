@@ -336,6 +336,57 @@ function EEex_HookCallInternal(address, labelPairs, assemblyT, after)
 	EEex_JITAt(address, {"jmp short "..hookAddress})
 end
 
+function EEex_HookConditionalJump(address, restoreSize, failAssembly, successAssembly)
+	EEex_HookConditionalJumpInternal(address, restoreSize, {}, failAssembly, successAssembly)
+end
+
+function EEex_HookConditionalJumpWithLabels(address, restoreSize, labelPairs, failAssembly, successAssembly)
+	EEex_HookConditionalJumpInternal(address, restoreSize, labelPairs, failAssembly, successAssembly)
+end
+
+function EEex_HookConditionalJumpInternal(address, restoreSize, labelPairs, failAssembly, successAssembly)
+
+	local jmpMnemonic, jmpDest, instructionLength, afterInstruction = EEex_GetJmpInfo(address)
+
+	local jmpFailDest = afterInstruction + restoreSize
+	local restoreBytes = EEex_StoreBytesAssembly(afterInstruction, restoreSize)
+
+	local hookAddress = EEex_RunWithAssemblyLabels(labelPairs or {}, function()
+
+		EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(address, 0, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance(address, 0)
+		EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(address, 1, {})
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance(address, 1)
+
+		return EEex_RunWithAssemblyLabels({
+			{"hook_address", address}},
+			function()
+				return EEex_JITNear(EEex_FlattenTable({
+					EEex_HookIntegrityWatchdog_HookEnter,
+					jmpMnemonic, " jmp_success_internal #ENDL",
+
+					failAssembly, [[
+					jmp_fail:
+					#MANUAL_HOOK_EXIT(0) ]],
+					restoreBytes, [[
+					jmp ]], jmpFailDest, [[
+
+					jmp_success_internal: #ENDL ]],
+					successAssembly, [[
+					jmp_success:
+					#MANUAL_HOOK_EXIT(1)
+					jmp ]], jmpDest
+				}))
+			end
+		)
+	end)
+
+	EEex_JITAt(address, {[[
+		jmp short ]], hookAddress, [[ #ENDL
+		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5 + instructionLength}
+	})
+end
+
 function EEex_HookConditionalJumpOnFail(address, restoreSize, assemblyT)
 	EEex_HookConditionalJumpOnFailInternal(address, restoreSize, {}, assemblyT)
 end
@@ -597,6 +648,23 @@ function EEex_ReplaceCall(address, newTarget)
 	local opcode = EEex_ReadU8(address)
 	if opcode ~= 0xE8 then EEex_Error("Not disp32 call: "..EEex_ToHex(opcode)) end
 	EEex_JITAt(address, {"call short ", EEex_JITNear({"jmp ", newTarget, "#ENDL"}), "#ENDL"})
+end
+
+function EEex_HookReplaceFunctionMaintainOriginal(address, restoreSize, originalLabel, newTarget)
+	EEex_HookShimFunctionMaintainOriginal(address, restoreSize, originalLabel, {"jmp ", newTarget, "#ENDL"})
+end
+
+function EEex_HookShimFunctionMaintainOriginal(address, restoreSize, originalLabel, assembly)
+
+	EEex_JITNearAsLabel(originalLabel, EEex_FlattenTable({
+		EEex_StoreBytesAssembly(address, restoreSize),
+		{"jmp ", address + restoreSize, "#ENDL"},
+	}))
+
+	EEex_JITAt(address, {[[
+		jmp short ]], EEex_JITNear(assembly), [[ #ENDL
+		#REPEAT(#$(1),nop #ENDL) ]], {restoreSize - 5},
+	})
 end
 
 ---------------------

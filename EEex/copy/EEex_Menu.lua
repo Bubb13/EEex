@@ -253,10 +253,8 @@ function EEex_Menu_IsNative(menuName)
 	return EEex_Menu_NativeMap[menuName] ~= nil
 end
 
-EEex_Menu_ScrollbarForced = {}
-
 function EEex_Menu_SetForceScrollbarRender(itemName, value)
-	EEex_Menu_ScrollbarForced[itemName] = value
+	EEex.ForceScrollbarRenderForItemName(itemName, value)
 end
 
 ---------------
@@ -358,7 +356,7 @@ function EEex_Menu_Hook_AfterMainFileLoaded()
 	end
 end
 
-function EEex_Menu_Hook_BeforeMenuStackSave()
+function EEex_Menu_LuaHook_BeforeMenuStackSave()
 	for _, listener in ipairs(EEex_Menu_BeforeMainFileLoadedListeners) do
 		listener()
 	end
@@ -386,11 +384,6 @@ function EEex_Menu_Hook_BeforeListRenderingItem(list, item, window, rClipBase, a
 			end
 		end
 	end
-end
-
-function EEex_Menu_Hook_CheckForceScrollbarRender(item)
-	local itemName = item.name:get()
-	return itemName ~= "" and EEex_Menu_ScrollbarForced[itemName]
 end
 
 function EEex_Menu_Hook_OnBeforeUIItemRender(item)

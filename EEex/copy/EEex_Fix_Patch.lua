@@ -324,6 +324,18 @@
 		EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 	})
 
+	--[[
+	+--------------------------------------------------------------------------------------+
+	| Override CChitin::SynchronousUpdate() to gain control over a frame's render sequence |
+	+--------------------------------------------------------------------------------------+
+	|   Used to allow the UI to request another render pass                                |
+	+--------------------------------------------------------------------------------------+
+	|   [EEex.dll] CChitin::Override_SynchronousUpdate()                                   |
+	+--------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CChitin::SynchronousUpdate()-FirstInstruction"), {"jmp #L(CChitin::Override_SynchronousUpdate)"})
+
 	EEex_EnableCodeProtection()
 
 end)()

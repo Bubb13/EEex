@@ -9,7 +9,8 @@
 	+--------------------------------------------------------------------------------------------+
 	|   Used to implement listeners that dynamically load additional menus / edit existing menus |
 	+--------------------------------------------------------------------------------------------+
-	|   [Lua] EEex_Menu_Hook_BeforeMenuStackSave()                                               |
+	|   [EEex.dll] EEex::Menu_Hook_OnBeforeMenuStackSave()                                       |
+	|   [Lua] EEex_Menu_LuaHook_BeforeMenuStackSave()                                            |
 	+--------------------------------------------------------------------------------------------+
 	--]]
 
@@ -18,16 +19,9 @@
 			EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
 			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 		}}},
-		EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(32)
-			]]},
-			EEex_GenLuaCall("EEex_Menu_Hook_BeforeMenuStackSave"),
-			{[[
-				call_error:
-				#DESTROY_SHADOW_SPACE
-			]]},
-		})
+		{[[
+			call #L(EEex::Menu_Hook_OnBeforeMenuStackSave)
+		]]}
 	)
 
 	--[[
@@ -299,49 +293,6 @@
 	)
 
 	--[[
-	+---------------------------------------------------------------+
-	| Call a hook that can force a UI list to render its scrollbar  |
-	+---------------------------------------------------------------+
-	|   [Lua] EEex_Menu_Hook_CheckForceScrollbarRender() -> boolean |
-	|       return:                                                 |
-	|           -> false - Don't alter engine behavior              |
-	|           -> true  - Force the list's scrollbar to render     |
-	+---------------------------------------------------------------+
-	--]]
-
-	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, {
-		{"hook_integrity_watchdog_ignore_registers", {
-			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8,
-			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
-		}}},
-		EEex_FlattenTable({
-			{[[
-				#MAKE_SHADOW_SPACE(48)
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
-			]]},
-			EEex_GenLuaCall("EEex_Menu_Hook_CheckForceScrollbarRender", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "uiItem" end,
-				},
-				["returnType"] = EEex_LuaCallReturnType.Boolean,
-			}),
-			{[[
-				jmp no_error
-
-				call_error:
-				xor rax, rax
-
-				no_error:
-				test rax, rax
-
-				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-				#DESTROY_SHADOW_SPACE
-				jnz #L(jmp_fail)
-			]]},
-		})
-	)
-
-	--[[
 	+----------------------------------------------------------------------+
 	| [JIT] Fix forced scrollbars sometimes crashing with a divide by zero |
 	+----------------------------------------------------------------------+
@@ -487,6 +438,73 @@
 	EEex_JITAt(EEex_Label("Hook-uiDoFile()-FirstInstruction"), {[[
 		jmp #L(EEex::Override_uiDoFile)
 	]]})
+
+	--[[
+	+---------------------------------------------------------------------------------------------------------------------+
+	| Hook that listens in on whether a UI item's scrollbar is visible for the current render pass                        |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   Used to fix scrollbar visibility changes causing an incomplete content wrapping state to be presented for 1 frame |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   Can force the scrollbar to be hidden / shown via its return value                                                 |
+	+---------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_OnUIItemCheckRenderScrollbar(pItem: uiItem*, bVisible: bool) -> bool                    |
+	|       return:                                                                                                       |
+	|           -> false - The scrollbar should be hidden                                                                 |
+	|           -> true  - The scrollbar should be shown                                                                  |
+	+---------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookConditionalJumpWithLabels(EEex_Label("Hook-drawItem()-CheckScrollbarContentHeight"), 0, {
+		{"hook_integrity_watchdog_ignore_registers_0", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}},
+		{"hook_integrity_watchdog_ignore_registers_1", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			mov rcx, r15                                         ; pItem
+			mov rdx, 1                                           ; bVisible
+			call #L(EEex::Fix_Hook_OnUIItemCheckRenderScrollbar)
+			test al, al
+			jz #L(jmp_success)
+		]]},
+		{[[
+			mov rcx, r15                                         ; pItem
+			xor rdx, rdx                                         ; bVisible
+			call #L(EEex::Fix_Hook_OnUIItemCheckRenderScrollbar)
+			test al, al
+			jnz #L(jmp_fail)
+		]]}
+	)
+
+	--[[
+	+------------------------------------------------------------------------------------+
+	| Track template instance destruction to clean up EEex data tied to uiItem instances |
+	+------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Menu_Hook_OnBeforeUITemplateFreed(pItem: uiItem*)               |
+	+------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-Infinity_DestroyAnimation()-free()"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+
+															 ; rcx already pItem
+			call #L(EEex::Menu_Hook_OnBeforeUITemplateFreed)
+
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
 
 	EEex_EnableCodeProtection()
 

@@ -1012,6 +1012,10 @@ Operations=ADD -15
 Pattern=448BC54889442420488D4C2420
 Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
 
+[CVidMode::Flip]
+Pattern=80B97001000000
+Operations=ADD -10
+
 [Chitin_GetSectionCallback]
 Pattern=4889742418574883EC20BA01000000
 Operations=ADD -10
@@ -1028,6 +1032,10 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 Pattern=4883EC28B9E20B0000
 Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
 
+[DrawClear]
+Pattern=488D551F498BCE
+Operations=ADD -9, PUSH, READ DWORD, ADD, ADD 4
+
 [DrawColor]
 Pattern=B916878FA0
 Operations=ADD 6, PUSH, READ DWORD, ADD, ADD 4
@@ -1043,6 +1051,10 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 [DrawPushState]
 Pattern=488945EF448B6D6F
 Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
+
+[SDL_GetTicks]
+Pattern=742C488D4C2430
+Operations=ADD -25
 
 [SDL_Log]
 Pattern=4C894C24204883EC284C8BC1
@@ -1657,6 +1669,9 @@ Operations=ADD -7
 ExeSwitch=1
 ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
+[Hook-CChitin::SynchronousUpdate()-FirstInstruction]
+Pattern=488BC4534883EC60
+
 [Hook-CDerivedStats::Construct()-FirstCall]
 Pattern=48894C24085741544155415641574883EC20488BF1
 Operations=ADD 28
@@ -2108,6 +2123,10 @@ Pattern=48895C2408488974242055574154
 [Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
 Pattern=0F848D000000488B4808
 Operations=ADD 17
+
+[Hook-Infinity_DestroyAnimation()-free()]
+Pattern=75A4488B742440
+Operations=ADD -16
 
 [Hook-Infinity_InstanceAnimation()-TemplateMenuOverride]
 Pattern=488BD0488BC8
