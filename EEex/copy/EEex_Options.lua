@@ -318,7 +318,7 @@ function EEex_Options_Private_LayoutVerticalTabArea:_onTabSelected(index)
 	self._openTabIndex = index
 	local tabLayout = tabEntry.layout
 	tabLayout:showBeforeLayout()
-	tabLayout:doLayout()
+	-- Not calling tabLayout:doLayout() because tabs are already laid out
 	tabLayout:showAfterLayout()
 end
 
@@ -381,8 +381,8 @@ function EEex_Options_Private_LayoutVerticalTabArea:doLayout()
 	EEex_Options_Private_CreateSeparator(self.menuName, nil,
 		self._layoutLeft + self.sidebarWidth + self.separatorPad, self._layoutTop, self.separatorWidth, self._layoutHeight)
 
-	if self._openTabIndex ~= nil then
-		self.tabs[self._openTabIndex].layout:doLayout()
+	for _, tab in ipairs(self.tabs) do
+		tab.layout:doLayout()
 	end
 end
 
@@ -3762,6 +3762,10 @@ function EEex_Options_Private_CreateInstance(menuName, templateName, x, y, w, h)
 	return instanceEntry
 end
 
+function EEex_Options_Private_ClearInstanceData()
+	EEex_Options_Private_TemplateInstancesByName = {}
+end
+
 function EEex_Options_Private_CreateDelayIcon(menuName, displayEntry, x, y, w, h)
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_DelayIcon", x, y, w, h)
 	instanceData.displayEntry = displayEntry
@@ -4261,7 +4265,22 @@ function EEex_Options_Private_ReadOptions(early)
 	end
 end
 
+function EEex_Options_Private_CheckKillFocus()
+	EEex_Options_Private_KeybindCheckKillFocus()
+	EEex_Options_Private_EditCheckKillFocus()
+end
+
 function EEex_Options_Private_Layout()
+
+	-- A layout destroys all currently existing template instances and rebuilds the
+	-- entire menu based on the current game state. Checking for any needed focus
+	-- kills before clearing up the old instance data.
+
+	-- Kill the focus of any keybind / edit widgets
+	EEex_Options_Private_CheckKillFocus()
+
+	-- Clear (soon to be) outdated instance data
+	EEex_Options_Private_ClearInstanceData()
 
 	-- Reset top level instances
 	EEex_Menu_DestroyAllTemplates("EEex_Options")
@@ -4617,8 +4636,7 @@ end
 function EEex_Options_Close()
 	if not Infinity_IsMenuOnStack("EEex_Options") then return end
 	Infinity_PopMenu("EEex_Options")
-	EEex_Options_Private_KeybindCheckKillFocus()
-	EEex_Options_Private_EditCheckKillFocus()
+	EEex_Options_Private_CheckKillFocus()
 	EEex_Options_Private_MainInset:hide()
 end
 

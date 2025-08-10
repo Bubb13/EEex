@@ -336,6 +336,28 @@
 
 	EEex_JITAt(EEex_Label("Hook-CChitin::SynchronousUpdate()-FirstInstruction"), {"jmp #L(CChitin::Override_SynchronousUpdate)"})
 
+	--[[
+	+------------------------------------------------------------------------------+
+	| Fix killing the capture of an edit item not properly stopping the text input |
+	+------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_OnBeforeUIKillCapture()                          |
+	+------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-uiKillCapture()-FirstInstruction"), 0, 6, 6, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Fix_Hook_OnBeforeUIKillCapture)
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
 	EEex_EnableCodeProtection()
 
 end)()

@@ -594,6 +594,14 @@ Operations=ADD -57
 Pattern=85C00F8E01010000
 Operations=ADD -31
 
+[stopEditCapture]
+Pattern=740A833804
+Operations=ADD 8, PUSH, READ DWORD, ADD, ADD 4
+
+[uiKillCapture]
+Pattern=488B8A88100000
+Operations=ADD 13, PUSH, READ DWORD, ADD, ADD 4
+
 [uiLoadMenu]
 Pattern=4883EC60BA7C000000
 Operations=ADD -8
@@ -2214,6 +2222,10 @@ Operations=ADD 25
 [Hook-uiDoFile()-FirstInstruction]
 Pattern=48894424304C8BC1
 Operations=ADD -42
+
+[Hook-uiKillCapture()-FirstInstruction]
+Pattern=488B8A88100000
+Operations=ADD 13, PUSH, READ DWORD, ADD, ADD 4
 
 [Hook-uiRefreshMenu()-restoreMenuStack()]
 Pattern=85FF0F8E94000000
