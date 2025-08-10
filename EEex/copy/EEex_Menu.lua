@@ -257,6 +257,11 @@ function EEex_Menu_SetForceScrollbarRender(itemName, value)
 	EEex.ForceScrollbarRenderForItemName(itemName, value)
 end
 
+function EEex_Menu_SetItemExtraScrollbarPad(uiItem, value)
+	EEex.SetUIItemExtraScrollbarPad(uiItem, value)
+end
+uiItem.setExtraScrollbarPad = EEex_Menu_SetItemExtraScrollbarPad
+
 ---------------
 -- Listeners --
 ---------------

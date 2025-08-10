@@ -32,6 +32,8 @@ menu
 				text lua "t(EEex_Options_Private_Tabs[rowNumber].label)"
 				text style "normal"
 				text align left center
+				text point 12 -- EEex_Options_Private_NormalFontPoint
+				text useFontZoom 0
 			}
 		}
 
@@ -69,6 +71,7 @@ menu
 			action "return EEex_Options_Private_TEMPLATE_Edit_Action()"
 			maxlines 1
 			text style "edit"
+			text useFontZoom 0
 		}
 		name "EEex_Options_TEMPLATE_Edit"
 	}
@@ -111,6 +114,8 @@ menu
 			text lua "EEex_Options_Private_TEMPLATE_KeybindBackground_Text()"
 			text style "normal"
 			text align left center
+			text point 12 -- EEex_Options_Private_NormalFontPoint
+			text useFontZoom 0
 			pad 3 3 3 3
 		}
 		name "EEex_Options_TEMPLATE_KeybindBackground"
@@ -213,21 +218,13 @@ menu
 
 	template
 	{
-		list
+		text
 		{
-			column
-			{
-				width 100
-				label
-				{
-					area 0 0 -1 -1
-					text lua ""
-					text style "normal"
-				}
-			}
-
-			rowheight dynamic
-			hidehighlight
+			enabled true
+			text lua "EEex_Options_Private_TEMPLATE_TextArea_Text()"
+			text style "normal"
+			text point 12 -- EEex_Options_Private_NormalFontPoint
+			text useFontZoom 0
 			scrollbar "GUISCRC"
 			scrollbar respectConstraints
 		}

@@ -506,6 +506,31 @@
 		]]}
 	)
 
+	--[[
+	+-----------------------------------------------------------------------------------------------+
+	| Override the hardcoded pad (16 pixels) applied to text when a scrollbar bam is defined        |
+	+-----------------------------------------------------------------------------------------------+
+	|   Fix: Only applies the hardcoded padding if the scrollbar is visible                         |
+	+-----------------------------------------------------------------------------------------------+
+	|   Also allows a custom pad to be applied only when the scrollbar is shown                     |
+	+-----------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Menu_Hook_CheckApplyTextScrollbarPad(pItem: uiItem*, pItemArea: SDL_Rect*) |
+	+-----------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookNOPsWithLabels(EEex_Label("Hook-drawItem()-CheckApplyTextHardcodedScrollbarPad"), 1, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			mov rcx, r15                                        ; pItem
+			lea rdx, qword ptr ss:[rbp+0x10]                    ; pItemArea
+			call #L(EEex::Menu_Hook_CheckApplyTextScrollbarPad)
+		]]}
+	)
+
 	EEex_EnableCodeProtection()
 
 end)()

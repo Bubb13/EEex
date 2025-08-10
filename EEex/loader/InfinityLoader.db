@@ -1052,6 +1052,14 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 Pattern=488945EF448B6D6F
 Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
 
+[DrawTransformToScreen]
+Pattern=81E1FF0F00004D896B20
+Operations=ADD 60, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawTransformToScreenH]
+Pattern=F30F2CC0488D5580
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
 [SDL_GetTicks]
 Pattern=742C488D4C2430
 Operations=ADD -25
@@ -1121,6 +1129,9 @@ Operations=ADD -15
 [va]
 Pattern=48895424104C894424184C894C24205355
 Operations=ADD -5
+
+[wordwrap]
+Pattern=4C894C24204C894424188954241048894C240853
 
 ;---------------------
 ;-- Engine VFTables --
@@ -2179,6 +2190,10 @@ Operations=ADD 79
 [Hook-drawItem()-AfterEnabledCheck]
 Pattern=0F8403260000
 Operations=ADD 6
+
+[Hook-drawItem()-CheckApplyTextHardcodedScrollbarPad]
+Pattern=48F7DB418BFC
+Operations=ADD 8
 
 [Hook-drawItem()-CheckScrollbarContentHeight]
 Pattern=85C00F85CE040000

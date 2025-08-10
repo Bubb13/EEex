@@ -27,6 +27,7 @@ EEex_Options_Private_LayoutAlign = {
 	["CENTER_CENTER"] = EEex_Flags({ EEex_Options_Private_LayoutAlignFlags.VERTICAL_CENTER, EEex_Options_Private_LayoutAlignFlags.HORIZONTAL_CENTER }),
 }
 
+EEex_Options_Private_NormalFontPoint = 12
 EEex_Options_Private_SeparatorPad = 10
 
 --=========
@@ -297,9 +298,10 @@ end
 function EEex_Options_Private_LayoutVerticalTabArea:_calculateSidebarWidth()
 
 	local maxWidth = 0
+	local normalFont = styles.normal.font
 
 	for _, v in ipairs(self.tabs) do
-		local width = EEex_Options_Private_GetTextWidthHeight(styles.normal.font, styles.normal.point, t(v.label))
+		local width = EEex_Options_Private_GetTextWidthHeight(normalFont, EEex_Options_Private_NormalFontPoint, t(v.label))
 		if width > maxWidth then
 			maxWidth = width
 		end
@@ -1339,7 +1341,7 @@ end
 ------------
 
 function EEex_Options_Private_LayoutKeybindBackground:calculateLayout(left, top, right, bottom)
-	local width, height = EEex_Options_Private_GetMaxTextBounds(styles.normal.font, styles.normal.point, 10)
+	local width, height = EEex_Options_Private_GetMaxTextBounds(styles.normal.font, EEex_Options_Private_NormalFontPoint, 10)
 	width  = width  + 3 + 3 -- Hardcoded pads (X-Option.menu)
 	height = height + 3 + 3 -- Hardcoded pads (X-Option.menu)
 	self._layoutLeft   = left
@@ -2236,11 +2238,12 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 			EEex_Options_Private_LayoutSeparator.new({ ["menuName"] = self.menuName, ["width"] = 2 }),
 			EEex_Options_Private_LayoutFixed.new({ ["width"] = EEex_Options_Private_SeparatorPad }),
 			EEex_Options_Private_LayoutTextArea.new({
-				["menuName"]       = self.menuName,
-				["text"]           = "EEex_Options_TRANSLATION_Description_Hint",
-				["translate"]      = true,
-				["width"]          = 250,
-				["layoutCallback"] = function(instanceData) textAreaInstanceData = instanceData end,
+				["menuName"]          = self.menuName,
+				["text"]              = "EEex_Options_TRANSLATION_Description_Hint",
+				["translate"]         = true,
+				["width"]             = 250,
+				["extraScrollbarPad"] = EEex_Options_Private_SeparatorPad,
+				["layoutCallback"]    = function(instanceData) textAreaInstanceData = instanceData end,
 			})
 			:inset({ ["insetTop"] = 5, ["insetRight"] = 5, ["insetBottom"] = 5 }),
 		},
@@ -2248,7 +2251,6 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 
 	local normalStyle     = styles.normal
 	local normalFont      = normalStyle.font
-	local normalPoint     = normalStyle.point
 	local normalFontColor = EEex_Options_Private_GetFontStyleColor(normalStyle)
 
 	local globalColumnOffset = 0
@@ -2273,7 +2275,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 				local optionLabel = EEex_Options_Private_LayoutText.new({
 					["menuName"]  = self.menuName,
 					["font"]      = normalFont,
-					["point"]     = normalPoint,
+					["point"]     = EEex_Options_Private_NormalFontPoint,
 					["color"]     = normalFontColor,
 					["text"]      = displayEntry.label,
 					["translate"] = true,
@@ -2557,6 +2559,13 @@ function EEex_Options_Private_LayoutTextArea:_init()
 	if self.text           == nil then self.text           = ""             end
 	if self.translate      == nil then self.translate      = false          end
 	if self.layoutCallback == nil then self.layoutCallback = function() end end
+
+	-- Optional:
+	--   self.extraScrollbarPad
+	--   self.padLeft
+	--   self.padTop
+	--   self.padRight
+	--   self.padBottom
 end
 
 ------------
@@ -2565,8 +2574,19 @@ end
 
 function EEex_Options_Private_LayoutTextArea:doLayout()
 	local text = self.translate and t(self.text) or self.text
-	local instanceData = EEex_Options_Private_CreateTextArea(self.menuName, text, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+	local instanceData = EEex_Options_Private_CreateTextArea(self.menuName, text, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight, {
+		["extraScrollbarPad"] = self.extraScrollbarPad,
+		["padLeft"]           = self.padLeft,
+		["padTop"]            = self.padTop,
+		["padRight"]          = self.padRight,
+		["padBottom"]         = self.padBottom,
+	})
 	self.layoutCallback(instanceData)
+end
+
+function EEex_Options_Private_TEMPLATE_TextArea_Text()
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_TextArea"][instanceId]
+	return instanceData.text
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -3516,11 +3536,10 @@ function EEex_Options_EditWidget:_onMap(displayEntry, optionID)
 end
 
 function EEex_Options_EditWidget:_buildLayout(displayEntry, menuName)
-	local normalStyle = styles.normal
 	return EEex_Options_Private_LayoutEdit.new({
 		["menuName"]     = menuName,
-		["font"]         = normalStyle.font,
-		["point"]        = normalStyle.point,
+		["font"]         = styles.normal.font,
+		["point"]        = EEex_Options_Private_NormalFontPoint,
 		["displayEntry"] = displayEntry,
 	})
 end
@@ -3796,19 +3815,20 @@ function EEex_Options_Private_CreateText(menuName, text, x, y, w, h, extraArgs)
 	return instanceData
 end
 
-function EEex_Options_Private_CreateTextArea(menuName, text, x, y, w, h)
+function EEex_Options_Private_CreateTextArea(menuName, text, x, y, w, h, extraArgs)
 
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_TextArea", x, y, w, h)
 	instanceData.text = text or ""
 
-	local listUD = instanceData.uiItem.list
+	local uiItem = instanceData.uiItem
+	local pad = uiItem.pad
 
-	local internalListGlobalName = "list"..EEex.FormatPointerAsEngine(EEex_UDToPtr(listUD))
-	_G[internalListGlobalName] = {}
-
-	local t = { "Dummy Value" }
-	listUD.table = EEex_AddToLuaRegistry(function() return t end)
-	listUD.columns.items.text.text.value.luaFunc = EEex_AddToLuaRegistry(function() return instanceData.text end)
+	if extraArgs == nil then extraArgs = {} end
+	if extraArgs.extraScrollbarPad ~= nil then uiItem:setExtraScrollbarPad(extraArgs.extraScrollbarPad) end
+	if extraArgs.padLeft           ~= nil then pad.x = extraArgs.padLeft                                end
+	if extraArgs.padTop            ~= nil then pad.y = extraArgs.padTop                                 end
+	if extraArgs.padRight          ~= nil then pad.w = extraArgs.padRight                               end
+	if extraArgs.padBottom         ~= nil then pad.h = extraArgs.padBottom                              end
 
 	return instanceData
 end
