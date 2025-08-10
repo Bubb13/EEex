@@ -1163,6 +1163,10 @@ function EEex_Options_Private_LayoutDelayIcon:doLayout()
 	EEex_Options_Private_CreateDelayIcon(self.menuName, self.displayEntry, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 end
 
+--//////////////
+--// Template //
+--//////////////
+
 function EEex_Options_Private_TEMPLATE_DelayIcon_Enabled()
 	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_DelayIcon"][instanceId]
 	local option = instanceData.displayEntry._option
@@ -1227,6 +1231,10 @@ function EEex_Options_Private_LayoutExitButton:doLayout()
 	EEex_Options_Private_CreateExitButton(self.menuName, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 end
 
+--//////////////
+--// Template //
+--//////////////
+
 function EEex_Options_Private_TEMPLATE_ExitButton_Action()
 	EEex_Options_Close()
 end
@@ -1288,6 +1296,14 @@ end
 
 function EEex_Options_Private_LayoutSeparator:doLayout()
 	EEex_Options_Private_CreateSeparator(self.menuName, self.color, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+end
+
+--//////////////
+--// Template //
+--//////////////
+
+function EEex_Options_Private_TEMPLATE_Separator_Fill()
+	return EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Separator"][instanceId].color
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -1368,6 +1384,10 @@ function EEex_Options_Private_LayoutKeybindBackground:doLayout()
 	self.layoutCallback(instanceData)
 end
 
+--//////////////
+--// Template //
+--//////////////
+
 function EEex_Options_Private_TEMPLATE_KeybindBackground_Action()
 	EEex_Options_Private_KeybindPendingFocusedInstance = instanceId
 end
@@ -1446,6 +1466,10 @@ function EEex_Options_Private_LayoutKeybindButton:doLayout()
 	local instanceData = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_KeybindButton", self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 	self.layoutCallback(instanceData)
 end
+
+--//////////////
+--// Template //
+--//////////////
 
 function EEex_Options_Private_TEMPLATE_KeybindButton_Action()
 
@@ -1533,6 +1557,10 @@ function EEex_Options_Private_LayoutKeybindUpDownButton:doLayout()
 	local instanceData = EEex_Options_Private_CreateInstance(self.menuName, "EEex_Options_TEMPLATE_KeybindButtonUpDown", self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 	self.layoutCallback(instanceData)
 end
+
+--//////////////
+--// Template //
+--//////////////
 
 function EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
 	local buttonInstanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_KeybindButtonUpDown"][instanceId]
@@ -1622,6 +1650,72 @@ function EEex_Options_Private_LayoutToggle:doLayout()
 	EEex_Options_Private_CreateToggle(self.menuName, self.displayEntry, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 end
 
+--//////////////
+--// Template //
+--//////////////
+
+function EEex_Options_Private_ToggleAction(displayEntry)
+
+	local widget = displayEntry.widget
+	local newToggleState = not widget.toggleState
+
+	if not newToggleState and widget.disallowToggleOff then
+		return
+	end
+
+	widget.toggleState = newToggleState
+
+	local forceOthers = widget.forceOthers
+
+	if forceOthers then
+
+		for _, forceEntry in ipairs(forceOthers[widget.toggleState] or {}) do
+
+			local forceDisplayEntry = EEex_Options_Private_IdToDisplayEntry[forceEntry[1]]
+			local forceWidget = forceDisplayEntry.widget
+			local newForceToggleState = forceEntry[2]
+
+			if type(newForceToggleState) == "function" then
+				newForceToggleState = newForceToggleState()
+			end
+
+			if newForceToggleState ~= nil then
+
+				forceWidget.toggleState = newForceToggleState
+
+				if newForceToggleState or not forceWidget.disallowToggleOff then
+					local mainForceDisplayEntry = forceWidget.deferTo and EEex_Options_Private_IdToDisplayEntry[forceWidget.deferTo] or forceDisplayEntry
+					local newForceVal = newForceToggleState and mainForceDisplayEntry.widget.toggleValue or 0
+					mainForceDisplayEntry:_setWorkingValue(newForceVal)
+				end
+			end
+		end
+	end
+
+	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
+	local newVal = newToggleState and mainDisplayEntry.widget.toggleValue or 0
+	mainDisplayEntry:_setWorkingValue(newVal)
+end
+
+function EEex_Options_Private_TEMPLATE_Toggle_Action()
+
+	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
+
+	local doToggle = function()
+		EEex_Options_Private_ToggleAction(displayEntry)
+	end
+
+	local toggleWarning = displayEntry.widget.toggleWarning
+	if toggleWarning == nil or not toggleWarning(doToggle) then
+		doToggle()
+	end
+end
+
+function EEex_Options_Private_TEMPLATE_Toggle_Frame()
+	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
+	return displayEntry.widget.toggleState and 2 or 0
+end
+
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_Private_LayoutToggle  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -1697,6 +1791,28 @@ function EEex_Options_Private_LayoutEdit:doLayout()
 		self._layoutHeight - self.padTop - self.padBottom)
 
 	backgroundInstance._pairedEditLUD = EEex_UDToLightUD(editInstance.uiItem)
+end
+
+--//////////////
+--// Template //
+--//////////////
+
+function EEex_Options_Private_TEMPLATE_Edit_Action()
+
+	if letter_pressed == nil then
+		return 1 -- Allow
+	end
+
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Edit"][instanceId]
+	local displayEntry = instanceData.displayEntry
+
+	if displayEntry.widget.number then
+		if letter_pressed ~= "-" and letter_pressed ~= "." and tonumber(letter_pressed) == nil then
+			return 0 -- Block
+		end
+	end
+
+	return 1 -- Allow
 end
 
 function EEex_Options_Private_TEMPLATE_EditBackground_Action()
@@ -1854,6 +1970,10 @@ function EEex_Options_Private_LayoutText:doLayout()
 		["verticalAlign"]   = self.verticalAlign,
 	})
 end
+
+--//////////////
+--// Template //
+--//////////////
 
 function EEex_Options_Private_TEMPLATE_Text_Text()
 	return EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Text"][instanceId].text
@@ -2390,102 +2510,6 @@ function EEex_Options_Private_LayoutOptionsPanel:_writeNewValues()
 	end
 end
 
---////////////////////////////////
---// EEex_Options_TEMPLATE_Edit //
---////////////////////////////////
-
-function EEex_Options_Private_TEMPLATE_Edit_Action()
-
-	if letter_pressed == nil then
-		return 1 -- Allow
-	end
-
-	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Edit"][instanceId]
-	local displayEntry = instanceData.displayEntry
-
-	if displayEntry.widget.number then
-		if letter_pressed ~= "-" and letter_pressed ~= "." and tonumber(letter_pressed) == nil then
-			return 0 -- Block
-		end
-	end
-
-	return 1 -- Allow
-end
-
---/////////////////////////////////////
---// EEex_Options_TEMPLATE_Separator //
---/////////////////////////////////////
-
-function EEex_Options_Private_TEMPLATE_Separator_Fill()
-	return EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Separator"][instanceId].color
-end
-
---//////////////////////////////////
---// EEex_Options_TEMPLATE_Toggle //
---//////////////////////////////////
-
-function EEex_Options_Private_ToggleAction(displayEntry)
-
-	local widget = displayEntry.widget
-	local newToggleState = not widget.toggleState
-
-	if not newToggleState and widget.disallowToggleOff then
-		return
-	end
-
-	widget.toggleState = newToggleState
-
-	local forceOthers = widget.forceOthers
-
-	if forceOthers then
-
-		for _, forceEntry in ipairs(forceOthers[widget.toggleState] or {}) do
-
-			local forceDisplayEntry = EEex_Options_Private_IdToDisplayEntry[forceEntry[1]]
-			local forceWidget = forceDisplayEntry.widget
-			local newForceToggleState = forceEntry[2]
-
-			if type(newForceToggleState) == "function" then
-				newForceToggleState = newForceToggleState()
-			end
-
-			if newForceToggleState ~= nil then
-
-				forceWidget.toggleState = newForceToggleState
-
-				if newForceToggleState or not forceWidget.disallowToggleOff then
-					local mainForceDisplayEntry = forceWidget.deferTo and EEex_Options_Private_IdToDisplayEntry[forceWidget.deferTo] or forceDisplayEntry
-					local newForceVal = newForceToggleState and mainForceDisplayEntry.widget.toggleValue or 0
-					mainForceDisplayEntry:_setWorkingValue(newForceVal)
-				end
-			end
-		end
-	end
-
-	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
-	local newVal = newToggleState and mainDisplayEntry.widget.toggleValue or 0
-	mainDisplayEntry:_setWorkingValue(newVal)
-end
-
-function EEex_Options_Private_TEMPLATE_Toggle_Action()
-
-	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
-
-	local doToggle = function()
-		EEex_Options_Private_ToggleAction(displayEntry)
-	end
-
-	local toggleWarning = displayEntry.widget.toggleWarning
-	if toggleWarning == nil or not toggleWarning(doToggle) then
-		doToggle()
-	end
-end
-
-function EEex_Options_Private_TEMPLATE_Toggle_Frame()
-	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
-	return displayEntry.widget.toggleState and 2 or 0
-end
-
 ------------
 -- Public --
 ------------
@@ -2583,6 +2607,10 @@ function EEex_Options_Private_LayoutTextArea:doLayout()
 	})
 	self.layoutCallback(instanceData)
 end
+
+--//////////////
+--// Template //
+--//////////////
 
 function EEex_Options_Private_TEMPLATE_TextArea_Text()
 	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_TextArea"][instanceId]
