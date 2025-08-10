@@ -3685,6 +3685,7 @@ EEex_Options_Private_PendingEditFocus        = nil
 EEex_Options_Private_TabInsertIndex          = 1
 EEex_Options_Private_Tabs                    = {}
 EEex_Options_Private_TemplateInstancesByName = {}
+EEex_Options_Private_WasOpenBeforeReload     = nil
 
 EEex_Options_Private_KeybindFocusedInstance        = nil
 EEex_Options_Private_KeybindPendingFocusedInstance = nil
@@ -4625,6 +4626,20 @@ function EEex_Options_Private_InstallButtons()
 	modifyExisting()
 end
 
+function EEex_Option_Private_InstallTabMenu(menuName)
+	EEex_Menu_Eval([[
+		menu
+		{
+			name "]] .. menuName .. [["
+			ignoreEsc
+			label
+			{
+				area 0 0 0 0
+			}
+		}
+	]])
+end
+
 function EEex_Options_Open()
 	if Infinity_IsMenuOnStack("EEex_Options") then return end
 	EEex_Options_Private_MainInset:showBeforeLayout()
@@ -4720,18 +4735,7 @@ function EEex_Options_AddTab(label, displayEntriesProvider)
 	EEex_GameState_AddInitializedListener(function()
 
 		local menuName = "EEex_Options_Tab" .. EEex_Options_Private_TabInsertIndex
-
-		EEex_Menu_Eval([[
-			menu
-			{
-				name "]] .. menuName .. [["
-				ignoreEsc
-				label
-				{
-					area 0 0 0 0
-				}
-			}
-		]])
+		EEex_Option_Private_InstallTabMenu(menuName)
 
 		local displayEntries = type(displayEntriesProvider) == "function" and displayEntriesProvider() or displayEntriesProvider
 

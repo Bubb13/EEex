@@ -26,3 +26,19 @@ EEex_Menu_AddWindowSizeChangedListener(function()
 end)
 
 EEex_Menu_AddBeforeUIItemRenderListener("EEex_Options_Background", EEex_Options_Private_Background_Render)
+
+EEex_Menu_AddBeforeMainFileReloadedListener(function()
+	EEex_Options_Private_WasOpenBeforeReload = Infinity_IsMenuOnStack("EEex_Options")
+	EEex_Options_Close()
+end)
+
+EEex_Menu_AddAfterMainFileReloadedListener(function()
+
+	for _, tab in ipairs(EEex_Options_Private_Tabs) do
+		EEex_Option_Private_InstallTabMenu(tab.layout.menuName)
+	end
+
+	if EEex_Options_Private_WasOpenBeforeReload then
+		EEex_Options_Open()
+	end
+end)
