@@ -3,10 +3,18 @@
 -- Constants ==
 --=============
 
+------------
+-- Public --
+------------
+
 EEex_Options_KeybindFireType = {
 	["UP"]   = true,
 	["DOWN"] = false,
 }
+
+-------------
+-- Private --
+-------------
 
 EEex_Options_Private_LayoutAlignFlags = {
 	["HORIZONTAL_CENTER"] = 0x1,
@@ -1087,6 +1095,11 @@ function EEex_Options_Private_LayoutTemplate:_onInitLayout()
 	self._curLayoutHeight = self.height or 0
 end
 
+function EEex_Options_Private_LayoutTemplate:_onParentLayoutCalculated(left, top, right, bottom)
+	if self.width  == nil then self._curLayoutWidth  = right  - self._layoutLeft end
+	if self.height == nil then self._curLayoutHeight = bottom - self._layoutTop  end
+end
+
 ------------
 -- Public --
 ------------
@@ -1097,11 +1110,6 @@ function EEex_Options_Private_LayoutTemplate:calculateLayout(left, top, right, b
 	self._layoutRight  = self._layoutLeft + self._curLayoutWidth
 	self._layoutBottom = self._layoutTop  + self._curLayoutHeight
 	self:_calculateDerivedLayout()
-end
-
-function EEex_Options_Private_LayoutTemplate:_onParentLayoutCalculated(left, top, right, bottom)
-	if self.width  == nil then self._curLayoutWidth  = right  - self._layoutLeft end
-	if self.height == nil then self._curLayoutHeight = bottom - self._layoutTop  end
 end
 
 function EEex_Options_Private_LayoutTemplate:doLayout()
@@ -1818,7 +1826,7 @@ end
 function EEex_Options_Private_TEMPLATE_EditBackground_Action()
 	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_EditBackground"][instanceId]
 	nameToItem["EEex_Options_Temp"] = instanceData._pairedEditLUD
-	EEex_Options_Private_PendingEditFocus = "EEex_Options_Temp"
+	EEex_Options_Private_EditPendingFocus = "EEex_Options_Temp"
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -3704,25 +3712,28 @@ end
 -- Globals ==
 --===========
 
-EEex_Options_Private_CapturedEdit            = nil -- uiItem
-EEex_Options_Private_IdToDisplayEntry        = {}
-EEex_Options_Private_IdToOption              = {}
-EEex_Options_Private_MainInset               = nil -- EEex_Options_Private_LayoutInset
-EEex_Options_Private_MainVerticalTabArea     = nil -- EEex_Options_Private_LayoutVerticalTabArea
-EEex_Options_Private_PendingEditFocus        = nil
-EEex_Options_Private_TabInsertIndex          = 1
-EEex_Options_Private_Tabs                    = {}
-EEex_Options_Private_TemplateInstancesByName = {}
-EEex_Options_Private_WasOpenBeforeReload     = nil
-
-EEex_Options_Private_KeybindFocusedInstance        = nil
-EEex_Options_Private_KeybindPendingFocusedInstance = nil
+EEex_Options_Private_EditCaptured                  = nil -- uiItem
+EEex_Options_Private_EditPendingFocus              = nil -- string
+EEex_Options_Private_IdToDisplayEntry              = {}
+EEex_Options_Private_IdToOption                    = {}
+EEex_Options_Private_KeybindFocusedInstance        = nil -- number
+EEex_Options_Private_KeybindPendingFocusedInstance = nil -- number
 EEex_Options_Private_KeybindRecordedKeys           = {}
 EEex_Options_Private_KeybindRecordedModifiers      = {}
+EEex_Options_Private_MainInset                     = nil -- EEex_Options_Private_LayoutInset
+EEex_Options_Private_MainVerticalTabArea           = nil -- EEex_Options_Private_LayoutVerticalTabArea
+EEex_Options_Private_TabInsertIndex                = 1
+EEex_Options_Private_Tabs                          = {}
+EEex_Options_Private_TemplateInstancesByName       = {}
+EEex_Options_Private_WasOpenBeforeReload           = nil -- boolean
 
---===========
--- Utility ==
---===========
+--=============
+-- Functions ==
+--=============
+
+--=-=-=-=-=-==
+-- Utility  ==
+--=-=-=-=-=-==
 
 function EEex_Options_Private_GetFontStyleColor(fontStyle)
 	return EEex_BAnd(EngineGlobals.strtoul(fontcolors[fontStyle.color], nil, 16), 0xFFFFFF)
@@ -3872,13 +3883,9 @@ function EEex_Options_Private_CreateToggle(menuName, displayEntry, x, y, w, h)
 	return instanceData
 end
 
---=============
--- Functions ==
---=============
-
-----------
--- Edit --
-----------
+--=-=-=-==
+-- Edit ==
+--=-=-=-==
 
 function EEex_Options_Private_EditSetOption(displayEntry)
 
@@ -3900,16 +3907,16 @@ function EEex_Options_Private_EditSetOption(displayEntry)
 end
 
 function EEex_Options_Private_EditCheckSetCapturedValue()
-	if EEex_Options_Private_CapturedEdit == nil then return end
-	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Edit"][EEex_Options_Private_CapturedEdit.instanceId]
+	if EEex_Options_Private_EditCaptured == nil then return end
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Edit"][EEex_Options_Private_EditCaptured.instanceId]
 	EEex_Options_Private_EditSetOption(instanceData.displayEntry)
 end
 
 -- On menu tick
 function EEex_Options_Private_EditCheckPendingFocus()
-	if EEex_Options_Private_PendingEditFocus == nil then return end
-	Infinity_FocusTextEdit(EEex_Options_Private_PendingEditFocus)
-	EEex_Options_Private_PendingEditFocus = nil
+	if EEex_Options_Private_EditPendingFocus == nil then return end
+	Infinity_FocusTextEdit(EEex_Options_Private_EditPendingFocus)
+	EEex_Options_Private_EditPendingFocus = nil
 end
 
 -- On menu tick
@@ -3919,7 +3926,7 @@ function EEex_Options_Private_EditCheckUnfocused()
 	local editCaptured = false
 
 	if captured ~= nil and captured.templateName:get() == "EEex_Options_TEMPLATE_Edit" then
-		if EEex_Options_Private_CapturedEdit ~= nil and EEex_UDEqual(EEex_Options_Private_CapturedEdit, captured) then
+		if EEex_Options_Private_EditCaptured ~= nil and EEex_UDEqual(EEex_Options_Private_EditCaptured, captured) then
 			-- Same edit instance as last time
 			return
 		end
@@ -3927,19 +3934,19 @@ function EEex_Options_Private_EditCheckUnfocused()
 	end
 
 	EEex_Options_Private_EditCheckSetCapturedValue()
-	EEex_Options_Private_CapturedEdit = editCaptured and captured or nil
+	EEex_Options_Private_EditCaptured = editCaptured and captured or nil
 end
 
 -- On menu close
 function EEex_Options_Private_EditCheckKillFocus()
-	EEex_Options_Private_PendingEditFocus = nil
+	EEex_Options_Private_EditPendingFocus = nil
 	EEex_Options_Private_EditCheckSetCapturedValue()
-	EEex_Options_Private_CapturedEdit = nil
+	EEex_Options_Private_EditCaptured = nil
 end
 
--------------
--- Keybind --
--------------
+--=-=-=-=-=-==
+-- Keybind  ==
+--=-=-=-=-=-==
 
 function EEex_Options_Private_KeybindResetPulse(instanceData)
 	instanceData.currentAlpha, instanceData.currentBlue, instanceData.currentGreen, instanceData.currentRed = EEex_Options_Private_UnpackColor(startColor)
@@ -4056,7 +4063,7 @@ function EEex_Options_Private_KeybindOnActivateFocus(instanceData)
 	EEex_Key_EnterCaptureMode(EEex_Options_Private_KeybindOnCaptureKey)
 end
 
-EEex_Options_Private_ModifierKeys = {
+EEex_Options_Private_KeybindModifierKeys = {
 	[ EEex_Key_GetFromName("Left Ctrl")   ] = true,
 	[ EEex_Key_GetFromName("Left Shift")  ] = true,
 	[ EEex_Key_GetFromName("Left Alt")    ] = true,
@@ -4087,7 +4094,7 @@ function EEex_Options_Private_KeybindOnCaptureKey(key)
 		return
 	end
 
-	if EEex_Options_Private_ModifierKeys[key] then
+	if EEex_Options_Private_KeybindModifierKeys[key] then
 		EEex_Options_Private_KeybindRecordModifierKey(instanceData, key)
 	else
 		EEex_Options_Private_KeybindRecordKey(instanceData, key)
@@ -4182,9 +4189,13 @@ function EEex_Options_Private_KeybindCheckKillFocus()
 	EEex_Options_Private_KeybindPendingFocusedInstance = nil
 end
 
--------------
--- General --
--------------
+--=-=-=-=-=-==
+-- General  ==
+--=-=-=-=-=-==
+
+--/////////////
+--// Private //
+--/////////////
 
 function EEex_Options_Private_Tick()
 	EEex_Options_Private_KeybindTick()
@@ -4375,17 +4386,6 @@ function EEex_Options_Private_FindItemByText(menu, toFindText)
 		local text = EEex_Menu_GetItemVariant(item.text.text)
 		if type(text) == "function" then text = text() end
 		if text == toFindText then
-			return item
-		end
-		item = item.next
-	end
-end
-
-function EEex_Options_Private_FindItemByType(menu, toFindType)
-	if menu == nil then return end
-	local item = menu.items
-	while item ~= nil do
-		if item.type == toFindType then
 			return item
 		end
 		item = item.next
@@ -4668,20 +4668,13 @@ function EEex_Option_Private_InstallTabMenu(menuName)
 	]])
 end
 
-function EEex_Options_Open()
-	if Infinity_IsMenuOnStack("EEex_Options") then return end
-	EEex_Options_Private_MainInset:showBeforeLayout()
-	EEex_Options_Private_Layout()
-	EEex_Options_Private_MainInset:showAfterLayout()
-	Infinity_PushMenu("EEex_Options")
-end
+--////////////
+--// Public //
+--////////////
 
-function EEex_Options_Close()
-	if not Infinity_IsMenuOnStack("EEex_Options") then return end
-	Infinity_PopMenu("EEex_Options")
-	EEex_Options_Private_CheckKillFocus()
-	EEex_Options_Private_MainInset:hide()
-end
+--------------------
+-- Keybind Values --
+--------------------
 
 function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType)
 
@@ -4709,13 +4702,6 @@ end
 
 function EEex_Options_UnmarshalKeybind(str)
 
-	local modifierKeys = {}
-	local keys = {}
-	result = { modifierKeys, keys }
-
-	local modifierKeysI = 1
-	local keysI = 1
-
 	local typeSplit = EEex_Utility_Split(str, "|", false, true)
 
 	if #typeSplit ~= 2 then
@@ -4725,6 +4711,12 @@ function EEex_Options_UnmarshalKeybind(str)
 	local sequenceStr = typeSplit[1]
 	local typeStr = typeSplit[2]
 
+	local modifierKeys = {}
+	local keys = {}
+
+	local modifierKeysI = 1
+	local keysI = 1
+
 	for _, keyStr in ipairs(EEex_Utility_Split(sequenceStr, "+", false, true)) do
 
 		local key = EEex_Key_GetFromName(keyStr)
@@ -4733,7 +4725,7 @@ function EEex_Options_UnmarshalKeybind(str)
 			return nil
 		end
 
-		if EEex_Options_Private_ModifierKeys[key] then
+		if EEex_Options_Private_KeybindModifierKeys[key] then
 			modifierKeys[modifierKeysI] = key
 			modifierKeysI = modifierKeysI + 1
 		else
@@ -4742,21 +4734,55 @@ function EEex_Options_UnmarshalKeybind(str)
 		end
 	end
 
+	local fireType
+
 	if typeStr == "Up" then
-		result[3] = true
+		fireType = true
 	elseif typeStr == "Down" then
-		result[3] = false
+		fireType = false
 	else
 		return nil
 	end
 
-	return result
+	return { modifierKeys, keys, fireType }
 end
 
-function EEex_Options_Register(option)
-	EEex_Options_Private_IdToOption[option.id] = option
-	return option
+---------------------
+-- Menu Visibility --
+---------------------
+
+function EEex_Options_Close()
+	if not Infinity_IsMenuOnStack("EEex_Options") then return end
+	Infinity_PopMenu("EEex_Options")
+	EEex_Options_Private_CheckKillFocus()
+	EEex_Options_Private_MainInset:hide()
 end
+
+function EEex_Options_Open()
+	if Infinity_IsMenuOnStack("EEex_Options") then return end
+	EEex_Options_Private_MainInset:showBeforeLayout()
+	EEex_Options_Private_Layout()
+	EEex_Options_Private_MainInset:showAfterLayout()
+	Infinity_PushMenu("EEex_Options")
+end
+
+---------------------
+-- Option Checking --
+---------------------
+
+function EEex_Options_Check(optionName, value)
+	local option = EEex_Options_Get(optionName)
+	if option == nil then return value == nil end
+	return option:_get() == value
+end
+
+function EEex_Options_Get(id)
+	return EEex_Options_Private_IdToOption[id]
+end
+
+-------------------------
+-- Option Registration --
+-------------------------
 
 function EEex_Options_AddTab(label, displayEntriesProvider)
 
@@ -4780,12 +4806,7 @@ function EEex_Options_AddTab(label, displayEntriesProvider)
 	end)
 end
 
-function EEex_Options_Get(id)
-	return EEex_Options_Private_IdToOption[id]
-end
-
-function EEex_Options_Check(optionName, value)
-	local option = EEex_Options_Get(optionName)
-	if option == nil then return value == nil end
-	return option:_get() == value
+function EEex_Options_Register(option)
+	EEex_Options_Private_IdToOption[option.id] = option
+	return option
 end
