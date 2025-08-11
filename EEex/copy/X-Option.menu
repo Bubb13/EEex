@@ -30,9 +30,8 @@ menu
 			{
 				area 0 0 -1 36
 				text lua "t(EEex_Options_Private_Tabs[rowNumber].label)"
-				text style "normal"
+				text style "EEex_Options_Normal"
 				text align left center
-				text point 12 -- EEex_Options_Private_NormalFontPoint
 				text useFontZoom 0
 			}
 		}
@@ -70,7 +69,7 @@ menu
 			enabled true
 			action "return EEex_Options_Private_TEMPLATE_Edit_Action()"
 			maxlines 1
-			text style "edit"
+			text style "EEex_Options_Edit"
 			text useFontZoom 0
 		}
 		name "EEex_Options_TEMPLATE_Edit"
@@ -112,9 +111,8 @@ menu
 			actionAlt "EEex_Options_Private_TEMPLATE_KeybindBackground_Action()"
 			fill lua "EEex_Options_Private_TEMPLATE_KeybindBackground_Fill()"
 			text lua "EEex_Options_Private_TEMPLATE_KeybindBackground_Text()"
-			text style "normal"
+			text style "EEex_Options_Normal"
 			text align left center
-			text point 12 -- EEex_Options_Private_NormalFontPoint
 			text useFontZoom 0
 			pad 3 3 3 3
 		}
@@ -159,7 +157,7 @@ menu
 			action "EEex_Options_Open()"
 			actionAlt "EEex_Options_Open()"
 			text "EEex_Options_TRANSLATION_EEex_Options"
-			text style "button"
+			text style "EEex_Options_Button"
 			scaleToClip
 		}
 		name "EEex_Options_TEMPLATE_OpenButton"
@@ -171,7 +169,7 @@ menu
 		{
 			enabled true
 			text lua "EEex_Options_Private_TEMPLATE_Text_Text()"
-			text style "normal"
+			text style "EEex_Options_Normal"
 			text color lua "EEex_Options_Private_TEMPLATE_Text_Color()"
 			text useFontZoom 0
 		}
@@ -186,7 +184,7 @@ menu
 			action "EEex_Options_Private_TEMPLATE_TextButton_Action()"
 			actionAlt "EEex_Options_Private_TEMPLATE_TextButton_Action()"
 			text lua "EEex_Options_Private_TEMPLATE_TextButton_Text()"
-			text style "normal"
+			text style "EEex_Options_Normal"
 			text color lua "EEex_Options_Private_TEMPLATE_TextButton_Color()"
 			text useFontZoom 0
 		}
@@ -222,8 +220,7 @@ menu
 		{
 			enabled true
 			text lua "EEex_Options_Private_TEMPLATE_TextArea_Text()"
-			text style "normal"
-			text point 12 -- EEex_Options_Private_NormalFontPoint
+			text style "EEex_Options_Normal"
 			text useFontZoom 0
 			scrollbar "GUISCRC"
 			scrollbar respectConstraints

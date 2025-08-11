@@ -10,6 +10,11 @@ EEex_GameState_AddBeforeIncludesListener(function()
 end)
 
 EEex_Menu_AddMainFileLoadedListener(function()
+
+	-- This should be a one-time thing, but some mods completely override the styles table in UI.MENU,
+	-- preventing other mods from installing their styles via M_*.lua files. Please don't do that! :(
+	EEex_Options_Private_InstallStyles()
+
 	EEex_Menu_LoadFile("X-Option")
 	EEex_Options_Private_InstallButtons()
 end)

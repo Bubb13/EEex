@@ -72,30 +72,46 @@
 	)
 
 	--[[
-	+-----------------------------------------------------------------------+
-	| Call a hook before the engine executes includes.lua                   |
-	+-----------------------------------------------------------------------+
-	|   Used to implement listeners that need access to game resources, but |
-	|   should run before util.lua, BGEE.lua, M_*.lua files, and UI.MENU    |
-	+-----------------------------------------------------------------------+
-	|   [Lua] EEex_GameState_Hook_OnBeforeIncludes()                        |
-	+-----------------------------------------------------------------------+
+	+------------------------------------------------------------------------------+
+	| Call a hook before / after the engine executes includes.lua                  |
+	+------------------------------------------------------------------------------+
+	|   Used to implement listeners that need access to game resources, but should |
+	|   run before / after util.lua, BGEE.lua, M_*.lua files, and UI.MENU          |
+	+------------------------------------------------------------------------------+
+	|   [Lua] EEex_GameState_Hook_OnBeforeIncludes()                               |
+	|   [Lua] EEex_GameState_Hook_OnAfterIncludes()                                |
+	+------------------------------------------------------------------------------+
 	--]]
 
-	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-dimmInit-uiDoFile()"), {
-		{"hook_integrity_watchdog_ignore_registers", {
+	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-dimmInit-uiDoFile()"), {
+		{"hook_integrity_watchdog_ignore_registers_0", {
 			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
 			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}},
+		{"hook_integrity_watchdog_ignore_registers_1", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		EEex_FlattenTable({
 			{[[
 				#MAKE_SHADOW_SPACE(40)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
 			]]},
-			EEex_GenLuaCall("EEex_GameState_Hook_OnBeforeIncludes"),
+			EEex_GenLuaCall("EEex_GameState_Hook_OnBeforeIncludes", { ["labelSuffix"] = "_0" }),
 			{[[
-				call_error:
+				call_error_0:
 				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]}
+		}),
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(32)
+			]]},
+			EEex_GenLuaCall("EEex_GameState_Hook_OnAfterIncludes", { ["labelSuffix"] = "_1" }),
+			{[[
+				call_error_1:
 				#DESTROY_SHADOW_SPACE
 			]]}
 		})

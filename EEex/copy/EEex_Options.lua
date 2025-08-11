@@ -35,7 +35,6 @@ EEex_Options_Private_LayoutAlign = {
 	["CENTER_CENTER"] = EEex_Flags({ EEex_Options_Private_LayoutAlignFlags.VERTICAL_CENTER, EEex_Options_Private_LayoutAlignFlags.HORIZONTAL_CENTER }),
 }
 
-EEex_Options_Private_NormalFontPoint = 12
 EEex_Options_Private_SeparatorPad = 10
 
 --=========
@@ -306,10 +305,13 @@ end
 function EEex_Options_Private_LayoutVerticalTabArea:_calculateSidebarWidth()
 
 	local maxWidth = 0
-	local normalFont = styles.normal.font
+
+	local normalStyle = styles["EEex_Options_Normal"]
+	local normalFont = normalStyle.font
+	local normalPoint = normalStyle.point
 
 	for _, v in ipairs(self.tabs) do
-		local width = EEex_Options_Private_GetTextWidthHeight(normalFont, EEex_Options_Private_NormalFontPoint, t(v.label))
+		local width = EEex_Options_Private_GetTextWidthHeight(normalFont, normalPoint, t(v.label))
 		if width > maxWidth then
 			maxWidth = width
 		end
@@ -1365,7 +1367,8 @@ end
 ------------
 
 function EEex_Options_Private_LayoutKeybindBackground:calculateLayout(left, top, right, bottom)
-	local width, height = EEex_Options_Private_GetMaxTextBounds(styles.normal.font, EEex_Options_Private_NormalFontPoint, 10)
+	local normalStyle = styles["EEex_Options_Normal"]
+	local width, height = EEex_Options_Private_GetMaxTextBounds(normalStyle.font, normalStyle.point, 11)
 	width  = width  + 3 + 3 -- Hardcoded pads (X-Option.menu)
 	height = height + 3 + 3 -- Hardcoded pads (X-Option.menu)
 	self._layoutLeft   = left
@@ -1796,7 +1799,12 @@ function EEex_Options_Private_LayoutEdit:doLayout()
 		self._layoutLeft   + self.padLeft,
 		self._layoutTop    + self.padTop,
 		self._layoutWidth  - self.padLeft - self.padRight,
-		self._layoutHeight - self.padTop - self.padBottom)
+		self._layoutHeight - self.padTop - self.padBottom,
+		{
+			["font"]  = self.font,
+			["point"] = self.point,
+		}
+	)
 
 	backgroundInstance._pairedEditLUD = EEex_UDToLightUD(editInstance.uiItem)
 end
@@ -2377,8 +2385,9 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 		},
 	}))
 
-	local normalStyle     = styles.normal
+	local normalStyle     = styles["EEex_Options_Normal"]
 	local normalFont      = normalStyle.font
+	local normalFontPoint = normalStyle.point
 	local normalFontColor = EEex_Options_Private_GetFontStyleColor(normalStyle)
 
 	local globalColumnOffset = 0
@@ -2403,7 +2412,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 				local optionLabel = EEex_Options_Private_LayoutText.new({
 					["menuName"]  = self.menuName,
 					["font"]      = normalFont,
-					["point"]     = EEex_Options_Private_NormalFontPoint,
+					["point"]     = normalFontPoint,
 					["color"]     = normalFontColor,
 					["text"]      = displayEntry.label,
 					["translate"] = true,
@@ -3572,10 +3581,11 @@ function EEex_Options_EditWidget:_onMap(displayEntry, optionID)
 end
 
 function EEex_Options_EditWidget:_buildLayout(displayEntry, menuName)
+	local editStyle = styles["EEex_Options_Edit"]
 	return EEex_Options_Private_LayoutEdit.new({
 		["menuName"]     = menuName,
-		["font"]         = styles.normal.font,
-		["point"]        = EEex_Options_Private_NormalFontPoint,
+		["font"]         = editStyle.font,
+		["point"]        = editStyle.point,
 		["displayEntry"] = displayEntry,
 	})
 end
@@ -3812,18 +3822,26 @@ function EEex_Options_Private_CreateDelayIcon(menuName, displayEntry, x, y, w, h
 	return instanceData
 end
 
-function EEex_Options_Private_CreateEdit(menuName, displayEntry, x, y, w, h)
+function EEex_Options_Private_CreateEdit(menuName, displayEntry, x, y, w, h, extraArgs)
+
+	if extraArgs == nil then extraArgs = {} end
 
 	local widget = displayEntry.widget
 
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_Edit", x, y, w, h)
 	instanceData.displayEntry = displayEntry
 
-	local editUD = instanceData.uiItem.edit
+	local uiItem = instanceData.uiItem
+	local editUD = uiItem.edit
+	local textUD = uiItem.text
+
+	_G[widget._editVar] = tostring(displayEntry:_getWorkingValue())
 	editUD.var:pointTo(EEex_WriteStringCache(widget._editVar))
 	if widget.maxCharacters then editUD.maxchars = widget.maxCharacters + 1 end
 
-	_G[widget._editVar] = tostring(displayEntry:_getWorkingValue())
+	if extraArgs.font  ~= nil then textUD.font:pointTo(EEex_WriteStringCache(extraArgs.font)) end
+	if extraArgs.point ~= nil then textUD.point = extraArgs.point                             end
+
 	return instanceData
 end
 
@@ -3845,7 +3863,7 @@ function EEex_Options_Private_CreateText(menuName, text, x, y, w, h, extraArgs)
 	local templateName  = extraArgs.action and "EEex_Options_TEMPLATE_TextButton" or "EEex_Options_TEMPLATE_Text"
 	local instanceData  = EEex_Options_Private_CreateInstance(menuName, templateName, x, y, w, h)
 	instanceData.text   = text
-	instanceData.color  = extraArgs.color or EEex_Options_Private_GetFontStyleColor(styles.normal)
+	instanceData.color  = extraArgs.color or EEex_Options_Private_GetFontStyleColor(styles["EEex_Options_Normal"])
 	instanceData.action = extraArgs.action
 
 	local uiItem = instanceData.uiItem
@@ -4246,9 +4264,9 @@ function EEex_Options_Private_BuildLayout()
 					{
 						["layout"] = EEex_Options_Private_LayoutText.new({
 							["menuName"]        = "EEex_Options",
-							["font"]            = styles.normal.font,
-							["point"]           = 16,
-							["color"]           = EEex_Options_Private_GetFontStyleColor(styles.normal),
+							["font"]            = styles["EEex_Options_Normal"].font,
+							["point"]           = styles["EEex_Options_Normal"].point + 4,
+							["color"]           = EEex_Options_Private_GetFontStyleColor(styles["EEex_Options_Normal"]),
 							["horizontalAlign"] = EEex_Options_Private_LayoutText_HorizontalAlign.CENTER,
 							["text"]            = "EEex_Options_TRANSLATION_EEex_Options",
 							["translate"]       = true,
@@ -4390,6 +4408,31 @@ function EEex_Options_Private_FindItemByText(menu, toFindText)
 		end
 		item = item.next
 	end
+end
+
+function EEex_Options_Private_InstallStyles()
+
+	local copyStyle = function(styleName, newStyleName)
+		local newStyle = EEex.DeepCopy(styles[styleName])
+		styles[newStyleName] = newStyle
+		return newStyle
+	end
+
+	local copyTextStyle = function(styleName, newStyleName)
+
+		local newStyle = copyStyle(styleName, newStyleName)
+		local newStyleFont = newStyle.font:lower()
+
+		if newStyleFont == "modestom" then
+			newStyle.point = 14
+		elseif newStyleFont == "normal" then
+			newStyle.point = 12
+		end
+	end
+
+	copyStyle("button", "EEex_Options_Button")
+	copyTextStyle("edit", "EEex_Options_Edit")
+	copyTextStyle("normal", "EEex_Options_Normal")
 end
 
 function EEex_Options_Private_InstallButtons()
