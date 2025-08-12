@@ -292,6 +292,8 @@ function EEex_Options_Private_LayoutVerticalTabArea:_init()
 	if self.tabsListBottomPad      == nil then self.tabsListBottomPad      = 0             end
 	if self.tabsListScrollbarWidth == nil then self.tabsListScrollbarWidth = 0             end
 
+	-- Optional
+	--   self.maxHeight
 	-- Derived
 	--   self._openTabIndex
 end
@@ -355,6 +357,11 @@ function EEex_Options_Private_LayoutVerticalTabArea:calculateLayout(left, top, r
 			if tabLayoutBottom > maxBottom then maxBottom = tabLayoutBottom end
 		end
 
+		if self.maxHeight ~= nil then
+			local clampedHeight = math.min(maxBottom - top, self.maxHeight)
+			maxBottom = top + clampedHeight
+		end
+
 		self._layoutLeft = left
 		self._layoutTop = top
 		self._layoutRight = maxRight
@@ -409,6 +416,10 @@ end
 
 function EEex_Options_Private_LayoutVerticalTabArea:hide()
 	self:closeCurrentTab()
+end
+
+function EEex_Options_Private_LayoutVerticalTabArea:setMaxHeight(maxHeight)
+	self.maxHeight = maxHeight
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -4344,6 +4355,7 @@ function EEex_Options_Private_Layout()
 	EEex_Menu_DestroyAllTemplates("EEex_Options")
 
 	local screenWidth, screenHeight = Infinity_GetScreenSize()
+	EEex_Options_Private_MainVerticalTabArea:setMaxHeight(screenHeight * 0.75)
 
 	-- Calculate the layout
 	EEex_Options_Private_MainInset:_onInitLayout()

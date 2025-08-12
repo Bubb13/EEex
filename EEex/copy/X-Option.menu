@@ -41,6 +41,7 @@ menu
 		actionAlt "EEex_Options_Private_MainVerticalTabArea:_onTabSelected(EEex_Options_Private_CurrentTab)"
 		rowheight 36
 		scrollbar "GUISCRC"
+		scrollbar respectConstraints
 		table "EEex_Options_Private_Tabs"
 		var "EEex_Options_Private_CurrentTab"
 	}
