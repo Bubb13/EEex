@@ -3,19 +3,6 @@
 -- Constants ==
 --=============
 
-------------
--- Public --
-------------
-
-EEex_Options_KeybindFireType = {
-	["UP"]   = true,
-	["DOWN"] = false,
-}
-
--------------
--- Private --
--------------
-
 EEex_Options_Private_LayoutAlignFlags = {
 	["HORIZONTAL_CENTER"] = 0x1,
 	["HORIZONTAL_RIGHT"]  = 0x2,
@@ -1401,7 +1388,7 @@ function EEex_Options_Private_LayoutKeybindBackground:doLayout()
 	EEex_Options_Private_KeybindResetPulse(instanceData)
 
 	local value = self.displayEntry:_getWorkingValue()
-	EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
+	EEex_Options_Private_KeybindUpdateText(instanceData, value.modifierKeys, value.keys)
 
 	self.layoutCallback(instanceData)
 end
@@ -1503,7 +1490,7 @@ function EEex_Options_Private_TEMPLATE_KeybindButton_Action()
 	else
 		local displayEntry = backgroundInstanceData.displayEntry
 		local default = displayEntry:_setWorkingValue(displayEntry:_getDefault())
-		EEex_Options_Private_KeybindUpdateText(backgroundInstanceData, default[1], default[2])
+		EEex_Options_Private_KeybindUpdateText(backgroundInstanceData, default.modifierKeys, default.keys)
 	end
 end
 
@@ -1593,21 +1580,20 @@ end
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Action()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
 	local existingVal = EEex.DeepCopy(displayEntry:_getWorkingValue()) -- Copy for subsequent modification
-	local fireType = existingVal[3]
-	existingVal[3] = not fireType
+	existingVal.fireType = not existingVal.fireType
 	displayEntry:_setWorkingValue(existingVal)
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Tooltip()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
-	local fireType = displayEntry:_getWorkingValue()[3]
+	local fireType = displayEntry:_getWorkingValue().fireType
 	local result = fireType and t("EEex_Options_TRANSLATION_On_Sequence_Released") or t("EEex_Options_TRANSLATION_On_Sequence_Pressed")
 	return displayEntry._option.type.lockedFireType == nil and result or result.." "..t("EEex_Options_TRANSLATION_Locked")
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Sequence()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
-	local fireType = displayEntry:_getWorkingValue()[3]
+	local fireType = displayEntry:_getWorkingValue().fireType
 	local sequence = fireType and 2 or 4
 	return displayEntry._option.type.lockedFireType == nil and sequence or sequence + 1
 end
@@ -2991,22 +2977,26 @@ end
 
 function EEex_Options_KeybindAccessor:validate(option, newValue, needCopy)
 	local lockedFireType = option.type.lockedFireType
-	if lockedFireType ~= nil and newValue[3] ~= lockedFireType then
+	if lockedFireType ~= nil and newValue.fireType ~= lockedFireType then
 		newValue = EEex.DeepCopy(newValue) -- Copy for subsequent modification
-		newValue[3] = lockedFireType
+		newValue.fireType = lockedFireType
 		return newValue
 	end
 	return EEex_Utility_CallSuper(EEex_Options_KeybindAccessor, "validate", self, option, newValue, needCopy)
 end
 
 function EEex_Options_KeybindAccessor:get(option)
-	local modifierKeys, keys, fireType = EEex_Keybinds_GetBinding(self.keybindID)
-	return { modifierKeys, keys, fireType }
+	return EEex_Keybinds_Get(self.keybindID)
 end
 
 function EEex_Options_KeybindAccessor:set(option, newValue, needCopy)
 	newValue = self:validate(option, newValue, needCopy)
-	EEex_Keybinds_SetBinding(self.keybindID, newValue[1], newValue[2], newValue[3], option.type.callback)
+	EEex_Keybinds_Update(self.keybindID, {
+		["callback"]     = option.type.callback,
+		["fireType"]     = newValue.fireType,
+		["keys"]         = newValue.keys,
+		["modifierKeys"] = newValue.modifierKeys,
+	})
 	return newValue
 end
 
@@ -3202,7 +3192,7 @@ function EEex_Options_KeybindLuaStorage:read(option)
 end
 
 function EEex_Options_KeybindLuaStorage:write(option, value)
-	local marshalled = EEex_Options_MarshalKeybind(value[1], value[2], value[3])
+	local marshalled = EEex_Options_MarshalKeybind(value)
 	EEex_Utility_CallSuper(EEex_Options_KeybindLuaStorage, "write", self, option, marshalled)
 end
 
@@ -4029,7 +4019,7 @@ function EEex_Options_Private_KeybindAdvancePulse(instanceData)
 end
 
 function EEex_Options_Private_KeybindUpdateText(instanceData, modifierKeys, keys)
-	instanceData.text = EEex_Options_MarshalKeybind(modifierKeys, keys)
+	instanceData.text = EEex_Options_Private_MarshalKeybindInternal(modifierKeys, keys)
 end
 
 function EEex_Options_Private_KeybindUpdateTextFromRecorded(instanceData)
@@ -4136,8 +4126,8 @@ function EEex_Options_Private_KeybindEndFocus(instanceData)
 	local displayEntry = instanceData.displayEntry
 
 	local existingVal = EEex.DeepCopy(displayEntry:_getWorkingValue()) -- Copy for subsequent modification
-	existingVal[1] = EEex_Options_Private_KeybindRecordedModifiers
-	existingVal[2] = EEex_Options_Private_KeybindRecordedKeys
+	existingVal.modifierKeys = EEex_Options_Private_KeybindRecordedModifiers
+	existingVal.keys = EEex_Options_Private_KeybindRecordedKeys
 	displayEntry:_setWorkingValue(existingVal)
 
 	EEex_Options_Private_KeybindKillFocus(instanceData, true)
@@ -4154,7 +4144,7 @@ function EEex_Options_Private_KeybindKillFocus(instanceData, accepted)
 
 	if not accepted then
 		local value = instanceData.displayEntry:_getWorkingValue()
-		EEex_Options_Private_KeybindUpdateText(instanceData, value[1], value[2])
+		EEex_Options_Private_KeybindUpdateText(instanceData, value.modifierKeys, value.keys)
 	end
 end
 
@@ -4226,13 +4216,6 @@ end
 --// Private //
 --/////////////
 
-function EEex_Options_Private_Tick()
-	EEex_Options_Private_KeybindTick()
-	EEex_Options_Private_EditCheckPendingFocus()
-	EEex_Options_Private_EditCheckUnfocused()
-	return 1
-end
-
 EEex.RegisterSlicedRect("EEex_Options_BackgroundRect", {
 	["topLeft"]     = {  0,  0, 32, 32 },
 	["top"]         = { 16,  0, 32, 32 },
@@ -4297,83 +4280,9 @@ function EEex_Options_Private_BuildLayout()
 	:inset({ ["insetLeft"] = 10, ["insetTop"] = 10, ["insetRight"] = 10, ["insetBottom"] = 10 })
 end
 
-function EEex_Options_Private_SpecialSortTabs()
-
-	local modulesTabIndex
-	local firstModuleTabIndex
-
-	for i, tabEntry in ipairs(EEex_Options_Private_Tabs) do
-		if tabEntry.label == "EEex_Options_TRANSLATION_Modules_TabTitle" then
-			modulesTabIndex = i
-			break
-		end
-	end
-
-	for i, tabEntry in ipairs(EEex_Options_Private_Tabs) do
-		local tabName = t(tabEntry.label)
-		if #tabName >= 8 and tabName:sub(1, 8) == "Module: " then
-			firstModuleTabIndex = i
-			break
-		end
-	end
-
-	if modulesTabIndex == nil or firstModuleTabIndex == nil then
-		return
-	end
-
-	local modulesTab = EEex_Options_Private_Tabs[modulesTabIndex]
-	table.remove(EEex_Options_Private_Tabs, modulesTabIndex)
-	table.insert(EEex_Options_Private_Tabs, firstModuleTabIndex, modulesTab)
-end
-
-function EEex_Options_Private_ReadOptions(early)
-	for _, option in pairs(EEex_Options_Private_IdToOption) do
-		if early == option:_canReadEarly() then
-			option:_set(option:_read(), true)
-		end
-	end
-end
-
 function EEex_Options_Private_CheckKillFocus()
 	EEex_Options_Private_KeybindCheckKillFocus()
 	EEex_Options_Private_EditCheckKillFocus()
-end
-
-function EEex_Options_Private_Layout()
-
-	-- A layout destroys all currently existing template instances and rebuilds the
-	-- entire menu based on the current game state. Checking for any needed focus
-	-- kills before clearing up the old instance data.
-
-	-- Kill the focus of any keybind / edit widgets
-	EEex_Options_Private_CheckKillFocus()
-
-	-- Clear (soon to be) outdated instance data
-	EEex_Options_Private_ClearInstanceData()
-
-	-- Reset top level instances
-	EEex_Menu_DestroyAllTemplates("EEex_Options")
-
-	local screenWidth, screenHeight = Infinity_GetScreenSize()
-	EEex_Options_Private_MainVerticalTabArea:setMaxHeight(screenHeight * 0.75)
-
-	-- Calculate the layout
-	EEex_Options_Private_MainInset:_onInitLayout()
-	EEex_Options_Private_MainInset:calculateLayout(0, 0, screenWidth, screenHeight)
-	local layoutWidth = EEex_Options_Private_MainInset:getLayoutWidth()
-	local layoutHeight = EEex_Options_Private_MainInset:getLayoutHeight()
-
-	-- Find the coordinates required to center the popup
-	local popupLeft = (screenWidth - layoutWidth) / 2
-	local popupTop = (screenHeight - layoutHeight) / 2
-	local popupRight = popupLeft + layoutWidth
-	local popupBottom = popupTop + layoutHeight
-
-	-- Actually layout the popup
-	EEex_Options_Private_MainInset:layout(popupLeft, popupTop, popupRight, popupBottom)
-
-	-- Move the background
-	Infinity_SetArea("EEex_Options_Background", popupLeft, popupTop, layoutWidth, layoutHeight)
 end
 
 function EEex_Options_Private_FindItemByBam(menu, toFindBam)
@@ -4420,31 +4329,6 @@ function EEex_Options_Private_FindItemByText(menu, toFindText)
 		end
 		item = item.next
 	end
-end
-
-function EEex_Options_Private_InstallStyles()
-
-	local copyStyle = function(styleName, newStyleName)
-		local newStyle = EEex.DeepCopy(styles[styleName])
-		styles[newStyleName] = newStyle
-		return newStyle
-	end
-
-	local copyTextStyle = function(styleName, newStyleName)
-
-		local newStyle = copyStyle(styleName, newStyleName)
-		local newStyleFont = newStyle.font:lower()
-
-		if newStyleFont == "modestom" then
-			newStyle.point = 14
-		elseif newStyleFont == "normal" then
-			newStyle.point = 12
-		end
-	end
-
-	copyStyle("button", "EEex_Options_Button")
-	copyTextStyle("edit", "EEex_Options_Edit")
-	copyTextStyle("normal", "EEex_Options_Normal")
 end
 
 function EEex_Options_Private_InstallButtons()
@@ -4709,6 +4593,31 @@ function EEex_Options_Private_InstallButtons()
 	modifyExisting()
 end
 
+function EEex_Options_Private_InstallStyles()
+
+	local copyStyle = function(styleName, newStyleName)
+		local newStyle = EEex.DeepCopy(styles[styleName])
+		styles[newStyleName] = newStyle
+		return newStyle
+	end
+
+	local copyTextStyle = function(styleName, newStyleName)
+
+		local newStyle = copyStyle(styleName, newStyleName)
+		local newStyleFont = newStyle.font:lower()
+
+		if newStyleFont == "modestom" then
+			newStyle.point = 14
+		elseif newStyleFont == "normal" then
+			newStyle.point = 12
+		end
+	end
+
+	copyStyle("button", "EEex_Options_Button")
+	copyTextStyle("edit", "EEex_Options_Edit")
+	copyTextStyle("normal", "EEex_Options_Normal")
+end
+
 function EEex_Option_Private_InstallTabMenu(menuName)
 	EEex_Menu_Eval([[
 		menu
@@ -4723,15 +4632,44 @@ function EEex_Option_Private_InstallTabMenu(menuName)
 	]])
 end
 
---////////////
---// Public //
---////////////
+function EEex_Options_Private_Layout()
 
---------------------
--- Keybind Values --
---------------------
+	-- A layout destroys all currently existing template instances and rebuilds the
+	-- entire menu based on the current game state. Checking for any needed focus
+	-- kills before clearing up the old instance data.
 
-function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType)
+	-- Kill the focus of any keybind / edit widgets
+	EEex_Options_Private_CheckKillFocus()
+
+	-- Clear (soon to be) outdated instance data
+	EEex_Options_Private_ClearInstanceData()
+
+	-- Reset top level instances
+	EEex_Menu_DestroyAllTemplates("EEex_Options")
+
+	local screenWidth, screenHeight = Infinity_GetScreenSize()
+	EEex_Options_Private_MainVerticalTabArea:setMaxHeight(screenHeight * 0.75)
+
+	-- Calculate the layout
+	EEex_Options_Private_MainInset:_onInitLayout()
+	EEex_Options_Private_MainInset:calculateLayout(0, 0, screenWidth, screenHeight)
+	local layoutWidth = EEex_Options_Private_MainInset:getLayoutWidth()
+	local layoutHeight = EEex_Options_Private_MainInset:getLayoutHeight()
+
+	-- Find the coordinates required to center the popup
+	local popupLeft = (screenWidth - layoutWidth) / 2
+	local popupTop = (screenHeight - layoutHeight) / 2
+	local popupRight = popupLeft + layoutWidth
+	local popupBottom = popupTop + layoutHeight
+
+	-- Actually layout the popup
+	EEex_Options_Private_MainInset:layout(popupLeft, popupTop, popupRight, popupBottom)
+
+	-- Move the background
+	Infinity_SetArea("EEex_Options_Background", popupLeft, popupTop, layoutWidth, layoutHeight)
+end
+
+function EEex_Options_Private_MarshalKeybindInternal(modifierKeys, keys, fireType)
 
 	local parts = {}
 	local partsI = 1
@@ -4753,6 +4691,62 @@ function EEex_Options_MarshalKeybind(modifierKeys, keys, fireType)
 	end
 
 	return fireType and sequenceStr.."|Up" or sequenceStr.."|Down"
+end
+
+function EEex_Options_Private_ReadOptions(early)
+	for _, option in pairs(EEex_Options_Private_IdToOption) do
+		if early == option:_canReadEarly() then
+			option:_set(option:_read(), true)
+		end
+	end
+end
+
+function EEex_Options_Private_SpecialSortTabs()
+
+	local modulesTabIndex
+	local firstModuleTabIndex
+
+	for i, tabEntry in ipairs(EEex_Options_Private_Tabs) do
+		if tabEntry.label == "EEex_Options_TRANSLATION_Modules_TabTitle" then
+			modulesTabIndex = i
+			break
+		end
+	end
+
+	for i, tabEntry in ipairs(EEex_Options_Private_Tabs) do
+		local tabName = t(tabEntry.label)
+		if #tabName >= 8 and tabName:sub(1, 8) == "Module: " then
+			firstModuleTabIndex = i
+			break
+		end
+	end
+
+	if modulesTabIndex == nil or firstModuleTabIndex == nil then
+		return
+	end
+
+	local modulesTab = EEex_Options_Private_Tabs[modulesTabIndex]
+	table.remove(EEex_Options_Private_Tabs, modulesTabIndex)
+	table.insert(EEex_Options_Private_Tabs, firstModuleTabIndex, modulesTab)
+end
+
+function EEex_Options_Private_Tick()
+	EEex_Options_Private_KeybindTick()
+	EEex_Options_Private_EditCheckPendingFocus()
+	EEex_Options_Private_EditCheckUnfocused()
+	return 1
+end
+
+--////////////
+--// Public //
+--////////////
+
+--------------------
+-- Keybind Values --
+--------------------
+
+function EEex_Options_MarshalKeybind(value)
+	return EEex_Options_Private_MarshalKeybindInternal(value.modifierKeys, value.keys, value.fireType)
 end
 
 function EEex_Options_UnmarshalKeybind(str)
@@ -4792,14 +4786,18 @@ function EEex_Options_UnmarshalKeybind(str)
 	local fireType
 
 	if typeStr == "Up" then
-		fireType = true
+		fireType = EEex_Keybinds_FireType.UP
 	elseif typeStr == "Down" then
-		fireType = false
+		fireType = EEex_Keybinds_FireType.DOWN
 	else
 		return nil
 	end
 
-	return { modifierKeys, keys, fireType }
+	return {
+		["fireType"]     = fireType,
+		["keys"]         = keys,
+		["modifierKeys"] = modifierKeys,
+	}
 end
 
 ---------------------

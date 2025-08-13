@@ -1,19 +1,12 @@
 
--- Format: ["<id>"] = {function / spell resref, {required modifier keys}, {main keys combination}, <fire on release boolean>},
+--=============
+-- Constants ==
+--=============
 
-EEex_Keybinds_Private_Hotkeys = {
-	-- ["EEex_Keybinds_ExampleOld"]            = {"SPIN103", {}, {0x73, 0x61, 0x64}},                                                      -- Old way of doing a spell keybinding
-	-- ["EEex_Keybinds_ExampleSpell"]          = {function() EEex_Keybinds_Cast("SPWI112") end, {}, {0x73, 0x61, 0x64}},                   -- Example of a spell keybinding
-	-- ["EEex_Keybinds_ExampleSelectPortrait"] = {function() EEex_Keybinds_SelectPortrait(0) end, {0x400000E1}, {0x31}},                   -- Example of a keybinding that uses shift mod
-	-- ["EEex_Keybinds_ExampleCastTwoStep1"]   = {function() EEex_Keybinds_CastTwoStep("SPWI124", "SPWI112") end, {}, {0x61, 0x73, 0x64}}, -- Example of casting Magic Missile through Nahal's
-	-- ["EEex_Keybinds_ExampleCastTwoStep2"]   = {function() EEex_Keybinds_CastTwoStep("SPWI510", "SPWI596") end, {}, {0x64, 0x73, 0x61}}, -- Example of casting Immunity : Necromancy
+EEex_Keybinds_FireType = {
+	["UP"]   = true,
+	["DOWN"] = false,
 }
-
--- Initialize all stage counters to 1
-for _, hotkeyDef in pairs(EEex_Keybinds_Private_Hotkeys) do
-	if hotkeyDef[4] == nil then hotkeyDef[4] = true end
-	hotkeyDef[5] = 1
-end
 
 --===========
 -- Options ==
@@ -60,6 +53,7 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_Keybinds_TabTitle", function() ret
 -- Globals ==
 --===========
 
+EEex_Keybinds_Private_Definitions = {}
 EEex_Keybinds_Private_InternalCastResref = nil
 EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
 EEex_Keybinds_Private_PrintKeys = false
@@ -68,27 +62,13 @@ EEex_Keybinds_Private_PrintKeys = false
 -- General ==
 --===========
 
-------------
--- Public --
-------------
+--=-=-=-=-==
+-- Public ==
+--=-=-=-=-==
 
-function EEex_Keybinds_SetBinding(id, modifierKeys, keys, fireType, func)
-	local existingTable = EEex_Keybinds_Private_Hotkeys[id]
-	if existingTable ~= nil then
-		if func ~= nil then existingTable[1] = func end
-		existingTable[2] = modifierKeys
-		existingTable[3] = keys
-		existingTable[4] = fireType
-	else
-		EEex_Keybinds_Private_Hotkeys[id] = { func, modifierKeys, keys, fireType, 1 }
-	end
-end
-
-function EEex_Keybinds_GetBinding(id)
-	local existingTable = EEex_Keybinds_Private_Hotkeys[id]
-	if existingTable == nil then return nil, nil, nil, nil end
-	return existingTable[2], existingTable[3], existingTable[4], existingTable[1]
-end
+---------------------
+-- Keybind Actions --
+---------------------
 
 function EEex_Keybinds_Cast(resref)
 
@@ -145,9 +125,167 @@ function EEex_Keybinds_SelectPortrait(portraitNum, dontUnselect)
 	end
 end
 
--------------
--- Private --
--------------
+------------------------
+-- Keybind Management --
+------------------------
+
+function EEex_Keybinds_Get(id)
+	local t = EEex_Keybinds_Private_Definitions[id]
+	if t == nil then return nil end
+	return {
+		["callback"]     = t.callback,
+		["fireType"]     = t.fireType,
+		["keys"]         = EEex.DeepCopy(t.keys),
+		["modifierKeys"] = EEex.DeepCopy(t.modifierKeys),
+	}
+end
+
+function EEex_Keybinds_Update(id, args)
+
+	local t = EEex_Keybinds_Private_Definitions[id]
+
+	if t == nil then
+		t = {
+			["callback"]     = function() end,
+			["fireType"]     = EEex_Keybinds_FireType.UP,
+			["keys"]         = {},
+			["modifierKeys"] = {},
+			["_stage"]       = 1,
+		}
+		EEex_Keybinds_Private_Definitions[id] = t
+	end
+
+	local callback     = args.callback
+	local fireType     = args.fireType
+	local keys         = args.keys
+	local modifierKeys = args.modifierKeys
+
+	if callback     ~= nil then t.callback     = callback                    end
+	if fireType     ~= nil then t.fireType     = fireType                    end
+	if keys         ~= nil then t.keys         = EEex.DeepCopy(keys)         end
+	if modifierKeys ~= nil then t.modifierKeys = EEex.DeepCopy(modifierKeys) end
+end
+
+--=-=-=-=-=-==
+-- Private  ==
+--=-=-=-=-=-==
+
+function EEex_Keybinds_Private_CastOffInternal(resref)
+
+	if worldScreen ~= e:GetActiveEngine() then return false end
+
+	local sprite = EEex_Sprite_GetSelected()
+	if sprite == nil then return false end
+
+	if not EEex_Keybinds_Private_UseCGameButtonList(sprite, sprite:GetInternalButtonList(), resref, true) then
+		return false
+	end
+
+	EEex_Actionbar_RestoreLastState()
+	return true
+end
+
+function EEex_Keybinds_Private_HandleKey(key, isReplay)
+
+	EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
+
+	for hotkeyName, hotkeyDef in pairs(EEex_Keybinds_Private_Definitions) do
+
+		local stage = hotkeyDef._stage
+
+		if stage == 0 then
+			-- If the current keybind stage indicates PROCESSING STOPPED, END
+			goto continue
+		end
+
+		local isModifier = EEex_Utility_Find(hotkeyDef.modifierKeys, key)
+		local hotkeyCombo = hotkeyDef.keys
+		local onlyModifiers = hotkeyCombo[1] == nil and hotkeyDef.modifierKeys[1] ~= nil
+
+		if not onlyModifiers then
+			-- If the keybind isn't only modifiers ...
+
+			if isModifier then
+				-- ... and the key is a specified modifier, END
+				goto continue
+			end
+
+			if hotkeyCombo[stage] ~= key then
+				-- ... and the key isn't the expected value for the current keybind stage, STOP PROCESSING and END
+				hotkeyDef._stage = 0
+				goto continue
+			end
+
+			-- ADVANCE
+			hotkeyDef._stage = stage + 1
+
+			if stage ~= #hotkeyCombo then
+				-- ... and the current keybind stage isn't the end of the sequence, END
+				goto continue
+			end
+
+		elseif not isModifier then
+			-- If the keybind is only modifiers, and the key isn't a specified modifier, STOP PROCESSING and END
+			hotkeyDef._stage = 0
+			goto continue
+		end
+
+		local allModifiersDown = true
+
+		for _, modifier in ipairs(hotkeyDef.modifierKeys) do
+			if not EEex_Key_IsDown(modifier) then
+				allModifiersDown = false
+				break
+			end
+		end
+
+		if not allModifiersDown then
+			-- If at least one of the specified modifiers isn't down ...
+			if not onlyModifiers then
+				-- ... and the keybind isn't only modifiers, STOP PROCESSING and ...
+				hotkeyDef._stage = 0
+			end
+			-- ... END
+			goto continue
+		end
+
+		if isReplay then
+			-- If this is a replay event, STOP PROCESSING and END
+			hotkeyDef._stage = 0
+			goto continue
+		end
+
+		-- Success
+
+		if hotkeyDef.fireType == EEex_Keybinds_FireType.UP then
+			-- Keybind fires on release
+			EEex_Keybinds_Private_PendingOnReleaseKeybind = hotkeyDef
+		else
+			-- Keybind fires on press
+			EEex_Keybinds_Private_Run(hotkeyDef)
+		end
+
+		do break end
+		::continue::
+	end
+end
+
+function EEex_Keybinds_Private_Reset()
+
+	for _, hotkeyDef in pairs(EEex_Keybinds_Private_Definitions) do
+		hotkeyDef._stage = 1
+	end
+
+	-- Replay the pressed keys stack so keybind states rebuild as if the released key wasn't pressed.
+	-- This rebuild is not allowed to activate keybindings by itself.
+	for _, key in ipairs(EEex_Key_GetPressedStack()) do
+		EEex_Keybinds_Private_HandleKey(key, true)
+	end
+end
+
+function EEex_Keybinds_Private_Run(hotkeyDef)
+	hotkeyDef.callback()
+end
 
 function EEex_Keybinds_Private_TogglePrintKeys()
 	if not EEex_Keybinds_Private_PrintKeys then
@@ -177,151 +315,9 @@ function EEex_Keybinds_Private_UseCGameButtonList(sprite, buttonList, resref, bO
 	return found
 end
 
-function EEex_Keybinds_Private_CastOffInternal(resref)
-
-	if worldScreen ~= e:GetActiveEngine() then return false end
-
-	local sprite = EEex_Sprite_GetSelected()
-	if sprite == nil then return false end
-
-	if not EEex_Keybinds_Private_UseCGameButtonList(sprite, sprite:GetInternalButtonList(), resref, true) then
-		return false
-	end
-
-	EEex_Actionbar_RestoreLastState()
-	return true
-end
-
 --=============
 -- Listeners ==
 --=============
-
-function EEex_Keybinds_Private_Run(hotkeyDef)
-
-	local hotkeyValue = hotkeyDef[1]
-	local hotkeyValueType = type(hotkeyValue)
-
-	if hotkeyValueType == "string" then
-		EEex_Keybinds_Cast(hotkeyValue)
-	elseif hotkeyValueType == "function" then
-		hotkeyValue()
-	else
-		EEex_Error("Unhandled keybind action type")
-	end
-end
-
-function EEex_Keybinds_Private_HandleKey(key, isReplay)
-
-	EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
-
-	for hotkeyName, hotkeyDef in pairs(EEex_Keybinds_Private_Hotkeys) do
-
-		local stage = hotkeyDef[5]
-
-		if stage == 0 then
-			-- If the current keybind stage indicates PROCESSING STOPPED, END
-			goto continue
-		end
-
-		local isModifier = EEex_Utility_Find(hotkeyDef[2], key)
-		local hotkeyCombo = hotkeyDef[3]
-		local onlyModifiers = hotkeyCombo[1] == nil and hotkeyDef[2][1] ~= nil
-
-		if not onlyModifiers then
-			-- If the keybind isn't only modifiers ...
-
-			if isModifier then
-				-- ... and the key is a specified modifier, END
-				goto continue
-			end
-
-			if hotkeyCombo[stage] ~= key then
-				-- ... and the key isn't the expected value for the current keybind stage, STOP PROCESSING and END
-				hotkeyDef[5] = 0
-				goto continue
-			end
-
-			-- ADVANCE
-			hotkeyDef[5] = stage + 1
-
-			if stage ~= #hotkeyCombo then
-				-- ... and the current keybind stage isn't the end of the sequence, END
-				goto continue
-			end
-
-		elseif not isModifier then
-			-- If the keybind is only modifiers, and the key isn't a specified modifier, STOP PROCESSING and END
-			hotkeyDef[5] = 0
-			goto continue
-		end
-
-		local allModifiersDown = true
-
-		for _, modifier in ipairs(hotkeyDef[2]) do
-			if not EEex_Key_IsDown(modifier) then
-				allModifiersDown = false
-				break
-			end
-		end
-
-		if not allModifiersDown then
-			-- If at least one of the specified modifiers isn't down ...
-			if not onlyModifiers then
-				-- ... and the keybind isn't only modifiers, STOP PROCESSING and ...
-				hotkeyDef[5] = 0
-			end
-			-- ... END
-			goto continue
-		end
-
-		if isReplay then
-			-- If this is a replay event, STOP PROCESSING and END
-			hotkeyDef[5] = 0
-			goto continue
-		end
-
-		-- Success
-
-		if hotkeyDef[4] then
-			-- Keybind fires on release
-			EEex_Keybinds_Private_PendingOnReleaseKeybind = hotkeyDef
-		else
-			-- Keybind fires on press
-			EEex_Keybinds_Private_Run(hotkeyDef)
-		end
-
-		do break end
-		::continue::
-	end
-end
-
-function EEex_Keybinds_Private_Reset()
-
-	for _, hotkeyDef in pairs(EEex_Keybinds_Private_Hotkeys) do
-		hotkeyDef[5] = 1
-	end
-
-	-- Replay the pressed keys stack so keybind states rebuild as if the released key wasn't pressed.
-	-- This rebuild is not allowed to activate keybindings by itself.
-	for _, key in ipairs(EEex_Key_GetPressedStack()) do
-		EEex_Keybinds_Private_HandleKey(key, true)
-	end
-end
-
-EEex_Key_AddPressedListener(function(key)
-	if EEex_Keybinds_Private_PrintKeys then
-		Infinity_DisplayString("[EEex] Pressed: "..EEex_ToHex(key))
-	end
-	EEex_Keybinds_Private_HandleKey(key, false)
-end)
-
-EEex_Key_AddReleasedListener(function(key)
-	if EEex_Keybinds_Private_PendingOnReleaseKeybind ~= nil then
-		EEex_Keybinds_Private_Run(EEex_Keybinds_Private_PendingOnReleaseKeybind)
-		EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
-	end
-	EEex_Keybinds_Private_Reset()
-end)
 
 EEex_Actionbar_AddListener(function(config, state)
 
@@ -336,4 +332,19 @@ EEex_Actionbar_AddListener(function(config, state)
 	return EEex_Actionbar_RunWithListenersSuppressed(function()
 		return EEex_Keybinds_Private_CastOffInternal(myCopy)
 	end)
+end)
+
+EEex_Key_AddPressedListener(function(key)
+	if EEex_Keybinds_Private_PrintKeys then
+		Infinity_DisplayString("[EEex] Pressed: "..EEex_ToHex(key))
+	end
+	EEex_Keybinds_Private_HandleKey(key, false)
+end)
+
+EEex_Key_AddReleasedListener(function(key)
+	if EEex_Keybinds_Private_PendingOnReleaseKeybind ~= nil then
+		EEex_Keybinds_Private_Run(EEex_Keybinds_Private_PendingOnReleaseKeybind)
+		EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
+	end
+	EEex_Keybinds_Private_Reset()
 end)

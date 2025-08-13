@@ -118,6 +118,20 @@ function EEex_Utility_MapToSortedTable(map, sortFunc)
 	return t
 end
 
+function EEex_Utility_Merge(t)
+	local result = {}
+	for k1, v1 in pairs(t) do
+		if type(v1) == "table" then
+			for k2, v2 in pairs(v1) do
+				result[k2] = v2
+			end
+		else
+			result[k1] = v1
+		end
+	end
+	return result
+end
+
 function EEex_Utility_NewScope(func)
 	return func()
 end
