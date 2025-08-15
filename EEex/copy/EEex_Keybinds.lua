@@ -70,6 +70,14 @@ EEex_Keybinds_Private_PrintKeys = false
 -- Keybind Actions --
 ---------------------
 
+-- @bubb_doc { EEex_Keybinds_Cast }
+--
+-- @summary: Attempts to cast ``resref`` as the leader of the currently selected sprites.
+--
+-- @param { resref / type=string }: The resref of the spell to cast.
+--
+-- @return { type=boolean }: ``true`` if the casting was started successfully; ``false`` otherwise.
+
 function EEex_Keybinds_Cast(resref)
 
 	if worldScreen ~= e:GetActiveEngine() then return false end
@@ -84,27 +92,52 @@ function EEex_Keybinds_Cast(resref)
 	return EEex_Keybinds_Private_UseCGameButtonList(sprite, sprite:GetQuickButtons(4, false), resref, false)
 end
 
-function EEex_Keybinds_CastTwoStep(initial, second)
-	if not EEex_Keybinds_Cast(initial) then return end
-	EEex_Keybinds_Private_InternalCastResref = second
+-- @bubb_doc { EEex_Keybinds_CastTwoStep }
+--
+-- @summary: Attempts to cast ``firstResref`` |rarr| ``secondResref`` as the leader of the currently selected sprites.
+--
+-- @param { firstResref / type=string }:
+--
+--     The resref of the first spell to cast. @EOL
+--     This spell should invoke op214.
+--
+-- @param { secondResref / type=string }:
+--
+--     The resref of the second spell to cast.                        @EOL
+--     This spell should be provided by the previously invoked op214.
+
+function EEex_Keybinds_CastTwoStep(firstResref, secondResref)
+	if not EEex_Keybinds_Cast(firstResref) then return end
+	EEex_Keybinds_Private_InternalCastResref = secondResref
 end
 
-function EEex_Keybinds_SelectPortrait(portraitNum, dontUnselect)
+-- @bubb_doc { EEex_Keybinds_SelectPortrait }
+--
+-- @summary: Attempts to select the portrait in ``portraitIndex``.
+--
+-- @param { portraitIndex / type=number }: The index of the portrait to select.
+--
+-- @param { dontUnselect / type=boolean / default = false }:
+--
+--     If ``true``, prevents the deselection of already-selected sprites. @EOL
+--     This is analogous to holding Shift in the original keybindings.
+
+function EEex_Keybinds_SelectPortrait(portraitIndex, dontUnselect)
 
 	local activeEngine = e:GetActiveEngine()
 	if worldScreen ~= activeEngine then
-		EEex_CastUD(activeEngine, "EEex_CBaldurEngine"):virtual_OnPortraitLClick(portraitNum)
+		EEex_CastUD(activeEngine, "EEex_CBaldurEngine"):virtual_OnPortraitLClick(portraitIndex)
 		return
 	end
 
 	local game = EngineGlobals.g_pBaldurChitin.m_pObjectGame
-	local spriteID = EEex_Sprite_GetInPortraitID(portraitNum)
+	local spriteID = EEex_Sprite_GetInPortraitID(portraitIndex)
 	local cursorState = game.m_nState
 
 	if cursorState == 0 then
 		local memberList = game.m_group.m_memberList
 		if memberList.m_nCount == 1 and memberList.m_pNodeHead.data == spriteID then
-			game:OnPortraitLDblClick(portraitNum)
+			game:OnPortraitLDblClick(portraitIndex)
 		else
 			if not dontUnselect then game:UnselectAll() end
 			game:SelectCharacter(spriteID, true) -- boolean bPlaySelectSound
@@ -129,6 +162,49 @@ end
 -- Keybind Management --
 ------------------------
 
+-- @bubb_doc { EEex_Keybinds_Get }
+--
+-- @summary: Returns a table representing the keybind with the given ``id``.
+--
+-- @param { id / type=string }: The unique id of the associated keybind.
+--
+-- @return { type=table | nil }: See summary.
+--
+-- @extra_comment:
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **The Keybind Table**
+-- *********************
+--
+-- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
+-- | Key          | Value Type             | Description                                                                                                             |
+-- +==============+========================+=========================================================================================================================+
+-- | callback     | function               | Function that is called when the conditions required by ``fireType`` are satisfied.                                     |
+-- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
+-- | fireType     | EEex_Keybinds_FireType | The situation in which ``callback`` is invoked.                                                                         |
+-- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
+-- | keys         | table                  | Table of keycodes defining the keybind's main sequence of keys.                                       :raw-html:`<br/>` |
+-- |              |                        | These keys must be pressed in the defined order for the keybind to be satisfied.                                        |
+-- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
+-- | modifierKeys | table                  | Table of keycodes defining the keys that are required to be down when the main sequence is satisfied. :raw-html:`<br/>` |
+-- |              |                        | Allowed keys include the left / right variants of Ctrl, Shift, and Alt.                                                 |
+-- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
+--
+-- ==========================================================================================================================================================================================================
+--
+-- **EEex_Keybinds_FireType**
+-- **************************
+--
+-- +--------------+----------------------------------------------------------------------------------------+
+-- | Ordinal Name | Description                                                                            |
+-- +==============+========================================================================================+
+-- | UP           | Fires when any key is released after the keybind has been satisfied. :raw-html:`<br/>` |
+-- |              | Additional key presses will cancel the satisfaction of the keybind.                    |
+-- +--------------+----------------------------------------------------------------------------------------+
+-- | DOWN         | Fires when the keybind has been satisfied.                                             |
+-- +--------------+----------------------------------------------------------------------------------------+
+
 function EEex_Keybinds_Get(id)
 	local t = EEex_Keybinds_Private_Definitions[id]
 	if t == nil then return nil end
@@ -139,6 +215,17 @@ function EEex_Keybinds_Get(id)
 		["modifierKeys"] = EEex.DeepCopy(t.modifierKeys),
 	}
 end
+
+-- @bubb_doc { EEex_Keybinds_Update }
+--
+-- @summary: Updates the keybind with the given ``id`` with the fields present in ``args``.
+--
+-- @param { id / type=string }: The unique id of the associated keybind.
+--
+-- @param { args / type=table }:
+--
+--     A table containing fields used to update the keybind.           @EOL
+--     See `The Keybind Table <#the-keybind-table>`_ for more details.
 
 function EEex_Keybinds_Update(id, args)
 

@@ -880,13 +880,20 @@ public class UpdateDocs
 		return str.replaceAll(macroString, ":raw-html:`<pre>` $2 :raw-html:`</pre>`");
 	}
 
-	private static String preprocessDescription(String str)
+	private static String preprocessDescription(String str, boolean noNewlines)
 	{
+		if (noNewlines) {
+			str = str.replaceAll("[\r\n]+", " ");
+		}
 		str = str.replaceAll("(?<=\\S)@EOL", "@EOL");
 		str = str.replaceAll("@EOL(?=\\S)", "@EOL\\\\");
 		str = str.replaceAll("\\s*@EOL\\s*", " @EOL ");
 		str = str.replaceAll("@EOL", ":raw-html:`<br/>`");
 		return replacePre(replaceBoldItalic(str));
+	}
+
+	private static String preprocessDescription(String str) {
+		return preprocessDescription(str, false);
 	}
 
 	private interface KeyValueProcessor<KeyType, ValueType> {
@@ -1015,6 +1022,8 @@ public class UpdateDocs
 			writer.println(".. role:: bold-italic" + System.lineSeparator() +
 				"   :class: bold-italic" + System.lineSeparator());
 
+			writer.println(".. |rarr| unicode:: U+2192" + System.lineSeparator());
+
 			writeHeader(writer, fileName);
 
 			iterateMapAsSorted(funcDocs, String::compareToIgnoreCase, (String funcName, BubbDoc doc) ->
@@ -1103,7 +1112,7 @@ public class UpdateDocs
 							? "``" + doc.self.defaultValue + "``"
 							: "";
 						tableMaker.addRow(doc.self.name, doc.self.type, defaultString,
-							preprocessDescription(doc.self.description));
+							preprocessDescription(doc.self.description, true));
 					}
 
 					writer.println("**Parameters:**" + System.lineSeparator());
@@ -1113,7 +1122,7 @@ public class UpdateDocs
 							? "``" + param.defaultValue + "``"
 							: "";
 						tableMaker.addRow(param.name, param.type, defaultString,
-							preprocessDescription(param.description));
+							preprocessDescription(param.description, true));
 					}
 
 					writer.println(tableMaker.build());
@@ -1129,7 +1138,7 @@ public class UpdateDocs
 					for (BubbDoc.BubbDocReturn returnValue : doc.returnValues)
 					{
 						tableMaker.addRow(preprocessDescription(returnValue.type),
-							preprocessDescription(returnValue.description));
+							preprocessDescription(returnValue.description, true));
 					}
 
 					writer.println(tableMaker.build());
