@@ -236,6 +236,15 @@ public class StringParser
 		return curPos < string.length() && chars.contains(string.substring(curPos, curPos + 1));
 	}
 
+	public boolean checkEscaped(int offset)
+	{
+		int escapeCharCount = 0;
+		for (int i = offset - 1; checkForSubStr("\\", i); --i) {
+			++escapeCharCount;
+		}
+		return escapeCharCount % 2 != 0;
+	}
+
 	/////////////
 	// Finding //
 	/////////////

@@ -608,14 +608,14 @@ public class UpdateDocs
 					do {
 						luaContentsParser.advanceToAfterAssert("\"");
 					}
-					while (luaContentsParser.checkForSubStr("\\", -2));
+					while (luaContentsParser.checkEscaped(-1));
 				}
 				case "'" ->
 				{
 					do {
 						luaContentsParser.advanceToAfterAssert("'");
 					}
-					while (luaContentsParser.checkForSubStr("\\", -2));
+					while (luaContentsParser.checkEscaped(-1));
 				}
 				case "[[" -> {
 					luaContentsParser.advanceToAfterAssert("]]");
