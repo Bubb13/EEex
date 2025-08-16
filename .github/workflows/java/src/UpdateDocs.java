@@ -820,7 +820,7 @@ public class UpdateDocs
 		if (nameWithModifierMatcher.find())
 		{
 			String modifier = nameWithModifierMatcher.group(2);
-			if (modifier.equals("Hook") || modifier.equals("Private")) {
+			if (modifier.equals("Hook") || modifier.equals("LuaHook") || modifier.equals("Private")) {
 				return;
 			}
 
@@ -845,7 +845,7 @@ public class UpdateDocs
 	}
 
 	private static final Pattern LUA_FUNCTION_PATTERN = Pattern.compile(
-		"(local\\s+)?function\\s+(\\S+)\\s*\\([\\s\\S]*?\\)");
+		"(local\\s+)?function\\s+([^\\s:]+)\\s*\\([\\s\\S]*?\\)");
 
 	private static String replaceRole(String str, String macroString, String roleName)
 	{
