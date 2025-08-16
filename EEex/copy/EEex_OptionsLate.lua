@@ -20,7 +20,7 @@ EEex_Menu_AddMainFileLoadedListener(function()
 end)
 
 -- Hardcoded call from EEex_GameState.lua
-function EEex_Options_OnAfterGameStateInitialized()
+function EEex_Options_Private_OnAfterGameStateInitialized()
 	EEex_Options_Private_SpecialSortTabs()
 	EEex_Options_Private_BuildLayout()
 end

@@ -117,7 +117,7 @@ end
 --
 -- @param { portraitIndex / type=number }: The index of the portrait to select.
 --
--- @param { dontUnselect / type=boolean / default = false }:
+-- @param { dontUnselect / type=boolean / default=false }:
 --
 --     If ``true``, prevents the deselection of already-selected sprites. @EOL
 --     This is analogous to holding Shift in the original keybindings.
@@ -174,6 +174,8 @@ end
 --
 -- ==========================================================================================================================================================================================================
 --
+-- .. _the-keybind-table:
+--
 -- **The Keybind Table**
 -- *********************
 --
@@ -224,8 +226,8 @@ end
 --
 -- @param { args / type=table }:
 --
---     A table containing fields used to update the keybind.           @EOL
---     See `The Keybind Table <#the-keybind-table>`_ for more details.
+--     A table containing fields used to update the keybind.              @EOL
+--     See :ref:`The Keybind Table <the-keybind-table>` for more details.
 
 function EEex_Keybinds_Update(id, args)
 

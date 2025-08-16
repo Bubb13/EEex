@@ -137,7 +137,7 @@ function EEex_GameState_LuaHook_OnInitialized()
 	EEex_GameState_Private_AlreadyInitialized = true
 	EEex_GameState_Private_InitializedListeners = {}
 	-- So EEex files using EEex_GameState_AddInitializedListener() always run before options initialization.
-	EEex_Options_OnAfterGameStateInitialized()
+	EEex_Options_Private_OnAfterGameStateInitialized()
 end
 
 function EEex_GameState_Hook_OnDestroyed()
