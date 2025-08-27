@@ -1257,6 +1257,10 @@ Operations=ADD -38, PUSH, READ DWORD, ADD, ADD 4
 Pattern=4C894C242053574883EC28
 Operations=ADD -10
 
+[Hardcoded_luaL_loadbufferx]
+Pattern=4833C44889442440488B842480000000
+Operations=ADD -11
+
 [Hardcoded_luaL_loadfilex]
 Pattern=53415441564157488DAC24A0FEFFFF
 Operations=ADD -2
