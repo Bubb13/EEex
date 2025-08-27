@@ -3,32 +3,28 @@
 -- Options --
 -------------
 
-B3Timer_Private_HugPortraits = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3Timer_HugPortraits",
+B3Timer_Private_HugPortraits = EEex_Options_Register("B3Timer_HugPortraits", EEex_Options_Option.new({
 	["default"]  = 0,
 	["type"]     = EEex_Options_ToggleType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Hug Portraits" }),
 }))
 
-B3Timer_Private_ShowCastTimer = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3Timer_ShowCastTimer",
+B3Timer_Private_ShowCastTimer = EEex_Options_Register("B3Timer_ShowCastTimer", EEex_Options_Option.new({
 	["default"]  = 1,
 	["type"]     = EEex_Options_ToggleType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Cast" }),
 }))
 
-B3Timer_Private_ShowContingencyTimer = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3Timer_ShowContingencyTimer",
+B3Timer_Private_ShowContingencyTimer = EEex_Options_Register("B3Timer_ShowContingencyTimer", EEex_Options_Option.new({
 	["default"]  = 1,
 	["type"]     = EEex_Options_ToggleType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Contingency" }),
 }))
 
-B3Timer_Private_ShowModalTimer = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3Timer_ShowModalTimer",
+B3Timer_Private_ShowModalTimer = EEex_Options_Register("B3Timer_ShowModalTimer", EEex_Options_Option.new({
 	["default"]  = 1,
 	["type"]     = EEex_Options_ToggleType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),

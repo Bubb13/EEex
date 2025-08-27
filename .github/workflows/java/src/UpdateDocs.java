@@ -432,7 +432,7 @@ public class UpdateDocs
 	{
 		commentParser.advanceToAfterAssert("{");
 		commentParser.startCapture();
-		commentParser.advanceToAssert("}");
+		commentParser.advanceToBalancedAssert("{", "}", 1);
 		String bubbDocInner = commentParser.endCapture();
 		commentParser.advance(1);
 

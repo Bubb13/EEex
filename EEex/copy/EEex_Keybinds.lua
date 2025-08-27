@@ -12,8 +12,7 @@ EEex_Keybinds_FireType = {
 -- Options ==
 --===========
 
-EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "EEex_Keybinds_OpenOptions",
+EEex_Options_Register("EEex_Keybinds_OpenOptions", EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("\\|Up"),
 	["type"]     = EEex_Options_KeybindType.new({
 		["callback"] = function() EEex_Options_Open() end,
@@ -22,8 +21,7 @@ EEex_Options_Register(EEex_Options_Option.new({
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Open Options Keybind" }),
 }))
 
-EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "EEex_Keybinds_ToggleKeycodeOutput",
+EEex_Options_Register("EEex_Keybinds_ToggleKeycodeOutput", EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("`|Up"),
 	["type"]     = EEex_Options_KeybindType.new({
 		["callback"] = function() EEex_Keybinds_Private_TogglePrintKeys() end,

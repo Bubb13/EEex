@@ -3,19 +3,17 @@
 -- Options --
 -------------
 
-EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3EffectMenu_LaunchKeybind",
+EEex_Options_Register("B3EffectMenu_LaunchKeybind", EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
 	["type"]     = EEex_Options_KeybindType.new({
-		["lockedFireType"] = EEex_Options_KeybindFireType.DOWN,
+		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
 		["callback"]       = function() B3EffectMenu_Private_Menu_KeybindActive = true end,
 	}),
 	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Module: Launch Keybind" }),
 }))
 
-B3EffectMenu_Private_RowCount = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3EffectMenu_RowCount",
+B3EffectMenu_Private_RowCount = EEex_Options_Register("B3EffectMenu_RowCount", EEex_Options_Option.new({
 	["default"]  = 4,
 	["type"]     = EEex_Options_EditType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 1, ["max"] = 99 }),

@@ -5,11 +5,10 @@
 
 -- Key that, while paused, advances time 2 AsynchronousUpdate ticks, or 1 "game time" tick.
 -- Holding this key for half a second causes time to flow normally until it is released.
-EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3TimeStep_Keybind",
+EEex_Options_Register("B3TimeStep_Keybind", EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("d|Down"),
 	["type"]     = EEex_Options_KeybindType.new({
-		["lockedFireType"] = EEex_Options_KeybindFireType.DOWN,
+		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
 		["callback"]       = function() B3TimeStep_Private_KeybindActivated() end,
 	}),
 	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3TimeStep_Keybind" }),

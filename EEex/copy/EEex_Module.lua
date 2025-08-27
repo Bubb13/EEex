@@ -1,6 +1,5 @@
 
-EEex_Module_Private_EffectMenu = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]              = "EEex_Module_EffectMenu",
+EEex_Module_Private_EffectMenu = EEex_Options_Register("EEex_Module_EffectMenu", EEex_Options_Option.new({
 	["default"]         = 0,
 	["type"]            = EEex_Options_ToggleType.new(),
 	["accessor"]        = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
@@ -8,8 +7,7 @@ EEex_Module_Private_EffectMenu = EEex_Options_Register(EEex_Options_Option.new({
 	["requiresRestart"] = true,
 }))
 
-EEex_Module_Private_EmptyContainer = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]              = "EEex_Module_EmptyContainer",
+EEex_Module_Private_EmptyContainer = EEex_Options_Register("EEex_Module_EmptyContainer", EEex_Options_Option.new({
 	["default"]         = 0,
 	["type"]            = EEex_Options_ToggleType.new(),
 	["accessor"]        = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
@@ -17,8 +15,7 @@ EEex_Module_Private_EmptyContainer = EEex_Options_Register(EEex_Options_Option.n
 	["requiresRestart"] = true,
 }))
 
-EEex_Module_Private_Scale = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]              = "EEex_Module_Scale",
+EEex_Module_Private_Scale = EEex_Options_Register("EEex_Module_Scale", EEex_Options_Option.new({
 	["default"]         = 0,
 	["type"]            = EEex_Options_ToggleType.new(),
 	["accessor"]        = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
@@ -26,8 +23,7 @@ EEex_Module_Private_Scale = EEex_Options_Register(EEex_Options_Option.new({
 	["requiresRestart"] = true,
 }))
 
-EEex_Module_Private_TimeStep = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]              = "EEex_Module_TimeStep",
+EEex_Module_Private_TimeStep = EEex_Options_Register("EEex_Module_TimeStep", EEex_Options_Option.new({
 	["default"]         = 0,
 	["type"]            = EEex_Options_ToggleType.new(),
 	["accessor"]        = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
@@ -35,8 +31,7 @@ EEex_Module_Private_TimeStep = EEex_Options_Register(EEex_Options_Option.new({
 	["requiresRestart"] = true,
 }))
 
-EEex_Module_Private_Timer = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]              = "EEex_Module_Timer",
+EEex_Module_Private_Timer = EEex_Options_Register("EEex_Module_Timer", EEex_Options_Option.new({
 	["default"]         = 0,
 	["type"]            = EEex_Options_ToggleType.new(),
 	["accessor"]        = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),

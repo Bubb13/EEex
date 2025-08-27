@@ -2648,6 +2648,38 @@ EEex_Options_Option.__index = EEex_Options_Option
 --// Static //
 --////////////
 
+-- @bubb_doc { EEex_Options_Option.new }
+--
+-- @summary: Creates a new ``EEex_Options_Option`` instance.
+--
+-- @param { o / type=table / default={} }:
+--
+--     The object to become the ``EEex_Options_Option`` instance.       @EOL
+--     See :ref:`The Option Table <the-option-table>` for more details.
+--
+-- @return { type=EEex_Options_Option }: See summary.
+--
+-- @extra_comment:
+--
+-- ==================================================================================================================
+--
+-- .. _the-option-table:
+--
+-- **The Option Table**
+-- ********************
+--
+-- +-----------------+------------------------------+---------------------------------------+
+-- | Key             | Value Type                   | Description                           |
+-- +=================+==============================+=======================================+
+-- | accessor        | EEex_Options_Accessor        | This field is currently undocumented. |
+-- +-----------------+------------------------------+---------------------------------------+
+-- | default         | ``<non-nil>``                | This field is currently undocumented. |
+-- +-----------------+------------------------------+---------------------------------------+
+-- | requiresRestart | boolean                      | This field is currently undocumented. |
+-- +-----------------+------------------------------+---------------------------------------+
+-- | storage         | EEex_Options_Private_Storage | This field is currently undocumented. |
+-- +-----------------+------------------------------+---------------------------------------+
+
 EEex_Options_Option.new = function(o)
 	if o == nil then o = {} end
 	setmetatable(o, EEex_Options_Option)
@@ -2665,7 +2697,6 @@ end
 
 function EEex_Options_Option:_init()
 	EEex_Utility_CallSuper(EEex_Options_Option, "_init", self)
-	if self.id              == nil then EEex_Error("id required")                                 end
 	if self.default         == nil then EEex_Error("default required")                            end
 	if self.accessor        == nil then self.accessor        = EEex_Options_PrivateAccessor.new() end
 	if self.requiresRestart == nil then self.requiresRestart = false                              end
@@ -2736,15 +2767,44 @@ end
 -- Public --
 ------------
 
+-- @bubb_doc { EEex_Options_Option:getDefault() }
+--
+-- @summary: Returns the default value of the option.
+--
+-- @return { type=``<non-nil>`` }: See summary.
+
 function EEex_Options_Option:getDefault()
 	-- Copy so the user can't modify internal state via a reference
 	return EEex.DeepCopy(self:_getDefault())
 end
 
+-- @bubb_doc { EEex_Options_Option:get() }
+--
+-- @summary:Returns the current, in-effect value of the option.
+--
+-- @note: Some options delay applying changes made to their value; these changes
+--        will only be visible at a later time, such as after a restart.
+--
+-- @return { type=``<non-nil>`` }: See summary.
+
 function EEex_Options_Option:get()
 	-- Copy so the user can't modify internal state via a reference
 	return EEex.DeepCopy(self:_get())
 end
+
+-- @bubb_doc { EEex_Options_Option:set() }
+--
+-- @summary: Sets the value of the option.
+--
+-- @note: Some options delay applying changes made to their value; these changes
+--        will only be visible at a later time, such as after a restart.
+--
+-- @param { newValue / type=``<any>`` }:
+--
+--     The value to set the option to.                   @EOL
+--     If ``nil``, sets the option to its default value.
+--
+-- @return { type=``<non-nil>`` }: Returns the value the option was set to after constraints were applied to ``newValue``.
 
 function EEex_Options_Option:set(newValue)
 	if newValue == nil then return self:_set(self:_getDefault()) end
@@ -4745,13 +4805,35 @@ end
 -- Keybind Values --
 --------------------
 
-function EEex_Options_MarshalKeybind(value)
-	return EEex_Options_Private_MarshalKeybindInternal(value.modifierKeys, value.keys, value.fireType)
+-- @bubb_doc { EEex_Options_MarshalKeybind }
+--
+-- @summary: Returns a string representing the given ``keybind`` table.
+--
+-- @param { keybind / type=table }:
+--
+--     A table representing the keybind to marshal.                       @EOL
+--     See :ref:`The Keybind Table <the-keybind-table>` for more details.
+--
+-- @return { type=string }: See summary.
+
+function EEex_Options_MarshalKeybind(keybind)
+	return EEex_Options_Private_MarshalKeybindInternal(keybind.modifierKeys, keybind.keys, keybind.fireType)
 end
 
-function EEex_Options_UnmarshalKeybind(str)
+-- @bubb_doc { EEex_Options_UnmarshalKeybind }
+--
+-- @summary: Returns a table representing the given ``keybindStr`` string.
+--
+-- @param { keybindStr / type=string }:
+--
+--     A string representing the keybind to unmarshal.                                @EOL
+--     This string is of the format ``<SDL key name>+<SDL key name>...|<UP or DOWN>``
+--
+-- @return { type=table }: See summary / :ref:`The Keybind Table <the-keybind-table>` for more details.
 
-	local typeSplit = EEex_Utility_Split(str, "|", false, true)
+function EEex_Options_UnmarshalKeybind(keybindStr)
+
+	local typeSplit = EEex_Utility_Split(keybindStr, "|", false, true)
 
 	if #typeSplit ~= 2 then
 		return nil
@@ -4804,12 +4886,20 @@ end
 -- Menu Visibility --
 ---------------------
 
+-- @bubb_doc { EEex_Options_Close }
+--
+-- @summary: Closes the "EEex Options" menu if it is currently open.
+
 function EEex_Options_Close()
 	if not Infinity_IsMenuOnStack("EEex_Options") then return end
 	Infinity_PopMenu("EEex_Options")
 	EEex_Options_Private_CheckKillFocus()
 	EEex_Options_Private_MainInset:hide()
 end
+
+-- @bubb_doc { EEex_Options_Open }
+--
+-- @summary: Opens the "EEex Options" menu if it is currently closed.
 
 function EEex_Options_Open()
 	if Infinity_IsMenuOnStack("EEex_Options") then return end
@@ -4823,11 +4913,29 @@ end
 -- Option Checking --
 ---------------------
 
-function EEex_Options_Check(optionName, value)
-	local option = EEex_Options_Get(optionName)
+-- @bubb_doc { EEex_Options_Check }
+--
+-- @summary: Checks if the option with the given ``id`` exists and is equal to the given ``value``.
+--
+-- @param { id / type=string }: The id of the option whose value is to be checked.
+--
+-- @param { value / type=``<non-nil>`` }: The value to check against the option.
+--
+-- @return { type=boolean }: ``true`` if the option with ``id`` exists and it is equal to the given ``value``; ``false`` otherwise.
+
+function EEex_Options_Check(id, value)
+	local option = EEex_Options_Get(id)
 	if option == nil then return value == nil end
 	return option:_get() == value
 end
+
+-- @bubb_doc { EEex_Options_Get }
+--
+-- @summary: Returns the option object with the given ``id``.
+--
+-- @param { id / type=string }: The id of the option to be fetched.
+--
+-- @return { type=EEex_Options_Option | nil }: See summary / :ref:`The Option Table <the-option-table>` for more details.
 
 function EEex_Options_Get(id)
 	return EEex_Options_Private_IdToOption[id]
@@ -4859,7 +4967,17 @@ function EEex_Options_AddTab(label, displayEntriesProvider)
 	end)
 end
 
-function EEex_Options_Register(option)
-	EEex_Options_Private_IdToOption[option.id] = option
+-- @bubb_doc { EEex_Options_Register }
+--
+-- @summary: Registers ``option`` under ``id``. Options must be registered to be functional.
+--
+-- @param { id / type=string }: The unique id to register ``option`` under.
+--
+-- @param { option / type=EEex_Options_Option }: The option being registered.
+--
+-- @return { type=EEex_Options_Option }: Returns ``option``.
+
+function EEex_Options_Register(id, option)
+	EEex_Options_Private_IdToOption[id] = option
 	return option
 end

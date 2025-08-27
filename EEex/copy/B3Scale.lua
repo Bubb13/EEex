@@ -3,8 +3,7 @@
 -- Options ==
 --===========
 
-B3Scale_Private_Percentage = EEex_Options_Register(EEex_Options_Option.new({
-	["id"]       = "B3Scale_Percentage",
+B3Scale_Private_Percentage = EEex_Options_Register("B3Scale_Percentage", EEex_Options_Option.new({
 	["default"]  = 1,
 	["type"]     = EEex_Options_EditType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1, ["floating"] = true }),
