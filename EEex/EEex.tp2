@@ -12,6 +12,7 @@ END
 
 AUTO_TRA ~EEex/language/%s~
 LANGUAGE ~English~ ~english~ ~EEex/language/english/setup.tra~
+LANGUAGE ~Simplified Chinese~ ~schinese~ ~EEex/language/schinese/setup.tra~
 
 BEGIN @0 LABEL ~B3-EEex-Main~
 REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) @1000
