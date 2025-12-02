@@ -21,7 +21,7 @@ Operating systems:
 <br>
 
 - Windows — Yes (native)
-- Linux — Proton / Wine with the appropriate option toggled in InfinityLoader.ini
+- Linux — Proton / Wine
 - MacOS — Wine? (untested)
 
 Game versions:
