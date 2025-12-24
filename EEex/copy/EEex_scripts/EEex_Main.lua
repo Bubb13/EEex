@@ -8,52 +8,53 @@
 ----------------------------------
 
 EEex_Main_Private_StartupFiles = {
-	"EEex_Utility",          -- Here so all EEex files can immediately use utility functions
-	"EEex_Key",              -- Here because it is required by EEex_Options.lua
-	"EEex_Key_Patch",        --
-	"EEex_Options",          -- Here so most EEex files can register options
-	"EEex_Action",           --
-	"EEex_Action_Patch",     --
-	"EEex_Actionbar",        --
-	"EEex_Actionbar_Patch",  --
-	"EEex_AIBase",           --
-	"EEex_AIBase_Patch",     --
-	"EEex_Area",             --
-	"EEex_GameObject",       --
-	"EEex_GameObject_Patch", --
-	"EEex_GameState",        --
-	"EEex_GameState_Patch",  --
-	"EEex_Keybinds",         --
-	"EEex_Menu",             --
-	"EEex_Menu_Patch",       --
-	"EEex_Mix_Patch",        --
-	"EEex_Object",           --
-	"EEex_Object_Patch",     --
-	"EEex_Opcode",           --
-	"EEex_Opcode_Patch",     --
-	"EEex_Projectile",       --
-	"EEex_Projectile_Patch", --
-	"EEex_Resource",         --
-	"EEex_Script",           --
-	"EEex_Script_Patch",     --
-	"EEex_Sprite",           --
-	"EEex_Sprite_Patch",     --
-	"EEex_Stats",            --
-	"EEex_Stats_Patch",      --
-	"EEex_Test",             --
-	"EEex_Trigger",          --
-	"EEex_Trigger_Patch",    --
-	"EEex_UncapFPS",         --
-	"EEex_UncapFPS_Patch",   --
-	"EEex_Variable",         --
+	"EEex_CrashHandler_Patch", -- Here to install replacement crash handler early
+	"EEex_Utility",            -- Here so all EEex files can immediately use utility functions
+	"EEex_Key",                -- Here because it is required by EEex_Options.lua
+	"EEex_Key_Patch",          --
+	"EEex_Options",            -- Here so most EEex files can register options
+	"EEex_Action",             --
+	"EEex_Action_Patch",       --
+	"EEex_Actionbar",          --
+	"EEex_Actionbar_Patch",    --
+	"EEex_AIBase",             --
+	"EEex_AIBase_Patch",       --
+	"EEex_Area",               --
+	"EEex_GameObject",         --
+	"EEex_GameObject_Patch",   --
+	"EEex_GameState",          --
+	"EEex_GameState_Patch",    --
+	"EEex_Keybinds",           --
+	"EEex_Menu",               --
+	"EEex_Menu_Patch",         --
+	"EEex_Mix_Patch",          --
+	"EEex_Object",             --
+	"EEex_Object_Patch",       --
+	"EEex_Opcode",             --
+	"EEex_Opcode_Patch",       --
+	"EEex_Projectile",         --
+	"EEex_Projectile_Patch",   --
+	"EEex_Resource",           --
+	"EEex_Script",             --
+	"EEex_Script_Patch",       --
+	"EEex_Sprite",             --
+	"EEex_Sprite_Patch",       --
+	"EEex_Stats",              --
+	"EEex_Stats_Patch",        --
+	"EEex_Test",               --
+	"EEex_Trigger",            --
+	"EEex_Trigger_Patch",      --
+	"EEex_UncapFPS",           --
+	"EEex_UncapFPS_Patch",     --
+	"EEex_Variable",           --
 	-- Late files
-	"EEex_Debug",            --
-	"EEex_Debug_Patch",      --
-	"EEex_Fix",              --
-	"EEex_Fix_Patch",        --
-	"EEex_Marshal",          --
-	"EEex_Module",           --
-	"EEex_OptionsLate",      -- Here so it can register listeners provided by other EEex files
+	"EEex_Debug",              --
+	"EEex_Debug_Patch",        --
+	"EEex_Fix",                --
+	"EEex_Fix_Patch",          --
+	"EEex_Marshal",            --
+	"EEex_Module",             --
+	"EEex_OptionsLate",        -- Here so it can register listeners provided by other EEex files
 }
 
 EEex_Main_Private_Modules = {

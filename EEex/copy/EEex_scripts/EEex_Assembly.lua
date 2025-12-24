@@ -192,6 +192,127 @@ function EEex_JITAt(dst, assemblyT)
 	EEex_JITAtInternal(dst, checkJIT, assemblyStr)
 end
 
+function EEex_Assembly_Private_AllocNearItr()
+
+	local currentCodePageI = 1
+	local curCodePage = EEex_CodePageAllocations[currentCodePageI]
+	local alreadyAllocatedCodePage = false
+	local currentAllocEntryI = 0
+
+	return function()
+
+		while true do
+
+			if curCodePage == nil then
+				if alreadyAllocatedCodePage then
+					return -- Fail
+				end
+				alreadyAllocatedCodePage = true
+				curCodePage = EEex_AllocCodePage()
+			end
+
+			while true do
+
+				currentAllocEntryI = currentAllocEntryI + 1
+				local curAllocEntry = curCodePage[currentAllocEntryI]
+
+				if curAllocEntry == nil then
+					currentCodePageI = currentCodePageI + 1
+					curCodePage = EEex_CodePageAllocations[currentCodePageI]
+					currentAllocEntryI = 1
+					break
+				end
+
+				if not curAllocEntry.reserved then
+					return curCodePage, currentAllocEntryI, curAllocEntry -- Success
+				end
+			end
+		end
+	end
+end
+
+function EEex_Assembly_Private_ReserveAllocEntry(finalCodePage, finalAllocEntryI, finalAllocEntry, alignmentOffset, requestedSize)
+
+	-----------------------------------------------------------------------------------------------------------------
+	-- Merge with previous non-reserved allocation / create new allocation to track unused alignment padding space --
+	-----------------------------------------------------------------------------------------------------------------
+
+	if alignmentOffset ~= 0 then
+
+		-- Modify / create previous allocation
+		local previousEntry = finalCodePage[finalAllocEntryI - 1]
+
+		if previousEntry ~= nil and not previousEntry.reserved then
+			previousEntry.size = previousEntry.size + alignmentOffset
+		else
+			table.insert(finalCodePage, finalAllocEntryI, {
+				["address"] = finalAllocEntry.address,
+				["size"] = alignmentOffset,
+				["reserved"] = false,
+			})
+			finalAllocEntryI = finalAllocEntryI + 1
+		end
+
+		-- Modify current allocation
+		finalAllocEntry.address = finalAllocEntry.address + alignmentOffset
+		finalAllocEntry.size = finalAllocEntry.size - alignmentOffset
+	end
+
+	--------------------------------------------------------------------------------------------
+	-- Merge with next non-reserved allocation / create new allocate to track left over space --
+	--------------------------------------------------------------------------------------------
+
+	local memLeftOver = finalAllocEntry.size - requestedSize
+
+	if memLeftOver > 0 then
+
+		-- Modify current allocation
+		finalAllocEntry.size = requestedSize
+
+		-- Modify / create next allocation
+		local addressAfterAlloc = finalAllocEntry.address + requestedSize
+		local nextEntry = finalCodePage[finalAllocEntryI + 1]
+
+		if nextEntry ~= nil then
+			if not nextEntry.reserved then
+				nextEntry.address = addressAfterAlloc
+				nextEntry.size = memLeftOver + nextEntry.size
+			else
+				table.insert(finalCodePage, finalAllocEntryI + 1, {
+					["address"] = addressAfterAlloc,
+					["size"] = memLeftOver,
+					["reserved"] = false,
+				})
+			end
+		else
+			finalCodePage[finalAllocEntryI + 1] = {
+				["address"] = addressAfterAlloc,
+				["size"] = memLeftOver,
+				["reserved"] = false,
+			}
+		end
+	end
+
+	----------------------------------------------------------------------------------------------------
+	-- Mark as reserved and return final allocation index (it might have changed due to an insertion) --
+	----------------------------------------------------------------------------------------------------
+
+	finalAllocEntry.reserved = true
+	return finalAllocEntryI
+end
+
+function EEex_AllocNear(requestedSize, alignment)
+	if alignment == nil then alignment = 0 end
+	for curCodePage, currentAllocEntryI, curAllocEntry in EEex_Assembly_Private_AllocNearItr() do
+		local alignmentOffset = EEex_DistanceToMultiple(curAllocEntry.address, alignment)
+		if curAllocEntry.size - alignmentOffset >= requestedSize then
+			EEex_Assembly_Private_ReserveAllocEntry(curCodePage, currentAllocEntryI, curAllocEntry, alignmentOffset, requestedSize)
+			return curAllocEntry.address -- `EEex_Assembly_Private_ReserveAllocEntry()` might have changed this to handle alignment
+		end
+	end
+	EEex_Error("EEex_AllocNear() failed to find/create large enough allocation")
+end
+
 function EEex_JITNear(assemblyT)
 
 	local stackMod = EEex_TryLabel("stack_mod")
@@ -202,89 +323,77 @@ function EEex_JITNear(assemblyT)
 		})
 	end
 
-	local assemblyStr = EEex_PreprocessAssembly(assemblyT)
+	assemblyT = EEex_FlattenTable({[[
+		hook_start: #ENDL ]],
+		assemblyT, [[ #ENDL
+		hook_end: #ENDL
+	]]})
 
-	local finalWriteSize
-	local currentCodePageI = 0
-	local currentAllocEntryI = 1
-	local alreadyAllocatedCodePage = false
+	-------------------------------------------------
+	-- Preprocess assembly before attempting write --
+	-------------------------------------------------
 
-	local getOrCreateAllocEntryIterate = function(func)
-		local curCodePage
-		repeat
-			curCodePage = EEex_CodePageAllocations[currentCodePageI]
-			if curCodePage and currentAllocEntryI < #curCodePage then
-				currentAllocEntryI = currentAllocEntryI + 1
-			else
-				currentCodePageI = currentCodePageI + 1
-				curCodePage = EEex_CodePageAllocations[currentCodePageI]
-				if not curCodePage then
-					if alreadyAllocatedCodePage then return true end
-					alreadyAllocatedCodePage = true
-					curCodePage = EEex_AllocCodePage()
-				end
-				currentAllocEntryI = 1
-			end
-		until func(curCodePage[currentAllocEntryI])
+	local assemblyStr, state = EEex_PreprocessAssembly(assemblyT)
+
+	------------------------------------
+	-- Setup near allocation iterator --
+	------------------------------------
+
+	local itr = EEex_Assembly_Private_AllocNearItr()
+	local curCodePage, currentAllocEntryI, curAllocEntry
+
+	local advanceItr = function()
+		curCodePage, currentAllocEntryI, curAllocEntry = itr()
+		if curCodePage == nil then
+			EEex_Error("EEex_JITNear() failed to find/create large enough allocation")
+		end
 	end
 
-	local checkJIT = function(writeSize)
-		local checkEntry = EEex_CodePageAllocations[currentCodePageI][currentAllocEntryI]
-		if writeSize > checkEntry.size then
-			local newDst
-			failed = getOrCreateAllocEntryIterate(function(allocEntry)
-				if allocEntry.reserved then return end
-				newDst = allocEntry.address
-				return true
-			end)
-			return failed and -1 or newDst
+	-- Fetch initial alloc entry
+	advanceItr()
+
+	-----------------
+	-- Attempt JIT --
+	-----------------
+
+	local finalWriteSize
+
+	-- This is called by `EEex_JITAtInternal()` every time it relocates to a new address.
+	-- Return:
+	--     -1 -> Error, return from `EEex_JITAtInternal()` without writing. Returned internally when a Lua exception is thrown.
+	--      0 -> Fits, write at the current location.
+	--     !0 -> Doesn't fit, try relocating to the returned address next.
+	local checkJITRelocationFits = function(writeSize)
+		if writeSize > curAllocEntry.size then
+			-- Too small, check next alloc entry
+			advanceItr()
+			return curAllocEntry.address
 		end
+		-- Good, write at current alloc entry
+		EEex_Assembly_Private_ReserveAllocEntry(curCodePage, currentAllocEntryI, curAllocEntry, 0, writeSize)
 		finalWriteSize = writeSize
 		return 0
 	end
 
-	local finalAllocEntry
-	getOrCreateAllocEntryIterate(function(firstAllocEntry)
+	local jitMetadata = EEex_JITAtInternal(curAllocEntry.address, checkJITRelocationFits, assemblyStr)
 
-		if firstAllocEntry.reserved then return end
-		EEex_JITAtInternal(firstAllocEntry.address, checkJIT, assemblyStr)
-		if not finalWriteSize then
-			EEex_Error("Failed to allocate memory for EEex_JITNear().")
+	local errorType = jitMetadata.errorType
+	if errorType ~= nil then
+		if errorType == 0 then
+			-- Throw error with message returned by AsmJit
+			EEex_Error("EEex_JITNear() failed: "..jitMetadata.errorMessage)
+		elseif errorType == 1 then
+			-- Rethrow Lua error raised by `checkJITRelocationFits()`
+			error(jitMetadata.errorMessage, 0)
 		end
+	end
 
-		local finalCodePage = EEex_CodePageAllocations[currentCodePageI]
-		finalAllocEntry = finalCodePage[currentAllocEntryI]
+	-------------------------
+	-- Post-JIT processing --
+	-------------------------
 
-		local memLeftOver = finalAllocEntry.size - finalWriteSize
-		if memLeftOver > 0 then
-			local newAddress = finalAllocEntry.address + finalWriteSize
-			local nextEntry = finalCodePage[currentAllocEntryI + 1]
-			if nextEntry then
-				if not nextEntry.reserved then
-					local addressDifference = nextEntry.address - newAddress
-					nextEntry.address = newAddress
-					nextEntry.size = finalAllocEntry.size + addressDifference
-				else
-					local newEntry = {}
-					newEntry.address = newAddress
-					newEntry.size = memLeftOver
-					newEntry.reserved = false
-					table.insert(finalCodePage, newEntry, currentAllocEntryI + 1)
-				end
-			else
-				local newEntry = {}
-				newEntry.address = newAddress
-				newEntry.size = memLeftOver
-				newEntry.reserved = false
-				table.insert(finalCodePage, newEntry)
-			end
-		end
-		finalAllocEntry.size = finalWriteSize
-		finalAllocEntry.reserved = true
-		return true
-	end)
-
-	return finalAllocEntry.address
+	EEex_Assembly_Private_PostJIT(state, curAllocEntry.address, finalWriteSize, jitMetadata)
+	return curAllocEntry.address
 end
 
 function EEex_JITNearAsLuaFunction(luaFunctionName, assemblyT)
@@ -298,6 +407,17 @@ function EEex_JITNearAsLabel(label, assemblyT)
 end
 
 EEex_DebugPreprocessAssembly = false
+
+EEex_Assembly_Private_DefaultMacroSwitch = {
+	["DEBUG_OFF"] = function(state, argumentsT)
+		--print("#DEBUG_OFF")
+		state.debug = false
+	end,
+	["DEBUG_ON"] = function(state, argumentsT)
+		--print("#DEBUG_ON")
+		state.debug = true
+	end,
+}
 
 function EEex_PreprocessAssembly(assemblyT, state)
 
@@ -326,166 +446,44 @@ function EEex_PreprocessAssembly(assemblyT, state)
 	builtStr[insertI] = "\n" -- Always end with a newline
 	local toReturn = table.concat(builtStr)
 
-	--[[
-		I would never abuse regex, I swear!
-		(Please forgive the following code)
-		#STACK_MOD((-\d+)[1])
-		(#MAKE_SHADOW_SPACE((\d+)[3?]))[2]
-		(#DESTROY_SHADOW_SPACE(KEEP_ENTRY)[5?])[4]
-		(#ALIGN_END)[6]
-		(#ALIGN((\d+)[8?]))[7]
-		(#SHADOW_SPACE_BOTTOM((\d+)[10?]))[9]
-		(#LAST_FRAME_TOP((\d+)[12?]))[11]
-		(#RESUME_SHADOW_ENTRY)[13]
-		(#MANUAL_HOOK_EXIT(\d+)[15])[14]
-	--]]
-
 	if not state then
 		state = {
-			["shadowSpaceStack"] = {},
-			["shadowSpaceStackTop"] = 0,
-			["alignModStack"] = {},
-			["alignModStackTop"] = 0,
-			["hintAccumulator"] = 0,
 			["debug"] = false,
 		}
+		EEex_Assembly_Private_InitState(state)
 	end
 
-	toReturn = EEex_ReplaceRegex(toReturn, "(?:#STACK_MOD\\s*\\((-{0,1}\\d+)\\))|(#MAKE_SHADOW_SPACE(?:\\s*\\((\\d+)\\)){0,1})|(#DESTROY_SHADOW_SPACE(?:(?!\\(.*?\\))|(?:\\((KEEP_ENTRY)\\))))|(#ALIGN_END)|(#ALIGN(?:\\s*\\((\\d+)\\)){0,1})|(#SHADOW_SPACE_BOTTOM\\s*\\((-{0,1}.+?)\\))|(#LAST_FRAME_TOP\\s*\\((-{0,1}.+?)\\))|(#RESUME_SHADOW_ENTRY)|(#MANUAL_HOOK_EXIT\\s*\\((\\d+)\\))|(#DEBUG_ON)|(#DEBUG_OFF)", function(pos, endPos, str, groups)
-		if groups[1] then
-			--print("#STACK_MOD("..tonumber(groups[1])..")")
-			state.hintAccumulator = state.hintAccumulator + tonumber(groups[1])
-		elseif groups[2] then
-			--print("#MAKE_SHADOW_SPACE")
-			local neededShadow = 32 + (groups[3] and tonumber(groups[3]) or 0)
-			if state.shadowSpaceStackTop > 0 and state.shadowSpaceStack[state.shadowSpaceStackTop].top == state.hintAccumulator then
-				local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
-				if shadowEntry.sizeNoRounding < neededShadow then
-					print(debug.traceback("[!] #MAKE_SHADOW_SPACE redefined where original failed to provide enough space! Correct this by expanding "..(shadowEntry.sizeNoRounding - 32).." to "..(neededShadow - 32).."; continuing with suboptimal configuration."))
-					local sizeDiff = EEex_RoundUp(neededShadow, 16) - shadowEntry.size
-					state.hintAccumulator = state.hintAccumulator + sizeDiff
-					shadowEntry.top = shadowEntry.top + sizeDiff
-					shadowEntry.size = shadowEntry.size + sizeDiff
-					shadowEntry.active = true
-					-- Ideally this would be merged with the previous shadow space instruction, but abusing
-					-- regex like this doesn't help make that happen, (would require an additional pass)
-					return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", sizeDiff)
-				end
-			else
-				local neededStack = EEex_DistanceToMultiple(state.hintAccumulator + neededShadow, 16) + neededShadow
+	while true do
 
-				if state.debug then
-					print(string.format(
-						"[?] #MAKE_SHADOW_SPACE() with hintAccumulator = %d, need %d bytes for shadow space, allocating %d to maintain alignment",
-						state.hintAccumulator, neededShadow, neededStack
-					))
-				end
+		local madeChange = false
 
-				state.hintAccumulator = state.hintAccumulator + neededStack
-				state.shadowSpaceStackTop = state.shadowSpaceStackTop + 1
-				state.shadowSpaceStack[state.shadowSpaceStackTop] = {
-					["top"] = state.hintAccumulator,
-					["size"] = neededStack,
-					["sizeNoRounding"] = neededShadow,
-					["active"] = true,
-				}
-				return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", neededStack)
+		-- Turn ENDL markers into newlines. This is a hacky pre-macro evaluation since ENDL uses macro syntax, but allows immediate text.
+		-- e.g. "#ENDLxor eax, eax" needs to be transformed into "\nxor eax, eax", not parsed as the invalid macro "#ENDLxor"
+		toReturn = EEex_ReplacePattern(toReturn, "#ENDL", "\n")
+
+		-- Handle macros
+		toReturn = EEex_ReplaceRegex(toReturn, "#([^\\s()]+)(?:\\(([^)]*)\\))?", function(pos, endPos, matchedStr, groups)
+
+			local macroName = groups[1]
+			local innerStr = groups[2]
+			local argumentsT = innerStr ~= nil and EEex_Split(EEex_Strip(innerStr), "%s*,%s*", true) or {}
+
+			local macroHandler = EEex_Assembly_Private_GetMacroHandler(macroName) or EEex_Assembly_Private_DefaultMacroSwitch[macroName]
+			if macroHandler == nil then
+				EEex_Error(string.format("Invalid macro \"#%s\"", macroName))
 			end
-		elseif groups[4] then
-			--print("#DESTROY_SHADOW_SPACE")
-			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
-			if state.hintAccumulator ~= shadowEntry.top then EEex_Error("#DESTROY_SHADOW_SPACE() failed - stack top not where it should be") end
-			if not groups[5] then
-				state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1
-			else
-				shadowEntry.active = false -- KEEP_ENTRY
-			end
-			state.hintAccumulator = state.hintAccumulator - shadowEntry.size
-			-- LEA maintains flags (as opposed to ADD), which allows us to test a register
-			-- and restore it before calling #DESTROY_SHADOW_SPACE and still use the result
-			-- for a branch.
-			return string.format("lea rsp, qword ptr ss:[rsp+%d]", shadowEntry.size)
-		elseif groups[6] then
-			--print("#ALIGN_END")
-			local alignEntry = state.alignModStack[state.alignModStackTop]
-			if alignEntry.madeShadow then state.shadowSpaceStackTop = state.shadowSpaceStackTop - 1 end
-			state.alignModStackTop = state.alignModStackTop - 1
-			if alignEntry.popAmount > 0 then
-				return string.format("lea rsp, qword ptr ss:[rsp+%d] #ENDL", tonumber(alignEntry.popAmount))
-			end
-		elseif groups[7] then
-			local pushedArgBytes = groups[8] and tonumber(groups[8]) or 0
-			--print("#ALIGN("..pushedArgBytes..")")
-			local neededShadow = 0
-			if state.shadowSpaceStackTop == 0 or state.shadowSpaceStack[state.shadowSpaceStackTop].top ~= state.hintAccumulator then
-				neededShadow = 32
-				state.shadowSpaceStackTop = state.shadowSpaceStackTop + 1
-				state.shadowSpaceStack[state.shadowSpaceStackTop] = {
-					["top"] = state.hintAccumulator,
-					["size"] = neededShadow,
-					["sizeNoRounding"] = neededShadow,
-				}
-			end
-			local neededStack = EEex_DistanceToMultiple(state.hintAccumulator + neededShadow + pushedArgBytes, 16) + neededShadow - pushedArgBytes
-			state.alignModStackTop = state.alignModStackTop + 1
-			state.alignModStack[state.alignModStackTop] = {
-				["popAmount"] = neededStack + pushedArgBytes,
-				["madeShadow"] = neededShadow > 0,
-			}
-			if neededStack > 0 then
-				return string.format("lea rsp, qword ptr ss:[rsp-%d] #ENDL", neededStack)
-			end
-		elseif groups[9] then
-			--print("#SHADOW_SPACE_BOTTOM")
-			local adjustStr = groups[10]
-			local adjust = adjustStr
-				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
-				or 0
-			if adjust >= 0 then EEex_Error("#SHADOW_SPACE_BOTTOM must have a negative offset") end
-			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
-			local stackModAdj = state.hintAccumulator - shadowEntry.top -- For when #STACK_MOD() adjusts the stack after #MAKE_SHADOW_SPACE()
-			return tostring(shadowEntry.sizeNoRounding + stackModAdj + adjust)
-		elseif groups[11] then
-			--print("#LAST_FRAME_TOP")
-			local adjustStr = groups[12]
-			local adjust = adjustStr
-				and (adjustStr:sub(-1) == "h" and tonumber(adjustStr:sub(1,-2), 16) or tonumber(adjustStr))
-				or 0
-			if adjust < 0 then EEex_Error("#LAST_FRAME_TOP must have a positive offset") end
-			if state.shadowSpaceStackTop == 0 then return adjust end
-			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
-			local stackModAdj = state.hintAccumulator - shadowEntry.top -- For when #STACK_MOD() adjusts the stack after #MAKE_SHADOW_SPACE()
-			return tostring(shadowEntry.size + stackModAdj + adjust)
-		elseif groups[13] then
-			--print("#RESUME_SHADOW_ENTRY")
-			local shadowEntry = state.shadowSpaceStack[state.shadowSpaceStackTop]
-			state.hintAccumulator = state.hintAccumulator + shadowEntry.size
-			shadowEntry.active = true
-		elseif groups[14] then
-			--print("#MANUAL_HOOK_EXIT")
-			local hadActiveShadowSpace = false
-			for i = state.shadowSpaceStackTop, 1, -1 do
-				if state.shadowSpaceStack[state.shadowSpaceStackTop].active then
-					hadActiveShadowSpace = true
-					break
-				end
-			end
-			if hadActiveShadowSpace or state.alignModStackTop ~= 0 then EEex_Error("#MANUAL_HOOK_EXIT cannot exit inside a stack frame") end
-			local instance = tonumber(groups[15])
-			if instance == nil or instance < 0 then EEex_Error("#MANUAL_HOOK_EXIT has invalid instance") end
-			return EEex_PreprocessAssembly(EEex_HookIntegrityWatchdog_HookExit(instance), state)
-		elseif groups[16] then
-			--print("#DEBUG_ON")
-			state.debug = true
-		elseif groups[17] then
-			--print("#DEBUG_OFF")
-			state.debug = false
+
+			local replacement = macroHandler(state, argumentsT)
+			madeChange = madeChange or matchedStr ~= replacement
+			return replacement
+		end)
+
+		if not madeChange then
+			break
 		end
-		return ""
-	end)
+	end
 
 	-- Standardize string
-	toReturn = EEex_ReplacePattern(toReturn, "#ENDL", "\n")    -- Turn ENDL markers into newlines
 	toReturn = EEex_ReplacePattern(toReturn, "[ \t]+\n", "\n") -- Remove whitespace before newlines (trailing whitespace)
 	toReturn = EEex_ReplacePattern(toReturn, "\n+", "\n")      -- Merge newlines
 	toReturn = EEex_ReplacePattern(toReturn, "\n[ \t]+", "\n") -- Remove whitespace after newlines, (indentation)
@@ -510,7 +508,7 @@ function EEex_PreprocessAssembly(assemblyT, state)
 		end
 	end)
 
-	return toReturn
+	return toReturn, state
 end
 
 function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
@@ -1000,9 +998,201 @@ function EEex_ReplaceRegex(str, findStr, replaceFunc)
 	return table.concat(builtStr)
 end
 
+function EEex_Split(text, splitBy, usePattern, allowEmptyCapture)
+
+	local toReturn = {}
+	local toReturnI = 1
+
+	local plain = usePattern == nil or not usePattern
+	local captureStartI = 1
+
+	while true do
+
+		local splitStartI, splitEndI = text:find(splitBy, captureStartI, plain)
+
+		if splitStartI == nil then
+			break
+		end
+
+		if splitStartI > captureStartI or allowEmptyCapture then
+			toReturn[toReturnI] = text:sub(captureStartI, splitStartI - 1)
+			toReturnI = toReturnI + 1
+		end
+
+		captureStartI = splitEndI + 1
+	end
+
+	local limit = #text
+	if captureStartI <= limit or (allowEmptyCapture and limit > 0) then
+		toReturn[toReturnI] = text:sub(captureStartI, limit)
+	end
+
+	return toReturn
+end
+
+function EEex_Strip(str)
+	return str:gsub("^%s", ""):gsub("%s$", "")
+end
+
 -------------------
 -- Table Utility --
 -------------------
+
+function EEex_Dump(key, valueToDump, dumpFunction)
+
+	dumpFunction = dumpFunction or print
+
+	local alphanumericSortEntries = function(o)
+		local function conv(s)
+			local res, dot = "", ""
+			for n, m, c in tostring(s):gmatch"(0*(%d*))(.?)" do
+				if n == "" then
+					dot, c = "", dot..c
+				else
+					res = res..(dot == "" and ("%03d%s"):format(#m, m) or "."..n)
+					dot, c = c:match"(%.?)(.*)"
+				end
+				res = res..c:gsub(".", "\0%0")
+			end
+			return res
+		end
+		table.sort(o,
+			function (a, b)
+				local ca, cb = conv(a.string), conv(b.string)
+				return ca < cb or ca == cb and a.string < b.string
+			end)
+		return o
+	end
+
+	local fillDumpLevel
+	fillDumpLevel = function(tableName, levelTable, levelToFill, levelTableKey)
+		local tableKey, tableValue = next(levelTable, levelTableKey)
+		while tableValue ~= nil do
+			local tableValueType = type(tableValue)
+			if tableValueType == 'string' or tableValueType == 'number' or tableValueType == 'boolean' then
+				local entry = {}
+				entry.string = tableValueType..' '..tostring(tableKey)..' = '
+				entry.value = tableValue
+				table.insert(levelToFill, entry)
+			elseif tableValueType == 'table' then
+				if tableKey ~= '_G' then
+					local entry = {}
+					local tableStr = tostring(tableValue)
+					local tableAddress = tableStr:sub(tableStr:find(" ") + 1, -1)
+					entry.string = tableValueType..' '..tostring(tableKey)..' ('..tableAddress..'):'
+					entry.value = {} --entry.value is a levelToFill
+					entry.value.previous = {}
+					entry.value.previous.tableName = tableName
+					entry.value.previous.levelTable = levelTable
+					entry.value.previous.levelToFill = levelToFill
+					entry.value.previous.levelTableKey = tableKey
+					table.insert(levelToFill, entry)
+					return fillDumpLevel(tableKey, tableValue, entry.value)
+				end
+			elseif tableValueType == 'userdata' then
+				local metatable = getmetatable(tableValue)
+				local entry = {}
+				if metatable ~= nil then
+					entry.string = tableValueType..' '..tableKey..':\n'
+					entry.value = {} --entry.value is a levelToFill
+					entry.value.previous = {}
+					entry.value.previous.tableName = tableName
+					entry.value.previous.levelTable = levelTable
+					entry.value.previous.levelToFill = levelToFill
+					entry.value.previous.levelTableKey = tableKey
+					table.insert(levelToFill, entry)
+					return fillDumpLevel(tableKey, metatable, entry.value)
+				else
+					entry.string = tableValueType..' '..tableKey..' = '
+					entry.value = 'nil'
+					table.insert(levelToFill, entry)
+				end
+			else
+				local entry = {}
+				entry.string = tableValueType..' '..tableKey
+				entry.value = nil
+				table.insert(levelToFill, entry)
+			end
+			--Iteration
+			tableKey, tableValue = next(levelTable, tableKey)
+		end
+		alphanumericSortEntries(levelToFill)
+		local previous = levelToFill.previous
+		if previous ~= nil then
+			local previousTableName = previous.tableName
+			local previousLevelTable = previous.levelTable
+			local previousLevelToFill = previous.levelToFill
+			local previousLevelTableKey = previous.levelTableKey
+			levelToFill.previous = nil
+			return fillDumpLevel(previousTableName, previousLevelTable,
+									  previousLevelToFill, previousLevelTableKey)
+		else
+			return levelToFill
+		end
+	end
+
+	local printEntries
+	printEntries = function(entriesTable, indentLevel, indentStrings, previousState, levelTableKey)
+		local tableEntryKey, tableEntry = next(entriesTable, levelTableKey)
+		while(tableEntry ~= nil) do
+			local tableEntryString = tableEntry.string
+			local tableEntryValue = tableEntry.value
+			local indentString = indentStrings[indentLevel]
+			if tableEntryValue ~= nil then
+				if type(tableEntryValue) ~= 'table' then
+					local valueToPrint = string.gsub(tostring(tableEntryValue), '\n', '\\n')
+					dumpFunction(indentString..tableEntryString..valueToPrint)
+				else
+					dumpFunction(indentString..tableEntryString)
+					dumpFunction(indentString..'{')
+					local previous = {}
+					previous.entriesTable = entriesTable
+					previous.indentLevel = indentLevel
+					previous.levelTableKey = tableEntryKey
+					previous.previousState = previousState
+					indentLevel = indentLevel + 1
+					local indentStringsSize = #indentStrings
+					if indentLevel > indentStringsSize then
+						indentStrings[indentStringsSize + 1] = indentStrings[indentStringsSize]..'	'
+					end
+					return printEntries(tableEntryValue, indentLevel, indentStrings, previous)
+				end
+			else
+				dumpFunction(indentString..tableEntryString)
+			end
+			--Increment
+			tableEntryKey, tableEntry = next(entriesTable, tableEntryKey)
+		end
+		dumpFunction(indentStrings[indentLevel - 1]..'}')
+		--Finish previous levels
+		if previousState ~= nil then
+			return printEntries(previousState.entriesTable, previousState.indentLevel, indentStrings,
+									 previousState.previousState, previousState.levelTableKey)
+		end
+	end
+
+	local valueToDumpType = type(valueToDump)
+	if valueToDumpType == 'string' or valueToDumpType == 'number' or valueToDumpType == 'boolean' then
+		dumpFunction(valueToDumpType..' '..key..' = '..tostring(valueToDump))
+	elseif valueToDumpType == 'table' then
+		dumpFunction(valueToDumpType..' '..key..':')
+		dumpFunction('{')
+		local entries = fillDumpLevel(key, valueToDump, {})
+		printEntries(entries, 1, {[0] = '', [1] = '	'})
+	elseif valueToDumpType == 'userdata' then
+		local metatable = getmetatable(valueToDump)
+		if metatable ~= nil then
+			dumpFunction(valueToDumpType..' '..key..':')
+			dumpFunction('{')
+			local entries = fillDumpLevel(key, metatable, {})
+			printEntries(entries, 1, {[0] = '', [1] = '	'})
+		else
+			dumpFunction(valueToDumpType..' '..key..' = nil')
+		end
+	else
+		dumpFunction(valueToDumpType..' '..key)
+	end
+end
 
 function EEex_FlattenTable(table)
 	local toReturn = {}

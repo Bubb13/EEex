@@ -374,8 +374,7 @@
 		}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(48)
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				#MAKE_PROLOG(40, rcx)
 			]]},
 			EEex_GenLuaCall("EEex_Menu_Hook_SaveInstanceId", {
 				["args"] = {
@@ -384,8 +383,7 @@
 			}),
 			{[[
 				call_error:
-				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-				#DESTROY_SHADOW_SPACE
+				#DESTROY_PROLOG
 			]]},
 		})
 	)
@@ -405,8 +403,7 @@
 		}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(48)
-				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				#MAKE_PROLOG(40, rcx)
 			]]},
 			EEex_GenLuaCall("EEex_Menu_Hook_SaveInstanceId", {
 				["args"] = {
@@ -415,8 +412,7 @@
 			}),
 			{[[
 				call_error:
-				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-				#DESTROY_SHADOW_SPACE
+				#DESTROY_PROLOG
 			]]},
 		})
 	)
