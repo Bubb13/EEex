@@ -1637,6 +1637,10 @@ Operations=ADD -16
 Pattern=83F947
 Operations=ADD -12
 
+[Hardcoded_lua_load]
+Pattern=4889442448498BC1
+Operations=ADD -16
+
 [Hardcoded_lua_newuserdata]
 Pattern=488BFA488B4918
 Operations=ADD -13
@@ -1654,6 +1658,10 @@ Pattern=4C8B411033C0
 [Hardcoded_lua_pushcclosure]
 Pattern=4889742410574883EC304963F8
 Operations=ADD -5
+
+[Hardcoded_lua_pushfstring]
+Pattern=4C894C2420534883EC20488BD9
+Operations=ADD -10
 
 [Hardcoded_lua_pushinteger]
 Pattern=488B41100F57C0

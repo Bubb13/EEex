@@ -282,7 +282,7 @@ EEex_Assembly_Private_MacroSwitch = {
 
 		local prologIndex = state.prologActionsTop + 1
 		state.prologActionsTop = prologIndex
-		
+
 		local prologActions = { ["stack"] = {}, ["top"] = 0, ["unwindSlotCount"] = 0, ["size"] = 0 }
 		state.prologActions[prologIndex] = prologActions
 

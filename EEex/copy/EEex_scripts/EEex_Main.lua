@@ -20,6 +20,7 @@ EEex_Main_Private_StartupFiles = {
 	"EEex_AIBase",             --
 	"EEex_AIBase_Patch",       --
 	"EEex_Area",               --
+	"EEex_EngineLua_Patch",    --
 	"EEex_GameObject",         --
 	"EEex_GameObject_Patch",   --
 	"EEex_GameState",          --

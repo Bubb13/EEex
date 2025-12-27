@@ -10,13 +10,7 @@
 	EEex_InitLuaBindings("LuaBindings-v2.6.6.0")
 	EEex_InitLuaBindings("EEex")
 
-	local override = function(funcName)
-		EEex_JITAt(EEex_Label(funcName), {[[
-			jmp #L(EEex::Override_#$(1)) ]], {funcName}
-		})
-	end
-
-	override("bootstrapLua")
+	EEex_JITAt(EEex_Label("bootstrapLua"), {"jmp #L(EEex::Override_bootstrapLua)"})
 
 	-----------------------------------------------------------------------------------
 	-- /START Lua function redirection                                               --
@@ -168,55 +162,6 @@
 	-----------------------------------
 	-- /END Lua function redirection --
 	-----------------------------------
-
-	----------------------------------------------------------------------------------------------------------------
-	-- /START Lua INI handling fix                                                                                --
-	----------------------------------------------------------------------------------------------------------------
-	--     The engine uses a custom Lua function (luaL_loadfilexptr) to execute Baldur.lua (opened with _wfopen). --
-	--     Since stdio functions have to be run within the same C runtime instance these functions must be        --
-	--     redirected to the Lua DLL procedures.                                                                  --
-	----------------------------------------------------------------------------------------------------------------
-
-	-- Redirect the _wfopen() call in OpenIniFile()
-	EEex_ReplaceCall(EEex_Label("Hook-OpenIniFile()-_wfopen()"), EEex_GetLuaLibraryProc("wrapper_wfopen"))
-
-	-- Redirect the luaL_loadfilexptr() call in chReadIniFile()
-	EEex_ReplaceCall(EEex_Label("Hook-chReadIniFile()-luaL_loadfilexptr()"), EEex_GetLuaLibraryProc("luaL_loadfilexptr"))
-
-	-- A unique pattern cannot be established inside chWriteInifile() - replace it entirely to redirect its fclose() call
-	override("chWriteInifile")
-
-	-- It's difficult to replace the fprintf() call in Infinity_WriteINILine() since a unique pattern can't be
-	-- established for that function. The only way to patch it is to grab its address after it has been
-	-- exported to Lua and replace it entirely.
-
-	EEex_ReplaceLua_OnUIFunctionsLoaded = function()
-		EEex_DisableCodeProtection()
-		EEex_JITAt(EEex_CFuncToPtr(Infinity_WriteINILine), {[[
-			jmp #L(EEex::Override_Infinity_WriteINILine)
-		]]})
-		EEex_EnableCodeProtection()
-	end
-
-	EEex_HookAfterCall(EEex_Label("Hook-dimmInit()-uiLoadFunctions()"), EEex_FlattenTable({
-		{[[
-			#MAKE_SHADOW_SPACE(32)
-		]]},
-		EEex_GenLuaCall("EEex_ReplaceLua_OnUIFunctionsLoaded"),
-		{[[
-			call_error:
-			#DESTROY_SHADOW_SPACE
-		]]},
-	}))
-
-	-- Disable backup INI processing, (runs if Baldur.lua had a syntax / runtime error), to prevent crash
-	-- due to the above stdio redirects for INI processing. The backup processing appears to parse
-	-- Baldur.lua as the old Baldur.ini SQL format.
-	EEex_ForceJump(EEex_Label("Hook-chReadIniFile()-CheckDoBackupProcessingJmp"))
-
-	-------------------------------
-	-- /END Lua INI handling fix --
-	-------------------------------
 
 	-- Replace all inlined uses of LUA_REGISTRYINDEX = -1001000 (Lua 5.2) with LUA_REGISTRYINDEX = -10000 (LuaJIT)
 	for _, address in ipairs(EEex_Label("Data-LUA_REGISTRYINDEX")) do
