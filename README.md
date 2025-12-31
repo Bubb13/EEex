@@ -3,6 +3,7 @@
 - [Overview](#overview)
 - [Compatibility](#compatibility)
 - [Download](#download)
+- [Install Order](#install-order)
 - [Installation](#installation)
 - [Stability](#stability)
 - [How EEex Works](#how-eeex-works)
@@ -13,6 +14,7 @@ EEex is an executable extender for Beamdog's Enhanced Edition of the Infinity En
 <br>
 <br>
 EEex's core component does <b>not</b> make any gameplay changes itself – it merely enables other mods to do so. The installer provides additional <a href="https://eeex-docs.readthedocs.io/en/latest/Introduction/components.html">components</a> that make gameplay changes.
+<br>
 <br>
 <br>
 <h1>Compatibility</h1>
@@ -41,6 +43,19 @@ A WeiDU installer has been intentionally omitted from the master branch to preve
 <br>
 <br>
 <br>
+
+<h1>Install Order</h1>
+EEex itself has no external mod dependencies, and thus can go anywhere in the install order.
+<br>
+<br>
+There is one notable exception — certain storefronts, (notably Steam), distribute the Siege of Dragonspear DLC for BG:EE as a zip archive. This archive must be merged with the base game before any mods can be installed. In this case, <a href="https://github.com/Argent77/A7-DlcMerger/releases">DLC Merger</a> must be the first mod in the install order, (i.e. go before EEex).
+<br>
+<br>
+It is generally good practice to place EEex near the beginning of the install order, as it needs to be installed before any mods that rely on it, or detect it to activate additional functionality.
+<br>
+<br>
+<br>
+
 <h1>Installation</h1>
 EEex is distributed as a Gibberlings3 installer. After running the setup file, simply point it to your game directory and click "Install".
 <br>
@@ -49,6 +64,7 @@ EEex is distributed as a Gibberlings3 installer. After running the setup file, s
 - Older versions of EEex are distributed without the Gibberlings3 installer. Extract the archive's contents into your game directory and run the setup file to install.
 
 <b>Please note:</b> The game must be started using InfinityLoader.exe / EEex.exe after installation; any attempt to start the game using the vanilla executable will result in a crash. If InfinityLoader.exe fails to start, please ensure you have installed the latest <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe/">Microsoft Visual C++ Redistributable</a>.
+<br>
 <br>
 <br>
 
