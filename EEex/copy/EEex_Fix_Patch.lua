@@ -251,8 +251,8 @@
 
 				; Mirror the engine's equip-list base selection from the equip-validation
 				; paths that already support opcode 180:
-				;   0x1588 -> m_cImmunitiesItemEquip
-				;   0x2230 -> alternate copy used by the same UI path
+				;   0x1588 -> m_derivedStats.m_cImmunitiesItemEquip
+				;   0x2230 -> m_tempStats.m_cImmunitiesItemEquip (alternate copy used by the same UI path)
 				;
 				; The engine uses `ebx` here as the same derived/base-state selector that
 				; the nearby item-type check already uses.
