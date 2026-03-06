@@ -149,6 +149,79 @@
 	})
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------------------------------------------+
+	| Opcodes #146 / #148                                                                                                                    |
+	+--------------------------------------------------------------------------------------------------------------------------------------------+
+	|   (special & 1) != 0 and param2 == 0 -> Queue SpellNoDec() / SpellPointNoDec() instead of ForceSpell() / ForceSpellPoint()                 |
+	+--------------------------------------------------------------------------------------------------------------------------------------------+
+	|   These hooks intentionally run in the param2 == 0 branch's *late* action-copy sequence, rather than at the earlier engine constant load.  |
+	|   Earlier hook sites looked simpler, but they sit farther away from the final CAIAction write and rely on transient register state.        |
+	|   The sites below are immediately before the outgoing action ID is copied into the message object's embedded CAIAction.                    |
+	+--------------------------------------------------------------------------------------------------------------------------------------------+
+	|   CGameEffectCastSpell::ApplyEffect()                                                                                                      |
+	|       entry mapping:                                                                                                                       |
+	|           rcx = this (effect)                                                                                                              |
+	|           rdx = sprite                                                                                                                     |
+	|       working registers in the param2 == 0 path:                                                                                           |
+	|           rsi = this                                                                                                                       |
+	|           r15 = sprite                                                                                                                     |
+	|       late copy sequence chosen for the hook:                                                                                              |
+	|           0x1401A85EB  movzx eax, word ptr [rsp+60h]                                                                                       |
+	|           0x1401A85F0  lea   rcx, [r14+18h]                                                                                                |
+	|           0x1401A85F4  mov   word ptr [r14+10h], ax                                                                                        |
+	|       The hook restores the load + lea, then overwrites eax only when this->m_special bit0 is set.                                         |
+	+--------------------------------------------------------------------------------------------------------------------------------------------+
+	|   CGameEffectCastSpellPoint::ApplyEffect()                                                                                                 |
+	|       entry mapping:                                                                                                                       |
+	|           rcx = this (effect)                                                                                                              |
+	|           rdx = sprite                                                                                                                     |
+	|       working registers in the param2 == 0 path:                                                                                           |
+	|           rdi = this                                                                                                                       |
+	|           r14 = sprite                                                                                                                     |
+	|       late copy sequence chosen for the hook:                                                                                              |
+	|           0x1401A8847  movzx eax, word ptr [rbp-59h]                                                                                       |
+	|           0x1401A884B  lea   rcx, [rsi+18h]                                                                                                |
+	|           0x1401A884F  mov   word ptr [rsi+10h], ax                                                                                        |
+	|       The hook restores the load + lea, then overwrites eax only when this->m_special bit0 is set.                                         |
+	+--------------------------------------------------------------------------------------------------------------------------------------------+
+	|   Why `EEex_HookAfterRestoreWithLabels()`?                                                                                                 |
+	|       1) These hook sites are inline instruction streams, not calls or jumps, so the call / conditional-jump helpers do not fit.           |
+	|       2) We want vanilla behavior by default: the engine should still execute its original `movzx ...` and `lea ...` pair first.           |
+	|       3) Only after those bytes run do we want to *optionally* replace the action ID in eax, immediately before the final `mov ..., ax`.   |
+	|       4) `restoreSize` is therefore the exact size of the instructions that must still execute before our conditional override runs:       |
+	|              op146: 9 bytes = 5-byte `movzx eax, word ptr [rsp+60h]` + 4-byte `lea rcx, [r14+18h]`                                         |
+	|              op148: 8 bytes = 4-byte `movzx eax, word ptr [rbp-59h]` + 4-byte `lea rcx, [rsi+18h]`                                         |
+	|       5) The `WithLabels` variant is used so the hook can pass `hook_integrity_watchdog_ignore_registers` through labelPairs.              |
+	+--------------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	----------------------------------------------------------------
+	-- CGameEffectCastSpell::ApplyEffect() - late action ID copy  --
+	----------------------------------------------------------------
+
+	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectCastSpell::ApplyEffect()-SetActionId"), 0, 9, 9, {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}}, {[[
+			test dword ptr ds:[rsi+48h], 1 ; this->m_special & 1 ?
+			jz #L(return)                  ; no  -> keep the engine's ForceSpell action ID already restored into eax
+
+			mov eax, 191                   ; yes -> swap the word about to be copied into the outgoing CAIAction to SPELLNODEC
+		]]}
+	)
+
+	---------------------------------------------------------------------
+	-- CGameEffectCastSpellPoint::ApplyEffect() - late action ID copy  --
+	---------------------------------------------------------------------
+
+	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectCastSpellPoint::ApplyEffect()-SetActionId"), 0, 8, 8, {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}}, {[[
+			test dword ptr ds:[rdi+48h], 1 ; this->m_special & 1 ?
+			jz #L(return)                  ; no  -> keep the engine's ForceSpellPoint action ID already restored into eax
+
+			mov eax, 192                   ; yes -> swap the word about to be copied into the outgoing CAIAction to SPELLPOINTNODEC
+		]]}
+	)
+
+	--[[
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	| Opcode #248                                                                                                                              |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
