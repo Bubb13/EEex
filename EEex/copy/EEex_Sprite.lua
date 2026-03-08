@@ -1490,6 +1490,63 @@ function EEex_Sprite_Hook_OnSetCurrAction(sprite)
 	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
 end
 
+-----------------------------------------------------------
+-- Resolve WSPECIAL.2DA SPEED bonuses for mastery hooks  --
+-----------------------------------------------------------
+
+EEex_Sprite_Private_WSpecialSpeedBonusData = nil
+
+local function EEex_Sprite_Private_GetWSpecialSpeedBonusData()
+
+	local speedBonusData = EEex_Sprite_Private_WSpecialSpeedBonusData
+	if speedBonusData ~= nil then
+		return speedBonusData
+	end
+
+	speedBonusData = {
+		["default"] = 0,
+		["byProficiency"] = {},
+	}
+
+	local wspecial = EEex_Resource_Load2DA("WSPECIAL")
+	local defaultSpeed = tonumber(wspecial:getDefault(), 10) or 0
+	-- Match the engine's STYLBONU path exactly: the table stores negative
+	-- SPEED entries, and CheckCombatStats() subtracts that raw value from
+	-- m_nPhysicalSpeed, which turns a negative 2DA entry into a positive
+	-- accumulated speed modifier on the sprite.
+	speedBonusData.default = defaultSpeed
+
+	local speedColumn = wspecial:findColumnLabel("SPEED")
+	if speedColumn >= 0 then
+		local _, lastRowIndex = wspecial:getMaxIndices()
+		for rowIndex = 0, lastRowIndex do
+			local proficiencyLevel = tonumber(wspecial:getRowLabel(rowIndex), 10)
+			if proficiencyLevel ~= nil then
+				local speedBonus = tonumber(wspecial:getAtPoint(speedColumn, rowIndex), 10) or defaultSpeed
+				speedBonusData.byProficiency[proficiencyLevel] = speedBonus
+			end
+		end
+	end
+
+	EEex_Sprite_Private_WSpecialSpeedBonusData = speedBonusData
+	return speedBonusData
+end
+
+function EEex_Sprite_Hook_GetWeaponMasterySpeedBonus(proficiencyLevel, offHand)
+
+	-- The engine stores a single speed-factor modifier on the sprite while
+	-- CheckCombatStatsWeapon() is invoked once per hand. Apply the WSPECIAL
+	-- bonus only on the primary-hand pass to avoid double-counting the same
+	-- mastery row into the shared accumulator.
+	if offHand or proficiencyLevel == nil or proficiencyLevel < 0 then
+		return 0
+	end
+
+	local speedBonusData = EEex_Sprite_Private_GetWSpecialSpeedBonusData()
+	local speedBonus = speedBonusData.byProficiency[proficiencyLevel]
+	return speedBonus ~= nil and speedBonus or speedBonusData.default
+end
+
 --------------------------------------------------------------------------------------------
 -- Allow ITM header flag BIT18 to ignore weapon styles (as if the item were in SLOT_FIST) --
 --------------------------------------------------------------------------------------------
