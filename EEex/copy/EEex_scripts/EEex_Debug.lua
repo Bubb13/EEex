@@ -5,6 +5,7 @@
 
 EEex_Debug_DisableExtraCreatureMarshalling = false
 EEex_Debug_LogActions = false
+EEex_Debug_LogEventTriggers = false
 
 --===========
 -- General ==
@@ -86,6 +87,25 @@ function EEex_Debug_Private_DumpSprite()
 	Infinity_DisplayString(str)
 end
 
+function EEex_Debug_Private_GetObjectName(object)
+	local objectType = object.m_objectType
+	local objectName = "Unknown"
+	if objectType == CGameObjectType.SPRITE then
+		objectName = object.m_sName.m_pchData:get().." ("..object.m_resref:get()..")"
+	elseif objectType == CGameObjectType.AREA_AI then
+		objectName = "Area script ("..object.m_pArea.m_resref:get()..")"
+	elseif objectType == CGameObjectType.GAME_AI then
+		objectName = "Game script (unknown)"
+	elseif objectType == CGameObjectType.DOOR then
+		objectName = "Door (unknown)"
+	elseif objectType == CGameObjectType.CONTAINER then
+		objectName = "Container (unknown)"
+	elseif objectType == CGameObjectType.TRIGGER then
+		objectName = "Trigger (unknown)"
+	end
+	return objectName
+end
+
 --===============
 -- Conditional ==
 --===============
@@ -113,31 +133,85 @@ end
 				return
 			end
 
-			local objectName = "Unknown"
-
-			if objectType == CGameObjectType.SPRITE then
-				objectName = aiBase.m_sName.m_pchData:get().." ("..aiBase.m_resref:get()..")"
-			elseif objectType == CGameObjectType.AREA_AI then
-				objectName = "Area script ("..aiBase.m_pArea.m_resref:get()..")"
-			elseif objectType == CGameObjectType.GAME_AI then
-				objectName = "Game script (unknown)"
-			elseif objectType == CGameObjectType.DOOR then
-				objectName = "Door (unknown)"
-			elseif objectType == CGameObjectType.CONTAINER then
-				objectName = "Container (unknown)"
-			elseif objectType == CGameObjectType.TRIGGER then
-				objectName = "Trigger (unknown)"
-			end
-
 			local actionID = aiBase.m_curAction.m_actionID
 			if actionID ~= 0 then
 				local curScriptNum = aiBase.m_curScriptNum
 				print(string.format("%s executing action %d (%s), script level %d (%s), block %d, response %d",
-					objectName, actionID, actionNames[actionID] or "unknown", curScriptNum,
+					EEex_Debug_Private_GetObjectName(aiBase), actionID, actionNames[actionID] or "unknown", curScriptNum,
 					aiBase:getScriptLevelResRef(aiBase, curScriptNum >= 3 and curScriptNum + 1 or curScriptNum),
 					aiBase.m_curResponseSetNum, aiBase.m_curResponseNum))
 			end
 		end
+	end
+
+	if EEex_Debug_LogEventTriggers then
+
+		local triggerNames = {}
+
+		EEex_GameState_AddInitializedListener(function()
+			local triggers = EEex_Resource_LoadIDS("TRIGGER")
+			triggers:iterateEntries(function(entry)
+				triggerNames[entry.m_id] = entry.m_start.m_pchData:get()
+			end)
+			triggers:free()
+		end)
+
+		EEex_Debug_Private_LogEventTrigger = function(aiBase, trigger)
+
+			local triggerId = trigger.m_triggerID
+			local aiType = trigger.m_triggerCause
+
+			local aiTypeStr = "Cause AI type --------- [ANYONE]"
+
+			if not aiType:Equals(CAIObjectType.ANYONE) then
+
+				local specialCaseParts = {}
+				local specialCasePartsI = 1
+
+				for i = 0, aiType.m_SpecialCase.lastIndex do
+					specialCaseParts[specialCasePartsI] = string.format("        m_SpecialCase[%d] -- %d\n", i, aiType.m_SpecialCase:get(i))
+					specialCasePartsI = specialCasePartsI + 1
+				end
+
+				aiTypeStr = string.format([[
+Cause AI type:
+        m_name ------------ "%s"
+        m_EnemyAlly ------- %d
+        m_General --------- %d
+        m_Race ------------ %d
+        m_Class ----------- %d
+        m_Instance -------- 0x%X
+%s        m_Specifics ------- %d
+        m_Gender ---------- %d
+        m_Alignment ------- %d]],
+					aiType.m_name.m_pchData:get(),
+					aiType.m_EnemyAlly,
+					aiType.m_General,
+					aiType.m_Race,
+					aiType.m_Class,
+					aiType.m_Instance,
+					table.concat(specialCaseParts),
+					aiType.m_Specifics,
+					aiType.m_Gender,
+					aiType.m_Alignment
+				)
+			end
+
+			EEex_Print(string.format([[
+--------------------------------------------------------------------------------
+Event trigger set:
+    Receiving object ------ %s
+    Trigger --------------- 0x%04X (%s)
+    Trigger int parameter - %d
+    %s
+--------------------------------------------------------------------------------
+]],
+				EEex_Debug_Private_GetObjectName(aiBase),
+				triggerId, triggerNames[triggerId] or "unknown",
+				trigger.m_specificID,
+				aiTypeStr))
+		end
+		EEex.AIBase_LuaHook_OnEventTriggerSet_Enabled = true
 	end
 end)()
 

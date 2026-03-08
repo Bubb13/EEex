@@ -198,3 +198,9 @@ function EEex_AIBase_LuaHook_OnScriptingObjectUpdated(aiBase, scriptingObject)
 		EEex_Utility_TryIgnore(listener, EEex_GameObject_CastUT(aiBase), scriptingObject)
 	end
 end
+
+function EEex_AIBase_LuaHook_OnEventTriggerSet(aiBase, trigger)
+	if EEex_Debug_LogEventTriggers then
+		EEex_Debug_Private_LogEventTrigger(aiBase, trigger)
+	end
+end
