@@ -2605,6 +2605,10 @@ Operations=ADD 67
 ExeSwitch=1
 ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
+[Hook-SetSnareTrapCapCompareJmp]
+Pattern=8B985010000003984C100000
+Operations=ADD 33
+
 [Hook-dimmInit-uiDoFile()]
 Pattern=488B18EB03
 Operations=ADD 79
