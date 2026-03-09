@@ -1,3 +1,48 @@
+---------------------------------------------------------------
+-- Fix TRAPLIMT.2DA's snare cap check in CGameEffectSetSnare --
+---------------------------------------------------------------
+
+local EEex_Fix_Private_SetSnareTrapCap = {
+	CompareJumpLabel = "Hook-SetSnareTrapCapCompareJmp",
+	SupportedEngineSentinelLabel = "Hook-dimmInit()-uiLoadMenu()",
+	OriginalCompareJumpOpcode = 0x7E, -- jle
+	FixedCompareJumpOpcode = 0x7C, -- jl
+}
+
+function EEex_Fix_InstallSetSnareTrapCapFix()
+
+	local private = EEex_Fix_Private_SetSnareTrapCap
+
+	-- This fix is only installed on engine variants that expose the shared snare
+	-- compare block and the usual UI loader sentinel.
+	local onSupportedEngine = EEex_TryLabel(private.SupportedEngineSentinelLabel)
+	local compareJumpAddress = EEex_TryLabel(private.CompareJumpLabel)
+
+	if not compareJumpAddress then
+		if onSupportedEngine then
+			EEex_Error("EEex_Fix_InstallSetSnareTrapCapFix(): failed to resolve Hook-SetSnareTrapCapCompareJmp")
+		end
+		return
+	end
+
+	-- The real engine bug is an off-by-one in CGameEffectSetSnare::ApplyEffect():
+	-- after comparing the current active trap count against TRAPLIMT.2DA's cap, the
+	-- engine branches on `jle`, which still allows placement when current == limit.
+	-- Rewriting that short jump to `jl` restores the intended `current < limit` behavior.
+	local currentOpcode = EEex_Read8(compareJumpAddress)
+	if currentOpcode == private.FixedCompareJumpOpcode then
+		return
+	end
+
+	if currentOpcode ~= private.OriginalCompareJumpOpcode then
+		EEex_Error(string.format(
+			"EEex_Fix_InstallSetSnareTrapCapFix(): unexpected opcode 0x%02X at Hook-SetSnareTrapCapCompareJmp",
+			currentOpcode
+		))
+	end
+
+	EEex_Write8(compareJumpAddress, private.FixedCompareJumpOpcode)
+end
 
 ----------------------------------------------------------------------------------------------------------
 -- Fix quick spell slots not updating when a special ability is added (for example, by op171 or act279) --
