@@ -2115,13 +2115,13 @@ Operations=ADD -5
 Pattern=663BBD58030000
 Operations=ADD 35
 
-[Hook-CRuleTables::IsProtectedFromSpell()-CompareStatCall]
-Pattern=8BD0458BC7448BCD488BCEE88DFBFEFFE916FAFFFF
-Operations=ADD 11
-
 [Hook-CRuleTables::GetProfBonuses()-IgnoreWeaponStyles]
 Pattern=48897C241055488BEC4883EC30
 Operations=ADD -5
+
+[Hook-CRuleTables::IsProtectedFromSpell()-CompareStatCall]
+Pattern=E94BFAFFFF83BFA44E000000
+Operations=ADD 48
 
 [Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall]
 Pattern=3CFF7484

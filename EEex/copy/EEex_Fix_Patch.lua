@@ -167,21 +167,21 @@
 	end
 
 	--[[
-	+---------------------------------------------------------------------------------------------------------------------+
-	| Fix SPLPROT.2DA relational stat comparisons treating signed stats as unsigned                                       |
-	+---------------------------------------------------------------------------------------------------------------------+
-	|   [JIT] CRuleTables::IsProtectedFromSpell()                                                                         |
-	|       Only relations <=, ==, <, >, >=, != are re-evaluated here. Bitwise relations retain the engine's behavior.    |
-	+---------------------------------------------------------------------------------------------------------------------+
-	| Why hook with EEex_HookBeforeCallWithLabels():                                                                      |
-	|   This site is the call from IsProtectedFromSpell() into CRuleTables::Compare(). At this exact point the caller     |
-	|   has already fetched the stat value, loaded the compare constant, decoded the relation, and still has the stat id  |
-	|   live in a register. That gives us the narrowest possible interception point:                                      |
-	|     * #L(return)      -> let the original Compare() call run unchanged                                              |
-	|     * #L(return_skip) -> skip the call and continue as if Compare() had returned our replacement result             |
-	|   Hooking earlier would require reimplementing more of IsProtectedFromSpell(); hooking after the call would mean    |
-	|   the engine has already performed the wrong unsigned comparison.                                                   |
-	+---------------------------------------------------------------------------------------------------------------------+
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Fix SPLPROT.2DA relational stat comparisons treating signed stats as unsigned                                      |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   [JIT] CRuleTables::IsProtectedFromSpell()                                                                        |
+	|       Only relations <=, ==, <, >, >=, != are re-evaluated here. Bitwise relations retain the engine's behavior.   |
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Why hook with EEex_HookBeforeCallWithLabels():                                                                     |
+	|   This site is the call from IsProtectedFromSpell() into CRuleTables::Compare(). At this exact point the caller    |
+	|   has already fetched the stat value, loaded the compare constant, decoded the relation, and still has the stat id |
+	|   live in a register. That gives us the narrowest possible interception point:                                     |
+	|     * #L(return)      -> let the original Compare() call run unchanged                                             |
+	|     * #L(return_skip) -> skip the call and continue as if Compare() had returned our replacement result            |
+	|   Hooking earlier would require reimplementing more of IsProtectedFromSpell(); hooking after the call would mean   |
+	|   the engine has already performed the wrong unsigned comparison.                                                  |
+	+--------------------------------------------------------------------------------------------------------------------+
 	--]]
 
 	-- Register state at the Compare() call site:
@@ -196,7 +196,7 @@
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.R11}}},
 		{[[
 			; If this stat is not marked as signed, preserve the engine's original Compare() call.
-			mov rax, #$(1)
+			mov rax, #$(1) ]], {EEex_Fix_Private_SignedSplprotStatBitmap}, [[ #ENDL
 			movzx r11d, r13w
 			cmp byte ptr ds:[rax+r11], 0
 			jz #L(return)
@@ -256,7 +256,7 @@
 			; skip the original call, resuming execution immediately after it.
 			movzx eax, al
 			jmp #L(return_skip)
-		]], {EEex_Fix_Private_SignedSplprotStatBitmap}}
+		]]}
 	)
 
 	--[[
