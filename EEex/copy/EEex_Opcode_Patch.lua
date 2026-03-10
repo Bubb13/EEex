@@ -149,6 +149,67 @@
 	})
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------+
+	| Opcode 0xDB (CGameEffectProtectionCircle)                                                              |
+	+--------------------------------------------------------------------------------------------------------+
+	|   m_effectAmount2 != 0 -> Override the engine's hardcoded protection bonus with m_effectAmount2        |
+	+--------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_OnOp219ApplyEffect(effect: CGameEffect, selectiveBonus: CSelectiveBonus)      |
+	+--------------------------------------------------------------------------------------------------------+
+	|   This hook is placed on the exact engine instruction that stores the hardcoded `2` into               |
+	|   `CSelectiveBonus::m_bonus`.                                                                          |
+	|                                                                                                        |
+	|   Use `EEex_HookAfterRestoreWithLabels()` specifically because:                                        |
+	|     1. We want the engine's original store to run first, so the default behavior stays intact when     |
+	|        `m_effectAmount2 == 0`.                                                                         |
+	|     2. At this point in `ApplyEffect()`, `rdi` already points at the freshly constructed               |
+	|        `CSelectiveBonus`, so Lua can safely overwrite only `m_bonus` without reconstructing anything.  |
+	|     3. `AfterRestore` automatically replays the overwritten bytes before our hook body runs, which     |
+	|        is cleaner and less brittle than manually re-emitting the instruction in a `BeforeRestore`      |
+	|        hook.                                                                                           |
+	+--------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectProtectionCircle::ApplyEffect()-SetHardcodedBonus"), 0, 7, 7, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				; The overwritten 7-byte engine store has already been restored / executed by
+				; EEex_HookAfterRestoreWithLabels() before control reaches this assembly.
+				; Register state at this site:
+				;   rbx -> CGameEffectProtectionCircle* / CGameEffect*
+				;   rdi -> CSelectiveBonus*
+				;
+				; Save the registers we reuse for the Lua call. If Lua errors, we simply
+				; restore them and fall through, leaving the engine's original +2 in place.
+				#MAKE_SHADOW_SPACE(64)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdi
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_OnOp219ApplyEffect", {
+				["args"] = {
+					-- `rbx` still holds the effect that is currently applying.
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameEffect" end,
+					-- `rdi` points at the just-created selective bonus whose `m_bonus`
+					-- field the engine has already initialized to 2.
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CSelectiveBonus" end,
+				},
+			}),
+			{[[
+				call_error:
+				; On failure, restore volatile state and continue with the engine's default bonus.
+				mov rdi, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
+
+	--[[
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	| Opcode #248                                                                                                                              |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
