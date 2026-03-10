@@ -992,6 +992,14 @@ Type=LIST
 Pattern=4889442470410FB600
 Operations=ADD -28
 
+; Vanilla branches here to skip op346's native school bonus when the incoming spell school is >= 12.
+[Hook-CGameEffect::CheckSave()-Op346SkipBonusJmp]
+Pattern=732183BEA44E000000B820110000BAC81D00000F44C24803C60FBF8C480C02000003F9
+
+; Full CGameEffectSaveVsSchoolMod::ApplyEffect body used as the anchor for the function-entry op346 hook.
+[CGameEffectSaveVsSchoolMod::ApplyEffect]
+Pattern=448B49484C8BC14183F90C720333C0C38B492085C9741683F9017521410FB7401C664289844A2C1300008BC1C3410FB7401C4A8D0C4A6601817C2C0000B801000000C3
+
 [CGameEffect::Construct]
 Pattern=4889442428488BD9418BF1
 Operations=ADD -23
