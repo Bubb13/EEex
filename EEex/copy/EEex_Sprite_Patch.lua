@@ -73,10 +73,42 @@
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Destruct()-FirstCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
-		{[[
-			mov rcx, rbx ; pSprite
-			call #L(EEex::Sprite_Hook_OnDestruct)
-		]]}
+		EEex_FlattenTable({
+			{[[
+				; The op346 extended-school cache is stored in sprite aux data, but this hook runs from the
+				; native destructor path, so save the volatile registers before calling back out to EEex/Lua.
+				#MAKE_SHADOW_SPACE(96)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r10
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r11
+
+				mov rcx, rbx ; pSprite
+				call #L(EEex::Sprite_Hook_OnDestruct)
+			]]},
+			-- Stats reload clears this cache when a live sprite's derived state is rebuilt. This second cleanup site
+			-- handles the separate lifetime case where the sprite object itself is being destroyed before another reload.
+			-- Clearing the aux entry here ensures the EEex-managed op346 rows 12..255 never outlive the sprite object.
+			EEex_GenLuaCall("EEex_Opcode_Hook_ClearOp346ExtendedBonuses", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end,
+				},
+			}),
+			{[[
+				call_error:
+				; Common exit path for both success and Lua-call failure: restore the volatile registers we saved
+				; above so the engine destructor continues with the expected call-clobbered register state.
+				mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+				mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
 	)
 
 	--[[
