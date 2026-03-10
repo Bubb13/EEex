@@ -642,6 +642,81 @@
 	})
 
 	--[[
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	| Fix the missing WSPECIAL.2DA[SPEED] mastery bonus in CGameSprite::CheckCombatStatsWeapon()                                       |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_GetWeaponMasterySpeedBonus(proficiencyLevel: number, offHand: boolean) -> number                        |
+	|                                                                                                                                  |
+	|       return:                                                                                                                    |
+	|           -> raw WSPECIAL.2DA SPEED value to subtract from the sprite's shared speed-factor modifier                             |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	|                                                                                                                                  |
+	| Hook strategy:                                                                                                                   |
+	|   Use EEex_HookAfterRestoreWithLabels() because we need the engine's                                                             |
+	|   final resolved proficiency in r12w after the overwritten instruction                                                           |
+	|   has already run, but before the surrounding WSPECIAL lookup logic                                                              |
+	|   consumes that state. A before-hook would have to manually replay the                                                           |
+	|   displaced instruction stream, and a call hook would sit too early in                                                           |
+	|   the control flow before CheckCombatStatsWeapon() has selected the                                                              |
+	|   effective proficiency level shared by the later bonus code.                                                                    |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameSprite::CheckCombatStatsWeapon()-ApplyMasterySpeedFactor"), 0, 8, 8, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(64)
+				; rcx / rdx remain live in the original block after the hook returns.
+				; Save them explicitly because EEex_GenLuaCall() is free to clobber
+				; caller-saved registers.
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			EEex_GenLuaCall("EEex_Sprite_Hook_GetWeaponMasterySpeedBonus", {
+				["args"] = {
+					function(rspOffset) return {[[
+						; r12w holds the final proficiency level selected by the engine
+						; for the current weapon pass at this point in the function.
+						movsx rax, r12w
+						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+					]]} end,
+					function(rspOffset) return {[[
+						; Read the current stack frame's offHand flag instead of
+						; inferring from equipment state in Lua.
+						mov eax, dword ptr ss:[rbp+0x50]
+						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
+					]]}, "boolean" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Number,
+			}),
+			{[[
+				jmp no_error
+
+				call_error:
+				xor eax, eax
+
+				no_error:
+				test eax, eax
+				je done
+
+				; Mirror the engine's style-speed path: subtract the raw 2DA value
+				; from m_nPhysicalSpeed so negative rows increase the accumulator.
+				sub word ptr ds:[r14+0x11F2], ax
+
+				done:
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
+
+	--[[
 	+---------------------------------------------------------------------------------------------------------------------------------+
 	| Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with a ranged weapon for specific           |
 	| [KITLIST.2DA]->ROWNAME / ITEMCAT.IDS pairs                                                                                      |
