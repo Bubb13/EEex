@@ -40,9 +40,9 @@ function EEex_Fix_Hook_OnSpellOrSpellPointStartedCastingGlow(sprite)
 	EEex_GetUDAux(sprite)["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 1
 end
 
-----------------------------------------------------------------------------------------------------------
--- Fix SPLPROT.2DA stat comparisons not respecting signed stat storage (e.g. negative resistances)      --
-----------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
+-- Fix SPLPROT.2DA stat comparisons not respecting signed stat storage (e.g. negative resistances) --
+-----------------------------------------------------------------------------------------------------
 
 -- The patch-side assembly receives the raw stat id as an unsigned 16-bit value.
 -- A 64 KiB byte map lets the hook answer "is this stat stored as signed?" with
