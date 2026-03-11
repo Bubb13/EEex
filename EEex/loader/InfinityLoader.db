@@ -1807,6 +1807,43 @@ Operations=ADD 23
 Pattern=3881F81000007407
 Operations=ADD 56
 
+[Hook-CGameEffectCastSpell::ApplyEffect()-SetActionId]
+; Pattern derivation:
+;   1) Disassemble the param2 == 0 path and identify the exact instruction where the final action ID is loaded into eax.
+;   2) Start the byte pattern at that target instruction and keep extending forward until the byte sequence is unique in icewind.exe.
+;   3) Because the unique match already begins at the desired hook address (0x1401A85EB), no Operations adjustment is needed.
+;   4) The resulting bytes correspond to:
+;          movzx eax, word ptr [rsp+60h]
+;          lea   rcx, [r14+18h]
+;          mov   word ptr [r14+10h], ax
+; param2 == 0 path, late action-ID copy:
+;   0x1401A85EB  movzx eax, word ptr [rsp+60h]
+;   0x1401A85F0  lea   rcx, [r14+18h]
+;   0x1401A85F4  mov   word ptr [r14+10h], ax
+; The Lua hook restores the load + lea, then conditionally swaps eax before the final store.
+Pattern=0FB7442460498D4E186641894610488D542468
+
+[Hook-CGameEffectCastSpellPoint::ApplyEffect()-SetActionId]
+; Pattern derivation:
+;   1) The ideal hook address is 0x1401A8847 (`movzx eax, word ptr [rbp-59h]`), immediately before the final action-ID store.
+;   2) The byte sequence starting there was not unique in icewind.exe, so the search window was extended backward to include the
+;      preceding constructor call at 0x1401A8842.
+;   3) That longer sequence is unique, but it begins 5 bytes before the desired hook address.
+;   4) `Operations=ADD 5` compensates for that, moving the resolved label from the start of the matched pattern to 0x1401A8847.
+;   5) The resulting bytes cover:
+;          call  CAIAction::CAIAction()
+;          movzx eax, word ptr [rbp-59h]
+;          lea   rcx, [rsi+18h]
+;          mov   word ptr [rsi+10h], ax
+; param2 == 0 path, late action-ID copy:
+;   0x1401A8842  call  CAIAction::CAIAction()
+;   0x1401A8847  movzx eax, word ptr [rbp-59h]
+;   0x1401A884B  lea   rcx, [rsi+18h]
+;   0x1401A884F  mov   word ptr [rsi+10h], ax
+; Pattern starts at the constructor call and ADD 5 lands on the movzx at 0x1401A8847.
+Pattern=E8B9E4F6FF0FB745A7488D4E1866894610488D55AF8B45F7894660
+Operations=ADD 5
+
 [Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction]
 Pattern=898248130000
 Operations=ADD -3
