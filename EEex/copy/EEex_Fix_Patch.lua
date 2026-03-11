@@ -270,6 +270,151 @@
 	]]})
 
 	--[[
+	+------------------------------------------------------------------------------------------------------------------+
+	| BUG: v2.6.6.0 - opcode 180 (CGameEffectRestrictEquipItem) is enforced by equip validation, but inventory UI      |
+	| paths only query CImmunitiesItemTypeEquipList::OnList(), so item-specific restrictions never get the usual red   |
+	| tint / usability denial in inventory.                                                                            |
+	+------------------------------------------------------------------------------------------------------------------+
+	| Fix the UI-side checks in CInfGame::CheckItemUsable(short, ...) and CInfGame::GetItemTint(CItem*) so they        |
+	| consult CImmunitiesItemEquipList::OnList() first, then fall back to the engine's original item-type check.       |
+	|                                                                                                                  |
+	| This is intentionally limited to the UI helper paths. The actual equip validation code already checks both       |
+	| opcode 180's item-resref list and opcode 181's item-type list; the missing red overlay was caused by the UI      |
+	| only consulting the latter.                                                                                      |
+	+------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local hookRestrictEquipItemUI = function(address, spriteRegister, itemRegister)
+		-- `address` is the original call to CImmunitiesItemTypeEquipList::OnList().
+		-- Replace that call with a small shim that:
+		--   1) checks CImmunitiesItemEquipList::OnList() using the item's resref
+		--   2) if no opcode 180 match is found, replays the engine's original item-type call
+		--
+		-- The caller-specific registers differ between the two UI helpers, so the
+		-- sprite/item registers are supplied by the two call sites below.
+		--
+		-- Original helper signatures:
+		--   CImmunitiesItemEquipList::OnList(
+		--       rcx = CImmunitiesItemEquipList*,
+		--       rdx = CResRef*,
+		--       r8  = unsigned long* outRef,
+		--       r9  = CGameEffect** outEffect
+		--   )
+		--
+		--   CImmunitiesItemTypeEquipList::OnList(
+		--       rcx = CImmunitiesItemTypeEquipList*,
+		--       edx = unsigned long itemType,
+		--       r8  = unsigned long* outRef,
+		--       r9  = CGameEffect** outEffect
+		--   )
+		--
+		-- This means only rcx/rdx differ between the opcode 180 and opcode 181 checks.
+		-- r8/r9 must be preserved so the surrounding engine code sees the exact same
+		-- out-parameter locations no matter which helper returns first.
+		--
+		-- Use EEex_HookRemoveCall() specifically because this patch is replacing a
+		-- single direct `call CImmunitiesItemTypeEquipList::OnList` instruction.
+		-- That gives us two things we want:
+		--   1) the original call is suppressed unless we explicitly replay it
+		--   2) `#L(original)` still remains available, so we can fall back to the
+		--      engine's original opcode 181 behavior after our opcode 180 check misses
+		--
+		-- Other common hook styles are a worse fit here:
+		--   - EEex_HookAfterCall(): too late, because the type-only check would already
+		--     have run before we could inject the item-resref check
+		--   - EEex_HookBeforeCall(): can run before the original call, but it is built
+		--     around preserving the original call rather than replacing it conditionally
+		--   - EEex_HookBeforeRestore()/EEex_HookAfterRestore(): workable in principle,
+		--     but unnecessarily low-level here because the target is already a clean
+		--     disp32 call site and HookRemoveCall gives us the original target for free
+		EEex_HookRemoveCall(address, EEex_FlattenTable({
+			{[[
+				; Allocate 0x40 bytes so we have:
+				;   - 0x20 bytes of Windows x64 shadow space for our nested calls
+				;   - 0x20 bytes of scratch space to save the original rcx/rdx/r8/r9
+				sub rsp, 40h
+
+				; Preserve the original call arguments. If the item-resref check misses,
+				; we must invoke the engine's original item-type helper with the same
+				; rcx/rdx/r8/r9 argument bundle it was about to receive.
+				mov qword ptr ss:[rsp+20h], rcx
+				mov qword ptr ss:[rsp+28h], rdx
+				mov qword ptr ss:[rsp+30h], r8
+				mov qword ptr ss:[rsp+38h], r9
+
+				; Mirror the engine's equip-list base selection from the equip-validation
+				; paths that already support opcode 180:
+				;   0x1588 -> m_derivedStats.m_cImmunitiesItemEquip
+				;   0x2230 -> m_tempStats.m_cImmunitiesItemEquip (alternate copy used by the same UI path)
+				;
+				; The engine uses `ebx` here as the same derived/base-state selector that
+				; the nearby item-type check already uses.
+				mov eax, 2230h
+				mov ecx, 1588h
+				test ebx, ebx
+				cmove ecx, eax
+				add rcx, ]], spriteRegister, [[
+
+				; CImmunitiesItemEquipList::OnList() is keyed by the item's CResRef,
+				; which begins at item + 0x10.
+				lea rdx, qword ptr ds:[]], itemRegister, [[+10h]
+
+				; Reuse the caller's original out-parameter storage.
+				mov r8, qword ptr ss:[rsp+30h]
+				mov r9, qword ptr ss:[rsp+38h]
+				call #L(CImmunitiesItemEquipList::OnList)
+
+				; A hit means opcode 180 already populated the out-parameters and return
+				; value exactly as the surrounding UI code expects. Skip the original
+				; item-type helper in that case.
+				test eax, eax
+				jnz return_from_hook
+
+				; No opcode 180 match: restore the original arguments and fall back to
+				; the engine's item-type helper so opcode 181 behavior remains unchanged.
+				mov rcx, qword ptr ss:[rsp+20h]
+				mov rdx, qword ptr ss:[rsp+28h]
+				mov r8, qword ptr ss:[rsp+30h]
+				mov r9, qword ptr ss:[rsp+38h]
+				call #L(original)
+
+				return_from_hook:
+				; Match the stack depth expected by the hook trampoline before jumping
+				; back to the instruction after the original removed call.
+				add rsp, 40h
+				jmp #L(return)
+			]]},
+		}))
+	end
+
+	-- CInfGame::CheckItemUsable(short, CItem*, ...) stores:
+	--   rsi -> sprite
+	--   rdi -> item
+	--
+	-- The loader DB label for this hook lands directly on the original
+	-- `call CImmunitiesItemTypeEquipList::OnList` inside the short-portrait
+	-- usability helper.
+	hookRestrictEquipItemUI(
+		EEex_Label("Hook-CInfGame::CheckItemUsable(short)-CImmunitiesItemTypeEquipList::OnList()"),
+		"rsi",
+		"rdi"
+	)
+
+	-- CInfGame::GetItemTint(CItem*) stores:
+	--   r13 -> sprite
+	--   rsi -> item
+	--
+	-- This is the path responsible for the red inventory overlay itself.
+	-- The hook shape is the same as CheckItemUsable(short, ...); only the source
+	-- registers differ because the surrounding function uses a different register
+	-- allocation.
+	hookRestrictEquipItemUI(
+		EEex_Label("Hook-CInfGame::GetItemTint()-CImmunitiesItemTypeEquipList::OnList()"),
+		"r13",
+		"rsi"
+	)
+
+	--[[
 	+--------------------------------------------------------------------------------------------------------------------------------+
 	| Fix a couple of regressions in v2.6 regarding op206/op232/op256                                                                |
 	+--------------------------------------------------------------------------------------------------------------------------------+
