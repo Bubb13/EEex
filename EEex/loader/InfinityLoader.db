@@ -119,6 +119,11 @@ Operations=ADD -22
 Pattern=4883EC20410FB6F8
 Operations=ADD -6
 
+; Tiny leaf helper consumed by EEex_Opcode_Patch.lua when emulating native
+; CLSSPLAB-driven mode-3 stat rolls for op6/op10/op19/op49.
+[CAIObjectType::GetClass]
+Pattern=0FB6410BC3CCCCCCCCCCCCCC
+
 [CAIObjectType::OfType]
 Pattern=415441574883EC30488BFA
 Operations=ADD -4
@@ -492,6 +497,11 @@ Operations=ADD -2
 
 [CRuleTables::MapCharacterSpecializationToSchool]
 Pattern=81FA000800007736
+
+; Native CLSSPLAB accessor used by opcode 15 / 44. Exposing it here lets the
+; Lua patch reuse engine row/column indexing instead of duplicating the table logic.
+[CRuleTables::GetSpellAbilityValue]
+Pattern=4C8BC90FBF8988380000443BC17D31
 
 [CScreenWorld::TogglePauseGame]
 Pattern=48895C241855565741564157488D6C24D9
@@ -1787,6 +1797,17 @@ Pattern=488BD84C8B7C2460
 Pattern=F6C301740DBA58010000
 Operations=ADD -5
 
+; Entry labels for handlers that do not natively implement param2 == 3.
+; The opcode patch hooks at the first instruction, rewrites mode-3 into mode-0,
+; then resumes through the original handler body.
+[Hook-CGameEffectCHR::ApplyEffect()-Entry]
+Pattern=83F9010F853F0100000FB68296070000
+Operations=ADD -70
+
+[Hook-CGameEffectCON::ApplyEffect()-Entry]
+Pattern=83F9010F853F0100000FB68295070000
+Operations=ADD -70
+
 [Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-CheckRetVal]
 Pattern=6685C00F848E0000004885DB
 Operations=ADD 3
@@ -1794,6 +1815,10 @@ Operations=ADD 3
 [Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext]
 Pattern=4C8BCF8B5320
 Operations=ADD 9
+
+[Hook-CGameEffectINT::ApplyEffect()-Entry]
+Pattern=83F9010F853F0100000FB68292070000
+Operations=ADD -70
 
 [Hook-CGameEffectCopySelf::ApplyEffect()-CGameSprite::Copy()]
 Pattern=4533C948899C2440010000
@@ -1837,6 +1862,10 @@ Operations=ADD 20
 
 [Hook-CGameEffectSecondaryCastList::ApplyEffect()]
 Pattern=48895C24185556574154415541564157488D6C24D94881EC00010000
+
+[Hook-CGameEffectWIS::ApplyEffect()-Entry]
+Pattern=83F9010F853F0100000FB68293070000
+Operations=ADD -70
 
 [Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call]
 Pattern=FF50088B9350010000
