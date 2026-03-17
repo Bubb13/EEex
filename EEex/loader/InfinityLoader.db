@@ -1952,7 +1952,7 @@ Operations=ADD 16
 Pattern=488D4DD08D7801
 Operations=ADD 18
 
-[Hook-CGameSprite::Hit()-AdjustCriticalRollThreshold]
+[Hook-CGameSprite::Hit()-AdjustCriticalHitRollThreshold]
 Pattern=0F8C1D010000B801000000418BFC
 Operations=ADD 0
 

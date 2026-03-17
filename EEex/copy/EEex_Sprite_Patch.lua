@@ -864,7 +864,7 @@
 	-- Intercept the late critical-hit branch inside Hit(). At this point the visible / effective
 	-- attack roll may already have been overridden for op138, but critical-hit eligibility must
 	-- still be decided from the natural d20 roll the engine originally rolled.
-	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::Hit()-AdjustCriticalRollThreshold"), 0, {
+	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::Hit()-AdjustCriticalHitRollThreshold"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
 			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
