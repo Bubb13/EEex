@@ -86,6 +86,62 @@
 	--------------------------------------
 
 	--[[
+	+-----------------------------------------------------------------------------------------------------------------------+
+	| Opcode #138 (0x8A)                                                                                                    |
+	+-----------------------------------------------------------------------------------------------------------------------+
+	|   param2 in {0, 8, 11, 12, 13} and (param1 & 1) ~= 0 -> invoke Lua callback in `resource`, then perform a real        |
+	|                                                         attack instead of the default animation-only behavior         |
+	|                                                                                                                       |
+	|   resource -> Name of the global Lua function. The name must be 8 characters or less, and be ALL UPPERCASE.           |
+	+-----------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op138_ApplyEffect(effect: CGameEffect*, sprite: CGameSprite*) -> boolean               |
+	|       return:                                                                                                         |
+	|           -> false - Effect not handled                                                                               |
+	|           -> true  - Effect handled (skip normal code)                                                                |
+	+-----------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- The Lua-side repo can intercept op138 at ApplyEffect(), but the callback result has
+	-- to survive until much later native attack phases (action start, Hit(), Damage()).
+	-- That is why the implementation also patches EEex.dll / loader labels in InfinityLoader.
+
+	-- Hook the first instruction of SetSequence::ApplyEffect() so op138 can decide, before any
+	-- vanilla work runs, whether this particular effect instance should be redirected into the
+	-- native op138 bridge. Non-op138 callers fall straight back into the original function.
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectSetSequence::ApplyEffect()-FirstInstruction"), 0, 6, 6, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			; Preserve the original ApplyEffect(effect, sprite) arguments across the helper call.
+			; The native helper returns non-zero only when it fully takes ownership of this op138.
+			#MAKE_SHADOW_SPACE(48)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			call #L(EEex::Opcode_Hook_Op138_ApplyEffect)
+			test eax, eax
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			jz #L(return)
+
+			; Handled path: emulate a successful ApplyEffect() return and skip the vanilla body.
+			; The native side has already queued the real attack flow and preserved later callback state.
+			mov eax, 1
+			#MANUAL_HOOK_EXIT(1)
+			ret
+		]]}
+	)
+	-- Manually define the ignored registers for the unusual `ret` above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectSetSequence::ApplyEffect()-FirstInstruction"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
+	})
+
+	--[[
 	+--------------------------------------------------------------------------------------------------+
 	| Opcode #214                                                                                      |
 	+--------------------------------------------------------------------------------------------------+

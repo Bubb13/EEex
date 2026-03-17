@@ -11,6 +11,7 @@
 	|   473 EEex_MatchObject(S:Chunk*)                                               |
 	|   473 EEex_MatchObjectEx(S:Chunk*,I:Nth*,I:Range*,I:Flags*X-MATOBJ)            |
 	|   474 EEex_SetTarget(S:Name*,O:Target*)                                        |
+	|   475 EEex_AttackOnce(O:Target*)                                               |
 	|   476 EEex_SpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)                |
 	|   476 EEex_SpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)                    |
 	|   477 EEex_SpellObjectOffsetNoDec(O:Target*,I:Spell*Spell,P:Offset*)           |
@@ -71,6 +72,10 @@
 	|   [Lua] EEex_Action_LuaHook_OnAfterSpriteStartedAction(sprite: CGameSprite)      |
 	+----------------------------------------------------------------------------------+
 	--]]
+
+	-- opcode 138 depends on this native callback as well: the wrapper action can queue
+	-- a normal Attack(), but only the engine knows when movement/pathing has finished and
+	-- the real attack action has actually started for the chosen target.
 
 	EEex_HookAfterCallWithLabels(EEex_Label("CGameSprite::SetCurrAction()-LastCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},

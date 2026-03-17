@@ -1827,6 +1827,9 @@ Operations=ADD -10
 Pattern=F6472004
 Operations=ADD 25
 
+[Hook-CGameEffectSetSequence::ApplyEffect()-FirstInstruction]
+Pattern=40534883EC20F782C81D000000080000488BC2488BD975160FB65120488BC8E8
+
 [Hook-CGameEffectRangeEffect::ApplyEffect()]
 Pattern=4885C9747B
 Operations=ADD -43
@@ -1924,9 +1927,38 @@ Operations=ADD 7
 Pattern=418BF1488D4DD8
 Operations=ADD 10
 
+; opcode 138 / AttackOnce bridge:
+; - ApplyEffect() interception starts the feature
+; - ExecuteAction()/SetCurrAction() labels track when the real attack begins
+; - Hit()/Damage() labels let the native bridge rewrite only the base rolls while
+;   still letting the engine keep its normal crit and damage-modifier behavior
+[Hook-CGameSprite::Damage()-FormatBaseDamageRoll]
+ExeSwitch=1
+ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
+
+[!ExeSwitch-Baldur.exe-Hook-CGameSprite::Damage()-FormatBaseDamageRoll]
+Pattern=440FBFC6488D15ABD52100488D4C2448E8E1E10600
+Operations=ADD 16
+
+[!ExeSwitch-BaldurII.exe-Hook-CGameSprite::Damage()-FormatBaseDamageRoll]
+Pattern=440FBFC6488D15ABD52100488D4C2448E8E1E10600
+Operations=ADD 16
+
+[!ExeSwitch-icewind.exe-Hook-CGameSprite::Damage()-FormatBaseDamageRoll]
+Pattern=440FBFC6488D156BF52100488D4C2448E891E20600
+Operations=ADD 16
+
 [Hook-CGameSprite::Hit()-FormatRollCall]
 Pattern=488D4DD08D7801
 Operations=ADD 18
+
+[Hook-CGameSprite::Hit()-AdjustCriticalHitRollThreshold]
+Pattern=0F8C1D010000B801000000418BFC
+Operations=ADD 0
+
+[Hook-CGameSprite::Hit()-AdjustCriticalMissRollThreshold]
+Pattern=0F8F60FFFFFF6683BBF803000062458BF4
+Operations=ADD 0
 
 [Hook-CGameSprite::Hit()-MeleeingWithRangedPenalty]
 Pattern=2BF90FAFC0

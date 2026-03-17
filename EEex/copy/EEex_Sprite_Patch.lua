@@ -487,6 +487,43 @@
 		})
 	)
 
+	-- Intercept the formatting call that turns Damage()'s raw base damage roll into the combat-log
+	-- "Roll:X" text. This is the earliest stable point where the engine has the uncluttered base
+	-- damage roll in hand, but has not yet folded it into the later total damage result. The native
+	-- bridge uses this seam for two cases:
+	--   1. the silent op138 preview pass, which needs the same base roll the real hit will use
+	--   2. the later real hit, where the Lua-returned base damage roll must replace only Roll:X
+	--      while leaving all later engine modifiers intact
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::Damage()-FormatBaseDamageRoll"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.RSI, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			; Preserve the formatter call arguments, ask the native bridge whether this Damage()
+			; instance belongs to the active op138 attack, then feed the possibly adjusted base
+			; roll back through the exact registers the engine is about to use for Roll:X.
+			#MAKE_SHADOW_SPACE(64)
+			mov qword ptr ss:[rsp+40], rcx
+			mov qword ptr ss:[rsp+48], rdx
+			mov qword ptr ss:[rsp+56], r8
+
+			; Ask the native op138 bridge whether this Damage() call is the silent preview
+			; or the later real swing, and if needed replace only the raw Roll:X basis.
+			mov rcx, rdi
+			mov rdx, r15
+			movsx r8d, si
+			call #L(EEex::Sprite_Hook_AdjustDamageRollBasis)
+
+			movsx esi, ax
+			mov r8d, esi
+			mov rdx, qword ptr ss:[rsp+48]
+			mov rcx, qword ptr ss:[rsp+40]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
 	--[[
 	+---------------------------------------------------------------------+
 	| On action change, clear EEex data associated with the ending action |
@@ -791,11 +828,119 @@
 
 	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::Hit()-FormatRollCall"), {
 		{"hook_integrity_watchdog_ignore_registers", {
-			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.RDI, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11, EEex_HookIntegrityWatchdogRegister.R12
 		}}},
 		{[[
+			#MAKE_SHADOW_SPACE(80)
+			mov qword ptr ss:[rsp+40], rcx
+			mov qword ptr ss:[rsp+48], rdx
+			mov qword ptr ss:[rsp+56], r8
+			mov qword ptr ss:[rsp+64], r9
+
+			; Let the native bridge consume the first real attack roll tied to the queued
+			; op138 attack, invoke the Lua callback, and hand back the overridden base roll.
+			mov rcx, rbx
+			mov rdx, r14
+			mov r8, r15
+			mov r9d, dword ptr ss:[rsp+56]
+			call #L(EEex::Sprite_Hook_OnBeforeFormatRollCall)
+
+			mov r9, qword ptr ss:[rsp+64]
+			mov rdx, qword ptr ss:[rsp+48]
+			mov rcx, qword ptr ss:[rsp+40]
+			mov edi, eax
+			mov r12d, eax
+			mov r8d, eax
+			mov dword ptr ss:[rbp-40h], eax
 			mov rax, ]], EEex_Label("EEex::CGameSprite_Hit_Roll"), [[ #ENDL
 			mov byte ptr ds:[rax], r8b
+
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	-- Intercept the late critical-hit branch inside Hit(). At this point the visible / effective
+	-- attack roll may already have been overridden for op138, but critical-hit eligibility must
+	-- still be decided from the natural d20 roll the engine originally rolled.
+	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::Hit()-AdjustCriticalHitRollThreshold"), 0, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			; Save the branch inputs, recover the natural roll from native op138 state, then rebuild
+			; the threshold compare so only crit logic sees the natural roll. The displayed attack roll
+			; remains overridden elsewhere; this hook adjusts only the jump decision in front of us.
+			#MAKE_SHADOW_SPACE(80)
+			mov qword ptr ss:[rsp+40], rcx
+			mov qword ptr ss:[rsp+48], rdx
+			mov qword ptr ss:[rsp+56], r8
+			mov qword ptr ss:[rsp+64], r9
+			mov dword ptr ss:[rsp+72], ecx
+
+			; The displayed / effective attack roll may be overridden, but crit thresholds
+			; still have to use the natural d20 roll.
+			mov rcx, rbx
+			mov rdx, r14
+			mov r8d, dword ptr ss:[rbp-40h]
+			call #L(EEex::Sprite_Hook_GetNaturalRollForLateHitLogic)
+
+			mov edx, dword ptr ss:[rbp-40h]
+			sub edx, eax
+			mov ecx, dword ptr ss:[rsp+72]
+			add ecx, edx
+
+			mov r9, qword ptr ss:[rsp+64]
+			mov r8, qword ptr ss:[rsp+56]
+			mov rdx, qword ptr ss:[rsp+48]
+			cmp dword ptr ss:[rbp-40h], ecx
+
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	-- Mirror the critical-hit fix for the later critical-miss branch. An op138 callback may lower
+	-- the displayed / effective attack roll below 1, but the engine must only force an automatic
+	-- miss when the natural d20 roll itself was really 1.
+	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::Hit()-AdjustCriticalMissRollThreshold"), 0, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			; Same strategy as the crit-hit hook above: preserve live branch state, ask the native
+			; bridge for the natural roll that belongs to this attack, then replay the compare with
+			; natural-roll semantics so only the automatic-miss gate is corrected.
+			#MAKE_SHADOW_SPACE(80)
+			mov qword ptr ss:[rsp+40], rcx
+			mov qword ptr ss:[rsp+48], rdx
+			mov qword ptr ss:[rsp+56], r8
+			mov qword ptr ss:[rsp+64], r9
+			mov dword ptr ss:[rsp+72], eax
+
+			; Mirror the critical-hit fix for critical misses so a debuffed overridden roll
+			; does not manufacture an automatic miss unless the natural roll was really 1.
+			mov rcx, rbx
+			mov rdx, r14
+			mov r8d, dword ptr ss:[rbp-40h]
+			call #L(EEex::Sprite_Hook_GetNaturalRollForLateHitLogic)
+
+			mov edx, dword ptr ss:[rbp-40h]
+			sub edx, eax
+			mov eax, dword ptr ss:[rsp+72]
+			add eax, edx
+
+			mov r9, qword ptr ss:[rsp+64]
+			mov r8, qword ptr ss:[rsp+56]
+			mov rdx, qword ptr ss:[rsp+48]
+			mov rcx, qword ptr ss:[rsp+40]
+			cmp dword ptr ss:[rbp-40h], eax
+
+			#DESTROY_SHADOW_SPACE
 		]]}
 	)
 
