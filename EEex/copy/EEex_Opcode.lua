@@ -130,6 +130,32 @@ function EEex_Opcode_LuaHook_AfterListsResolved(sprite)
 end
 
 --[[
++----------------------------------------------------------------------------------------------------------------+
+| Opcode #138 (0x8A)                                                                                             |
++----------------------------------------------------------------------------------------------------------------+
+| param2 in {0, 8, 11, 12, 13} and (param1 & 1) ~= 0 -> perform a real attack and call the Lua function in       |
+|                                                       `resource` before the attack roll / damage is finalized  |
++----------------------------------------------------------------------------------------------------------------+
+| Callback signature:                                                                                            |
+|     FUNC(op138: CGameEffect, sprite: CGameSprite, baseAttackRoll: number, baseDamageRoll: number)              |
+|         -> number, number[, boolean]                                                                           |
+|                                                                                                                |
+| Notes:                                                                                                         |
+|     - The callback name must be 8 characters or less, and be ALL UPPERCASE                                     |
+|     - The Lua patch only redirects opcode 138 into the feature. The actual callback result has to persist      |
+|       across later native attack phases, so EEex.dll / loader labels are patched too                           |
+|     - Critical-hit determination still uses the natural roll                                                   |
+|     - `baseDamageRoll` is captured from the engine's raw `Roll:X` damage basis before later modifiers          |
+|     - The returned base attack roll is clamped to the engine's natural d20 range `[1, 20]`                     |
+|     - The returned base damage roll is clamped to `>= 0`                                                       |
+|     - The returned base damage roll replaces only the engine's raw `Roll:X` basis; later damage modifiers      |
+|       still apply normally unless the optional third return forces final damage to `0`                         |
+|     - If the optional third return is `true` and the returned base damage roll clamps to `0`, final damage     |
+|       is forced to `0` too, ignoring later damage modifiers                                                    |
++----------------------------------------------------------------------------------------------------------------+
+--]]
+
+--[[
 +--------------------------------------------------------------------------------+
 | Opcode #214                                                                    |
 +--------------------------------------------------------------------------------+

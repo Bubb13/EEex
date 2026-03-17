@@ -37,6 +37,7 @@
 !/style/*.*
 !/.gitattributes
 !/.gitignore
+!/.gitmessage
 !/EEex.png
 !/package_mod.bat
 !/README.md

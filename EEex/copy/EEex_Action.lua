@@ -243,6 +243,31 @@ function EEex_Action_Private_SpellObjectOffset(aiBase, curAction, bOnlySprite, r
 	return realActionFunc(aiBase)
 end
 
+local function EEex_Action_Private_AttackOnce(aiBase, curAction)
+
+	if not aiBase:isSprite(true) then
+		return EEex_Action_ReturnType.ACTION_ERROR
+	end
+
+	local target = aiBase:GetTargetShareType1(curAction.m_acteeID, CGameObjectType.SPRITE)
+	if target == nil then
+		return EEex_Action_ReturnType.ACTION_ERROR
+	end
+
+	local sprite = EEex_GameObject_CastUT(aiBase)
+	sprite:UpdateTarget(target)
+
+	-- Use the engine's normal Attack() path so pathing, ranged projectile creation, and
+	-- weapon selection behave exactly like a regular attack. The native op138 bridge stops
+	-- the action after the first matched real roll; doing that purely in Lua was not
+	-- reliable once the sprite had to walk into range first.
+	curAction.m_actionID = 3 -- Attack
+	curAction.m_dest.x = target.m_pos.x
+	curAction.m_dest.y = target.m_pos.y
+
+	return aiBase:virtual_ExecuteAction()
+end
+
 EEex_Action_Private_Switch = {
 
 	-- Bug Fix: Enable ForceSpellRange / ForceSpellRangeRES
@@ -285,6 +310,13 @@ EEex_Action_Private_Switch = {
 		targetTable[curAction.m_string1.m_pchData:get()] = target and target.m_id or nil
 
 		return EEex_Action_ReturnType.ACTION_DONE
+	end,
+
+	-- EEex_AttackOnce
+	[475] = function(aiBase, curAction)
+		-- This is a thin wrapper around Attack(). The "exactly one swing" behavior is
+		-- finalized natively once the first real attack roll is consumed.
+		return EEex_Action_Private_AttackOnce(aiBase, curAction)
 	end,
 
 	-- EEex_SpellObjectOffset / EEex_SpellObjectOffsetRES
