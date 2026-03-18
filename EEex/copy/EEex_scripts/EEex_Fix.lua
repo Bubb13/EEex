@@ -4,7 +4,6 @@
 
 local EEex_Fix_Private_SetSnareTrapCap = {
 	CompareJumpLabel = "Hook-SetSnareTrapCapCompareJmp",
-	SupportedEngineSentinelLabel = "Hook-dimmInit()-uiLoadMenu()",
 	OriginalCompareJumpOpcode = 0x7E, -- jle
 	FixedCompareJumpOpcode = 0x7C, -- jl
 }
@@ -13,15 +12,9 @@ function EEex_Fix_InstallSetSnareTrapCapFix()
 
 	local private = EEex_Fix_Private_SetSnareTrapCap
 
-	-- This fix is only installed on engine variants that expose the shared snare
-	-- compare block and the usual UI loader sentinel.
-	local onSupportedEngine = EEex_TryLabel(private.SupportedEngineSentinelLabel)
 	local compareJumpAddress = EEex_TryLabel(private.CompareJumpLabel)
 
 	if not compareJumpAddress then
-		if onSupportedEngine then
-			EEex_Error("EEex_Fix_InstallSetSnareTrapCapFix(): failed to resolve Hook-SetSnareTrapCapCompareJmp")
-		end
 		return
 	end
 
