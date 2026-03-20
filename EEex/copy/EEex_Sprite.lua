@@ -1527,6 +1527,185 @@ function EEex_Sprite_Hook_GetProfBonuses_IgnoreWeaponStyles(item, damR, damL, th
 	return false
 end
 
+local function EEex_Sprite_Private_IWDStrengthClampRank(rank)
+	if rank < EEex_Resource_Private_IWDStrengthMinRank then
+		return EEex_Resource_Private_IWDStrengthMinRank
+	end
+	if rank > EEex_Resource_Private_IWDStrengthMaxRank then
+		return EEex_Resource_Private_IWDStrengthMaxRank
+	end
+	return rank
+end
+
+local function EEex_Sprite_Private_IWDStrengthToExpandedRank(strength, exceptional)
+
+	-- Expanded rank space:
+	--   * integer STR below 18 keeps its numeric value
+	--   * exceptional tiers occupy the ranks inserted after 18
+	--   * integer STR above 18 is shifted upward by the number of exceptional tiers
+	-- This lets a cumulative +N/-N operate in "tier steps" without hardcoding any specific
+	-- exceptional ladder.
+	if strength < EEex_Resource_Private_IWDStrengthMinValue or strength > EEex_Resource_Private_IWDStrengthMaxValue then
+		return nil
+	end
+
+	if strength < 18 then
+		return strength
+	end
+
+	local thresholds = EEex_Resource_Private_IWDStrengthExceptionalThresholds
+
+	if strength == 18 then
+
+		-- Exceptional strength is bucketed by the threshold labels derived from STRMODEX. Values
+		-- inside the same bucket share one expanded rank because they represent the same combat tier.
+		if exceptional < 0 then
+			exceptional = 0
+		end
+
+		if exceptional > EEex_Resource_Private_IWDStrengthMaxExceptional then
+			exceptional = EEex_Resource_Private_IWDStrengthMaxExceptional
+		end
+
+		local tierIndex = 0
+		for _, threshold in ipairs(thresholds) do
+			if exceptional < threshold then
+				break
+			end
+			tierIndex = tierIndex + 1
+		end
+
+		return 18 + tierIndex
+	end
+
+	return strength + #thresholds
+end
+
+local function EEex_Sprite_Private_IWDStrengthFromExpandedRank(rank)
+
+	-- Inverse of EEex_Sprite_Private_IWDStrengthToExpandedRank(). Converts a stepped rank back to
+	-- the engine's split STR / STRExtra representation.
+	if rank < EEex_Resource_Private_IWDStrengthMinRank or rank > EEex_Resource_Private_IWDStrengthMaxRank then
+		return nil
+	end
+
+	local thresholds = EEex_Resource_Private_IWDStrengthExceptionalThresholds
+	local thresholdCount = #thresholds
+
+	if rank <= 18 then
+		return rank, 0
+	end
+
+	local exceptionalRank = rank - 18
+	if exceptionalRank <= thresholdCount then
+		return 18, thresholds[exceptionalRank]
+	end
+
+	return rank - thresholdCount, 0
+end
+
+function EEex_Sprite_Hook_OnProcessEffectListStatsReload(sprite)
+
+	if not EEex_Resource_Private_IWDStrengthEnabled then
+		return
+	end
+
+	local derivedStats = sprite.m_derivedStats
+	local strengthScratch = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(sprite), "EEex_Sprite_IWDStrengthScratch")
+	-- ProcessEffectList() can loop back through Reload() / BonusInit() / HandleList() in the same
+	-- evaluation pass. Reset the per-pass baseline here so temporary mode 0 effects are recomputed
+	-- from the freshly reloaded derived stats instead of compounding their own prior output.
+	strengthScratch["baselineStrength"] = derivedStats.m_nSTR
+	strengthScratch["baselineExceptional"] = derivedStats.m_nSTRExtra
+	strengthScratch["currentStrength"] = derivedStats.m_nSTR
+	strengthScratch["currentExceptional"] = derivedStats.m_nSTRExtra
+end
+
+function EEex_Sprite_Hook_OnApplyStrengthEffect(effect, sprite)
+
+	if not EEex_Resource_Private_IWDStrengthEnabled then
+		return false
+	end
+
+	local effectMode = effect.m_dWFlags
+	-- Only cumulative mode 0 is remapped to tier stepping. Other engine modes, especially mode 3,
+	-- have separate exceptional-strength behavior that is intentionally left vanilla here.
+	if effectMode ~= 0 then
+		return false
+	end
+
+	local effectAmount = effect.m_effectAmount
+	if effectAmount == 0 then
+		return false
+	end
+
+	local baseStats = sprite.m_baseStats
+
+	if effect.m_durationType == 1 then
+
+		-- Permanent mode 0 mutates the base stat fields directly, so convert the current base STR to
+		-- expanded rank space, step by the effect amount, then write the converted result back.
+		local currentRank = EEex_Sprite_Private_IWDStrengthToExpandedRank(baseStats.m_STRBase, baseStats.m_STRExtraBase)
+		if currentRank == nil then
+			return false
+		end
+
+		local targetStrength, targetExceptional =
+			EEex_Sprite_Private_IWDStrengthFromExpandedRank(EEex_Sprite_Private_IWDStrengthClampRank(currentRank + effectAmount))
+
+		if targetStrength == nil then
+			return false
+		end
+
+		baseStats.m_STRBase = targetStrength
+		baseStats.m_STRExtraBase = targetExceptional
+		-- Match the engine's permanent-effect contract: request a repass and mark the effect done.
+		effect.m_forceRepass = 1
+		effect.m_done = 1
+		return true
+	end
+
+	local derivedStats = sprite.m_derivedStats
+	local strengthScratch = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(sprite), "EEex_Sprite_IWDStrengthScratch")
+
+	-- ProcessEffectList() may rerun Reload() / BonusInit() / HandleList() in the same call. The
+	-- reload hook resets this scratch to the freshly reloaded derived STR state each pass so the
+	-- same effect is not tier-stepped again on loop re-entry.
+	if strengthScratch["currentStrength"] == nil then
+		-- This fallback is only for callers that reach the hook before the reload callback seeded
+		-- the pass state; use the current derived value as both baseline and running value.
+		strengthScratch["baselineStrength"] = derivedStats.m_nSTR
+		strengthScratch["baselineExceptional"] = derivedStats.m_nSTRExtra
+		strengthScratch["currentStrength"] = derivedStats.m_nSTR
+		strengthScratch["currentExceptional"] = derivedStats.m_nSTRExtra
+	end
+
+	local currentRank = EEex_Sprite_Private_IWDStrengthToExpandedRank(
+		strengthScratch["currentStrength"], strengthScratch["currentExceptional"])
+
+	if currentRank == nil then
+		return false
+	end
+
+	local targetStrength, targetExceptional =
+		EEex_Sprite_Private_IWDStrengthFromExpandedRank(EEex_Sprite_Private_IWDStrengthClampRank(currentRank + effectAmount))
+
+	if targetStrength == nil then
+		return false
+	end
+
+	local bonusStats = sprite.m_bonusStats
+	strengthScratch["currentStrength"] = targetStrength
+	strengthScratch["currentExceptional"] = targetExceptional
+	-- Temporary mode 0 contributes through bonusStats. Write the net delta from the per-pass
+	-- baseline instead of incrementing in place so repeated HandleList() passes stay idempotent.
+	bonusStats.m_nSTR = targetStrength - strengthScratch["baselineStrength"]
+	bonusStats.m_nSTRExtra = targetExceptional - strengthScratch["baselineExceptional"]
+	-- Match the engine's temporary-effect contract: temporary mode 0 is reprocessed each pass.
+	effect.m_done = 0
+	return true
+end
+
 --[[
 +---------------------------------------------------------------------------------------------------------------------------------+
 | Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with a ranged weapon for specific           |
