@@ -1835,6 +1835,10 @@ Operations=ADD -43
 Pattern=488D8FC81C0000
 Operations=ADD 20
 
+[Hook-CGameEffectProtectionCircle::ApplyEffect()-SetHardcodedBonus]
+Pattern=488D8E001D0000C7471802000000488BD7
+Operations=ADD 7
+
 [Hook-CGameEffectSecondaryCastList::ApplyEffect()]
 Pattern=48895C24185556574154415541564157488D6C24D94881EC00010000
 

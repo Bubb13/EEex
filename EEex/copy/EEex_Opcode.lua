@@ -159,6 +159,23 @@ function EEex_Opcode_Hook_OnOp214ApplyEffect(effect, sprite)
 	return true
 end
 
+----------------------------------------------------
+-- Opcode 0xDB (param3 overrides hardcoded bonus) --
+----------------------------------------------------
+
+function EEex_Opcode_Hook_OnOp219ApplyEffect(effect, selectiveBonus)
+
+	-- `m_effectAmount2` is the caller-controlled override value. Treat it as a signed
+	-- integer and only apply it when non-zero so that `0` continues to mean "keep the
+	-- engine default", which is the hardcoded +2 written just before this hook runs.
+	local effectAmount2 = effect.m_effectAmount2
+	if effectAmount2 ~= 0 then
+		-- Overwrite only the computed bonus magnitude. The selector / CAIObjectType
+		-- portion of the bonus has already been populated by the engine.
+		selectiveBonus.m_bonus = effectAmount2
+	end
+end
+
 ------------------------------------------------------------
 -- Opcode #248 (Special BIT0 allows .EFF to bypass op120) --
 ------------------------------------------------------------
