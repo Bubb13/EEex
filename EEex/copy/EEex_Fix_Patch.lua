@@ -4,6 +4,19 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+---------------------------------------------------------------------------------------------------------------------+
+	| Fix TRAPLIMT.2DA's snare cap check in CGameEffectSetSnare::ApplyEffect                                              |
+	+---------------------------------------------------------------------------------------------------------------------+
+	| The real engine bug is an off-by-one at the cap compare: after comparing the current active trap count against      |
+	| TRAPLIMT.2DA's limit, the engine branches on `jle`, so `current == limit` is still accepted and one extra trap      |
+	| can be placed. EEex_Fix_InstallSetSnareTrapCapFix() rewrites that short jump to `jl` at the shared compare site     |
+	| used by the current BGEE, BG2EE, and IWDEE executables (`v2.6.6.0`).                                                |
+	+---------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Fix_InstallSetSnareTrapCapFix()
+
+	--[[
 	+----------------------------------------------------------------------------------------------------+
 	| BUG: v2.6.6.0 - op206/318/324 incorrectly indexes the source object's item list if the incoming    |
 	| effect's source spell has a name strref of -1 without first checking if the source was a sprite    |
