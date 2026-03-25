@@ -606,6 +606,20 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 		return labelAddress and EEex_ToDecStr(labelAddress) or labelName
 	end)
 
+	-- #OFFSET_OF
+	assemblyStr = EEex_ReplacePattern(assemblyStr, "#OFFSET_OF(%b())", function(match)
+		local innerStr = match.groups[1]
+		local innerMatch = EEex_FindPattern(innerStr, "^%(%s*([^;]+)%s*;%s*([^;]+)%s*%)$")
+		if innerMatch == nil then EEex_Error(string.format("Invalid #OFFSET_OF parameters: \"%s\"", innerStr)) end
+		local structName = innerMatch.groups[1]
+		local structBinding = _G[structName]
+		if structBinding == nil then EEex_Error(string.format("Invalid #OFFSET_OF parameter: \"%s\"", structName)) end
+		local memberName = innerMatch.groups[2]
+		local offsetof = structBinding["offsetof_"..memberName]
+		if offsetof == nil then EEex_Error(string.format("Invalid #OFFSET_OF parameter: \"%s\"", memberName)) end
+		return EEex_ToDecStr(offsetof)
+	end)
+
 	-- #REPEAT
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#REPEAT(%b())", function(match)
 
