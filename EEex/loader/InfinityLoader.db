@@ -2166,6 +2166,10 @@ Operations=ADD 20
 [Hook-CGameEffectSecondaryCastList::ApplyEffect()]
 Pattern=48895C24185556574154415541564157488D6C24D94881EC00010000
 
+[Hook-CGameEffectSetSnare::ApplyEffect()-SetSnareTrapCapCompareJmp]
+Pattern=3BD87E35
+Operations=ADD 2
+
 [Hook-CGameEffectStaticCharge::ApplyEffect()-CopyOp333Call]
 Pattern=FF50088B9350010000
 
@@ -2604,10 +2608,6 @@ Operations=ADD 67
 [Hook-dimmInit()-uiLoadMenu()]
 ExeSwitch=1
 ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
-
-[Hook-SetSnareTrapCapCompareJmp]
-Pattern=8B985010000003984C100000
-Operations=ADD 33
 
 [Hook-dimmInit-uiDoFile()]
 Pattern=488B18EB03

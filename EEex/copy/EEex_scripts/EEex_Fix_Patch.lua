@@ -4,17 +4,36 @@
 	EEex_DisableCodeProtection()
 
 	--[[
-	+---------------------------------------------------------------------------------------------------------------------+
-	| Fix TRAPLIMT.2DA's snare cap check in CGameEffectSetSnare::ApplyEffect                                              |
-	+---------------------------------------------------------------------------------------------------------------------+
-	| The real engine bug is an off-by-one at the cap compare: after comparing the current active trap count against      |
-	| TRAPLIMT.2DA's limit, the engine branches on `jle`, so `current == limit` is still accepted and one extra trap      |
-	| can be placed. EEex_Fix_InstallSetSnareTrapCapFix() rewrites that short jump to `jl` at the shared compare site     |
-	| used by the current BGEE, BG2EE, and IWDEE executables (`v2.6.6.0`).                                                |
-	+---------------------------------------------------------------------------------------------------------------------+
+	+----------------------------------------------------------------------------------------------------------------+
+	| Fix TRAPLIMT.2DA's snare cap check in CGameEffectSetSnare::ApplyEffect                                         |
+	+----------------------------------------------------------------------------------------------------------------+
+	| The real engine bug is an off-by-one at the cap compare: after comparing the current active trap count against |
+	| TRAPLIMT.2DA's limit, the engine branches on `jle`, so `current == limit` is still accepted and one extra trap |
+	| can be placed. This patch rewrites that short jump to `jl` at the shared compare site used by the current      |
+	| BGEE, BG2EE, and IWDEE executables (`v2.6.6.0`).                                                               |
+	+----------------------------------------------------------------------------------------------------------------+
 	--]]
 
-	EEex_Fix_InstallSetSnareTrapCapFix()
+	EEex_Utility_NewScope(function()
+
+		local compareJumpAddress = EEex_Label("Hook-CGameEffectSetSnare::ApplyEffect()-SetSnareTrapCapCompareJmp")
+		local fixedOpcode = 0x7C -- jl
+
+		local currentOpcode = EEex_ReadU8(compareJumpAddress)
+		if currentOpcode == fixedOpcode then
+			-- Something else already fixed the branch
+			return
+		end
+
+		if currentOpcode ~= 0x7E then -- jle
+			EEex_Error(string.format(
+				"Unexpected opcode 0x%02X at #L(Hook-CGameEffectSetSnare::ApplyEffect()-SetSnareTrapCapCompareJmp)",
+				currentOpcode
+			))
+		end
+
+		EEex_WriteU8(compareJumpAddress, fixedOpcode)
+	end)
 
 	--[[
 	+----------------------------------------------------------------------------------------------------+
