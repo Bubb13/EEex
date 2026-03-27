@@ -1028,16 +1028,16 @@ EEex_GameState_AddInitializedListener(function()
 		local checkModeRow = config:findRowLabel("CHECK_MODE")
 
 		if valueColumn < 0 then
-			error("X-IWDSTR.2DA is missing the VALUE column")
+			EEex_Error("X-IWDSTR.2DA is missing the VALUE column")
 		end
 
 		if checkModeRow < 0 then
-			error("X-IWDSTR.2DA is missing the CHECK_MODE row")
+			EEex_Error("X-IWDSTR.2DA is missing the CHECK_MODE row")
 		end
 
 		local checkMode = config:getAtPoint(valueColumn, checkModeRow)
 		if checkMode ~= "0" and checkMode ~= "1" then
-			error("X-IWDSTR.2DA CHECK_MODE VALUE must be 0 or 1")
+			EEex_Error("X-IWDSTR.2DA CHECK_MODE VALUE must be 0 or 1")
 		end
 
 		if checkMode == "0" then
@@ -1051,7 +1051,7 @@ EEex_GameState_AddInitializedListener(function()
 			-- row labels up front instead of trying to interpret them later.
 			local _, lastRowIndex = data:getMaxIndices()
 			if lastRowIndex < 0 then
-				error(name.." has no rows")
+				EEex_Error(name.." has no rows")
 			end
 
 			local rows = {}
@@ -1063,11 +1063,11 @@ EEex_GameState_AddInitializedListener(function()
 				local numericLabel = tonumber(rowLabel, 10)
 
 				if numericLabel == nil or numericLabel ~= math.floor(numericLabel) then
-					error(name.." row label '"..rowLabel.."' is not an integer")
+					EEex_Error(name.." row label '"..rowLabel.."' is not an integer")
 				end
 
 				if previousLabel ~= nil and numericLabel ~= previousLabel + 1 then
-					error(name.." row labels must be contiguous ascending integers")
+					EEex_Error(name.." row labels must be contiguous ascending integers")
 				end
 
 				rows[#rows + 1] = {
@@ -1089,7 +1089,7 @@ EEex_GameState_AddInitializedListener(function()
 		-- Exceptional tiers are inserted between the integer 18 and 19 ranks, so the integer
 		-- table must at least span those two values for the expanded mapping to be valid.
 		if minStrength > 18 or maxStrength < 19 then
-			error("STRMOD.2DA must include integer strength rows 18 and 19")
+			EEex_Error("STRMOD.2DA must include integer strength rows 18 and 19")
 		end
 
 		local strmodex = EEex_Resource_Load2DA("STRMODEX")
@@ -1097,16 +1097,16 @@ EEex_GameState_AddInitializedListener(function()
 		local damageColumn = strmodex:findColumnLabel("DAMAGE")
 
 		if toHitColumn < 0 then
-			error("STRMODEX.2DA is missing the TO_HIT column")
+			EEex_Error("STRMODEX.2DA is missing the TO_HIT column")
 		end
 
 		if damageColumn < 0 then
-			error("STRMODEX.2DA is missing the DAMAGE column")
+			EEex_Error("STRMODEX.2DA is missing the DAMAGE column")
 		end
 
 		local strmodexRows = parseContiguousIntegerRows(strmodex, "STRMODEX.2DA")
 		if strmodexRows[1].label ~= 0 then
-			error("STRMODEX.2DA must start at row 0")
+			EEex_Error("STRMODEX.2DA must start at row 0")
 		end
 
 		local thresholds = {}
@@ -1143,7 +1143,7 @@ EEex_GameState_AddInitializedListener(function()
 		-- `thresholds` now contains the exceptional row labels where the "combat tier" changes.
 		-- Runtime code treats those labels as the inserted ranks between integer 18 and 19.
 		if #thresholds == 0 then
-			error("STRMODEX.2DA does not define any TO_HIT/DAMAGE exceptional strength tiers")
+			EEex_Error("STRMODEX.2DA does not define any TO_HIT/DAMAGE exceptional strength tiers")
 		end
 
 		EEex_Resource_Private_IWDStrengthEnabled = true
