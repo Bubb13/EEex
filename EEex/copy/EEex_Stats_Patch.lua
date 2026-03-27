@@ -83,7 +83,24 @@
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()"), {
 		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
-		statsReloadTemplate("rsi")
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(40)
+			]]},
+			-- Keep the existing reload-side EEex bookkeeping, then notify the X-IWDSTR runtime that a
+			-- new ProcessEffectList() pass has started. The Lua callback resets the per-pass strength
+			-- scratch used by temporary cumulative mode 0 so loop re-entry does not double-apply tiers.
+			statsReloadTemplate("rsi"),
+			EEex_GenLuaCall("EEex_Sprite_Hook_OnProcessEffectListStatsReload", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsi #ENDL", {rspOffset}}, "CGameSprite" end,
+				},
+			}),
+			{[[
+				call_error:
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
 	)
 
 	--[[

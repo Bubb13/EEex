@@ -1807,6 +1807,13 @@ Operations=ADD 23
 Pattern=3881F81000007407
 Operations=ADD 56
 
+; X-IWDSTR mode 0 entry hook. Pattern generated from FindPattern/src for the 2.6.6.0 EE
+; executables and anchored at the function's first instruction so Lua can either handle the
+; effect completely or fall through to the untouched engine path.
+[Hook-CGameEffectSTR::ApplyEffect()-FirstInstruction]
+Pattern=564154415541564157488BEC
+Operations=ADD -2
+
 [Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction]
 Pattern=898248130000
 Operations=ADD -3
@@ -1956,6 +1963,9 @@ Operations=ADD 34
 Pattern=8B564825FF7F0000
 Operations=ADD 26
 
+; Used by the X-IWDSTR temporary-mode scratch reset. This fires immediately after
+; CDerivedStats::Reload() inside ProcessEffectList() so each pass starts from the freshly
+; rebuilt derived STR state.
 [Hook-CGameSprite::ProcessEffectList()-CDerivedStats::Reload()]
 Pattern=488D8660050000660F1F440000
 Operations=ADD 37
@@ -2118,6 +2128,10 @@ Operations=ADD 35
 [Hook-CRuleTables::GetProfBonuses()-IgnoreWeaponStyles]
 Pattern=48897C241055488BEC4883EC30
 Operations=ADD -5
+
+[Hook-CRuleTables::IsProtectedFromSpell()-CompareStatCall]
+Pattern=E94BFAFFFF83BFA44E000000
+Operations=ADD 48
 
 [Hook-CScreenWorld::OnKeyDown()-ThievingHotkeyPressSpecialAbilitiesCall]
 Pattern=3CFF7484

@@ -642,6 +642,80 @@
 	})
 
 	--[[
+	+-------------------------------------------------------------------------------------------------------------------------------+
+	| Implement X-IWDSTR.2DA - Treat cumulative mode 0 strength changes as tier changes when stepping across STRMODEX breakpoints   |
+	+-------------------------------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Sprite_Hook_OnApplyStrengthEffect(effect: CGameEffect, sprite: CGameSprite) -> boolean                           |
+	|       return:                                                                                                                 |
+	|           -> false - Don't alter engine behavior                                                                              |
+	|           -> true  - Effect handled (skip normal code)                                                                        |
+	+-------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- Strategy:
+	--   * hook the first instruction so Lua sees the original effect / sprite arguments before any
+	--     engine-side mutation happens
+	--   * use a "before restore" trampoline so a false Lua result can still resume the untouched
+	--     function by replaying the displaced prologue bytes and then continuing normally
+	--   * if Lua returns true, skip that restore/resume path entirely and synthesize the function's
+	--     normal success return from the trampoline
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectSTR::ApplyEffect()-FirstInstruction"), 0, 7, 7, {
+		-- This hook runs before the overwritten prologue bytes are replayed, so only the caller's
+		-- return address is on the stack at entry. Model that exact pre-prologue state here.
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(64)
+				; Preserve the original arguments across the Lua call so a false return can fall back to
+				; the untouched engine implementation.
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			-- Lua contains the policy decision. Assembly here only preserves arguments, marshals the
+			-- call, and selects between "resume vanilla" and "return handled" afterwards.
+			EEex_GenLuaCall("EEex_Sprite_Hook_OnApplyStrengthEffect", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx", {rspOffset}, "#ENDL"}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx", {rspOffset}, "#ENDL"}, "CGameSprite" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Boolean,
+			}),
+			{[[
+				jmp no_error
+
+				call_error:
+				xor rax, rax
+
+				no_error:
+				; rax == 0: branch to the hook framework's restore/resume path. Because this is a
+				; before-restore hook, that path replays the stolen prologue bytes and then continues in
+				; CGameEffectSTR::ApplyEffect() as though the hook had not intercepted it.
+				; rax != 0: report "effect handled" and return immediately without running engine code.
+				test rax, rax
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				jz #L(return)
+
+				; Match ApplyEffect()'s success return convention and exit directly from the trampoline.
+				mov eax, 1
+				#MANUAL_HOOK_EXIT(1)
+				ret
+			]]},
+		})
+	)
+	-- Manually define the ignored registers for the unusual `ret` above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectSTR::ApplyEffect()-FirstInstruction"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
+	})
+
+	--[[
 	+---------------------------------------------------------------------------------------------------------------------------------+
 	| Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with a ranged weapon for specific           |
 	| [KITLIST.2DA]->ROWNAME / ITEMCAT.IDS pairs                                                                                      |
