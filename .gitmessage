@@ -1,0 +1,33 @@
+# <type>(<scope>): <imperative summary>
+#
+# Example:
+# fix(opcode): preserve natural roll for op138 crit checks
+#
+# Conventional Commit guidance:
+# - type: feat, fix, refactor, perf, build, docs, test, chore
+# - scope: use one precise EEex area
+# - summary: imperative, specific, <= 72 chars, no trailing period
+#
+# Suggested EEex scopes:
+# action, opcode, sprite, menu, ui, loader, patch, tp2, docs, packaging
+#
+# Why:
+# - State the concrete bug, limitation, or motivation.
+# - Prefer engine behavior over implementation trivia.
+#
+# What:
+# - Summarize the code and behavior changes.
+# - Call out hook sites, scripts, or data files when relevant.
+#
+# Validation:
+# - List the checks you actually ran.
+# - Include build status, luaparse/tests, runtime checks, or engine variants.
+#
+# Risks / Notes:
+# - Record follow-up work, compatibility concerns, or deliberate tradeoffs.
+#
+# Refs:
+# - Optional issue, artifact, dump, or investigation note.
+#
+# BREAKING CHANGE:
+# - Optional footer when behavior or interfaces change incompatibly.

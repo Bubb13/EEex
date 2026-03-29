@@ -2,6 +2,7 @@
 473 EEex_MatchObject(S:Chunk*)
 473 EEex_MatchObjectEx(S:Chunk*,I:Nth*,I:Range*,I:Flags*X-MATOBJ)
 474 EEex_SetTarget(S:Name*,O:Target*)
+475 EEex_AttackOnce(O:Target*)
 476 EEex_SpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)
 476 EEex_SpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)
 477 EEex_SpellObjectOffsetNoDec(O:Target*,I:Spell*Spell,P:Offset*)

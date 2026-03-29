@@ -167,6 +167,99 @@
 	end
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Fix SPLPROT.2DA relational stat comparisons treating signed stats as unsigned                                      |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   [JIT] CRuleTables::IsProtectedFromSpell()                                                                        |
+	|       Only relations <=, ==, <, >, >=, != are re-evaluated here. Bitwise relations retain the engine's behavior.   |
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Why hook with EEex_HookBeforeCallWithLabels():                                                                     |
+	|   This site is the call from IsProtectedFromSpell() into CRuleTables::Compare(). At this exact point the caller    |
+	|   has already fetched the stat value, loaded the compare constant, decoded the relation, and still has the stat id |
+	|   live in a register. That gives us the narrowest possible interception point:                                     |
+	|     * #L(return)      -> let the original Compare() call run unchanged                                             |
+	|     * #L(return_skip) -> skip the call and continue as if Compare() had returned our replacement result            |
+	|   Hooking earlier would require reimplementing more of IsProtectedFromSpell(); hooking after the call would mean   |
+	|   the engine has already performed the wrong unsigned comparison.                                                  |
+	+--------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- Register state at the Compare() call site:
+	--   edx = stat value read from CDerivedStats::GetAtOffset()
+	--   r8d = SPLPROT compare constant
+	--   r9d = relation opcode that Compare() would evaluate
+	--   r13w = stat id, still available from the surrounding IsProtectedFromSpell() loop
+	--
+	-- We only need one scratch register (r11) to index the signed-stat bitmap, so
+	-- the watchdog is told to ignore that register for this hook.
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CRuleTables::IsProtectedFromSpell()-CompareStatCall"), {
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.R11}}},
+		{[[
+			; If this stat is not marked as signed, preserve the engine's original Compare() call.
+			mov rax, #$(1) ]], {EEex_Fix_Private_SignedSplprotStatBitmap}, [[ #ENDL
+			movzx r11d, r13w
+			cmp byte ptr ds:[rax+r11], 0
+			jz #L(return)
+
+			; Compare() also supports non-relational operations. This fix only replaces the
+			; six relational operators whose signedness is wrong; everything else stays native.
+			cmp r9d, 5
+			ja #L(return)
+
+			; Re-evaluate the relation with signed setcc variants using the exact operands the
+			; engine was about to pass into Compare(): edx (lhs stat value) vs r8d (rhs constant).
+			test r9d, r9d
+			je compare_le
+			cmp r9d, 1
+			je compare_eq
+			cmp r9d, 2
+			je compare_lt
+			cmp r9d, 3
+			je compare_gt
+			cmp r9d, 4
+			je compare_ge
+			cmp r9d, 5
+			je compare_ne
+			jmp #L(return)
+
+			compare_le:
+			cmp edx, r8d
+			setle al
+			jmp finish_compare
+
+			compare_eq:
+			cmp edx, r8d
+			sete al
+			jmp finish_compare
+
+			compare_lt:
+			cmp edx, r8d
+			setl al
+			jmp finish_compare
+
+			compare_gt:
+			cmp edx, r8d
+			setg al
+			jmp finish_compare
+
+			compare_ge:
+			cmp edx, r8d
+			setge al
+			jmp finish_compare
+
+			compare_ne:
+			cmp edx, r8d
+			setne al
+
+			finish_compare:
+			; Compare() returns a boolean-like integer in eax. Materialize the same shape and
+			; skip the original call, resuming execution immediately after it.
+			movzx eax, al
+			jmp #L(return_skip)
+		]]}
+	)
+
+	--[[
 	+----------------------------------------------------------------------------------------------------------------+
 	| [JIT] Opcode #182 should consider -1 (instead of 0) the fail return value from CGameSprite::FindItemPersonal() |
 	+----------------------------------------------------------------------------------------------------------------+
