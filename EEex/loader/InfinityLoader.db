@@ -1433,6 +1433,14 @@ Pattern=4C894C24204C894424188954241048894C240853
 ;-- Engine VFTables --
 ;---------------------
 
+[CGameChunk::VFTable]
+Pattern=4889442438488BBC24A0000000
+Operations=ADD 42, PUSH, READ DWORD, ADD, ADD 4
+
+[CGameText::VFTable]
+Pattern=48894424404C8BBC24C0000000
+Operations=ADD 33, PUSH, READ DWORD, ADD, ADD 4
+
 [CMessageAddClairvoyance::VFTable]
 Pattern=74228B4E48
 Operations=ADD 19, PUSH, READ DWORD, ADD, ADD 4
@@ -1548,6 +1556,18 @@ Operations=ADD -38, PUSH, READ DWORD, ADD, ADD 4
 [CScreenMap::VFTable]
 Pattern=488D8E18070000
 Operations=ADD -83, PUSH, READ DWORD, ADD, ADD 4
+
+[CSparkleCluster::VFTable]
+Pattern=48895C24085556574154415541564157488BEC4883EC30
+Operations=ADD 46, PUSH, READ DWORD, ADD, ADD 4
+
+[CVEFVidCell::VFTable]
+Pattern=488BC74889B7A8030000
+Operations=ADD -55, PUSH, READ DWORD, ADD, ADD 4
+
+[CVisualEffect::VFTable]
+Pattern=838F8C00000002
+Operations=ADD 32, PUSH, READ DWORD, ADD, ADD 4
 
 ;------------------------------------------
 ;-- Functions Referenced by Lua Bindings --

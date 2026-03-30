@@ -3,6 +3,33 @@
 -- Fetching Game Objects --
 ---------------------------
 
+EEex_GameObject_Private_VFTableToUsertype = {
+	[ EEex_Label("CGameChunk::VFTable")              ] = "CGameChunk",
+	[ EEex_Label("CGameText::VFTable")               ] = "CGameText",
+	[ EEex_Label("CProjectile::VFTable")             ] = "CProjectile",
+	[ EEex_Label("CProjectileAmbiant::VFTable")      ] = "CProjectileAmbiant",
+	[ EEex_Label("CProjectileArea::VFTable")         ] = "CProjectileArea",
+	[ EEex_Label("CProjectileBAM::VFTable")          ] = "CProjectileBAM",
+	[ EEex_Label("CProjectileChain::VFTable")        ] = "CProjectileChain",
+	[ EEex_Label("CProjectileColorSpray::VFTable")   ] = "CProjectileColorSpray",
+	[ EEex_Label("CProjectileConeOfCold::VFTable")   ] = "CProjectileConeOfCold",
+	[ EEex_Label("CProjectileFall::VFTable")         ] = "CProjectileFall",
+	[ EEex_Label("CProjectileFireHands::VFTable")    ] = "CProjectileFireHands",
+	[ EEex_Label("CProjectileInstant::VFTable")      ] = "CProjectileInstant",
+	[ EEex_Label("CProjectileMulti::VFTable")        ] = "CProjectileMulti",
+	[ EEex_Label("CProjectileMushroom::VFTable")     ] = "CProjectileMushroom",
+	[ EEex_Label("CProjectileNewScorcher::VFTable")  ] = "CProjectileNewScorcher",
+	[ EEex_Label("CProjectileScorcher::VFTable")     ] = "CProjectileScorcher",
+	[ EEex_Label("CProjectileSegment::VFTable")      ] = "CProjectileSegment",
+	[ EEex_Label("CProjectileSkyStrike::VFTable")    ] = "CProjectileSkyStrike",
+	[ EEex_Label("CProjectileSkyStrikeBAM::VFTable") ] = "CProjectileSkyStrikeBAM",
+	[ EEex_Label("CProjectileSpellHit::VFTable")     ] = "CProjectileSpellHit",
+	[ EEex_Label("CProjectileTravelDoor::VFTable")   ] = "CProjectileTravelDoor",
+	[ EEex_Label("CSparkleCluster::VFTable")         ] = "CSparkleCluster",
+	[ EEex_Label("CVEFVidCell::VFTable")             ] = "CVEFVidCell",
+	[ EEex_Label("CVisualEffect::VFTable")           ] = "CVisualEffect",
+}
+
 -- @bubb_doc { EEex_GameObject_CastUserType / alias=EEex_GameObject_CastUT }
 -- @summary:
 --
@@ -16,8 +43,16 @@
 --
 --     usertype =
 --     @|
---         CGameAIArea   | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor        | CGameFireball3d | CGameSound    | @EOL
---         CGameSpawning | CGameSprite | CGameStatic | CGameTemporal  | CGameTiledObject | CGameTrigger    | CObjectMarker | nil
+--         CGameAIArea          | CGameAIBase             | CGameAIGame           | CGameChunk            | @EOL
+--         CGameContainer       | CGameDoor               | CGameFireball3d       | CGameObject           | @EOL
+--         CGameSound           | CGameSpawning           | CGameSprite           | CGameStatic           | @EOL
+--         CGameTemporal        | CGameText               | CGameTiledObject      | CGameTrigger          | @EOL
+--         CObjectMarker        | CProjectile             | CProjectileAmbiant    | CProjectileArea       | @EOL
+--         CProjectileBAM       | CProjectileChain        | CProjectileColorSpray | CProjectileConeOfCold | @EOL
+--         CProjectileFall      | CProjectileFireHands    | CProjectileInstant    | CProjectileMulti      | @EOL
+--         CProjectileMushroom  | CProjectileNewScorcher  | CProjectileScorcher   | CProjectileSegment    | @EOL
+--         CProjectileSkyStrike | CProjectileSkyStrikeBAM | CProjectileSpellHit   | CProjectileTravelDoor | @EOL
+--         CSparkleCluster      | CVEFVidCell             | CVisualEffect         | nil
 --     @|
 --
 -- }: See summary.
@@ -28,24 +63,106 @@ function EEex_GameObject_CastUserType(object)
 		return nil
 	end
 
+	--[[
+	+-------------------------------------------------------+
+	| CGameObject                                           |
+	+-------------------------------------------------------+
+	| [No VFTable] CBloodPool                               |
+	| +--------------------------------+                    |
+	| | CGameAIBase                    |                    |
+	| +--------------------------------+                    |
+	| | [Shares VFTable v] CGameAIArea |                    |
+	| | [Shares VFTable ^] CGameAIGame |                    |
+	| | CGameContainer                 |                    |
+	| | CGameDoor                      |                    |
+	| | CGameSprite                    |                    |
+	| | CGameTiledObject               |                    |
+	| | CGameTrigger                   |                    |
+	| +--------------------------------+                    |
+	| CGameChunk                                            |
+	| CGameFireball3d                                       |
+	| CGameSound                                            |
+	| CGameSpawning                                         |
+	| CGameStatic                                           |
+	| CGameTemporal                                         |
+	| CGameText                                             |
+	| [No VFTable] CLightning                               |
+	| CObjectMarker                                         |
+	| +---------------------------------------------------+ |
+	| | CProjectile                                       | |
+	| +---------------------------------------------------+ |
+	| | +-----------------------------------------------+ | |
+	| | | CProjectileBAM                                | | |
+	| | +-----------------------------------------------+ | |
+	| | | CProjectileArea                               | | |
+	| | | +----------------------------------------+    | | |
+	| | | | CProjectileChain                       |    | | |
+	| | | +----------------------------------------+    | | |
+	| | | | [No VFTable] CProjectileLightningStorm |    | | |
+	| | | +----------------------------------------+    | | |
+	| | | CProjectileColorSpray                         | | |
+	| | | CProjectileConeOfCold                         | | |
+	| | | CProjectileFall                               | | |
+	| | | CProjectileFireHands                          | | |
+	| | | [No VFTable] CProjectileInvisibleTravelling   | | |
+	| | | [No VFTable] CProjectileLightningBolt         | | |
+	| | | [No VFTable] CProjectileLightningBoltGround   | | |
+	| | | [No VFTable] CProjectileLightningBounce       | | |
+	| | | +-------------------------------------------+ | | |
+	| | | | CProjectileMulti                          | | | |
+	| | | +-------------------------------------------+ | | |
+	| | | | [No VFTable] CProjectileMagicMissileMulti | | | |
+	| | | +-------------------------------------------+ | | |
+	| | | CProjectileMushroom                           | | |
+	| | | CProjectileNewScorcher                        | | |
+	| | | CProjectileScorcher                           | | |
+	| | | CProjectileSegment                            | | |
+	| | | CProjectileSkyStrikeBAM                       | | |
+	| | +-----------------------------------------------+ | |
+	| | [No VFTable] CProjectileCastingGlow               | |
+	| | +---------------------------------------+         | |
+	| | | CProjectileInstant                    |         | |
+	| | +---------------------------------------+         | |
+	| | | [No VFTable] CProjectileCallLightning |         | |
+	| | +---------------------------------------+         | |
+	| | CProjectileSkyStrike                              | |
+	| | +---------------------+                           | |
+	| | | CProjectileSpellHit |                           | |
+	| | +---------------------+                           | |
+	| | | CProjectileAmbiant  |                           | |
+	| | +---------------------+                           | |
+	| | CProjectileTravelDoor                             | |
+	| +---------------------------------------------------+ |
+	| [No VFTable] CSparkle                                 |
+	| CSparkleCluster                                       |
+	| CVEFVidCell                                           |
+	| CVisualEffect                                         |
+	+-------------------------------------------------------+
+	--]]
+
+	-- Unimplemented: CGameObjectType.AREA_PROJECTILE = 0x50 is an unlisted object type
 	local usertype = ({
-		[CGameObjectType.NONE]          = nil,
 		[CGameObjectType.AIBASE]        = "CGameAIBase",
-		[CGameObjectType.SOUND]         = "CGameSound",
-		[CGameObjectType.CONTAINER]     = "CGameContainer",
-		[CGameObjectType.SPAWNING]      = "CGameSpawning",
-		[CGameObjectType.DOOR]          = "CGameDoor",
-		[CGameObjectType.STATIC]        = "CGameStatic",
-		[CGameObjectType.SPRITE]        = "CGameSprite",
-		[CGameObjectType.OBJECT_MARKER] = "CObjectMarker",
-		[CGameObjectType.TRIGGER]       = "CGameTrigger",
-		[CGameObjectType.TILED_OBJECT]  = "CGameTiledObject",
-		[CGameObjectType.TEMPORAL]      = "CGameTemporal",
 		[CGameObjectType.AREA_AI]       = "CGameAIArea",
+		[CGameObjectType.CONTAINER]     = "CGameContainer",
+		[CGameObjectType.DOOR]          = "CGameDoor",
 		[CGameObjectType.FIREBALL]      = "CGameFireball3d",
 		[CGameObjectType.GAME_AI]       = "CGameAIGame",
+		[CGameObjectType.NONE]          = nil,
+		[CGameObjectType.OBJECT_MARKER] = "CObjectMarker",
+		[CGameObjectType.SOUND]         = "CGameSound",
+		[CGameObjectType.SPAWNING]      = "CGameSpawning",
+		[CGameObjectType.SPRITE]        = "CGameSprite",
+		[CGameObjectType.STATIC]        = "CGameStatic",
+		[CGameObjectType.TEMPORAL]      = "CGameTemporal",
+		[CGameObjectType.TILED_OBJECT]  = "CGameTiledObject",
+		[CGameObjectType.TRIGGER]       = "CGameTrigger",
 	})[object.m_objectType]
 
+	if usertype == nil then
+		-- The CGameObject doesn't hold a valid object type. Attempt to retrieve it from the vftable.
+		usertype = EEex_GameObject_Private_VFTableToUsertype[EEex_ReadPtr(EEex_UDToPtr(object))]
+	end
 	return usertype and EEex_CastUD(object, usertype) or object
 end
 EEex_GameObject_CastUT = EEex_GameObject_CastUserType
@@ -60,8 +177,16 @@ EEex_GameObject_CastUT = EEex_GameObject_CastUserType
 --
 --     usertype =
 --     @|
---         CGameAIArea   | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor        | CGameFireball3d | CGameSound    | @EOL
---         CGameSpawning | CGameSprite | CGameStatic | CGameTemporal  | CGameTiledObject | CGameTrigger    | CObjectMarker | nil
+--         CGameAIArea          | CGameAIBase             | CGameAIGame           | CGameChunk            | @EOL
+--         CGameContainer       | CGameDoor               | CGameFireball3d       | CGameObject           | @EOL
+--         CGameSound           | CGameSpawning           | CGameSprite           | CGameStatic           | @EOL
+--         CGameTemporal        | CGameText               | CGameTiledObject      | CGameTrigger          | @EOL
+--         CObjectMarker        | CProjectile             | CProjectileAmbiant    | CProjectileArea       | @EOL
+--         CProjectileBAM       | CProjectileChain        | CProjectileColorSpray | CProjectileConeOfCold | @EOL
+--         CProjectileFall      | CProjectileFireHands    | CProjectileInstant    | CProjectileMulti      | @EOL
+--         CProjectileMushroom  | CProjectileNewScorcher  | CProjectileScorcher   | CProjectileSegment    | @EOL
+--         CProjectileSkyStrike | CProjectileSkyStrikeBAM | CProjectileSpellHit   | CProjectileTravelDoor | @EOL
+--         CSparkleCluster      | CVEFVidCell             | CVisualEffect         | nil
 --     @|
 --
 -- }: See summary.
