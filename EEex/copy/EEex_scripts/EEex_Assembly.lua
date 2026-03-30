@@ -609,15 +609,26 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 	-- #OFFSET_OF
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#OFFSET_OF(%b())", function(match)
 		local innerStr = match.groups[1]
-		local innerMatch = EEex_FindPattern(innerStr, "^%(%s*([^;]+)%s*;%s*([^;]+)%s*%)$")
-		if innerMatch == nil then EEex_Error(string.format("Invalid #OFFSET_OF parameters: \"%s\"", innerStr)) end
-		local structName = innerMatch.groups[1]
-		local structBinding = _G[structName]
-		if structBinding == nil then EEex_Error(string.format("Invalid #OFFSET_OF parameter: \"%s\"", structName)) end
-		local memberName = innerMatch.groups[2]
-		local offsetof = structBinding["offsetof_"..memberName]
-		if offsetof == nil then EEex_Error(string.format("Invalid #OFFSET_OF parameter: \"%s\"", memberName)) end
-		return EEex_ToDecStr(offsetof)
+		local innerSplit = EEex_Split(innerStr:sub(2):sub(1, -2), "%s*%.%s*", true)
+		if innerSplit[2] == nil then EEex_Error("#OFFSET_OF has invalid number of arguments") end
+		local curStructName = innerSplit[1]
+		local curMemberIndex = 2
+		local curMemberName = innerSplit[curMemberIndex]
+		local totalOffset = 0
+		while true do
+			local structBinding = _G[curStructName]
+			if structBinding == nil then EEex_Error(string.format("Invalid usertype encountered in #OFFSET_OF: \"%s\"", curStructName)) end
+			local offsetof = structBinding["offsetof_"..curMemberName]
+			if offsetof == nil then EEex_Error(string.format("Member missing offsetof binding in #OFFSET_OF: %s::%s", curStructName, curMemberName)) end
+			local usertype = structBinding["usertype_"..curMemberName]
+			if usertype == nil then EEex_Error(string.format("Member missing usertype binding in #OFFSET_OF: %s::%s", curStructName, curMemberName)) end
+			totalOffset = totalOffset + offsetof
+			curMemberIndex = curMemberIndex + 1
+			curMemberName = innerSplit[curMemberIndex]
+			if curMemberName == nil then break end
+			curStructName = usertype
+		end
+		return EEex_ToDecStr(totalOffset)
 	end)
 
 	-- #REPEAT
