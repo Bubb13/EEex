@@ -5,6 +5,101 @@
 
 EEex_Opcode_ListsResolvedListeners = {}
 
+-- Mode-3 stat bonuses for op6/op10/op15/op19/op44/op49 ultimately flow through
+-- CRuleTables::GetSpellAbilityValue(), which indexes CLSSPLAB by numeric row /
+-- column rather than by symbolic labels. Keep the full schema contract here so
+-- Lua and the patch layer both talk about the same layout.
+EEex_Opcode_ClassSpellAbilityTable = {
+	["columns"] = {
+		-- Slot 0 must exist because the native STR / DEX helpers reference columns
+		-- 1 and 6 respectively. The name is not semantically important; the index is.
+		"RESERVED",
+		"STR",
+		-- Slot 2 is likewise structural padding. We opted for the STREX name so the
+		-- shipped table still looks familiar to modders.
+		"STREX",
+		"CON",
+		"INT",
+		"WIS",
+		"DEX",
+		"CHR",
+	},
+	["columnIndices"] = {
+		-- These are zero-based indexes as consumed by CRuleTables::GetSpellAbilityValue().
+		-- They are intentionally sparse because columns 0 and 2 are reserved by layout.
+		["STR"] = 1,
+		["CON"] = 3,
+		["INT"] = 4,
+		["WIS"] = 5,
+		["DEX"] = 6,
+		["CHR"] = 7,
+	},
+	["rows"] = {
+		-- Row order also matters. The engine derives a class byte, then uses that byte
+		-- as a direct row index into CLSSPLAB.
+		"UNUSED",
+		"MAGE",
+		"FIGHTER",
+		"CLERIC",
+		"THIEF",
+		"BARD",
+		"PALADIN",
+		"FIGHTER_MAGE",
+		"FIGHTER_CLERIC",
+		"FIGHTER_THIEF",
+		"FIGHTER_MAGE_THIEF",
+		"DRUID",
+		"RANGER",
+		"MAGE_THIEF",
+		"CLERIC_MAGE",
+		"CLERIC_THIEF",
+		"FIGHTER_DRUID",
+		"FIGHTER_MAGE_CLERIC",
+		"CLERIC_RANGER",
+		"SORCERER",
+		"MONK",
+		"SHAMAN",
+	},
+}
+
+function EEex_Opcode_Private_ValidateClassSpellAbilityTable()
+
+	local array = EEex_Resource_Load2DA("CLSSPLAB")
+	if not array then
+		EEex_Error("[EEex_Opcode] Missing CLSSPLAB.2DA; install the EEex copy before using mode-3 class spell bonuses.")
+	end
+
+	-- Fail fast on schema drift. If another override reorders columns, the engine
+	-- would silently read the wrong stat budgets unless we stop here.
+	for index, expectedLabel in ipairs(EEex_Opcode_ClassSpellAbilityTable["columns"]) do
+		local actualIndex = array:findColumnLabel(expectedLabel)
+		local wantedIndex = index - 1
+		if actualIndex ~= wantedIndex then
+			EEex_Error(string.format(
+				"[EEex_Opcode] CLSSPLAB.2DA column '%s' must be at zero-based index %d, found %d.",
+				expectedLabel, wantedIndex, actualIndex
+			))
+		end
+	end
+
+	-- Row labels are validated for the same reason: native code passes a numeric class
+	-- id, not a row label, so row order must stay synchronized with the executable.
+	for index, expectedLabel in ipairs(EEex_Opcode_ClassSpellAbilityTable["rows"]) do
+		local actualLabel = array:getRowLabel(index - 1)
+		if actualLabel ~= expectedLabel then
+			EEex_Error(string.format(
+				"[EEex_Opcode] CLSSPLAB.2DA row %d must be '%s', found '%s'.",
+				index - 1, expectedLabel, actualLabel
+			))
+		end
+	end
+end
+
+EEex_GameState_AddInitializedListener(function()
+	-- Run once the game is initialized enough for resource loading to be reliable.
+	EEex_Opcode_Private_ValidateClassSpellAbilityTable()
+end)
+
 function EEex_Opcode_AddListsResolvedListener(func)
 	-- [EEex.dll]
 	EEex.Opcode_LuaHook_AfterListsResolved_Enabled = true
