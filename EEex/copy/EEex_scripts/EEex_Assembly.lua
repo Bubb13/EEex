@@ -511,6 +511,29 @@ function EEex_PreprocessAssembly(assemblyT, state)
 	return toReturn, state
 end
 
+function EEex_OffsetOf(pathStr)
+	local innerSplit = EEex_Split(pathStr, "%s*%.%s*", true)
+	if innerSplit[2] == nil then EEex_Error("#OFFSET_OF has invalid number of arguments") end
+	local curStructName = innerSplit[1]
+	local curMemberIndex = 2
+	local curMemberName = innerSplit[curMemberIndex]
+	local totalOffset = 0
+	while true do
+		local structBinding = _G[curStructName]
+		if structBinding == nil then EEex_Error(string.format("Invalid usertype encountered in #OFFSET_OF: \"%s\"", curStructName)) end
+		local offsetof = structBinding["offsetof_"..curMemberName]
+		if offsetof == nil then EEex_Error(string.format("Member missing offsetof binding in #OFFSET_OF: %s::%s", curStructName, curMemberName)) end
+		local usertype = structBinding["usertype_"..curMemberName]
+		if usertype == nil then EEex_Error(string.format("Member missing usertype binding in #OFFSET_OF: %s::%s", curStructName, curMemberName)) end
+		totalOffset = totalOffset + offsetof
+		curMemberIndex = curMemberIndex + 1
+		curMemberName = innerSplit[curMemberIndex]
+		if curMemberName == nil then break end
+		curStructName = usertype
+	end
+	return totalOffset
+end
+
 function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 
 	local advanceCount = 1
@@ -609,26 +632,8 @@ function EEex_PreprocessAssemblyStr(assemblyT, curI, assemblyStr)
 	-- #OFFSET_OF
 	assemblyStr = EEex_ReplacePattern(assemblyStr, "#OFFSET_OF(%b())", function(match)
 		local innerStr = match.groups[1]
-		local innerSplit = EEex_Split(innerStr:sub(2):sub(1, -2), "%s*%.%s*", true)
-		if innerSplit[2] == nil then EEex_Error("#OFFSET_OF has invalid number of arguments") end
-		local curStructName = innerSplit[1]
-		local curMemberIndex = 2
-		local curMemberName = innerSplit[curMemberIndex]
-		local totalOffset = 0
-		while true do
-			local structBinding = _G[curStructName]
-			if structBinding == nil then EEex_Error(string.format("Invalid usertype encountered in #OFFSET_OF: \"%s\"", curStructName)) end
-			local offsetof = structBinding["offsetof_"..curMemberName]
-			if offsetof == nil then EEex_Error(string.format("Member missing offsetof binding in #OFFSET_OF: %s::%s", curStructName, curMemberName)) end
-			local usertype = structBinding["usertype_"..curMemberName]
-			if usertype == nil then EEex_Error(string.format("Member missing usertype binding in #OFFSET_OF: %s::%s", curStructName, curMemberName)) end
-			totalOffset = totalOffset + offsetof
-			curMemberIndex = curMemberIndex + 1
-			curMemberName = innerSplit[curMemberIndex]
-			if curMemberName == nil then break end
-			curStructName = usertype
-		end
-		return EEex_ToDecStr(totalOffset)
+		local offset = EEex_OffsetOf(innerStr:sub(2):sub(1, -2))
+		return EEex_ToDecStr(offset)
 	end)
 
 	-- #REPEAT
