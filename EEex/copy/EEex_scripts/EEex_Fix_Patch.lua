@@ -4,6 +4,22 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+------------------------------------------------------------------------------------------------------------------------+
+	| BUG: v2.5+ - op33 param2 == 3 immediately subtracts from SAVEVSWANDS instead of SAVEVSDEATH in the current effect pass |
+	+------------------------------------------------------------------------------------------------------------------------+
+	|   [JIT] CGameEffectSaveVsDeath::ApplyEffect()                                                                          |
+	|       Replace the incorrect immediate save target. Example patch from v2.6.6.0:                                        |
+	|           Bugged -> sub word ptr ds:[rdi+1136h], ax ; SAVEVSWANDS                                                      |
+	|           Fixed  -> sub word ptr ds:[rdi+1134h], ax ; SAVEVSDEATH                                                      |
+	+------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_WriteU32(
+		EEex_Label("Hook-CGameEffectSaveVsDeath::ApplyEffect()-ImmediateSaveWriteOffset"),
+		EEex_OffsetOf("CGameSprite.m_derivedStats.m_nSaveVSDeath")
+	)
+
+	--[[
 	+----------------------------------------------------------------------------------------------------------------+
 	| Fix TRAPLIMT.2DA's snare cap check in CGameEffectSetSnare::ApplyEffect                                         |
 	+----------------------------------------------------------------------------------------------------------------+

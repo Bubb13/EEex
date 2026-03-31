@@ -86,32 +86,6 @@
 	--------------------------------------
 
 	--[[
-	+------------------------------------------------------------------------------------------------------------------------------------+
-	| Opcode #33                                                                                                                         |
-	+------------------------------------------------------------------------------------------------------------------------------------+
-	|   BUG: v2.5+ - param2 == 3 immediately subtracts from SAVEVSWANDS instead of SAVEVSDEATH in the current effect pass                |
-	+------------------------------------------------------------------------------------------------------------------------------------+
-	|   Loader label: Hook-CGameEffectSaveVsDeath::ApplyEffect()-ImmediateSaveWrite                                                      |
-	|       -> resolves to the first byte of the buggy 7-byte write instruction                                                          |
-	|          `sub word ptr [rdi+1136h], ax`                                                                                            |
-	|                                                                                                                                    |
-	|   Why EEex_HookNOPs() here:                                                                                                        |
-	|       -> this site is a single in-place instruction, not a call boundary                                                           |
-	|       -> we do not need to preserve any original bytes or re-enter the displaced instruction                                       |
-	|       -> the bad instruction is exactly 7 bytes long, so EEex_HookNOPs(..., 2, ...) is a perfect fit:                              |
-	|          the helper writes a 5-byte jump over the site and pads the remaining 2 bytes with NOPs                                    |
-	|       -> that makes this the narrowest patch possible and avoids a broader ApplyEffect hook                                        |
-	+------------------------------------------------------------------------------------------------------------------------------------+
-	--]]
-
-	-- Replace only the incorrect immediate save target:
-	--   engine bug:  sub word ptr ds:[rdi+1136h], ax  ; SAVEVSWANDS
-	--   fixed to:    sub word ptr ds:[rdi+1134h], ax  ; SAVEVSDEATH
-	EEex_HookNOPs(EEex_Label("Hook-CGameEffectSaveVsDeath::ApplyEffect()-ImmediateSaveWrite"), 2, {[[
-		sub word ptr ds:[rdi+1134h], ax
-	]]})
-
-	--[[
 	+--------------------------------------------------------------------------------------------------+
 	| Opcode #214                                                                                      |
 	+--------------------------------------------------------------------------------------------------+

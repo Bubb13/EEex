@@ -2159,16 +2159,6 @@ Operations=ADD 56
 Pattern=898248130000
 Operations=ADD -3
 
-; CGameEffectSaveVsDeath::ApplyEffect(), m_dWFlags == 3 immediate path.
-; The pattern intentionally spans the surrounding branch and state reset so the label resolves
-; to the exact buggy write and not just any similar `sub word ptr [rdi+imm], ax`.
-; `Operations=ADD 18` lands on:
-;   66 29 87 36 11 00 00    sub word ptr [rdi+1136h], ax
-; The Lua hook then replaces only that instruction with the correct SAVEVSDEATH displacement.
-[Hook-CGameEffectSaveVsDeath::ApplyEffect()-ImmediateSaveWrite]
-Pattern=3993CC00000074110FB7431C8993CC00000066298736110000837B24010F852E
-Operations=ADD 18
-
 [Hook-CGameEffectList::Marshal()-OverrideSize]
 Pattern=488BCBFF504085C0
 Operations=ADD 269
@@ -2192,6 +2182,10 @@ Operations=ADD -43
 [Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail]
 Pattern=488D8FC81C0000
 Operations=ADD 20
+
+[Hook-CGameEffectSaveVsDeath::ApplyEffect()-ImmediateSaveWriteOffset]
+Pattern=0F852E0100000FB687AC050000
+Operations=ADD -8
 
 [Hook-CGameEffectSecondaryCastList::ApplyEffect()]
 Pattern=48895C24185556574154415541564157488D6C24D94881EC00010000
