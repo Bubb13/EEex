@@ -1063,18 +1063,21 @@ end
 --
 -- end
 
+-- IMPORTANT: This is part of the X-BIV1.0 schema, don't modify existing enum values without implementing migration code!
 EEex_Sprite_Private_MarshalHandlerFieldType = {
-	["TABLE_END"]   = 0,
-	["TABLE_START"] = 1,
-	["STRING"]      = 2,
-	["INT8"]        = 3,
-	["INTU8"]       = 4,
-	["INT16"]       = 5,
-	["INTU16"]      = 6,
-	["INT32"]       = 7,
-	["INTU32"]      = 8,
-	["INT64"]       = 9,
-	["INTU64"]      = 10,
+	["TABLE_END"]     = 0,
+	["TABLE_START"]   = 1,
+	["STRING"]        = 2,
+	["INT8"]          = 3,
+	["INTU8"]         = 4,
+	["INT16"]         = 5,
+	["INTU16"]        = 6,
+	["INT32"]         = 7,
+	["INTU32"]        = 8,
+	["INT64"]         = 9,
+	["INTU64"]        = 10,
+	["BOOLEAN_FALSE"] = 11,
+	["BOOLEAN_TRUE"]  = 12,
 }
 
 EEex_Sprite_Private_CurrentSpriteMarshalHandlerData = {}
@@ -1114,12 +1117,15 @@ function EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(t)
 
 	local accumulator = 0
 	local lengthTypeSwitch = {
-		["string"] = function(v)
-			return #v + 1
+		["boolean"] = function(v)
+			return 0
 		end,
 		["number"] = function(v)
 			local _, _, writeAdvance = EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(v)
 			return writeAdvance
+		end,
+		["string"] = function(v)
+			return #v + 1
 		end,
 	}
 
@@ -1139,8 +1145,8 @@ function EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(t)
 				break
 			end
 			local kType = type(k)
-			if kType ~= "number" and kType ~= "string" then
-				EEex_Error("Only numbers / strings can be used as keys in creature marshal")
+			if kType ~= "boolean" and kType ~= "number" and kType ~= "string" then
+				EEex_Error("Only booleans / numbers / strings can be used as keys in creature marshal")
 			end
 
 			toProcess[2] = k
@@ -1154,8 +1160,8 @@ function EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(t)
 				goto continue
 			else
 				local vType = type(v)
-				if vType ~= "number" and vType ~= "string" and vType ~= "table" then
-					EEex_Error("Only numbers / strings / tables can be used as values in creature marshal")
+				if vType ~= "boolean" and vType ~= "number" and vType ~= "string" and vType ~= "table" then
+					EEex_Error("Only booleans / numbers / strings / tables can be used as values in creature marshal")
 				end
 				if vType == "table" then
 					-- KEY_FIELD_TYPE + KEY_LENGTH + TABLE_START
@@ -1193,17 +1199,24 @@ function EEex_Sprite_Private_WriteSpriteMarshalHandlerData(memoryPtr, t)
 	end
 
 	local writeTypeSwitch = {
+		["boolean"] = function(v)
+			EEex_Write8(memoryPtr, v
+				and EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_TRUE
+				or  EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_FALSE
+			)
+			memoryPtr = memoryPtr + 1
+		end,
+		["number"] = writeNumber,
 		["string"] = function(v)
 			EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.STRING)
 			memoryPtr = memoryPtr + 1
 			EEex_WriteString(memoryPtr, v)
 			memoryPtr = memoryPtr + #v + 1
 		end,
-		["number"] = writeNumber,
 		["table"] = function(v)
 			EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_START)
 			memoryPtr = memoryPtr + 1
-		end
+		end,
 	}
 
 	local processStack = {{t, nil}} -- toProcessT, iterK
@@ -1259,8 +1272,13 @@ function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 	end
 
 	local addTableExport = function(handlerName, toExport)
+		if toExport == nil then
+			-- `nil` means the export handler doesn't want to marshal any data, not even an empty table.
+			-- This saves some bytes by not writing the bare-bones serialized table structure.
+			return
+		end
 		if type(toExport) ~= "table" then
-			EEex_Error("Creature marshal handler must export table")
+			EEex_Error("Creature marshal handler must export table or nil")
 		end
 		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize = EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize + 1
 		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData[EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize] = toExport
@@ -1371,6 +1389,12 @@ function EEex_Sprite_LuaHook_ReadExtraEffectListUnmarshal(sprite, baseMemory)
 				local read = EEex_ReadU64(memory)
 				memory = memory + 8
 				return read
+			end,
+			[EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_FALSE] = function()
+				return false
+			end,
+			[EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_TRUE] = function()
+				return true
 			end,
 		}
 
