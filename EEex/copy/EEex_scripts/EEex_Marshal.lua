@@ -30,9 +30,9 @@ EEex_Sprite_AddMarshalHandlers("EEex_Item",
 				if string.find(toMarshal["EEex_ItemMarshal"], ":", 1, true) == nil then
 					return nil
 				end
-				return toMarshal
 			end
 		end
+		return toMarshal
 	end,
 	function(sprite, read)
 		local marshaled = read["EEex_ItemMarshal"]
