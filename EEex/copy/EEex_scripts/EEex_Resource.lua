@@ -759,7 +759,7 @@ function EEex_Resource_AddItemEffect(itemHeader, effectArgs, abilityIndex)
 
 	return EEex_Resource_Private_RebuildItem(stagedItem)
 end
-itemHeader.addEffect = EEex_Resource_AddItemEffect
+Item_Header_st.addEffect = EEex_Resource_AddItemEffect
 
 -- @bubb_doc { EEex_Resource_RemoveItemAbility / instance_name=removeAbility }
 --
@@ -784,7 +784,7 @@ function EEex_Resource_RemoveItemAbility(itemHeader, abilityIndex)
 	end
 	return EEex_Resource_Private_RebuildItem(stagedItem)
 end
-itemHeader.removeAbility = EEex_Resource_RemoveItemAbility
+Item_Header_st.removeAbility = EEex_Resource_RemoveItemAbility
 
 -- @bubb_doc { EEex_Resource_RemoveItemEqEffect / instance_name=removeEqEffect }
 --
@@ -809,7 +809,7 @@ function EEex_Resource_RemoveItemEqEffect(itemHeader, effectIndex)
 	end
 	return EEex_Resource_Private_RebuildItem(stagedItem)
 end
-itemHeader.removeEqEffect = EEex_Resource_RemoveItemEqEffect
+Item_Header_st.removeEqEffect = EEex_Resource_RemoveItemEqEffect
 
 -- @bubb_doc { EEex_Resource_RemoveItemEffect / instance_name=removeEffect }
 --
