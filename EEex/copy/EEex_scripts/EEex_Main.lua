@@ -36,6 +36,7 @@ EEex_Main_Private_StartupFiles = {
 	"EEex_Projectile",         --
 	"EEex_Projectile_Patch",   --
 	"EEex_Resource",           --
+	"EEex_Item",               --
 	"EEex_Script",             --
 	"EEex_Script_Patch",       --
 	"EEex_Sprite",             --

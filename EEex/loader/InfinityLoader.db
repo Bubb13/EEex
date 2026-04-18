@@ -2159,6 +2159,10 @@ Operations=ADD -68
 Pattern=4533C948899C2440010000
 Operations=ADD 64
 
+[Hook-CGameEffectCreateItem::ApplyEffect()-CGameAIBase::PlaceItem()]
+Pattern=488BDE41B901000000
+Operations=ADD 30
+
 [Hook-CGameEffectDamage::ApplyEffect()-OnDone]
 Pattern=448964242041FF92E8000000
 Operations=ADD 23

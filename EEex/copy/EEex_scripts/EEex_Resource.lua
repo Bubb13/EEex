@@ -162,8 +162,8 @@ end
 Spell_Header_st.getAbility = EEex_Resource_GetSpellAbility
 
 function EEex_Resource_GetItemAbility(itemHeader, abilityIndex)
-	if itemHeader.abilityCount <= abilityIndex then return end
-	return EEex_PtrToUD(EEex_UDToPtr(itemHeader) + itemHeader.abilityOffset + Item_Header_st.sizeof * abilityIndex, "Item_ability_st")
+	if abilityIndex < 0 or itemHeader.abilityCount <= abilityIndex then return end
+	return EEex_PtrToUD(EEex_UDToPtr(itemHeader) + itemHeader.abilityOffset + Item_ability_st.sizeof * abilityIndex, "Item_ability_st")
 end
 Item_Header_st.getAbility = EEex_Resource_GetItemAbility
 
@@ -171,6 +171,697 @@ function EEex_Resource_GetCItemAbility(item, abilityIndex)
 	return item.pRes.pHeader:getAbility(abilityIndex)
 end
 CItem.getAbility = EEex_Resource_GetCItemAbility
+
+--------------------------------------
+-- Item Runtime Mutation Helpers    --
+--------------------------------------
+
+-- This is intentionally looser than EEex_Item.lua's resref normalization:
+-- item mutators use nil to mean "clear this field on the rebuilt ITM".
+local function EEex_Resource_Private_NormalizeOptionalResRef(value, fieldName)
+	if value == nil then
+		return ""
+	end
+	if type(value) == "string" then
+		return value
+	end
+	if type(value) == "userdata" and value.get then
+		return value:get()
+	end
+	EEex_Error(fieldName.." must be a string or CResRef!")
+end
+
+local function EEex_Resource_Private_NormalizeAttackProbability(value)
+	-- Accept either a Lua table or the engine's fixed-size attack-probability
+	-- array, then normalize both shapes into one plain Lua array for staging.
+	local attackProbability = {0, 0, 0, 0, 0, 0}
+	if value == nil then
+		return attackProbability
+	end
+	if type(value) == "table" then
+		for i = 1, 6 do
+			local entry = value[i]
+			if entry == nil then
+				entry = value[i - 1]
+			end
+			if entry ~= nil then
+				attackProbability[i] = entry
+			end
+		end
+		return attackProbability
+	end
+	if type(value) == "userdata" and value.get then
+		for i = 0, 5 do
+			attackProbability[i + 1] = value:get(i)
+		end
+		return attackProbability
+	end
+	EEex_Error("attackProbability must be a table or Array<unsigned __int16,6>!")
+end
+
+local function EEex_Resource_Private_CopyItemEffectData(effectData)
+	-- Staging happens in pure Lua tables so effect templates can be copied,
+	-- inserted, and fanned out across abilities without aliasing userdata.
+	return {
+		effectID = effectData.effectID,
+		targetType = effectData.targetType,
+		spellLevel = effectData.spellLevel,
+		effectAmount = effectData.effectAmount,
+		dwFlags = effectData.dwFlags,
+		durationType = effectData.durationType,
+		duration = effectData.duration,
+		probabilityUpper = effectData.probabilityUpper,
+		probabilityLower = effectData.probabilityLower,
+		res = effectData.res,
+		numDice = effectData.numDice,
+		diceSize = effectData.diceSize,
+		savingThrow = effectData.savingThrow,
+		saveMod = effectData.saveMod,
+		special = effectData.special,
+	}
+end
+
+local function EEex_Resource_Private_CopyItemEffect(effect)
+	return EEex_Resource_Private_CopyItemEffectData({
+		effectID = effect.effectID,
+		targetType = effect.targetType,
+		spellLevel = effect.spellLevel,
+		effectAmount = effect.effectAmount,
+		dwFlags = effect.dwFlags,
+		durationType = effect.durationType,
+		duration = effect.duration,
+		probabilityUpper = effect.probabilityUpper,
+		probabilityLower = effect.probabilityLower,
+		res = effect.res:get(),
+		numDice = effect.numDice,
+		diceSize = effect.diceSize,
+		savingThrow = effect.savingThrow,
+		saveMod = effect.saveMod,
+		special = effect.special,
+	})
+end
+
+local function EEex_Resource_Private_CopyItemAbility(ability)
+	return {
+		type = ability.type,
+		quickSlotType = ability.quickSlotType,
+		largeDamageDice = ability.largeDamageDice,
+		quickSlotIcon = ability.quickSlotIcon:get(),
+		actionType = ability.actionType,
+		actionCount = ability.actionCount,
+		range = ability.range,
+		launcherType = ability.launcherType,
+		largeDamageDiceCount = ability.largeDamageDiceCount,
+		speedFactor = ability.speedFactor,
+		largeDamageDiceBonus = ability.largeDamageDiceBonus,
+		thac0Bonus = ability.thac0Bonus,
+		damageDice = ability.damageDice,
+		school = ability.school,
+		damageDiceCount = ability.damageDiceCount,
+		secondaryType = ability.secondaryType,
+		damageDiceBonus = ability.damageDiceBonus,
+		damageType = ability.damageType,
+		effectCount = ability.effectCount,
+		startingEffect = ability.startingEffect,
+		maxUsageCount = ability.maxUsageCount,
+		usageFlags = ability.usageFlags,
+		abilityFlags = ability.abilityFlags,
+		missileType = ability.missileType,
+		attackProbability = EEex_Resource_Private_NormalizeAttackProbability(ability.attackProbability),
+	}
+end
+
+local function EEex_Resource_Private_GetItemEffect(itemHeader, effectIndex)
+	if effectIndex < 0 then return end
+	return EEex_PtrToUD(EEex_UDToPtr(itemHeader) + itemHeader.effectsOffset + Item_effect_st.sizeof * effectIndex, "Item_effect_st")
+end
+
+local function EEex_Resource_Private_FindItemResource(itemHeader)
+	if not itemHeader then
+		EEex_Error("itemHeader must be defined!")
+	end
+
+	-- Mutators receive only an Item_Header_st pointer. Recover the owning CResItem
+	-- by pointer identity so the rebuilt bytes get written back to the right ITM.
+	local targetPtr = EEex_UDToPtr(itemHeader)
+	local itemType = EEex_Resource_ExtToType("ITM")
+	local resources = EngineGlobals.resources
+	local resourceData = resources.m_pData
+
+	for i = 0, resources.m_nSize - 1 do
+		local res = resourceData:get(i)
+		if res and res.type == itemType and res.bLoaded then
+			local itemRes = EEex_CastUD(res, "CResItem")
+			if itemRes.pHeader and EEex_UDToPtr(itemRes.pHeader) == targetPtr then
+				return itemRes
+			end
+		end
+	end
+
+	EEex_Error("itemHeader must reference a demanded, engine-owned ITM resource!")
+end
+
+local function EEex_Resource_Private_ValidateNonNegativeIndex(index, name)
+	if type(index) ~= "number" or index % 1 ~= 0 then
+		EEex_Error(name.." must be an integer!")
+	end
+	if index < 0 then
+		EEex_Error(name.." must be >= 0!")
+	end
+	return index
+end
+
+local function EEex_Resource_Private_ValidateAbilityIndexForInsert(abilityIndex)
+	if abilityIndex == nil then
+		return -1
+	end
+	if type(abilityIndex) ~= "number" or abilityIndex % 1 ~= 0 then
+		EEex_Error("abilityIndex must be an integer!")
+	end
+	return abilityIndex
+end
+
+local function EEex_Resource_Private_ValidateWildcardIndex(index, name)
+	if index == nil then
+		return -1
+	end
+	if type(index) ~= "number" or index % 1 ~= 0 then
+		EEex_Error(name.." must be an integer!")
+	end
+	return index
+end
+
+local function EEex_Resource_Private_NormalizeItemAbilityArgs(abilityArgs)
+	-- Ability inserts are expressed as plain Lua data first; the ITM is rebuilt
+	-- only after all defaults and caller overrides have been resolved.
+	abilityArgs = abilityArgs or {}
+	if type(abilityArgs) ~= "table" then
+		EEex_Error("abilityArgs must be a table!")
+	end
+	if abilityArgs.effectCount ~= nil then
+		EEex_Error("effectCount may not be defined!")
+	end
+	if abilityArgs.startingEffect ~= nil then
+		EEex_Error("startingEffect may not be defined!")
+	end
+
+	local abilityData = {
+		type = EEex_Utility_MakeWord(0x3, 0x1), -- Type: Magical, Type flags: Usable after Identification
+		quickSlotType = 3,                      -- Ability location: Quick-item slot / Use Item button
+		largeDamageDice = 0,
+		quickSlotIcon = "",
+		actionType = 1,
+		actionCount = 0,
+		range = 100,
+		launcherType = 0,
+		largeDamageDiceCount = 0,
+		speedFactor = 0,
+		largeDamageDiceBonus = 0,
+		thac0Bonus = 0,
+		damageDice = 0,
+		school = 0,
+		damageDiceCount = 0,
+		secondaryType = 0,
+		damageDiceBonus = 0,
+		damageType = 0,
+		effectCount = 0,
+		startingEffect = 0,
+		maxUsageCount = 5,
+		usageFlags = 1,                         -- When drained: Item vanishes
+		abilityFlags = 0,
+		missileType = 1,
+		attackProbability = {0, 0, 0, 0, 0, 0},
+		effects = {},
+	}
+
+	local numericKeys = {
+		"type",
+		"quickSlotType",
+		"largeDamageDice",
+		"actionType",
+		"actionCount",
+		"range",
+		"launcherType",
+		"largeDamageDiceCount",
+		"speedFactor",
+		"largeDamageDiceBonus",
+		"thac0Bonus",
+		"damageDice",
+		"school",
+		"damageDiceCount",
+		"secondaryType",
+		"damageDiceBonus",
+		"damageType",
+		"maxUsageCount",
+		"usageFlags",
+		"abilityFlags",
+		"missileType",
+	}
+
+	for _, key in ipairs(numericKeys) do
+		if abilityArgs[key] ~= nil then
+			abilityData[key] = abilityArgs[key]
+		end
+	end
+
+	abilityData.quickSlotIcon = EEex_Resource_Private_NormalizeOptionalResRef(abilityArgs.quickSlotIcon, "quickSlotIcon")
+	abilityData.attackProbability = EEex_Resource_Private_NormalizeAttackProbability(abilityArgs.attackProbability)
+	return abilityData
+end
+
+local function EEex_Resource_Private_NormalizeItemEffectArgs(effectArgs, defaultTargetType, defaultDurationType)
+	-- Effect inserts use the same staged-table pattern as abilities so callers can
+	-- describe one effect template before it is copied into the rebuilt ITM.
+	effectArgs = effectArgs or {}
+	if type(effectArgs) ~= "table" then
+		EEex_Error("effectArgs must be a table!")
+	end
+	if effectArgs.effectID == nil then
+		EEex_Error("effectID must be defined!")
+	end
+
+	local effectData = {
+		effectID = effectArgs.effectID,
+		targetType = defaultTargetType,
+		spellLevel = 0,
+		effectAmount = 0,
+		dwFlags = 0,
+		durationType = defaultDurationType,
+		duration = 0,
+		probabilityUpper = 100,
+		probabilityLower = 0,
+		res = "",
+		numDice = 0,
+		diceSize = 0,
+		savingThrow = 0,
+		saveMod = 0,
+		special = 0,
+	}
+
+	local numericKeys = {
+		"targetType",
+		"spellLevel",
+		"effectAmount",
+		"dwFlags",
+		"durationType",
+		"duration",
+		"probabilityUpper",
+		"probabilityLower",
+		"numDice",
+		"diceSize",
+		"savingThrow",
+		"saveMod",
+		"special",
+	}
+
+	for _, key in ipairs(numericKeys) do
+		if effectArgs[key] ~= nil then
+			effectData[key] = effectArgs[key]
+		end
+	end
+
+	effectData.res = EEex_Resource_Private_NormalizeOptionalResRef(effectArgs.res, "res")
+	return effectData
+end
+
+local function EEex_Resource_Private_StageItem(itemHeader)
+	-- Mutators cannot safely edit the demanded ITM in place. Adding or removing
+	-- abilities / effects changes block sizes, offsets, and startingEffect indices,
+	-- so the entire resource has to be re-laid out as one fresh byte stream.
+	--
+	-- This staging pass snapshots every mutable piece into plain Lua tables before
+	-- the rebuild happens. That keeps the read phase separate from the write phase,
+	-- avoids chasing pointers into memory that will be replaced by dimmServiceFromMemory,
+	-- and preserves the opaque bytes around the structured blocks verbatim.
+	local itemRes = EEex_Resource_Private_FindItemResource(itemHeader)
+	local itemDataBase = EEex_UDToPtr(itemHeader)
+	local prefixSize = itemHeader.abilityOffset
+	local oldAbilityBlockSize = itemHeader.abilityCount * Item_ability_st.sizeof
+	local oldGapStart = itemDataBase + prefixSize + oldAbilityBlockSize
+	local gapSize = itemHeader.effectsOffset - (prefixSize + oldAbilityBlockSize)
+	-- Preserve the raw gap between ability and effect blocks byte-for-byte. The
+	-- engine can leave padding or opaque data there, and rebuilds should not guess.
+	if gapSize < 0 then
+		EEex_Error("itemHeader contains overlapping ability and effect blocks!")
+	end
+
+	local maxEffectEnd = itemHeader.equipedStartingEffect + itemHeader.equipedEffectCount
+	local equippedEffects = {}
+	for localEffectIndex = 0, itemHeader.equipedEffectCount - 1 do
+		local globalEffectIndex = itemHeader.equipedStartingEffect + localEffectIndex
+		table.insert(equippedEffects, EEex_Resource_Private_CopyItemEffect(EEex_Resource_Private_GetItemEffect(itemHeader, globalEffectIndex)))
+	end
+
+	local abilities = {}
+	for abilityIndex = 0, itemHeader.abilityCount - 1 do
+		local ability = itemHeader:getAbility(abilityIndex)
+		if not ability then
+			EEex_Error("itemHeader ability traversal failed at index "..tostring(abilityIndex).."!")
+		end
+
+		local abilityData = EEex_Resource_Private_CopyItemAbility(ability)
+		abilityData.effects = {}
+		local abilityEffectEnd = abilityData.startingEffect + abilityData.effectCount
+		if abilityEffectEnd > maxEffectEnd then
+			maxEffectEnd = abilityEffectEnd
+		end
+
+		for localEffectIndex = 0, abilityData.effectCount - 1 do
+			local globalEffectIndex = abilityData.startingEffect + localEffectIndex
+			table.insert(abilityData.effects, EEex_Resource_Private_CopyItemEffect(EEex_Resource_Private_GetItemEffect(itemHeader, globalEffectIndex)))
+		end
+
+		table.insert(abilities, abilityData)
+	end
+
+	local oldEffectsEnd = itemHeader.effectsOffset + maxEffectEnd * Item_effect_st.sizeof
+	if oldEffectsEnd > itemRes.nSize then
+		EEex_Error("itemHeader effect block exceeds its owning ITM resource size!")
+	end
+
+	-- The returned table is the mutators' working copy: pure Lua data for every
+	-- editable structure, plus the untouched byte ranges needed to reassemble the
+	-- final ITM without guessing about engine-owned padding or trailing payloads.
+	return {
+		res = itemRes,
+		dataBase = itemDataBase,
+		prefixSize = prefixSize,
+		oldAbilityBlockSize = oldAbilityBlockSize,
+		gapSize = gapSize,
+		oldGapAddress = oldGapStart,
+		oldSuffixAddress = itemDataBase + oldEffectsEnd,
+		suffixSize = itemRes.nSize - oldEffectsEnd,
+		abilities = abilities,
+		equippedEffects = equippedEffects,
+	}
+end
+
+local function EEex_Resource_Private_WriteItemAbility(ability, abilityData)
+	EEex_Memset(EEex_UDToPtr(ability), 0, Item_ability_st.sizeof)
+	ability.type = abilityData.type
+	ability.quickSlotType = abilityData.quickSlotType
+	ability.largeDamageDice = abilityData.largeDamageDice
+	ability.quickSlotIcon:set(abilityData.quickSlotIcon)
+	ability.actionType = abilityData.actionType
+	ability.actionCount = abilityData.actionCount
+	ability.range = abilityData.range
+	ability.launcherType = abilityData.launcherType
+	ability.largeDamageDiceCount = abilityData.largeDamageDiceCount
+	ability.speedFactor = abilityData.speedFactor
+	ability.largeDamageDiceBonus = abilityData.largeDamageDiceBonus
+	ability.thac0Bonus = abilityData.thac0Bonus
+	ability.damageDice = abilityData.damageDice
+	ability.school = abilityData.school
+	ability.damageDiceCount = abilityData.damageDiceCount
+	ability.secondaryType = abilityData.secondaryType
+	ability.damageDiceBonus = abilityData.damageDiceBonus
+	ability.damageType = abilityData.damageType
+	ability.effectCount = abilityData.effectCount
+	ability.startingEffect = abilityData.startingEffect
+	ability.maxUsageCount = abilityData.maxUsageCount
+	ability.usageFlags = abilityData.usageFlags
+	ability.abilityFlags = abilityData.abilityFlags
+	ability.missileType = abilityData.missileType
+	for i = 0, 5 do
+		ability.attackProbability:set(i, abilityData.attackProbability[i + 1] or 0)
+	end
+end
+
+local function EEex_Resource_Private_WriteItemEffect(effect, effectData)
+	EEex_Memset(EEex_UDToPtr(effect), 0, Item_effect_st.sizeof)
+	effect.effectID = effectData.effectID
+	effect.targetType = effectData.targetType
+	effect.spellLevel = effectData.spellLevel
+	effect.effectAmount = effectData.effectAmount
+	effect.dwFlags = effectData.dwFlags
+	effect.durationType = effectData.durationType
+	effect.duration = effectData.duration
+	effect.probabilityUpper = effectData.probabilityUpper
+	effect.probabilityLower = effectData.probabilityLower
+	effect.res:set(effectData.res)
+	effect.numDice = effectData.numDice
+	effect.diceSize = effectData.diceSize
+	effect.savingThrow = effectData.savingThrow
+	effect.saveMod = effectData.saveMod
+	effect.special = effectData.special
+end
+
+local function EEex_Resource_Private_RebuildItem(stagedItem)
+	local rebuiltHeader
+	local newAbilityBlockSize = #stagedItem.abilities * Item_ability_st.sizeof
+	local newEffectsCount = #stagedItem.equippedEffects
+	for _, abilityData in ipairs(stagedItem.abilities) do
+		newEffectsCount = newEffectsCount + #abilityData.effects
+	end
+
+	local newEffectsBlockSize = newEffectsCount * Item_effect_st.sizeof
+	local newEffectsOffset = stagedItem.prefixSize + newAbilityBlockSize + stagedItem.gapSize
+	local newSuffixAddress = newEffectsOffset + newEffectsBlockSize
+	local newSize = newSuffixAddress + stagedItem.suffixSize
+
+	-- Rebuild the demanded ITM in stack memory, flattening equipped effects and all
+	-- ability effect lists into one contiguous effect block with fresh indices.
+	EEex_RunWithStack(newSize, function(bufferBase)
+		EEex_Memset(bufferBase, 0, newSize)
+		EEex_Memcpy(bufferBase, stagedItem.dataBase, stagedItem.prefixSize)
+
+		local newHeader = EEex_PtrToUD(bufferBase, "Item_Header_st")
+		newHeader.abilityOffset = stagedItem.prefixSize
+		newHeader.abilityCount = #stagedItem.abilities
+		newHeader.effectsOffset = newEffectsOffset
+		newHeader.equipedStartingEffect = 0
+		newHeader.equipedEffectCount = #stagedItem.equippedEffects
+
+		local nextAbilityBase = bufferBase + stagedItem.prefixSize
+		local nextEffectIndex = #stagedItem.equippedEffects
+		for _, abilityData in ipairs(stagedItem.abilities) do
+			abilityData.effectCount = #abilityData.effects
+			abilityData.startingEffect = nextEffectIndex
+			EEex_Resource_Private_WriteItemAbility(EEex_PtrToUD(nextAbilityBase, "Item_ability_st"), abilityData)
+			nextAbilityBase = nextAbilityBase + Item_ability_st.sizeof
+			nextEffectIndex = nextEffectIndex + abilityData.effectCount
+		end
+
+		if stagedItem.gapSize > 0 then
+			EEex_Memcpy(bufferBase + stagedItem.prefixSize + newAbilityBlockSize, stagedItem.oldGapAddress, stagedItem.gapSize)
+		end
+
+		local nextEffectBase = bufferBase + newEffectsOffset
+		for _, effectData in ipairs(stagedItem.equippedEffects) do
+			EEex_Resource_Private_WriteItemEffect(EEex_PtrToUD(nextEffectBase, "Item_effect_st"), effectData)
+			nextEffectBase = nextEffectBase + Item_effect_st.sizeof
+		end
+		for _, abilityData in ipairs(stagedItem.abilities) do
+			for _, effectData in ipairs(abilityData.effects) do
+				EEex_Resource_Private_WriteItemEffect(EEex_PtrToUD(nextEffectBase, "Item_effect_st"), effectData)
+				nextEffectBase = nextEffectBase + Item_effect_st.sizeof
+			end
+		end
+
+		if stagedItem.suffixSize > 0 then
+			EEex_Memcpy(bufferBase + newSuffixAddress, stagedItem.oldSuffixAddress, stagedItem.suffixSize)
+		end
+
+		EngineGlobals.dimmServiceFromMemory(stagedItem.res, EEex_PtrToUD(bufferBase, "VariableArray<char>"), newSize, false, true)
+		local demanded = stagedItem.res:Demand()
+		if not demanded then
+			EEex_Error("EEex_Resource_Private_RebuildItem: failed to redemand rebuilt ITM resource!")
+		end
+		rebuiltHeader = EEex_CastUD(demanded, "Item_Header_st")
+	end)
+	return rebuiltHeader
+end
+
+local function EEex_Resource_Private_GetStagedAbility(stagedItem, abilityIndex, funcName)
+	abilityIndex = EEex_Resource_Private_ValidateNonNegativeIndex(abilityIndex, "abilityIndex")
+	local abilityData = stagedItem.abilities[abilityIndex + 1]
+	if not abilityData then
+		EEex_Error(funcName..": abilityIndex is out of range!")
+	end
+	return abilityData
+end
+
+-- These mutators rebuild the ITM resource in-place. Previously held pointers into the
+-- demanded header, ability, or effect blocks should be treated as stale after a mutation.
+-- They all start from EEex_Resource_Private_StageItem() so traversal happens against the
+-- original demanded resource exactly once, before any rewrite invalidates those pointers.
+-- Callers should use the returned Item_Header_st for any follow-up mutation.
+
+-- @bubb_doc { EEex_Resource_AddItemAbility / instance_name=addAbility }
+--
+-- @summary: Appends a new ability to ``itemHeader`` and returns the rebuilt demanded ITM header.
+--
+-- @self { itemHeader / usertype=Item_Header_st }: The demanded item header to mutate.
+--
+-- @param { abilityArgs / type=table|nil }: Optional ability fields for the inserted ability.
+--
+-- @return { type=Item_Header_st }: The rebuilt demanded item header.
+
+function EEex_Resource_AddItemAbility(itemHeader, abilityArgs)
+	local stagedItem = EEex_Resource_Private_StageItem(itemHeader)
+	table.insert(stagedItem.abilities, EEex_Resource_Private_NormalizeItemAbilityArgs(abilityArgs))
+	return EEex_Resource_Private_RebuildItem(stagedItem)
+end
+Item_Header_st.addAbility = EEex_Resource_AddItemAbility
+
+-- @bubb_doc { EEex_Resource_AddItemEqEffect / instance_name=addEqEffect }
+--
+-- @summary: Appends an equipped effect to ``itemHeader`` and returns the rebuilt demanded ITM header.
+--
+-- @self { itemHeader / usertype=Item_Header_st }: The demanded item header to mutate.
+--
+-- @param { effectArgs / type=table|nil }: Optional effect fields for the inserted equipped effect.
+--
+-- @return { type=Item_Header_st }: The rebuilt demanded item header.
+
+function EEex_Resource_AddItemEqEffect(itemHeader, effectArgs)
+	local stagedItem = EEex_Resource_Private_StageItem(itemHeader)
+	table.insert(stagedItem.equippedEffects, EEex_Resource_Private_NormalizeItemEffectArgs(
+		effectArgs,
+		1,
+		EEex_Utility_MakeWord(0x2, 0x0) -- Timing mode: Instant/While equipped, Dispel/Resistance: Natural/Nonmagical
+	))
+	return EEex_Resource_Private_RebuildItem(stagedItem)
+end
+Item_Header_st.addEqEffect = EEex_Resource_AddItemEqEffect
+
+-- @bubb_doc { EEex_Resource_AddItemEffect / instance_name=addEffect }
+--
+-- @summary: Adds an ability effect to one ability or to every ability when ``abilityIndex`` is ``nil``.
+--
+-- @self { itemHeader / usertype=Item_Header_st }: The demanded item header to mutate.
+--
+-- @param { effectArgs / type=table|nil }: Optional effect fields for the inserted ability effect.
+--
+-- @param { abilityIndex / type=number|nil / default=nil }:
+--     The zero-based ability index to target. If ``nil``, the effect is copied into every ability. @EOL
+--
+-- @return { type=Item_Header_st }: The rebuilt demanded item header.
+
+function EEex_Resource_AddItemEffect(itemHeader, effectArgs, abilityIndex)
+	abilityIndex = EEex_Resource_Private_ValidateAbilityIndexForInsert(abilityIndex)
+	local stagedItem = EEex_Resource_Private_StageItem(itemHeader)
+	local effectData = EEex_Resource_Private_NormalizeItemEffectArgs(effectArgs, 2, 0)
+
+	if abilityIndex < 0 then
+		-- Insert into every ability. Copy the staged effect table for each target so
+		-- later edits or rebuild bookkeeping never share the same table instance.
+		if #stagedItem.abilities == 0 then
+			EEex_Error("EEex_Resource_AddItemEffect: itemHeader has no abilities!")
+		end
+		for _, abilityData in ipairs(stagedItem.abilities) do
+			table.insert(abilityData.effects, EEex_Resource_Private_CopyItemEffectData(effectData))
+		end
+	else
+		table.insert(EEex_Resource_Private_GetStagedAbility(stagedItem, abilityIndex, "EEex_Resource_AddItemEffect").effects,
+			EEex_Resource_Private_CopyItemEffectData(effectData))
+	end
+
+	return EEex_Resource_Private_RebuildItem(stagedItem)
+end
+itemHeader.addEffect = EEex_Resource_AddItemEffect
+
+-- @bubb_doc { EEex_Resource_RemoveItemAbility / instance_name=removeAbility }
+--
+-- @summary: Removes one ability or all abilities when ``abilityIndex`` is ``nil``, then returns the rebuilt demanded ITM header.
+--
+-- @self { itemHeader / usertype=Item_Header_st }: The demanded item header to mutate.
+--
+-- @param { abilityIndex / type=number|nil / default=nil }:
+--     The zero-based ability index to remove. If ``nil``, removes every ability. @EOL
+--
+-- @return { type=Item_Header_st }: The rebuilt demanded item header.
+
+function EEex_Resource_RemoveItemAbility(itemHeader, abilityIndex)
+	local stagedItem = EEex_Resource_Private_StageItem(itemHeader)
+	abilityIndex = EEex_Resource_Private_ValidateWildcardIndex(abilityIndex, "abilityIndex")
+	if abilityIndex < 0 then
+		stagedItem.abilities = {}
+	elseif stagedItem.abilities[abilityIndex + 1] == nil then
+		EEex_Error("EEex_Resource_RemoveItemAbility: abilityIndex is out of range!")
+	else
+		table.remove(stagedItem.abilities, abilityIndex + 1)
+	end
+	return EEex_Resource_Private_RebuildItem(stagedItem)
+end
+itemHeader.removeAbility = EEex_Resource_RemoveItemAbility
+
+-- @bubb_doc { EEex_Resource_RemoveItemEqEffect / instance_name=removeEqEffect }
+--
+-- @summary: Removes one equipped effect or all equipped effects when ``effectIndex`` is ``nil``, then returns the rebuilt demanded ITM header.
+--
+-- @self { itemHeader / usertype=Item_Header_st }: The demanded item header to mutate.
+--
+-- @param { effectIndex / type=number|nil / default=nil }:
+--     The zero-based equipped-effect index to remove. If ``nil``, removes every equipped effect. @EOL
+--
+-- @return { type=Item_Header_st }: The rebuilt demanded item header.
+
+function EEex_Resource_RemoveItemEqEffect(itemHeader, effectIndex)
+	local stagedItem = EEex_Resource_Private_StageItem(itemHeader)
+	effectIndex = EEex_Resource_Private_ValidateWildcardIndex(effectIndex, "effectIndex")
+	if effectIndex < 0 then
+		stagedItem.equippedEffects = {}
+	elseif stagedItem.equippedEffects[effectIndex + 1] == nil then
+		EEex_Error("EEex_Resource_RemoveItemEqEffect: effectIndex is out of range!")
+	else
+		table.remove(stagedItem.equippedEffects, effectIndex + 1)
+	end
+	return EEex_Resource_Private_RebuildItem(stagedItem)
+end
+itemHeader.removeEqEffect = EEex_Resource_RemoveItemEqEffect
+
+-- @bubb_doc { EEex_Resource_RemoveItemEffect / instance_name=removeEffect }
+--
+-- @summary: Removes one ability effect, or a wildcard-selected set of ability effects, then returns the rebuilt demanded ITM header.
+--
+-- @self { itemHeader / usertype=Item_Header_st }: The demanded item header to mutate.
+--
+-- @param { effectIndex / type=number|nil / default=nil }:
+--     The zero-based ability-effect index to remove. If ``nil``, clears the matched ability effect lists. @EOL
+--
+-- @param { abilityIndex / type=number|nil / default=nil }:
+--     The zero-based ability index to target. If ``nil``, applies the removal across every ability. @EOL
+--
+-- @return { type=Item_Header_st }: The rebuilt demanded item header.
+
+function EEex_Resource_RemoveItemEffect(itemHeader, effectIndex, abilityIndex)
+	local stagedItem = EEex_Resource_Private_StageItem(itemHeader)
+	effectIndex = EEex_Resource_Private_ValidateWildcardIndex(effectIndex, "effectIndex")
+	abilityIndex = EEex_Resource_Private_ValidateWildcardIndex(abilityIndex, "abilityIndex")
+
+	-- Negative indices mean "all matched entries": abilityIndex < 0 fans out across
+	-- every ability, and effectIndex < 0 clears the whole targeted effect list.
+	if abilityIndex < 0 then
+		if effectIndex < 0 then
+			for _, abilityData in ipairs(stagedItem.abilities) do
+				abilityData.effects = {}
+			end
+		else
+			local matchedAny = false
+			for _, abilityData in ipairs(stagedItem.abilities) do
+				if abilityData.effects[effectIndex + 1] ~= nil then
+					table.remove(abilityData.effects, effectIndex + 1)
+					matchedAny = true
+				end
+			end
+			if not matchedAny then
+				EEex_Error("EEex_Resource_RemoveItemEffect: effectIndex is out of range for all matched abilities!")
+			end
+		end
+	else
+		local abilityData = EEex_Resource_Private_GetStagedAbility(stagedItem, abilityIndex, "EEex_Resource_RemoveItemEffect")
+		if effectIndex < 0 then
+			abilityData.effects = {}
+		elseif abilityData.effects[effectIndex + 1] == nil then
+			EEex_Error("EEex_Resource_RemoveItemEffect: effectIndex is out of range!")
+		else
+			table.remove(abilityData.effects, effectIndex + 1)
+		end
+	end
+	return EEex_Resource_Private_RebuildItem(stagedItem)
+end
+Item_Header_st.removeEffect = EEex_Resource_RemoveItemEffect
 
 function EEex_Resource_GetSpellAbilityForLevel(spellHeader, casterLevel)
 

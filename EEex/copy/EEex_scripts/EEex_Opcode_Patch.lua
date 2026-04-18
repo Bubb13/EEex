@@ -86,6 +86,62 @@
 	--------------------------------------
 
 	--[[
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	| CGameEffectCreateItem() [opcode #122 / #255]                                                                                     |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	|   param2         > 0    -> Override the created CItem's flags before the engine places it                                        |
+	|   (special & 1) != 0    -> Save the placed inventory/equipment slot to EEex_GetUDAux(sprite).EEex_CGameEffectCreateItem_Slot     |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_CGameEffectCreateItem_BeforePlaceItem(pEffect: CGameEffect*, pItem: CItem*)                       |
+	|   [EEex.dll] EEex::Opcode_Hook_CGameEffectCreateItem_AfterPlaceItem(pEffect: CGameEffect*, pSprite: CGameSprite*, pItem: CItem*) |
+	+----------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	--------------------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_CGameEffectCreateItem_BeforePlaceItem() --
+	--------------------------------------------------------------------------
+
+	EEex_HookBeforeAndAfterCallWithLabels(EEex_Label("Hook-CGameEffectCreateItem::ApplyEffect()-CGameAIBase::PlaceItem()"), {
+		{"hook_integrity_watchdog_ignore_registers_0", {
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+			mov rdx, rbx                                                    ; pItem
+			mov rcx, r14                                                    ; pEffect
+			call #L(EEex::Opcode_Hook_CGameEffectCreateItem_BeforePlaceItem)
+
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]},
+
+	-------------------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_CGameEffectCreateItem_AfterPlaceItem() --
+	-------------------------------------------------------------------------
+
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+
+			mov r8, rbx                                                     ; pItem
+			mov rdx, r12                                                    ; pSprite
+			mov rcx, r14                                                    ; pEffect
+			call #L(EEex::Opcode_Hook_CGameEffectCreateItem_AfterPlaceItem)
+
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	--[[
 	+------------------------------------------------------------------------------------+
 	| Opcode #146                                                                        |
 	+------------------------------------------------------------------------------------+
