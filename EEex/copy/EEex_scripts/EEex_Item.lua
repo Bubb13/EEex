@@ -75,6 +75,7 @@ local function EEex_Item_Private_GetOrCreateRuntimeResource(itemResref)
 	EEex_RunWithStack(CResRef.sizeof, function(stackMem)
 		local resrefUD = EEex_PtrToUD(stackMem, "CResRef")
 		resrefUD:set(itemResref)
+		-- const CResRef* cResRef, int nType, bool createIfNotExists
 		itemResource = EEex_CastUD(EngineGlobals.dimmGetResObject(resrefUD, EEex_Item_Private_ItemType, true), "CResItem")
 	end)
 	if not itemResource then
@@ -116,6 +117,7 @@ local function EEex_Item_Private_UnmarshalResourceHex(resource, marshaledHex)
 			writeOffset = writeOffset + 1
 		end
 
+		-- CRes* pRes, void* pData, int nSize, bool useTempOverride, bool makeCopy
 		EngineGlobals.dimmServiceFromMemory(resource, EEex_PtrToUD(bufferBase, "VariableArray<char>"), byteCount, false, true)
 	end)
 
@@ -223,6 +225,7 @@ local function EEex_Item_Private_DumpPersistentResources()
 	for itemResref in pairs(EEex_Item_Private_PersistentResrefs) do
 		local itemResource = EEex_Resource_Fetch(itemResref, EEex_Item_Private_ItemExtension)
 		if itemResource then
+			-- CRes* pRes
 			EngineGlobals.dimmDump(itemResource)
 		end
 	end
@@ -259,6 +262,7 @@ function EEex_Item_CreateFromResref(itemResref, args, persist)
 		itemHeader.equipedEffectCount = 0
 		itemHeader.maxStackable = 1
 
+		-- CRes* pRes, void* pData, int nSize, bool useTempOverride, bool makeCopy
 		EngineGlobals.dimmServiceFromMemory(itemResource, EEex_PtrToUD(bufferBase, "VariableArray<char>"), Item_Header_st.sizeof, false, true)
 	end)
 
@@ -291,6 +295,7 @@ function EEex_Item_CreateCopy(itemResref, sourceItem, args, persist)
 		-- Clone the entire demanded ITM payload, including equipped effects, abilities,
 		-- and ability-linked effect blocks.
 		EEex_Memcpy(bufferBase, EEex_UDToPtr(sourceHeader), sourceResource.nSize)
+		-- CRes* pRes, void* pData, int nSize, bool useTempOverride, bool makeCopy
 		EngineGlobals.dimmServiceFromMemory(itemResource, EEex_PtrToUD(bufferBase, "VariableArray<char>"), sourceResource.nSize, false, true)
 	end)
 
