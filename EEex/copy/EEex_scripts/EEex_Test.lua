@@ -70,3 +70,80 @@ function EEex_Test_2DAFunctions()
 		print(string.format("    [%d] = %s", i, str))
 	end)
 end
+
+function EEex_Test_CreateRuntimeItem()
+
+	local sprite = EEex_Sprite_GetSelected() -- CGameSprite
+	if not sprite then
+		return
+	end
+
+	-- New item from scratch
+	do
+		local pHeader = EEex_Item_CreateFromResref("B3NEWITM", {
+			["genericName"] = 1080,
+			["identifiedName"] = 1080,
+			["itemFlags"] = 0x2C, -- droppable, displayable, not copyable
+			["itemType"] = 10, -- rings
+			["minINTRequired"] = 9,
+			["baseValue"] = 900,
+			["genericDescription"] = 17054,
+			["identifiedDescription"] = 17054,
+			["itemIcon"] = "IRING01",
+			["groundIcon"] = "GRING01",
+		}, true) -- set last boolean parameter to ``false`` if you do not want the item to survive load/save
+		--
+		pHeader = EEex_Resource_AddItemAbility(pHeader, {
+			["quickSlotIcon"] = "IRING01",
+		})
+		--
+		pHeader = EEex_Resource_AddItemEqEffect(pHeader, {
+			["effectID"] = 0x8E, -- type: display portrait icon
+			["dwFlags"] = 94, -- icon: magnetized
+		})
+		--
+		pHeader = EEex_Resource_AddItemEffect(pHeader, {
+			["effectID"] = 0x92, -- type: Cast Spell (at Creature)
+			["dwFlags"] = 1, -- mode: Cast instantly (caster level)
+			["res"] = "SPWI112",
+		})
+		--
+		sprite:applyEffect({
+			["effectID"] = 0x7A, -- Create inventory item
+			["durationType"] = 1,
+			["effectAmount"] = Infinity_RandomNumber(1, 5),
+			["res"] = "B3NEWITM",
+			["sourceID"] = sprite.m_id,
+			["sourceTarget"] = sprite.m_id,
+		})
+	end
+
+	-- Clone existing item
+	do
+		local items = sprite.m_equipment.m_items -- Array<CItem*,39>
+		for i = 0, 38 do
+			local item = items:get(i) -- CItem
+			if item then -- sanity check
+				local resref = item.pRes.resref:get()
+				if resref:upper() == "STAF01" then
+					local pHeader = EEex_Item_CreateCopy("B3STAF01", item, {
+						["attributes"] = 9, -- enchantment: +9
+					}, true) -- set last boolean parameter to ``false`` if you do not want the item to survive load/save
+					--
+					pHeader.itemFlags = EEex_BOr(pHeader.itemFlags, 0x6) -- add magical flag
+					pHeader.baseValue = pHeader.baseValue + 1000 -- increase base value by 1000
+					--
+					sprite:applyEffect({
+						["effectID"] = 0x7A, -- Create inventory item
+						["durationType"] = 1,
+						["res"] = "B3STAF01",
+						["sourceID"] = sprite.m_id,
+						["sourceTarget"] = sprite.m_id,
+					})
+					--
+					break
+				end
+			end
+		end
+	end
+end
