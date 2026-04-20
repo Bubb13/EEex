@@ -379,6 +379,11 @@ Operations=ADD -16
 Pattern=4889742410574883EC30488B5908
 Operations=ADD -5
 
+; Used by the opcode 180 inventory-overlay fix in EEex_Fix_Patch.lua.
+; This helper is keyed by item CResRef, unlike CImmunitiesItemTypeEquipList::OnList().
+[CImmunitiesItemEquipList::OnList]
+Pattern=40534883EC204C8B5108498BD94533C94C890B
+
 [CInfButtonArray::SetQuickSlot]
 Pattern=48896C24104889742418574881ECE0000000
 
@@ -2098,6 +2103,60 @@ Operations=ADD 72
 [Hook-CInfGame::Unmarshal()-AfterGlobalVariablesUnmarshalled]
 Pattern=413B7C2434
 Operations=ADD 14
+
+; UI-only opcode 180 fix:
+; replace the original item-type immunity call in CInfGame::CheckItemUsable(short, ...)
+; with a shim that checks the item-resref immunity list first, then falls back to the
+; engine's original item-type helper.
+;
+; Address arithmetic used to compute this entry:
+;   pattern starts at 0x140271688
+;   target call is    0x1402716A7
+;   delta = 0x1F = 31
+;
+; Byte-count arithmetic for the matched sequence:
+;   0FB7D0                        -> 3
+;   4C8D4C2440                    -> 5
+;   B868220000                    -> 5
+;   4C8D442448                    -> 5
+;   85DB                          -> 2
+;   B9C0150000                    -> 5
+;   0F44C8                        -> 3
+;   4803CE                        -> 3
+;   total                         -> 31
+;
+; The pattern therefore ends on `add rcx, rsi`, and ADD 31 lands on the next byte:
+; the E8 opcode of the original `call CImmunitiesItemTypeEquipList::OnList`.
+[Hook-CInfGame::CheckItemUsable(short)-CImmunitiesItemTypeEquipList::OnList()]
+Pattern=0FB7D04C8D4C2440B8682200004C8D44244885DBB9C01500000F44C84803CE
+Operations=ADD 31
+
+; UI-only opcode 180 fix:
+; replace the original item-type immunity call in CInfGame::GetItemTint(CItem*).
+; This is the inventory tint helper that drives the red overlay.
+;
+; Address arithmetic used to compute this entry:
+;   pattern starts at 0x1402777FD
+;   target call is    0x14027781F
+;   delta = 0x22 = 34
+;
+; Byte-count arithmetic for the matched sequence:
+;   0FB7D0                        -> 3
+;   4C8D4C2430                    -> 5
+;   B868220000                    -> 5
+;   4C8D842498000000              -> 8
+;   85DB                          -> 2
+;   B9C0150000                    -> 5
+;   0F44C8                        -> 3
+;   4903CD                        -> 3
+;   total                         -> 34
+;
+; This pattern is 3 bytes longer than the CheckItemUsable(short, ...) entry because
+; `lea r8, [rsp+98h]` encodes to 8 bytes here, whereas `lea r8, [rsp+48h]` encoded to
+; 5 bytes there. That is why this hook needs ADD 34 rather than ADD 31.
+[Hook-CInfGame::GetItemTint()-CImmunitiesItemTypeEquipList::OnList()]
+Pattern=0FB7D04C8D4C2430B8682200004C8D84249800000085DBB9C01500000F44C84903CD
+Operations=ADD 34
 
 [Hook-CItem::GetUsabilityText()-IsOp319InvertedJmp]
 Pattern=4183BC2488000000000F84A4000000
