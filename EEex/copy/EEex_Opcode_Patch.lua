@@ -86,6 +86,140 @@
 	--------------------------------------
 
 	--[[
+	+----------------------------------------------------------------------------------------------------------+
+	| Opcode #65                                                                                               |
+	+----------------------------------------------------------------------------------------------------------+
+	|   param1 BIT0 -> Skip setting STATE_BLUR while still applying the rest of the opcode                     |
+	+----------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- EEex_HookNOPs() is the right fit here because the engine instruction we are
+	-- replacing is a single, isolated 5-byte "or [stateFlags], STATE_BLUR". We do not
+	-- need to redirect surrounding control flow; we only need to conditionally suppress
+	-- that one write and otherwise fall through exactly where the engine already was.
+	-- Keeping this hook minimal also avoids another Lua call at a fragile instruction-
+	-- replacement site; execution tracking for the special BIT0 path is handled by a
+	-- separate function-entry hook below.
+	EEex_HookNOPs(EEex_Label("Hook-CGameEffectBlur::ApplyEffect()-SetStateBlur"), 5, {[[
+		test dword ptr ds:[rcx+0x1C], 1          ; effect->m_effectAmount BIT0
+		jz #L(apply_state_blur)                  ; BIT0 clear -> replay the stock STATE_BLUR write below
+
+		jmp #L(return)                           ; BIT0 means "apply opcode 65, but do not mark STATE_BLUR"
+
+		apply_state_blur:
+		or dword ptr ds:[rdx+0x1120], 0x20000000 ; Default engine behavior when BIT0 is clear
+	]]})
+
+	--[[
+	+----------------------------------------------------------------------------------------------------------+
+	| Opcode #65                                                                                               |
+	+----------------------------------------------------------------------------------------------------------+
+	|   Track real opcode #65 BIT0 ApplyEffect() executions on each sprite during ProcessEffectList()          |
+	+----------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_OnOp65BlurBit0AppliedThisPass(sprite: CGameSprite)                              |
+	+----------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- EEex_HookBeforeRestoreWithLabels() is the right fit here because this is a
+	-- normal function-entry hook on CGameEffectBlur::ApplyEffect(). That lets us record
+	-- the special BIT0 execution on the sprite from a stable call boundary instead of
+	-- trying to infer it later from effect-list state or from a brittle in-body patch.
+	-- The prologue here is "push rbx" (2 bytes) + "sub rsp, 0x20" (4 bytes), so the
+	-- hook must restore / skip the full 6-byte window rather than splitting the stack
+	-- setup instruction.
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectBlur::ApplyEffect()-FirstInstruction"), 0, 6, 6, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}}, EEex_FlattenTable({
+			{[[
+				test dword ptr ds:[rcx+0x1C], 1                          ; effect->m_effectAmount BIT0
+				jz #L(return)
+
+				#MAKE_SHADOW_SPACE(48)                                   ; Save the original effect / sprite args across the Lua helper call
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_OnOp65BlurBit0AppliedThisPass", {
+				["args"] = {
+					-- Pass the sprite currently being processed by CGameEffectBlur::ApplyEffect().
+					-- ProcessEffectList() will consume this marker during the blur-clear sync
+					-- later in the same pass if STATE_BLUR was intentionally suppressed.
+					function(rspOffset) return {
+						"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}
+					}, "CGameSprite" end,
+				},
+			}),
+			{[[
+				jmp no_error
+
+				call_error:
+				no_error:
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
+
+	--[[
+	+----------------------------------------------------------------------------------------------------------+
+	| Opcode #65                                                                                               |
+	+----------------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_ShouldKeepOp65BlurVisual(sprite: CGameSprite) -> boolean                        |
+	+----------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- EEex_HookConditionalJumpOnFailWithLabels() is the right fit here because the
+	-- original site is itself a conditional branch in ProcessEffectList():
+	-- "if STATE_BLUR is absent, go run the blur-clear path". We want to preserve that
+	-- existing branch structure and only synthesize a success case when Lua says a
+	-- real opcode 65 BIT0 ApplyEffect() just ran for this sprite during the current
+	-- pass. Using the conditional-jump hook keeps the engine's original success / fail
+	-- destinations intact, while the labels let this patch explicitly choose which
+	-- path to resume.
+	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-BlurStateSyncJmp"), 7, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				cmp byte ptr ds:[rsi+0x3F72], r12b ; If the visual blur is already off, there is nothing to preserve
+				je #L(jmp_fail)                    ; Follow the stock path and let the overwritten cmp replay normally
+				#MAKE_SHADOW_SPACE(40)             ; One qword Lua arg + Win64 shadow space, torn down on every exit path below
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_ShouldKeepOp65BlurVisual", {
+				["args"] = {
+					-- Pass the current sprite so Lua can check whether opcode 65 BIT0
+					-- executed on it earlier in this ProcessEffectList() pass.
+					function(rspOffset) return {
+						"mov qword ptr ss:[rsp+#$(1)], rsi #ENDL", {rspOffset}
+					}, "CGameSprite" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Boolean, -- true => keep the distortion even without STATE_BLUR
+			}),
+			{[[
+				jmp no_error ; Skip the fallback path when the Lua call completed successfully
+
+				call_error:
+				xor rax, rax ; Treat Lua failure as "do not override engine behavior"
+
+				no_error:
+				test rax, rax
+
+				#DESTROY_SHADOW_SPACE              ; LEA preserves flags, so the test result survives this stack restore
+				jz #L(jmp_fail)                    ; No qualifying opcode 65 effect: keep the original blur-clear path
+				mov eax, dword ptr ds:[rsi+0x1120] ; Rebuild the original EAX state snapshot before taking the success branch
+				jmp #L(jmp_success)                ; Pretend the STATE_BLUR check succeeded so the visual blur is preserved
+			]]},
+		})
+	)
+
+	--[[
 	+--------------------------------------------------------------------------------------------------+
 	| Opcode #214                                                                                      |
 	+--------------------------------------------------------------------------------------------------+

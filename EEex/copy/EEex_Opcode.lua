@@ -129,6 +129,50 @@ function EEex_Opcode_LuaHook_AfterListsResolved(sprite)
 	end
 end
 
+-- Track sprites that actually executed opcode 65's BIT0 ApplyEffect() path during
+-- the current ProcessEffectList() pass. This uses the engine's real execution path
+-- instead of trying to reconstruct blur ownership from effect-list state after the
+-- fact, which proved unreliable for both equipped effects and temporary driven
+-- child effects.
+local EEex_Opcode_Private_Op65BlurVisualAppliedThisPass = {}
+
+function EEex_Opcode_Hook_OnOp65BlurBit0AppliedThisPass(sprite)
+
+	-- Key by sprite address rather than sprite id / resref. This marker is purely a
+	-- short-lived runtime fact: "opcode 65 BIT0 really did execute on this sprite
+	-- during the current effect-processing pass".
+	EEex_Opcode_Private_Op65BlurVisualAppliedThisPass[EEex_UDToPtr(sprite)] = true
+end
+
+function EEex_Opcode_Hook_ShouldKeepOp65BlurVisual(sprite)
+
+	-- ProcessEffectList() normally treats the sprite's blur distortion as a pure
+	-- reflection of STATE_BLUR. For opcode 65 BIT0, preserve that distortion only if a
+	-- real CGameEffectBlur::ApplyEffect() just ran for this sprite during the same
+	-- pass. If no such application happened, the distortion should clear normally.
+	local spriteAddress = EEex_UDToPtr(sprite)
+	if EEex_Opcode_Private_Op65BlurVisualAppliedThisPass[spriteAddress] then
+		EEex_Opcode_Private_Op65BlurVisualAppliedThisPass[spriteAddress] = nil
+		return true
+	end
+
+	return false
+end
+
+-- The blur-clear sync runs before the existing AfterListsResolved hook points in
+-- CGameSprite::ProcessEffectList(). Clearing the marker here makes it strictly
+-- "this pass only": the blur-sync hook can see a real opcode 65 BIT0 application
+-- from the current pass, but mixed sequences (for example equipped + limited blur)
+-- cannot leak a stale marker into a later removal pass and keep the distortion on.
+EEex_Opcode_AddListsResolvedListener(function(sprite)
+	-- Sanity check
+	if not (EEex_GameObject_IsSprite(sprite) and sprite.m_pArea) then
+		return
+	end
+	--
+	EEex_Opcode_Private_Op65BlurVisualAppliedThisPass[EEex_UDToPtr(sprite)] = nil
+end)
+
 --[[
 +--------------------------------------------------------------------------------+
 | Opcode #214                                                                    |
