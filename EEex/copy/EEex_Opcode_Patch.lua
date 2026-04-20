@@ -505,6 +505,105 @@
 	)
 
 	--[[
+	+---------------------------------------------------------------------------------------------------+
+	| Opcode 0x15A (CGameEffectSaveVsSchoolMod)                                                         |
+	+---------------------------------------------------------------------------------------------------+
+	|   special -> MSCHOOL.2DA row. The engine only applies rows 0..11 directly; EEex extends support   |
+	|              to the remaining 8-bit school range and feeds the result back into saving throws.    |
+	+---------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_OnOp346ApplyEffect(effect: CGameEffect, sprite: CGameSprite) -> boolean  |
+	|       return:                                                                                     |
+	|           -> false - Preserve vanilla failure path                                                |
+	|           -> true  - Treat the effect as handled                                                  |
+	+---------------------------------------------------------------------------------------------------+
+	|   [Lua] EEex_Opcode_Hook_GetOp346SaveVsSchoolBonus(effect: CGameEffect, sprite: CGameSprite)      |
+	|         -> int                                                                                    |
+	+---------------------------------------------------------------------------------------------------+
+	--]]
+
+	local op346ApplyEffect = EEex_Label("CGameEffectSaveVsSchoolMod::ApplyEffect")
+	local op346CheckSaveSkipBonusJmp = EEex_Label("Hook-CGameEffect::CheckSave()-Op346SkipBonusJmp")
+
+	-- Hook the function entry instead of the out-of-bounds branch so unhandled cases can cleanly
+	-- restore the original 11-byte prefix, while handled extended schools return before vanilla's 0..11 gate.
+	EEex_HookBeforeRestoreWithLabels(op346ApplyEffect, 0, 11, 11, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(64)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_OnOp346ApplyEffect", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rcx #ENDL", {rspOffset}}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdx #ENDL", {rspOffset}}, "CGameSprite" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Boolean,
+			}),
+			{[[
+				jmp no_error
+
+				call_error:
+				xor eax, eax
+
+				no_error:
+				test rax, rax
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				jz #L(return)
+
+				mov eax, 1
+				#MANUAL_HOOK_EXIT(1)
+				ret
+			]]},
+		})
+	)
+	-- Manually define the ignored registers for the unusual `ret` above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(op346ApplyEffect, 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
+	})
+
+	-- This branch is where vanilla skips the op346 school bonus when the incoming spell school is >= 12.
+	-- Inject the EEex-managed bonus there so rows 12..255 participate in the normal save calculation.
+	EEex_HookConditionalJumpOnSuccessWithLabels(op346CheckSaveSkipBonusJmp, 7, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(48)
+			]]},
+			EEex_GenLuaCall("EEex_Opcode_Hook_GetOp346SaveVsSchoolBonus", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameEffect" end,
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rsi #ENDL", {rspOffset}}, "CGameSprite" end,
+				},
+				["returnType"] = EEex_LuaCallReturnType.Number,
+			}),
+			{[[
+				jmp no_error
+
+				call_error:
+				xor eax, eax
+
+				no_error:
+				#DESTROY_SHADOW_SPACE
+				add edi, eax
+			]]},
+		})
+	)
+
+	--[[
 	+------------------------------------------------------------------------------------------------+
 	| Allow saving throw BIT23 to bypass opcode #101                                                 |
 	+------------------------------------------------------------------------------------------------+

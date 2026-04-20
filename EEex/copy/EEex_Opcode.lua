@@ -15,6 +15,79 @@ end
 -- Private Functions --
 -----------------------
 
+local EEex_Opcode_Private_Op346ExtendedBonusesAuxKey = "EEex_Opcode_Op346_ExtendedBonuses"
+local EEex_Opcode_Private_Op346VanillaSchoolCount = 12
+local EEex_Opcode_Private_Op346MaxSchool = 0xFF -- Effect source school fields are 8-bit in the engine data structures.
+
+local function EEex_Opcode_Private_Op346NormalizeInt16(value)
+	-- op346 writes 16-bit stats in the engine, so mirror its signed wraparound semantics here.
+	value = EEex_BAnd(value, 0xFFFF)
+	if value >= 0x8000 then
+		value = value - 0x10000
+	end
+	return value
+end
+
+local function EEex_Opcode_Private_Op346GetBonuses(sprite, create)
+	-- Extended schools have no native CDerivedStats slots, so cache their resolved bonuses in sprite aux data.
+	local auxiliary = create and EEex_GetUDAux(sprite) or EEex_TryGetUDAux(sprite)
+	if auxiliary == nil then
+		return nil
+	end
+
+	local bonuses = auxiliary[EEex_Opcode_Private_Op346ExtendedBonusesAuxKey]
+	if bonuses == nil and create then
+		bonuses = {}
+		auxiliary[EEex_Opcode_Private_Op346ExtendedBonusesAuxKey] = bonuses
+	end
+	return bonuses
+end
+
+function EEex_Opcode_Hook_ClearOp346ExtendedBonuses(sprite)
+	-- This cache is derived from active effects, so throw it away whenever stats are rebuilt or the sprite dies.
+	local auxiliary = EEex_TryGetUDAux(sprite)
+	if auxiliary ~= nil then
+		auxiliary[EEex_Opcode_Private_Op346ExtendedBonusesAuxKey] = nil
+	end
+end
+
+function EEex_Opcode_Hook_OnOp346ApplyEffect(effect, sprite)
+
+	local school = effect.m_special
+	if school < EEex_Opcode_Private_Op346VanillaSchoolCount or school > EEex_Opcode_Private_Op346MaxSchool then
+		return false
+	end
+
+	-- Preserve the engine's add/set behavior, but redirect rows 12..255 into EEex-managed storage.
+	local bonuses = EEex_Opcode_Private_Op346GetBonuses(sprite, true)
+	local amount = EEex_Opcode_Private_Op346NormalizeInt16(effect.m_effectAmount)
+	local modType = effect.m_dWFlags
+
+	if modType == 0 then
+		bonuses[school] = EEex_Opcode_Private_Op346NormalizeInt16((bonuses[school] or 0) + amount)
+	elseif modType == 1 then
+		bonuses[school] = amount
+	end
+
+	return true
+end
+
+function EEex_Opcode_Hook_GetOp346SaveVsSchoolBonus(effect, sprite)
+
+	local school = effect.m_school
+	if school < EEex_Opcode_Private_Op346VanillaSchoolCount or school > EEex_Opcode_Private_Op346MaxSchool then
+		return 0
+	end
+
+	-- Saving throws read the incoming effect's spell school, so use that as the key into the extended cache.
+	local bonuses = EEex_Opcode_Private_Op346GetBonuses(sprite, false)
+	if bonuses == nil then
+		return 0
+	end
+
+	return bonuses[school] or 0
+end
+
 function EEex_Opcode_Private_ApplyExtraMeleeEffects(sprite, targetSprite)
 
 	EEex_Utility_IterateCPtrList(sprite:getActiveStats().m_cExtraMeleeEffects, function(effect)

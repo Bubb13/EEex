@@ -44,22 +44,61 @@
 	--]]
 
 	local statsReloadTemplate = function(spriteRegStr)
-		return {[[
-			mov rcx, #$(1) ]], {spriteRegStr}, [[ ; pSprite
-			call #L(EEex::Stats_Hook_OnReload)
-		]]}
+		return EEex_FlattenTable({
+			{[[
+				; Extended op346 schools are cached in sprite aux data instead of CDerivedStats, but this
+				; hook runs inside native reload code, so preserve the volatile register set around the calls below.
+				; This shared template now owns the shadow-space frame for every reload hook site that reuses it.
+				; Keeping #MAKE_SHADOW_SPACE / #DESTROY_SHADOW_SPACE here avoids duplicating or double-freeing that
+				; frame in wrapper trampolines like the special `rbx` caller below.
+				#MAKE_SHADOW_SPACE(96)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r10
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r11
+			]]},
+			{[[
+				mov rcx, #$(1) ]], {spriteRegStr}, [[ ; pSprite
+				call #L(EEex::Stats_Hook_OnReload)
+			]]},
+			-- Vanilla op346 rows 0..11 rebuild into real CDerivedStats fields during reload. EEex rows 12..255
+			-- live in sprite aux storage instead, so clear that derived cache here before the rebuilt effect state
+			-- starts using it again. This handles the "same sprite, new stats state" lifetime case.
+			EEex_GenLuaCall("EEex_Opcode_Hook_ClearOp346ExtendedBonuses", {
+				["args"] = {
+					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], "..spriteRegStr.." #ENDL", {rspOffset}}, "CGameSprite" end,
+				},
+			}),
+			{[[
+				call_error:
+				; Common exit path for both success and Lua-call failure: restore the volatile registers we saved
+				; above so the surrounding engine reload code resumes with its expected call-clobbered state.
+				mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+				mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
 	end
 
 	local callStatsReloadRbx = {"call #$(1) #ENDL",
 		{
 			EEex_JITNear(EEex_FlattenTable({
 				{[[
+					; This helper is entered via a real CALL, so the pushed return address shifts the stack by 8 bytes.
+					; Only the alignment hint stays here: statsReloadTemplate() itself allocates and destroys the
+					; shared shadow-space frame, so doing that again in this trampoline would double-adjust rsp.
 					#STACK_MOD(8) ; This was called, the ret ptr broke alignment
-					#MAKE_SHADOW_SPACE
 				]]},
 				statsReloadTemplate("rbx"),
 				{[[
-					#DESTROY_SHADOW_SPACE
+					; The shared template has already restored registers and destroyed its shadow space, so this
+					; trampoline only needs to return to the original caller once the `rbx`-based reload work is done.
 					ret
 				]]},
 			})),
