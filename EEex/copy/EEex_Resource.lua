@@ -951,6 +951,13 @@ function EEex_Resource_KitSymbolToIDS(kitSymbol)
 end
 
 EEex_Resource_Private_KitIgnoresMeleeingWithRangedPenaltyForItemCategory = {}
+EEex_Resource_Private_IWDStrengthEnabled = false
+EEex_Resource_Private_IWDStrengthExceptionalThresholds = {}
+EEex_Resource_Private_IWDStrengthMinValue = 0
+EEex_Resource_Private_IWDStrengthMaxValue = 0
+EEex_Resource_Private_IWDStrengthMaxExceptional = 0
+EEex_Resource_Private_IWDStrengthMinRank = 0
+EEex_Resource_Private_IWDStrengthMaxRank = 0
 
 EEex_GameState_AddInitializedListener(function()
 
@@ -996,6 +1003,159 @@ EEex_GameState_AddInitializedListener(function()
 			EEex_Resource_Private_ItemCategoryIDSToSymbol[id] = symbol
 			EEex_Resource_Private_ItemCategorySymbolToIDS[symbol] = id
 		end)
+	end)
+
+	------------------
+	-- X-IWDSTR.2DA --
+	------------------
+
+	EEex_Utility_NewScope(function()
+
+		-- Default to the vanilla engine path unless the tweak is explicitly enabled and the
+		-- supporting rule tables validate cleanly. All of the derived lookup state below is
+		-- rebuilt from STRMOD / STRMODEX at startup so nothing in the runtime logic needs to
+		-- hardcode a particular exceptional ladder.
+		EEex_Resource_Private_IWDStrengthEnabled = false
+		EEex_Resource_Private_IWDStrengthExceptionalThresholds = {}
+		EEex_Resource_Private_IWDStrengthMinValue = 0
+		EEex_Resource_Private_IWDStrengthMaxValue = 0
+		EEex_Resource_Private_IWDStrengthMaxExceptional = 0
+		EEex_Resource_Private_IWDStrengthMinRank = 0
+		EEex_Resource_Private_IWDStrengthMaxRank = 0
+
+		local config = EEex_Resource_Load2DA("X-IWDSTR")
+		local valueColumn = config:findColumnLabel("VALUE")
+		local checkModeRow = config:findRowLabel("CHECK_MODE")
+
+		if valueColumn < 0 then
+			EEex_Error("X-IWDSTR.2DA is missing the VALUE column")
+		end
+
+		if checkModeRow < 0 then
+			EEex_Error("X-IWDSTR.2DA is missing the CHECK_MODE row")
+		end
+
+		local checkMode = config:getAtPoint(valueColumn, checkModeRow)
+		if checkMode ~= "0" and checkMode ~= "1" then
+			EEex_Error("X-IWDSTR.2DA CHECK_MODE VALUE must be 0 or 1")
+		end
+
+		if checkMode == "0" then
+			return
+		end
+
+		local function parseContiguousIntegerRows(data, name)
+
+			-- The tweak models strength as a single expanded rank. That is only sound if the
+			-- source table rows form a contiguous integer domain, so reject sparse / non-integer
+			-- row labels up front instead of trying to interpret them later.
+			local _, lastRowIndex = data:getMaxIndices()
+			if lastRowIndex < 0 then
+				EEex_Error(name.." has no rows")
+			end
+
+			local rows = {}
+			local previousLabel = nil
+
+			for rowIndex = 0, lastRowIndex do
+
+				local rowLabel = data:getRowLabel(rowIndex)
+				local numericLabel = tonumber(rowLabel, 10)
+
+				if numericLabel == nil or numericLabel ~= math.floor(numericLabel) then
+					EEex_Error(name.." row label '"..rowLabel.."' is not an integer")
+				end
+
+				if previousLabel ~= nil and numericLabel ~= previousLabel + 1 then
+					EEex_Error(name.." row labels must be contiguous ascending integers")
+				end
+
+				rows[#rows + 1] = {
+					["index"] = rowIndex,
+					["label"] = numericLabel,
+				}
+
+				previousLabel = numericLabel
+			end
+
+			return rows
+		end
+
+		local strmod = EEex_Resource_Load2DA("STRMOD")
+		local strmodRows = parseContiguousIntegerRows(strmod, "STRMOD.2DA")
+		local minStrength = strmodRows[1].label
+		local maxStrength = strmodRows[#strmodRows].label
+
+		-- Exceptional tiers are inserted between the integer 18 and 19 ranks, so the integer
+		-- table must at least span those two values for the expanded mapping to be valid.
+		if minStrength > 18 or maxStrength < 19 then
+			EEex_Error("STRMOD.2DA must include integer strength rows 18 and 19")
+		end
+
+		local strmodex = EEex_Resource_Load2DA("STRMODEX")
+		local toHitColumn = strmodex:findColumnLabel("TO_HIT")
+		local damageColumn = strmodex:findColumnLabel("DAMAGE")
+
+		if toHitColumn < 0 then
+			EEex_Error("STRMODEX.2DA is missing the TO_HIT column")
+		end
+
+		if damageColumn < 0 then
+			EEex_Error("STRMODEX.2DA is missing the DAMAGE column")
+		end
+
+		local strmodexRows = parseContiguousIntegerRows(strmodex, "STRMODEX.2DA")
+		if strmodexRows[1].label ~= 0 then
+			EEex_Error("STRMODEX.2DA must start at row 0")
+		end
+
+		local thresholds = {}
+		local seenThresholds = {}
+		local addThreshold = function(label)
+			if not seenThresholds[label] then
+				seenThresholds[label] = true
+				thresholds[#thresholds + 1] = label
+			end
+		end
+		local previousToHit = nil
+		local previousDamage = nil
+
+		-- The first exceptional tier begins at the second STRMODEX row label (for vanilla data:
+		-- 18/01). That boundary exists even when TO_HIT / DAMAGE still match the row before it,
+		-- so seed it explicitly before scanning for later stat breakpoints.
+		if #strmodexRows >= 2 then
+			addThreshold(strmodexRows[2].label)
+		end
+
+		for _, row in ipairs(strmodexRows) do
+
+			local toHit = strmodex:getAtPoint(toHitColumn, row.index)
+			local damage = strmodex:getAtPoint(damageColumn, row.index)
+
+			if previousToHit ~= nil and (toHit ~= previousToHit or damage ~= previousDamage) then
+				addThreshold(row.label)
+			end
+
+			previousToHit = toHit
+			previousDamage = damage
+		end
+
+		-- `thresholds` now contains the exceptional row labels where the "combat tier" changes.
+		-- Runtime code treats those labels as the inserted ranks between integer 18 and 19.
+		if #thresholds == 0 then
+			EEex_Error("STRMODEX.2DA does not define any TO_HIT/DAMAGE exceptional strength tiers")
+		end
+
+		EEex_Resource_Private_IWDStrengthEnabled = true
+		EEex_Resource_Private_IWDStrengthExceptionalThresholds = thresholds
+		EEex_Resource_Private_IWDStrengthMinValue = minStrength
+		EEex_Resource_Private_IWDStrengthMaxValue = maxStrength
+		-- Clamp exceptional values against the actual STRMODEX domain rather than assuming 100.
+		EEex_Resource_Private_IWDStrengthMaxExceptional = strmodexRows[#strmodexRows].label
+		-- Expanded ranks reuse the integer STR values directly up to 18, then insert one rank per
+		-- exceptional threshold before continuing with integer 19+.
+		EEex_Resource_Private_IWDStrengthMinRank = minStrength
+		EEex_Resource_Private_IWDStrengthMaxRank = maxStrength + #thresholds
 	end)
 
 	------------------
