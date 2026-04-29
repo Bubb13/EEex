@@ -366,7 +366,7 @@ local function EEex_Resource_Private_NormalizeItemAbilityArgs(abilityArgs)
 	end
 
 	local abilityData = {
-		type = EEex_Utility_MakeWord(0x3, 0x1), -- Type: Magical, Type flags: Usable after Identification
+		type = EEex_PackWord(0x3, 0x1), -- Type: Magical, Type flags: Usable after Identification
 		quickSlotType = 3,                      -- Ability location: Quick-item slot / Use Item button
 		largeDamageDice = 0,
 		quickSlotIcon = "",
@@ -719,7 +719,7 @@ function EEex_Resource_AddItemEqEffect(itemHeader, effectArgs)
 	table.insert(stagedItem.equippedEffects, EEex_Resource_Private_NormalizeItemEffectArgs(
 		effectArgs,
 		1,
-		EEex_Utility_MakeWord(0x2, 0x0) -- Timing mode: Instant/While equipped, Dispel/Resistance: Natural/Nonmagical
+		EEex_PackWord(0x2, 0x0) -- Timing mode: Instant/While equipped, Dispel/Resistance: Natural/Nonmagical
 	))
 	return EEex_Resource_Private_RebuildItem(stagedItem)
 end
