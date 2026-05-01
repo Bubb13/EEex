@@ -87,6 +87,8 @@ EEex_Main_Private_Modules = {
 
 	-- Contains EEex's C++ functionality
 	EEex_OpenLuaBindings("EEex")
+	-- Build the verified module trust chain after EEex table is available, so EEex.GetLuaModule is bound.
+	EEex_DoFile("EEex_LuaModule")
 	EEex_DoFile("EEex_HookIntegrityWatchdog")
 
 	-- Defines aliases for EEex functions to preserve API compatibility if internal names change

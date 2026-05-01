@@ -53,6 +53,20 @@ function EEex_IsMaskUnset(original, isUnsetMask)
 	return EEex_BAnd(original, isUnsetMask) == 0x0
 end
 
+-- The classic bit trick for "exactly one bit set" is:
+-- mask the bits you care about, then check that ``x & (x-1) == 0``
+-- (which clears the lowest set bit — if the result is zero, there was only one bit set to begin with)
+
+function EEex_IsExactlyOneBitSet(original, isSetMask)
+	local masked = EEex_BAnd(original, isSetMask)
+	return masked ~= 0 and EEex_BAnd(masked, masked - 1) == 0
+end
+
+function EEex_IsAtMostOneBitSet(original, isSetMask)
+	local masked = EEex_BAnd(original, isSetMask)
+	return EEex_BAnd(masked, masked - 1) == 0
+end
+
 function EEex_SetBit(original, toSetIndex)
 	return EEex_BOr(original, EEex_LShift(0x1, toSetIndex))
 end
@@ -101,6 +115,86 @@ end
 
 function EEex_UnsetMask(original, toUnsetmask)
 	return EEex_BAnd(original, EEex_BNot(toUnsetmask))
+end
+
+-- Combines two byte components into an unsigned 16-bit word.
+-- Each component accepts both signed [-128, 127] and unsigned [0, 255] values.
+-- Negative inputs are treated as two's complement and normalized before packing:
+--   e.g. -1 → 0xFF (255), -128 → 0x80 (128)
+-- Always returns an unsigned value in [0, 65535].
+function EEex_PackWord(lowByte, highByte)
+	if type(lowByte)  ~= "number" then EEex_Error("lowByte must be a number")  end
+	if type(highByte) ~= "number" then EEex_Error("highByte must be a number") end
+	lowByte  = math.floor(lowByte)
+	highByte = math.floor(highByte)
+	-- Accept both signed and unsigned ranges
+	if lowByte  < -128 or lowByte  > 0xFF then EEex_Error("lowByte out-of-bounds (expected [-128, 255])")  end
+	if highByte < -128 or highByte > 0xFF then EEex_Error("highByte out-of-bounds (expected [-128, 255])") end
+	-- Normalize signed two's complement: -1 → 255, -128 → 128
+	if lowByte  < 0 then lowByte  = lowByte  + 0x100 end
+	if highByte < 0 then highByte = highByte + 0x100 end
+	return lowByte + highByte * 0x100
+end
+
+-- Splits a 16-bit word into its low and high byte components.
+-- The optional `signed` parameter (default: false) controls how the returned
+-- bytes are interpreted:
+--   signed=false → both bytes are unsigned [0, 255]
+--   signed=true  → both bytes use signed two's complement [-128, 127]
+--                  e.g. 0xFF → -1, 0x80 → -128
+-- Input always accepts the full unsigned range [0, 65535].
+function EEex_UnpackWord(word, signed)
+	if type(word) ~= "number" then EEex_Error("word must be a number") end
+	word = math.floor(word)
+	if word < 0 or word > 0xFFFF then EEex_Error("word out-of-bounds (expected [0, 65535])") end
+	local lowByte  = word % 0x100
+	local highByte = math.floor(word / 0x100)
+	if signed then
+		-- Reinterpret as signed: values above 0x7F wrap to negative
+		if lowByte  > 0x7F then lowByte  = lowByte  - 0x100 end
+		if highByte > 0x7F then highByte = highByte - 0x100 end
+	end
+	return lowByte, highByte
+end
+
+-- Combines two 16-bit word components into an unsigned 32-bit dword.
+-- Each component accepts both signed [-32768, 32767] and unsigned [0, 65535] values.
+-- Negative inputs are treated as two's complement and normalized before packing:
+--   e.g. -1 → 0xFFFF (65535), -32768 → 0x8000 (32768)
+-- Always returns an unsigned value in [0, 4294967295].
+function EEex_PackDWord(lowWord, highWord)
+	if type(lowWord)  ~= "number" then EEex_Error("lowWord must be a number")  end
+	if type(highWord) ~= "number" then EEex_Error("highWord must be a number") end
+	lowWord  = math.floor(lowWord)
+	highWord = math.floor(highWord)
+	-- Accept both signed and unsigned ranges
+	if lowWord  < -32768 or lowWord  > 0xFFFF then EEex_Error("lowWord out-of-bounds (expected [-32768, 65535])")  end
+	if highWord < -32768 or highWord > 0xFFFF then EEex_Error("highWord out-of-bounds (expected [-32768, 65535])") end
+	-- Normalize signed two's complement: -1 → 65535, -32768 → 32768
+	if lowWord  < 0 then lowWord  = lowWord  + 0x10000 end
+	if highWord < 0 then highWord = highWord + 0x10000 end
+	return lowWord + highWord * 0x10000
+end
+
+-- Splits a 32-bit dword into its low and high 16-bit word components.
+-- The optional `signed` parameter (default: false) controls how the returned
+-- words are interpreted:
+--   signed=false → both words are unsigned [0, 65535]
+--   signed=true  → both words use signed two's complement [-32768, 32767]
+--                  e.g. 0xFFFF → -1, 0x8000 → -32768
+-- Input always accepts the full unsigned range [0, 4294967295].
+function EEex_UnpackDWord(dword, signed)
+	if type(dword) ~= "number" then EEex_Error("dword must be a number") end
+	dword = math.floor(dword)
+	if dword < 0 or dword > 0xFFFFFFFF then EEex_Error("dword out-of-bounds (expected [0, 4294967295])") end
+	local lowWord  = dword % 0x10000
+	local highWord = math.floor(dword / 0x10000)
+	if signed then
+		-- Reinterpret as signed: values above 0x7FFF wrap to negative
+		if lowWord  > 0x7FFF then lowWord  = lowWord  - 0x10000 end
+		if highWord > 0x7FFF then highWord = highWord - 0x10000 end
+	end
+	return lowWord, highWord
 end
 
 -------------------

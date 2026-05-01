@@ -500,6 +500,27 @@ end
 -- Sprite Details --
 --------------------
 
+-- @bubb_doc { EEex_Sprite_IsPartyMember / instance_name=isPartyMember }
+--
+-- @summary: Returns whether the given ``sprite`` is a party member.
+--
+-- @self { sprite / type=CGameSprite }: The sprite whose party membership is being checked.
+--
+-- @return { type=boolean }: See summary.
+
+function EEex_Sprite_IsPartyMember(sprite)
+	for i = 0, 5 do
+		local partyMember = EEex_Sprite_GetInPortrait(i) -- CGameSprite
+		if partyMember then -- sanity check
+			if partyMember.m_id == sprite.m_id then
+				return true
+			end
+		end
+	end
+	return false
+end
+CGameSprite.isPartyMember = EEex_Sprite_IsPartyMember
+
 -- @bubb_doc { EEex_Sprite_GetPortraitIndex / instance_name=getPortraitIndex }
 --
 -- @summary: Returns the given ``sprite``'s portrait index, or ``-1`` if it isn't a party member.
@@ -849,6 +870,366 @@ EEex_Sprite_GetKnownInnateSpellsWithAbilityItr = EEex_Sprite_GetKnownInnateSpell
 CGameSprite.getKnownInnateSpellsWithAbilityIterator = EEex_Sprite_GetKnownInnateSpellsWithAbilityItr
 CGameSprite.getKnownInnateSpellsWithAbilityItr = EEex_Sprite_GetKnownInnateSpellsWithAbilityItr
 
+function EEex_Sprite_Private_NormalizeSpellResref(spellResRef)
+	if spellResRef == nil then
+		EEex_Error("spellResRef required")
+	end
+	if spellResRef:find(".", 1, true) ~= nil then
+		EEex_Error("spellResRef must not include an extension")
+	end
+	-- Normalize once so later comparisons can stay exact and case-sensitive.
+	spellResRef = spellResRef:upper()
+	if #spellResRef < 1 or #spellResRef > 8 then
+		EEex_Error("spellResRef length out-of-bounds (expected [1-8])")
+	end
+	return spellResRef
+end
+
+function EEex_Sprite_Private_NormalizeSpellType(spellType)
+	if spellType == 0 or spellType == 1 or spellType == 2 then
+		return spellType
+	end
+
+	if type(spellType) == "string" then
+		return ({
+			["PRIEST"] = 0,
+			["WIZARD"] = 1,
+			["INNATE"] = 2,
+		})[spellType:upper()] or EEex_Error(string.format("Unknown spell type: %s", tostring(spellType)))
+	end
+
+	EEex_Error(string.format("Unknown spell type: %s", tostring(spellType)))
+end
+
+function EEex_Sprite_Private_GetSpellbookInfo(sprite, spellType)
+	-- Each spellbook is tracked as parallel known / memorized-level / memorized-entry tables.
+	-- Innate spells do not mirror a derived memorization table, unlike priest and mage books.
+	local info = ({
+		[0] = {
+			spellType = 0,
+			maxLevels = 7,
+			knownLists = sprite.m_knownSpellsPriest,
+			memorizedLevels = sprite.m_memorizedSpellsLevelPriest,
+			memorizedLists = sprite.m_memorizedSpellsPriest,
+			derivedLevels = sprite.m_derivedStats.m_memorizedSpellsLevelPriest,
+		},
+		[1] = {
+			spellType = 1,
+			maxLevels = 9,
+			knownLists = sprite.m_knownSpellsMage,
+			memorizedLevels = sprite.m_memorizedSpellsLevelMage,
+			memorizedLists = sprite.m_memorizedSpellsMage,
+			derivedLevels = sprite.m_derivedStats.m_memorizedSpellsLevelMage,
+		},
+		[2] = {
+			spellType = 2,
+			maxLevels = 1,
+			knownLists = sprite.m_knownSpellsInnate,
+			memorizedLevels = sprite.m_memorizedSpellsLevelInnate,
+			memorizedLists = sprite.m_memorizedSpellsInnate,
+			derivedLevels = nil,
+		},
+	})[spellType]
+
+	if info == nil then
+		EEex_Error(string.format("Unsupported spell type: %s", tostring(spellType)))
+	end
+	return info
+end
+
+function EEex_Sprite_Private_NormalizeSpellLevel(spellLevel, maxLevels)
+	if type(spellLevel) ~= "number" then
+		EEex_Error("spellLevel must be a number")
+	end
+	spellLevel = math.floor(spellLevel)
+	if spellLevel < 0 or spellLevel >= maxLevels then
+		EEex_Error(string.format("Spell level out-of-bounds (expected [0-%d])", maxLevels - 1))
+	end
+	return spellLevel
+end
+
+function EEex_Sprite_Private_NormalizeSpellCount(spellCount)
+	if spellCount == nil then
+		return 1
+	end
+	if type(spellCount) ~= "number" then
+		EEex_Error("spellCount must be a number")
+	end
+	return math.floor(spellCount)
+end
+
+function EEex_Sprite_Private_NormalizeMemorizedState(memorized)
+	if memorized == nil then
+		return true
+	end
+	if type(memorized) ~= "boolean" then
+		EEex_Error("memorized must be a boolean")
+	end
+	return memorized
+end
+
+function EEex_Sprite_Private_ResetMemorizedSpellLevel(memorizedSpellLevel, spellLevel, spellType)
+	memorizedSpellLevel.m_spellLevel = spellLevel
+	memorizedSpellLevel.m_baseCount = 0
+	memorizedSpellLevel.m_count = 0
+	memorizedSpellLevel.m_magicType = spellType
+	memorizedSpellLevel.m_memorizedStartingSpell = 0
+	memorizedSpellLevel.m_memorizedCount = 0
+end
+
+function EEex_Sprite_Private_IsSpontaneousCaster(sprite, spellType)
+	local class = EEex_GameObject_GetClass(sprite)
+	return (spellType == 1 and class == 19) or (spellType == 0 and class == 21)
+end
+
+function EEex_Sprite_Private_CountMatchingMemorizedSpells(memorizedSpellList, spellResRef)
+	local matchingCount = 0
+	local node = memorizedSpellList.m_pNodeHead
+	while node do
+		local memorizedSpell = node.data
+		if memorizedSpell.m_spellId:get():upper() == spellResRef then
+			matchingCount = matchingCount + 1
+		end
+		node = node.pNext
+	end
+	return matchingCount
+end
+
+function EEex_Sprite_Private_GetSpontaneousSpellCopyLimit(sprite, spellbookInfo, spellLevel)
+	if not EEex_Sprite_Private_IsSpontaneousCaster(sprite, spellbookInfo.spellType) then
+		return nil
+	end
+
+	-- Sorcerer-style books cap duplicate memorized entries to the slot count tracked for that level.
+	local maxCopies = 0
+	local memorizedSpellLevel = spellbookInfo.memorizedLevels:get(spellLevel)
+	if memorizedSpellLevel ~= nil then
+		maxCopies = math.max(maxCopies, memorizedSpellLevel.m_baseCount, memorizedSpellLevel.m_count)
+	end
+
+	local derivedLevels = spellbookInfo.derivedLevels
+	if derivedLevels ~= nil then
+		local derivedMemorizedSpellLevel = derivedLevels:getReference(spellLevel)
+		maxCopies = math.max(maxCopies, derivedMemorizedSpellLevel.m_baseCount, derivedMemorizedSpellLevel.m_count)
+	end
+
+	return maxCopies
+end
+
+function EEex_Sprite_Private_EnsureMemorizedSpellLevel(spellbookInfo, spellLevel)
+	local memorizedSpellLevel = spellbookInfo.memorizedLevels:get(spellLevel)
+	if memorizedSpellLevel == nil then
+		-- These level records are allocated lazily; sparse spellbooks are valid.
+		memorizedSpellLevel = EEex_PtrToUD(EEex_Malloc(CCreatureFileMemorizedSpellLevel.sizeof), "CCreatureFileMemorizedSpellLevel")
+		EEex_Memset(EEex_UDToPtr(memorizedSpellLevel), 0, CCreatureFileMemorizedSpellLevel.sizeof)
+		EEex_Sprite_Private_ResetMemorizedSpellLevel(memorizedSpellLevel, spellLevel, spellbookInfo.spellType)
+		spellbookInfo.memorizedLevels:set(spellLevel, memorizedSpellLevel)
+	end
+	return memorizedSpellLevel
+end
+
+function EEex_Sprite_Private_SyncDerivedMemorizedSpellLevel(spellbookInfo, spellLevel, memorizedSpellLevel)
+	local derivedLevels = spellbookInfo.derivedLevels
+	if derivedLevels == nil then
+		return
+	end
+
+	local derivedMemorizedSpellLevel = derivedLevels:getReference(spellLevel)
+	if memorizedSpellLevel == nil then
+		-- Clearing the base level must also clear the derived mirror the engine reads from.
+		EEex_Sprite_Private_ResetMemorizedSpellLevel(derivedMemorizedSpellLevel, spellLevel, spellbookInfo.spellType)
+		return
+	end
+
+	-- Keep the derived bookkeeping in sync with the base spellbook arrays.
+	derivedMemorizedSpellLevel.m_spellLevel = memorizedSpellLevel.m_spellLevel
+	derivedMemorizedSpellLevel.m_baseCount = memorizedSpellLevel.m_baseCount
+	derivedMemorizedSpellLevel.m_count = memorizedSpellLevel.m_count
+	derivedMemorizedSpellLevel.m_magicType = memorizedSpellLevel.m_magicType
+	derivedMemorizedSpellLevel.m_memorizedStartingSpell = memorizedSpellLevel.m_memorizedStartingSpell
+	derivedMemorizedSpellLevel.m_memorizedCount = memorizedSpellLevel.m_memorizedCount
+end
+
+function EEex_Sprite_Private_SyncMemorizedSpellInfo(spellbookInfo)
+	local memorizedStartingSpell = 0
+	for spellLevel = 0, spellbookInfo.maxLevels - 1 do
+		local memorizedSpellLevel = spellbookInfo.memorizedLevels:get(spellLevel)
+		if memorizedSpellLevel ~= nil then
+			local memorizedSpellList = spellbookInfo.memorizedLists:getReference(spellLevel)
+			-- The engine expects a flattened starting index into the concatenated per-level lists.
+			memorizedSpellLevel.m_spellLevel = spellLevel
+			memorizedSpellLevel.m_magicType = spellbookInfo.spellType
+			memorizedSpellLevel.m_memorizedStartingSpell = memorizedStartingSpell
+			memorizedSpellLevel.m_memorizedCount = memorizedSpellList.m_nCount
+			memorizedStartingSpell = memorizedStartingSpell + memorizedSpellList.m_nCount
+		end
+		EEex_Sprite_Private_SyncDerivedMemorizedSpellLevel(spellbookInfo, spellLevel, memorizedSpellLevel)
+	end
+end
+
+function EEex_Sprite_Private_HasKnownSpell(spellbookInfo, spellLevel, spellType, spellResRef)
+	local knownSpellList = spellbookInfo.knownLists:getReference(spellLevel)
+	local node = knownSpellList.m_pNodeHead
+	while node do
+		local knownSpell = node.data
+		if knownSpell.m_spellLevel == spellLevel
+			and knownSpell.m_magicType == spellType
+			and knownSpell.m_knownSpellId:get():upper() == spellResRef
+		then
+			return true
+		end
+		node = node.pNext
+	end
+	return false
+end
+
+-- @bubb_doc { EEex_Sprite_AddKnownSpell / instance_name=addKnownSpell }
+--
+-- @summary:
+--
+--     Adds ``spellResRef`` to the given ``sprite``'s known spell list for ``spellType`` at ``spellLevel``.
+--
+--     ``spellResRef`` must be a spell resref without an extension. ``spellLevel`` is zero-based.
+--
+--     If the spell is already known at the given level and type, no duplicate entry is added.
+--
+-- @self { sprite / usertype=CGameSprite }: The sprite whose known spell list is being modified.
+--
+-- @param { spellResRef / type=string }:
+--
+--     The spell resref to add. @EOL
+--     Must not include an extension.
+--
+-- @param { spellLevel / type=number }:
+--
+--     The zero-based spell level to add the spell at. @EOL
+--     Valid values depend on ``spellType``.
+--
+-- @param { spellType / type=number | string }:
+--
+--     The spellbook to modify. @EOL
+--     Accepts ``0`` / ``PRIEST``, ``1`` / ``WIZARD``, or ``2`` / ``INNATE``.
+--
+-- @return { type=boolean }:
+--
+--     ``true`` if a new known-spell entry was added, or ``false`` if the spell was already present.
+
+function EEex_Sprite_AddKnownSpell(sprite, spellResRef, spellLevel, spellType)
+	local normalizedSpellType = EEex_Sprite_Private_NormalizeSpellType(spellType)
+	local spellbookInfo = EEex_Sprite_Private_GetSpellbookInfo(sprite, normalizedSpellType)
+	local normalizedSpellLevel = EEex_Sprite_Private_NormalizeSpellLevel(spellLevel, spellbookInfo.maxLevels)
+	local normalizedSpellResRef = EEex_Sprite_Private_NormalizeSpellResref(spellResRef)
+
+	-- Known spells are keyed by level + magic type + resref, so avoid duplicate nodes.
+	if EEex_Sprite_Private_HasKnownSpell(spellbookInfo, normalizedSpellLevel, normalizedSpellType, normalizedSpellResRef) then
+		return false
+	end
+
+	local knownSpellList = spellbookInfo.knownLists:getReference(normalizedSpellLevel)
+	local knownSpell = EEex_PtrToUD(EEex_Malloc(CCreatureFileKnownSpell.sizeof), "CCreatureFileKnownSpell")
+	EEex_Memset(EEex_UDToPtr(knownSpell), 0, CCreatureFileKnownSpell.sizeof)
+	knownSpell.m_knownSpellId:set(normalizedSpellResRef)
+	knownSpell.m_spellLevel = normalizedSpellLevel
+	knownSpell.m_magicType = normalizedSpellType
+	knownSpellList:AddTail(knownSpell)
+	return true
+end
+CGameSprite.addKnownSpell = EEex_Sprite_AddKnownSpell
+
+-- @bubb_doc { EEex_Sprite_AddMemorizedSpell / instance_name=addMemorizedSpell }
+--
+-- @summary:
+--
+--     Adds one or more memorized copies of ``spellResRef`` to the given ``sprite``'s spellbook.
+--
+--     The spell is first ensured to exist in the known-spell list for the same ``spellType`` and ``spellLevel``.
+--
+--     For spontaneous casters, the number of copies actually added is capped by the available slot count at that level.
+--
+-- @self { sprite / usertype=CGameSprite }: The sprite whose memorized spell list is being modified.
+--
+-- @param { spellResRef / type=string }:
+--
+--     The spell resref to add. @EOL
+--     Must not include an extension.
+--
+-- @param { spellLevel / type=number }:
+--
+--     The zero-based spell level to add the spell at. @EOL
+--     Valid values depend on ``spellType``.
+--
+-- @param { spellType / type=number | string }:
+--
+--     The spellbook to modify. @EOL
+--     Accepts ``0`` / ``PRIEST``, ``1`` / ``WIZARD``, or ``2`` / ``INNATE``.
+--
+-- @param { spellCount / type=number / default=1 }:
+--
+--     The number of memorized entries to append.
+--
+-- @param { memorized / type=boolean / default=true }:
+--
+--     Determines whether newly added entries start flagged as memorized.
+--
+-- @return { type=number }:
+--
+--     The number of memorized-spell entries actually added.
+
+function EEex_Sprite_AddMemorizedSpell(sprite, spellResRef, spellLevel, spellType, spellCount, memorized)
+	local normalizedSpellType = EEex_Sprite_Private_NormalizeSpellType(spellType)
+	local spellbookInfo = EEex_Sprite_Private_GetSpellbookInfo(sprite, normalizedSpellType)
+	local normalizedSpellLevel = EEex_Sprite_Private_NormalizeSpellLevel(spellLevel, spellbookInfo.maxLevels)
+	local normalizedSpellResRef = EEex_Sprite_Private_NormalizeSpellResref(spellResRef)
+	local normalizedSpellCount = EEex_Sprite_Private_NormalizeSpellCount(spellCount)
+	local normalizedMemorized = EEex_Sprite_Private_NormalizeMemorizedState(memorized)
+
+	-- Memorized entries assume the spell is already present in the known-spell list.
+	EEex_Sprite_AddKnownSpell(sprite, normalizedSpellResRef, normalizedSpellLevel, normalizedSpellType)
+	if normalizedSpellCount <= 0 then
+		return 0
+	end
+
+	local memorizedSpellList = spellbookInfo.memorizedLists:getReference(normalizedSpellLevel)
+	local spontaneousSpellCopyLimit = EEex_Sprite_Private_GetSpontaneousSpellCopyLimit(sprite, spellbookInfo, normalizedSpellLevel)
+	if spontaneousSpellCopyLimit ~= nil then
+		-- Spontaneous casters are limited by slot count, not by how many identical nodes we would like to append.
+		local existingSpellCopies = EEex_Sprite_Private_CountMatchingMemorizedSpells(memorizedSpellList, normalizedSpellResRef)
+		normalizedSpellCount = math.min(normalizedSpellCount, math.max(0, spontaneousSpellCopyLimit - existingSpellCopies))
+		if normalizedSpellCount <= 0 then
+			return 0
+		end
+	end
+
+	local memorizedSpellLevel = EEex_Sprite_Private_EnsureMemorizedSpellLevel(spellbookInfo, normalizedSpellLevel)
+	local addedCount = 0
+
+	for _ = 1, normalizedSpellCount do
+		local memorizedSpell = EEex_PtrToUD(EEex_Malloc(CCreatureFileMemorizedSpell.sizeof), "CCreatureFileMemorizedSpell")
+		EEex_Memset(EEex_UDToPtr(memorizedSpell), 0, CCreatureFileMemorizedSpell.sizeof)
+		memorizedSpell.m_spellId:set(normalizedSpellResRef)
+		memorizedSpell.m_flags = normalizedMemorized and 1 or 0
+		memorizedSpellList:AddTail(memorizedSpell)
+		addedCount = addedCount + 1
+	end
+
+	if addedCount > 0 then
+		local memorizedSpellCount = memorizedSpellList.m_nCount
+		if not EEex_Sprite_Private_IsSpontaneousCaster(sprite, normalizedSpellType) then
+			-- Prepared casters store capacity directly on the level record; keep it at least as large as the list.
+			if memorizedSpellLevel.m_baseCount < memorizedSpellCount then
+				memorizedSpellLevel.m_baseCount = memorizedSpellCount
+			end
+			if memorizedSpellLevel.m_count < memorizedSpellCount then
+				memorizedSpellLevel.m_count = memorizedSpellCount
+			end
+		end
+		EEex_Sprite_Private_SyncMemorizedSpellInfo(spellbookInfo)
+	end
+
+	return addedCount
+end
+CGameSprite.addMemorizedSpell = EEex_Sprite_AddMemorizedSpell
+
 -- Iterator returns <CButtonData>
 function EEex_Sprite_GetSpellButtonDataIteratorFrom2DA(sprite, resref)
 
@@ -947,6 +1328,258 @@ function EEex_Sprite_DisplayTextRef(sprite, text, optionalArgs)
 	EngineGlobals.g_pBaldurChitin.m_cMessageHandler:AddMessage(message, false)
 end
 CGameSprite.displayTextRef = EEex_Sprite_DisplayTextRef
+
+function EEex_Sprite_DisplayMessage(sprite, messageStr, messageColor)
+
+	local message = EEex_NewUD("CMessageDisplayText")
+
+	EEex_RunWithStackManager({
+		{ ["name"] = "messageStr", ["struct"] = "CString", ["constructor"] = {["args"] = {messageStr} } } },
+		function(manager)
+			local id = sprite.m_id
+			message:Construct(
+				sprite:GetName(true),
+				manager:getUD("messageStr"),
+				CVidPalette.RANGE_COLORS:get(sprite.m_baseStats.m_colors:get(2)),
+				messageColor == nil and 0xBED7D7 or messageColor,
+				-1, id, id
+			)
+		end
+	)
+
+	EngineGlobals.g_pBaldurChitin.m_cMessageHandler:AddMessage(message, false)
+
+end
+CGameSprite.displayMessage = EEex_Sprite_DisplayMessage
+
+-- @bubb_doc { EEex_Sprite_GetActiveInactiveClasses / instance_name=getActiveInactiveClasses }
+-- @summary:
+--
+--     Returns the active class ID for the given sprite. @EOL
+--     In case of dual-classed characters, it also returns their original class and whether it is re-activated.
+--
+-- @self { sprite / usertype=CGameSprite }: Input sprite.
+--
+-- @return { type=table }: See summary.
+
+function EEex_Sprite_GetActiveInactiveClasses(sprite)
+
+	if not EEex_GameObject_IsSprite(sprite) then
+		EEex_Error("Expected CGameSprite!")
+	end
+
+	local flags = sprite.m_baseStats.m_flags
+	if not EEex_IsAtMostOneBitSet(flags, 0x1F8) then -- isolate bits 3-8 (0x8|0x10|0x20|0x40|0x80|0x100)
+		EEex_Error("Expected at most one of bits 3-8 to be set in m_flags!")
+	end
+
+	local class = EEex_GameObject_GetClass(sprite)
+	local symbol = EEex_Resource_IDSToSymbol("CLASS", class)
+	local toReturn = {
+		["active"] = class,
+		["inactive"] = nil,
+		["reactivated"] = nil,
+	}
+
+	local func = function()
+
+		local toReturn = false
+		local reactivated = EEex_Trigger_ParseConditionalString(string.format("Class(Myself,%d)", class))
+		if reactivated:evalConditionalAsAIBase(sprite) then
+			toReturn = true
+		end
+		reactivated:free()
+		return toReturn
+
+	end
+
+	EEex_Utility_Switch(symbol, {
+
+		-- FIGHTER_MAGE, resolves pair (1 <-> 2)
+		["FIGHTER_MAGE"] = function()
+			if EEex_IsBitSet(flags, 0x3) then -- Original class: Fighter
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "MAGE")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+			elseif EEex_IsBitSet(flags, 0x4) then -- Original class: Mage
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "MAGE")
+			end
+		end,
+
+		-- FIGHTER_CLERIC, resolves pair (2 <-> 3)
+		["FIGHTER_CLERIC"] = function()
+			if EEex_IsBitSet(flags, 0x3) then -- Original class: Fighter
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+			elseif EEex_IsBitSet(flags, 0x5) then -- Original class: Cleric
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+			end
+		end,
+
+		-- FIGHTER_THIEF, resolves pair (2 <-> 4)
+		["FIGHTER_THIEF"] = function()
+			if EEex_IsBitSet(flags, 0x3) then -- Original class: Fighter
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "THIEF")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+			elseif EEex_IsBitSet(flags, 0x6) then -- Original class: Thief
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "THIEF")
+			end
+		end,
+
+		-- MAGE_THIEF, resolves pair (1 <-> 4)
+		["MAGE_THIEF"] = function()
+			if EEex_IsBitSet(flags, 0x4) then -- Original class: Mage
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "THIEF")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "MAGE")
+			elseif EEex_IsBitSet(flags, 0x6) then -- Original class: Thief
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "MAGE")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "THIEF")
+			end
+		end,
+
+		-- CLERIC_MAGE, resolves pair (1 <-> 3)
+		["CLERIC_MAGE"] = function()
+			if EEex_IsBitSet(flags, 0x5) then -- Original class: Cleric
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "MAGE")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+			elseif EEex_IsBitSet(flags, 0x4) then -- Original class: Mage
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "MAGE")
+			end
+		end,
+
+		-- CLERIC_THIEF, resolves pair (3 <-> 4)
+		["CLERIC_THIEF"] = function()
+			if EEex_IsBitSet(flags, 0x5) then -- Original class: Cleric
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "THIEF")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+			elseif EEex_IsBitSet(flags, 0x6) then -- Original class: Thief
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "THIEF")
+			end
+		end,
+
+		-- FIGHTER_DRUID, resolves pair (2 <-> 11)
+		["FIGHTER_DRUID"] = function()
+			if EEex_IsBitSet(flags, 0x3) then -- Original class: Fighter
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "DRUID")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+			elseif EEex_IsBitSet(flags, 0x7) then -- Original class: Druid
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "FIGHTER")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "DRUID")
+			end
+		end,
+
+		-- CLERIC_RANGER, resolves pair (3 <-> 12)
+		["CLERIC_RANGER"] = function()
+			if EEex_IsBitSet(flags, 0x5) then -- Original class: Cleric
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "RANGER")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+			elseif EEex_IsBitSet(flags, 0x8) then -- Original class: Ranger
+				toReturn["active"] = EEex_Resource_SymbolToIDS("CLASS", "CLERIC")
+				toReturn["inactive"] = EEex_Resource_SymbolToIDS("CLASS", "RANGER")
+			end
+		end,
+
+	}) -- no defaultCase needed: unhandled classes will simply return with inactive = nil, which is the expected value for non-dual-classable classes.
+
+	if toReturn["inactive"] then
+		toReturn["reactivated"] = func()
+	end
+
+	return toReturn
+end
+CGameSprite.getActiveInactiveClasses = EEex_Sprite_GetActiveInactiveClasses
+
+-- @bubb_doc { EEex_Sprite_GetLevels / instance_name=getLevels }
+-- @summary:
+--
+--     Returns the base and current (i.e. modified) class levels for the given sprite. @EOL
+--     For dual-classed / multi-classed characters, will also return the highest class levels. @EOL
+--     For dual-classed characters, the "highest" levels will be identical to the active class levels.
+--
+-- @self { sprite / usertype=CGameSprite }: Input sprite.
+--
+-- @return { type=table }: See summary.
+
+function EEex_Sprite_GetLevels(sprite)
+
+	if not EEex_GameObject_IsSprite(sprite) then
+		EEex_Error("Expected CGameSprite!")
+	end
+
+	local baseStats = sprite.m_baseStats -- CCreatureFileHeader
+	local activeStats = EEex_Sprite_GetActiveStats(sprite) -- CDerivedStats
+
+	local class = EEex_GameObject_GetClass(sprite)
+	local symbol = EEex_Resource_IDSToSymbol("CLASS", class)
+
+	local toReturn = {
+		["base"] = {
+			["first"] = baseStats.m_level1,
+			["second"] = 0,
+			["third"] = 0,
+			["highest"] = baseStats.m_level1,
+		},
+		["active"] = {
+			["first"] = activeStats.m_nLevel1,
+			["second"] = 0,
+			["third"] = 0,
+			["highest"] = activeStats.m_nLevel1,
+		},
+	}
+
+	local two = function()
+		toReturn.base.second = baseStats.m_level2
+		toReturn.active.second = activeStats.m_nLevel2
+		--
+		local tbl = EEex_Sprite_GetActiveInactiveClasses(sprite)
+		if tbl["inactive"] then -- dualclass
+			if string.find(symbol, EEex_Resource_IDSToSymbol("CLASS", tbl["inactive"]) .. "_", 1, true) then
+				toReturn.base.highest = baseStats.m_level2
+				toReturn.active.highest = activeStats.m_nLevel2
+			else
+				toReturn.base.highest = baseStats.m_level1
+				toReturn.active.highest = activeStats.m_nLevel1
+			end
+		else -- true multiclass
+			toReturn.base.highest = math.max(toReturn.base.first, toReturn.base.second)
+			toReturn.active.highest = math.max(toReturn.active.first, toReturn.active.second)
+		end
+	end
+
+	local three = function()
+		toReturn.base.second = baseStats.m_level2
+		toReturn.active.second = activeStats.m_nLevel2
+		toReturn.base.third = baseStats.m_level3
+		toReturn.active.third = activeStats.m_nLevel3
+		--
+		toReturn.base.highest = math.max(toReturn.base.first, toReturn.base.second, toReturn.base.third)
+		toReturn.active.highest = math.max(toReturn.active.first, toReturn.active.second, toReturn.active.third)
+	end
+
+	EEex_Utility_Switch(symbol, {
+
+		["FIGHTER_MAGE"] = two, -- NB: if we write ``two()``, then Lua calls the function immediately at table construction time, and assigns its return value to the key. Since two returns nothing, the return value is ``nil``, and that is what gets assigned to the key, which is not what we want. By writing just ``two``, we are assigning the function itself to the key, and EEex_Utility_Switch will call it when that case is hit.
+		["FIGHTER_CLERIC"] = two,
+		["FIGHTER_THIEF"] = two,
+		["MAGE_THIEF"] = two,
+		["CLERIC_MAGE"] = two,
+		["CLERIC_THIEF"] = two,
+		["FIGHTER_DRUID"] = two,
+		["CLERIC_RANGER"] = two,
+		--
+		["FIGHTER_MAGE_THIEF"] = three,
+		["FIGHTER_MAGE_CLERIC"] = three,
+
+	}) -- no defaultCase needed: playable single classes and non-playable classes will simply keep default values.
+
+	return toReturn
+
+end
+CGameSprite.getLevels = EEex_Sprite_GetLevels
 
 ------------------------------
 -- / End Instance Functions --

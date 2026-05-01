@@ -102,6 +102,57 @@ function EEex_Utility_GetOrCreateTable(t, key, fillFunc)
 	return default
 end
 
+-- @bubb_doc { EEex_Utility_PickRandom }
+-- @summary:
+--
+--     Picks n unique random elements from table t, using a partial Fisher-Yates shuffle. @EOL
+--     Every possible combination of n elements has exactly equal probability of being chosen. @EOL
+--     The original table is never mutated. @EOL
+--     Time complexity is O(n); space complexity is O(#t) due to the full shallow copy of the input.
+--
+-- @param { t / type=table }: The source table to pick from.
+-- @param { n / type=number }: How many unique elements to pick. Defaults to 1 if not specified.
+--
+-- @return { type=table }: A new table containing the n picked elements.
+
+function EEex_Utility_PickRandom(t, n)
+	-- default to picking a single element if n is not specified
+	n = n or 1
+
+	-- guard against impossible requests (e.g. picking 4 from a 3-element table)
+	assert(n <= #t, "cannot pick more elements than the table contains")
+
+	-- shallow copy so the original table is never mutated;
+	-- important when reusing the same list across multiple calls
+	local pool = {}
+	for i, v in ipairs(t) do
+		pool[i] = v
+	end
+
+	local result = {}
+
+	-- partial Fisher-Yates shuffle: instead of shuffling the entire table,
+	-- we only run the algorithm for the n elements we actually need,
+	-- stopping early once we have enough picks — hence "partial".
+	-- Fisher-Yates works by iterating backwards and swapping each element
+	-- with a randomly chosen one from the still-unprocessed region [1..i],
+	-- which guarantees every permutation is equally likely.
+	for i = #pool, #pool - n + 1, -1 do
+
+		-- pick a random index from the still-unpicked region [1..i]
+		local j = math.random(i)
+
+		-- swap the randomly chosen element to position i,
+		-- effectively removing it from the unpicked region
+		pool[i], pool[j] = pool[j], pool[i]
+
+		-- collect the picked element
+		result[#result + 1] = pool[i]
+	end
+
+	return result
+end
+
 function EEex_Utility_IterateCPtrList(list, func)
 	local node = list.m_pNodeHead
 	while node do
@@ -181,6 +232,56 @@ function EEex_Utility_TryIgnore(func, ...)
 		return
 	end
 	return select(2, table.unpack(result))
+end
+
+-- @bubb_doc { EEex_Utility_GetDistance / EEex_Utility_GetDistanceIsometric }
+-- @summary:
+--
+--     Gets the (isometric) distance between two points.
+--
+-- @param { x1 / type=number }: The x-coordinate of the first point.
+-- @param { y1 / type=number }: The y-coordinate of the first point.
+-- @param { x2 / type=number }: The x-coordinate of the second point.
+-- @param { y2 / type=number }: The y-coordinate of the second point.
+--
+-- @return { type=number }: The distance between the two points.
+
+function EEex_Utility_GetDistance(x1, y1, x2, y2)
+	return math.floor((((x1 - x2) ^ 2) + ((y1 - y2) ^ 2)) ^ .5) 
+end
+
+function EEex_Utility_GetDistanceIsometric(x1, y1, x2, y2)
+	return math.floor(((x1 - x2) ^ 2 + (4/3 * (y1 - y2)) ^ 2) ^ .5)
+end
+
+-- @bubb_doc { EEex_Utility_DJB2 }
+-- @summary:
+--
+--     Variant of the djb2 hash algorithm, which is highly efficient for turning a string into a numeric value.
+--
+-- @param { str / type=string }: The input string.
+--
+-- @return { type=number }: The hash value corresponding to the input string.
+
+function EEex_Utility_DJB2(str)
+	-- Initializes the hash value. The number 5381 is just an arbitrary,
+	-- large prime number chosen as a starting point. Using a non-zero,
+	-- prime initializer helps ensure a good initial mix of bits, which
+	-- improves the quality of the final hash
+	local hash = 5381
+	for i = 1, #str do
+		-- Multiplies the current hash by 33. This
+		-- multiplication spreads out the bits of the hash and provides strong
+		-- mixing. (The number 33 is used because it's 32+1, which is fast
+		-- for computers: it's a left bit shift by 5, plus an addition)
+
+		-- Adds the numeric ASCII/byte value of the current character to the result.
+		-- This incorporates the unique value of the character into the hash
+		hash = (hash * 33) + string.byte(str, i)
+	end
+	-- Returns the final calculated numeric hash value.
+	-- This is the unique, predictable number you could use for ``math.randomseed()`` and the like
+	return hash
 end
 
 ---------------

@@ -9,4 +9,6 @@
 	EEex_DoFile("EEex_Assembly_Patch")
 	-- Replaces the statically compiled, in-exe Lua version with LuaLibrary.
 	EEex_DoFile("EEex_ReplaceLua")
+	-- Build the verified module trust chain using the now-active external Lua runtime.
+	EEex_DoFile("EEex_LuaModule")
 end)()
