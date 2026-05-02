@@ -317,6 +317,7 @@ EEex_Actionbar_AddButtonsUpdatedListener(function()
 		local launcherHeader = selectedLauncher and selectedLauncher.pRes.pHeader or nil -- Item_Header_st
 		local toCheck = {weaponHeader, launcherHeader}
 		local cnt = 0
+		local strref = {}
 		--
 		for _, v in ipairs(toCheck) do
 			-- Check the weapon requirements and if they aren't met, unequip the weapon
@@ -329,17 +330,39 @@ EEex_Actionbar_AddButtonsUpdatedListener(function()
 									if activeStats.m_nCON >= v.minCONRequired then
 										if activeStats.m_nCHR >= v.minCHRRequired then
 											cnt = cnt + 1
+										else
+											strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_CHR", "StrRef")
 										end
+									else
+										strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_CON", "StrRef")
 									end
+								else
+									strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_DEX", "StrRef")
 								end
+							else
+								strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_WIS", "StrRef")
 							end
+						else
+							strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_INT", "StrRef")
 						end
+					else
+						strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_STR", "StrRef")
 					end
+				else
+					strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_STR", "StrRef")
 				end
+			else
+				strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_LEVEL", "StrRef")
 			end
 		end
 		--
-		if not (cnt == #toCheck and cnt > 0) then
+		if not (cnt == #toCheck and cnt > 0 and #strref == 0) then
+			-- play a sound to indicate the weapon can't be equipped
+			Infinity_PlaySound("ERROR27")
+			-- display the error message(s)
+			for _, v in ipairs(strref) do
+				EEex_Sprite_DisplayTextRef(sprite, tonumber(v))
+			end
 			-- actually unequip the weapon (or, if you prefer, equip fists)
 			local unequip = EEex_Action_ParseResponseString('SelectWeaponAbility(SLOT_FIST,0)')
 			unequip:executeResponseAsAIBaseInstantly(sprite)
