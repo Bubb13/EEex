@@ -149,6 +149,197 @@
 	})
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Opcodes #6 / #10 / #19 / #49                                                                                       |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   param2 == 3 -> Roll a class-based stat bonus from CLSSPLAB.2DA, using the same native helpers that opcode #15    |
+	|                  (DEX) and opcode #44 (STR) already rely on.                                                       |
+	|                                                                                                                    |
+	|   The CLSSPLAB schema is validated in EEex_Opcode.lua. Column indexes are zero-based and must remain stable.       |
+	+--------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local function EEex_Opcode_Private_AssertLabelBytes(label, expectedBytes)
+		-- Loader patterns intentionally give us symbolic entry points instead of RVAs.
+		-- We still assert the first bytes here so the Lua patch fails loudly if a
+		-- future executable keeps the same pattern label but lands on an unexpected
+		-- instruction sequence that would invalidate the hook assumptions below.
+		local address = EEex_Label(label)
+		for i, expectedByte in ipairs(expectedBytes) do
+			local actualByte = EEex_ReadU8(address + i - 1)
+			if actualByte ~= expectedByte then
+				EEex_Error(string.format(
+					"[EEex_Opcode_Patch] %s mismatch at %s+0x%X: expected %s, found %s.",
+					label, EEex_ToHex(address), i - 1, EEex_ToHex(expectedByte, 2), EEex_ToHex(actualByte, 2)
+				))
+			end
+		end
+	end
+
+	local classSpellColumns = EEex_Opcode_ClassSpellAbilityTable["columnIndices"]
+
+	-- These helpers are the same native building blocks used by opcode 15 / 44.
+	-- Reusing them keeps row lookup and class-to-row mapping consistent with the
+	-- engine instead of reimplementing that logic in Lua.
+	EEex_Opcode_Private_AssertLabelBytes("CAIObjectType::GetClass", {
+		0x0F, 0xB6, 0x41, 0x0B, 0xC3
+	})
+	EEex_Opcode_Private_AssertLabelBytes("CRuleTables::GetSpellAbilityValue", {
+		0x4C, 0x8B, 0xC9, 0x0F, 0xBF, 0x89, 0x88, 0x38, 0x00, 0x00
+	})
+	EEex_Opcode_Private_AssertLabelBytes("Hook-CGameEffectCHR::ApplyEffect()-Entry", {
+		0x40, 0x55, 0x53, 0x56, 0x57
+	})
+	EEex_Opcode_Private_AssertLabelBytes("Hook-CGameEffectCON::ApplyEffect()-Entry", {
+		0x40, 0x55, 0x53, 0x56, 0x57
+	})
+	EEex_Opcode_Private_AssertLabelBytes("Hook-CGameEffectINT::ApplyEffect()-Entry", {
+		0x40, 0x55, 0x53, 0x56, 0x57
+	})
+	EEex_Opcode_Private_AssertLabelBytes("Hook-CGameEffectWIS::ApplyEffect()-Entry", {
+		0x40, 0x55, 0x53, 0x56, 0x57
+	})
+
+	local classSpellMode3Entries = {
+		{
+			["opcode"] = 6,
+			["handlerLabel"] = "Hook-CGameEffectCHR::ApplyEffect()-Entry",
+			-- Stat offsets stay here because they are part of the handler ABI we are
+			-- emulating, not addresses to discover. These were recovered from the
+			-- native opcode handlers and are specific to the current engine layout.
+			["statOffset"] = 0x796,
+			["statCap"] = 20,
+			["classSpellColumn"] = classSpellColumns["CHR"],
+		},
+		{
+			["opcode"] = 10,
+			["handlerLabel"] = "Hook-CGameEffectCON::ApplyEffect()-Entry",
+			["statOffset"] = 0x795,
+			["statCap"] = 20,
+			["classSpellColumn"] = classSpellColumns["CON"],
+		},
+		{
+			["opcode"] = 19,
+			["handlerLabel"] = "Hook-CGameEffectINT::ApplyEffect()-Entry",
+			["statOffset"] = 0x792,
+			["statCap"] = 20,
+			["classSpellColumn"] = classSpellColumns["INT"],
+		},
+		{
+			["opcode"] = 49,
+			["handlerLabel"] = "Hook-CGameEffectWIS::ApplyEffect()-Entry",
+			["statOffset"] = 0x793,
+			["statCap"] = 20,
+			["classSpellColumn"] = classSpellColumns["WIS"],
+		},
+	}
+
+	local function EEex_Opcode_Private_InstallClassSpellMode3(entry)
+		-- Hook at function entry, but only special-case param2 == 3. All other modes
+		-- must continue through the untouched native implementation.
+		--
+		-- EEex_HookBeforeRestoreWithLabels is the right fit here because we need to:
+		--   1) inspect / rewrite the incoming effect before the handler's own logic branches on param2
+		--   2) preserve the original function body after our rewrite
+		--   3) resume normal control flow with the stolen entry bytes restored
+		--
+		-- In other words, this is an entry shim, not a tail hook and not a full handler replacement.
+		--
+		-- The numeric arguments here are:
+		--   0 -> restoreDelay: start stealing / restoring bytes at the first instruction
+		--   5 -> restoreSize:  overwrite exactly the 5-byte function prologue we validated above
+		--   5 -> returnDelay:  jump back immediately after those same 5 bytes
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(entry["handlerLabel"]), 0, 5, 5, {
+			-- We arrive here via a jump inserted at the original function entry, so the
+			-- missing return address means rsp is effectively 8 bytes "higher" than a
+			-- normal call frame. stack_mod tells the assembly preprocessor about that
+			-- difference so shadow-space / alignment helpers still compute correctly.
+			{"stack_mod", 8},
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			EEex_FlattenTable({
+				{[[
+					cmp dword ptr ds:[rcx+0x20], 3
+					jne #L(return)
+
+					; Save effect / sprite so we can rewrite param1+param2 in-place and
+					; then resume execution through the normal mode-0 branch.
+					#MAKE_SHADOW_SPACE(32)
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+					; Native opcode 15 / 44 mode-3 logic refuses to increase the stat
+					; past its natural cap. We mirror that behavior here.
+					movzx eax, byte ptr ds:[rdx+#$(1)] ]], {entry["statOffset"]}, [[ #ENDL
+					mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], eax
+					cmp eax, #$(1) ]], {entry["statCap"]}, [[ #ENDL
+					jge set_zero
+
+					; Call the sprite virtual that returns the CAIObjectType, then ask
+					; the engine for its class byte. This preserves any engine-specific
+					; class normalization before CLSSPLAB is indexed.
+					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+					mov rax, qword ptr ds:[rcx]
+					call qword ptr ds:[rax+0x20]
+
+					mov rcx, rax
+					call #L(CAIObjectType::GetClass)
+
+					mov r10, qword ptr ds:[#L(g_pBaldurChitin)]
+					mov rcx, qword ptr ds:[r10+0x1090]
+					movzx edx, al
+					mov r8d, #$(1) ]], {entry["classSpellColumn"]}, [[ #ENDL
+					call #L(CRuleTables::GetSpellAbilityValue)
+
+					; Treat non-positive table values as "no bonus". This matches the
+					; defensive behavior we want if a row / column is intentionally zeroed.
+					test eax, eax
+					jle set_zero
+
+					; The engine scales rand() into 1..N with the classic 0x7FFF mask
+					; and arithmetic shift. We keep the exact formula so the bonus
+					; distribution matches opcode 15 / 44.
+					mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], eax
+					call #L(rand)
+					and eax, 0x7FFF
+					imul eax, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+					sar eax, 0x0F
+					inc eax
+
+					mov ecx, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+					add ecx, eax
+					cmp ecx, #$(1) ]], {entry["statCap"]}, [[ #ENDL
+					jle amount_ready
+
+					mov eax, #$(1) ]], {entry["statCap"]}, [[ #ENDL
+					sub eax, dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+					jmp amount_ready
+
+					set_zero:
+					; Rewrite mode-3 into an empty mode-0 adjustment rather than trying
+					; to skip the handler. That lets the native tail continue to own all
+					; side effects, dirty flags, and stat-specific bookkeeping.
+					xor eax, eax
+
+					amount_ready:
+					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+					mov dword ptr ds:[rcx+0x1C], eax
+					mov dword ptr ds:[rcx+0x20], 0
+					mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+					#DESTROY_SHADOW_SPACE
+				]]},
+			})
+		)
+	end
+
+	for _, entry in ipairs(classSpellMode3Entries) do
+		EEex_Opcode_Private_InstallClassSpellMode3(entry)
+	end
+
+	--[[
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	| Opcode #248                                                                                                                              |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
