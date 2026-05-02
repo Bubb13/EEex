@@ -316,7 +316,6 @@ EEex_Actionbar_AddButtonsUpdatedListener(function()
 		local weaponHeader = selectedWeapon.pRes.pHeader -- Item_Header_st
 		local launcherHeader = selectedLauncher and selectedLauncher.pRes.pHeader or nil -- Item_Header_st
 		local toCheck = {weaponHeader, launcherHeader}
-		local cnt = 0
 		local strref = {}
 		--
 		for _, v in ipairs(toCheck) do
@@ -329,7 +328,7 @@ EEex_Actionbar_AddButtonsUpdatedListener(function()
 								if activeStats.m_nDEX >= v.minDEXRequired then
 									if activeStats.m_nCON >= v.minCONRequired then
 										if activeStats.m_nCHR >= v.minCHRRequired then
-											cnt = cnt + 1
+											-- cnt = cnt + 1
 										else
 											strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_CHR", "StrRef")
 										end
@@ -356,7 +355,7 @@ EEex_Actionbar_AddButtonsUpdatedListener(function()
 			end
 		end
 		--
-		if not (cnt == #toCheck and cnt > 0 and #strref == 0) then
+		if #strref > 0 then
 			-- play a sound to indicate the weapon can't be equipped
 			Infinity_PlaySound("ERROR27")
 			-- display the error message(s)
