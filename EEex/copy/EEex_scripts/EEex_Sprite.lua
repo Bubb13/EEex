@@ -1595,6 +1595,40 @@ function EEex_Sprite_GetLevels(sprite)
 end
 CGameSprite.getLevels = EEex_Sprite_GetLevels
 
+-- @bubb_doc { EEex_Sprite_GetSelectedWeapon / instance_name=getSelectedWeapon }
+-- @summary:
+--
+--     Returns information about the currently selected weapon for the given sprite, including: @EOL
+--     - The weapon slot (as per ``SLOTS.IDS``) currently selected in the Inventory UI. @EOL
+--     - The ``CItem`` userdata for the currently selected weapon. @EOL
+--     - The ability index associated with the selected weapon. @EOL
+--     - The launcher (``CItem`` userdata) associated with the selected weapon ability, if any. @EOL
+--     - The launcher slot (as per ``SLOTS.IDS``) associated with the selected weapon ability, if any.
+--
+-- @self { sprite / usertype=CGameSprite }: Input sprite.
+--
+-- @return { type=table }: See summary.
+
+function EEex_Sprite_GetSelectedWeapon(sprite)
+
+	if not EEex_GameObject_IsSprite(sprite) then
+		EEex_Error("Expected CGameSprite!")
+	end
+
+	local equipment = sprite.m_equipment -- CGameSpriteEquipment
+
+	local toReturn = {
+		["weaponSlot"] = equipment.m_selectedWeapon, -- number
+		["weapon"] = equipment.m_items:get(equipment.m_selectedWeapon) or EEex_Error("Expected CItem!"), -- CItem
+		["weaponAbility"] = equipment.m_selectedWeaponAbility, -- number
+		["launcher"] = sprite:getLauncher(equipment.m_selectedWeaponAbility) or nil, -- CItem
+		["launcherSlot"] = sprite:getLauncher(equipment.m_selectedWeaponAbility) and select(2, sprite:getLauncher(equipment.m_selectedWeaponAbility)) or nil, -- number
+	}
+
+	return toReturn
+end
+CGameSprite.getSelectedWeapon = EEex_Sprite_GetSelectedWeapon
+
 ------------------------------
 -- / End Instance Functions --
 ------------------------------
