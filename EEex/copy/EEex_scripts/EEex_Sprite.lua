@@ -1497,8 +1497,8 @@ CGameSprite.getActiveInactiveClasses = EEex_Sprite_GetActiveInactiveClasses
 -- @summary:
 --
 --     Returns the base and current (i.e. modified) class levels for the given sprite. @EOL
---     For dual-classed / multi-classed characters, will also return the highest class levels. @EOL
---     For dual-classed characters, the "highest" levels will be identical to the active class levels.
+--     For dual-classed / multi-classed characters, will also return the highest and average (rounded up) class levels. @EOL
+--     For dual-classed characters, the "highest" and "average" levels will be identical to the active class levels.
 --
 -- @self { sprite / usertype=CGameSprite }: Input sprite.
 --
@@ -1522,12 +1522,14 @@ function EEex_Sprite_GetLevels(sprite)
 			["second"] = 0,
 			["third"] = 0,
 			["highest"] = baseStats.m_level1,
+			["average"] = baseStats.m_level1,
 		},
 		["active"] = {
 			["first"] = activeStats.m_nLevel1,
 			["second"] = 0,
 			["third"] = 0,
 			["highest"] = activeStats.m_nLevel1,
+			["average"] = activeStats.m_nLevel1,
 		},
 	}
 
@@ -1540,13 +1542,22 @@ function EEex_Sprite_GetLevels(sprite)
 			if string.find(symbol, EEex_Resource_IDSToSymbol("CLASS", tbl["inactive"]) .. "_", 1, true) then
 				toReturn.base.highest = baseStats.m_level2
 				toReturn.active.highest = activeStats.m_nLevel2
+				--
+				toReturn.base.average = baseStats.m_level2
+				toReturn.active.average = activeStats.m_nLevel2
 			else
 				toReturn.base.highest = baseStats.m_level1
 				toReturn.active.highest = activeStats.m_nLevel1
+				--
+				toReturn.base.average = baseStats.m_level1
+				toReturn.active.average = activeStats.m_nLevel1
 			end
 		else -- true multiclass
 			toReturn.base.highest = math.max(toReturn.base.first, toReturn.base.second)
 			toReturn.active.highest = math.max(toReturn.active.first, toReturn.active.second)
+			--
+			toReturn.base.average = math.ceil((toReturn.base.first + toReturn.base.second) / 2)
+			toReturn.active.average = math.ceil((toReturn.active.first + toReturn.active.second) / 2)
 		end
 	end
 
@@ -1558,6 +1569,9 @@ function EEex_Sprite_GetLevels(sprite)
 		--
 		toReturn.base.highest = math.max(toReturn.base.first, toReturn.base.second, toReturn.base.third)
 		toReturn.active.highest = math.max(toReturn.active.first, toReturn.active.second, toReturn.active.third)
+		--
+		toReturn.base.average = math.ceil((toReturn.base.first + toReturn.base.second + toReturn.base.third) / 3)
+		toReturn.active.average = math.ceil((toReturn.active.first + toReturn.active.second + toReturn.active.third) / 3)
 	end
 
 	EEex_Utility_Switch(symbol, {
