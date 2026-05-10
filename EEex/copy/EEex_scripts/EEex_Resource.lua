@@ -155,6 +155,42 @@ function EEex_Resource_Demand(resref, extension)
 	return demanded
 end
 
+-- @bubb_doc { EEex_Resource_DecodeSpell }
+--
+-- @summary: Returns the spell filename corresponding to ``spellIDS``.
+--
+-- @note: The first character of the numeric code identifies the spell prefix:
+--     * 1 -> ``SPPR``
+--     * 2 -> ``SPWI``
+--     * 3 -> ``SPIN``
+--     * 4 -> ``SPCL``
+--     * Anything else defaults to ``MARW``.
+--
+--     The remaining three characters identify the spell filename, i.e. ``1101`` refers to ``SPPR101``.
+--
+-- @param { spellIDS / type=number }: The ID of the spell to decode.
+--
+-- @return { type=string }: See summary.
+
+function EEex_Resource_DecodeSpell(spellIDS)
+	local prefix
+	local spellType = math.floor(spellIDS / 1000)
+	--
+	if spellType == 1 then
+		prefix = "SPPR"
+	elseif spellType == 2 then
+		prefix = "SPWI"
+	elseif spellType == 3 then
+		prefix = "SPIN"
+	elseif spellType == 4 then
+		prefix = "SPCL"
+	else
+		prefix = "MARW"
+	end
+	--
+	return prefix .. string.format("%03d", spellIDS % 1000)
+end
+
 function EEex_Resource_GetSpellAbility(spellHeader, abilityIndex)
 	if spellHeader.abilityCount <= abilityIndex then return end
 	return EEex_PtrToUD(EEex_UDToPtr(spellHeader) + spellHeader.abilityOffset + Spell_ability_st.sizeof * abilityIndex, "Spell_ability_st")
