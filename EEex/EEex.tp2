@@ -48,6 +48,7 @@ END
 
 AUTO_TRA ~EEex/language/%s~
 LANGUAGE ~English~ ~english~ ~EEex/language/english/setup.tra~
+LANGUAGE ~Simplified Chinese~ ~schinese~ ~EEex/language/schinese/setup.tra~
 
 /////////////////////
 // Quick Menu Core //
