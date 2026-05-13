@@ -219,7 +219,7 @@ function EEex_Assembly_Private_AllocNearItr()
 				if curAllocEntry == nil then
 					currentCodePageI = currentCodePageI + 1
 					curCodePage = EEex_CodePageAllocations[currentCodePageI]
-					currentAllocEntryI = 1
+					currentAllocEntryI = 0
 					break
 				end
 
