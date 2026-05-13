@@ -21,6 +21,10 @@
 !/EEex/language/*.*
 !/EEex/language/english
 !/EEex/language/english/*.*
+!/EEex/language/schinese
+!/EEex/language/schinese/*.*
+!/EEex/language/spanish
+!/EEex/language/spanish/*.*
 !/EEex/lib
 !/EEex/lib/*.*
 !/EEex/loader

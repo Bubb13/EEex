@@ -1,0 +1,29 @@
+
+//////////////
+// EEex.tp2 //
+//////////////
+
+// Component names
+@0 = ~Núcleo del menú rápido~
+@1 = ~EEex~
+@2 = ~Habilitar módulo de menú de efectos: Mayús izquierda al pasar el cursor para ver los conjuros que afectan a la criatura~
+@3 = ~Habilitar módulo de contenedores vacíos: Resaltar los contenedores vacíos en gris en lugar de cian~
+@4 = ~Habilitar módulo de teclas rápidas: Editar override/B3Hotkey.lua para crear teclas rápidas avanzadas para conjuros~
+@5 = ~Habilitar módulo de escala: Factor de escala de la interfaz de usuario personalizable~
+@6 = ~Habilitar módulo de avance de tiempo: Avanzar 1 tick del juego al pulsar la tecla~
+@7 = ~Habilitar módulo de temporizadores: Indicadores visuales para acciones modales, contingencias y tiempos de recarga de conjuros/objetos~
+@8 = ~Experimental - Usar LuaJIT: Puede ayudar con los tirones | ADVERTENCIA: puede provocar fallos al combinarse con ciertos mods~
+
+// Error messages
+@1000 = ~Juego no compatible.~
+@1001 = ~Este componente requiere que el componente principal esté instalado.~
+@1002 = ~Este componente requiere que el componente principal esté instalado.~
+
+// `GROUP`s
+@2000 = ~Opcional~
+@2001 = ~Experimental | ADVERTENCIA: Instalar solo si comprendes los riesgos~
+
+// QUICK_MENU selections
+@3000 = ~Mínimo       | Correcciones del motor y funcionalidad básica requerida por otros mods.~
+@3001 = ~Completo     | "Mínimo" + Todos los módulos opcionales habilitados por defecto. Los módulos se pueden desactivar dentro del juego.~
+@3002 = ~Experimental | "Completo" + Todos los componentes experimentales. ADVERTENCIA: Instalar solo si comprendes los riesgos.~
