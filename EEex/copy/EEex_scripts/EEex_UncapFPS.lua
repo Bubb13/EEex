@@ -54,7 +54,7 @@ EEex_UncapFPS_Private_VSyncEnabled = EEex_Options_Register("EEex_UncapFPS_VSyncE
 	end,
 }))
 
-EEex_Options_AddTab("Uncap FPS", function() return {
+EEex_Options_AddTab("EEex_Options_TRANSLATION_UncapFPS_TabTitle", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
 			["optionID"]    = "EEex_UncapFPS_AISpeed",

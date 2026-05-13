@@ -155,6 +155,8 @@ This indicator displays the interval of modal actions: find traps, turn undead, 
 -- Uncap FPS --
 ---------------
 
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_TabTitle"] = "Uncap FPS"
+
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_AISpeed"] = "AI Speed"
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_AISpeed_Description"] = [[
