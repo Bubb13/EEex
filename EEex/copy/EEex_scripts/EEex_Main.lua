@@ -56,6 +56,8 @@ EEex_Main_Private_StartupFiles = {
 	"EEex_Marshal",            --
 	"EEex_Module",             --
 	"EEex_OptionsLate",        -- Here so it can register listeners provided by other EEex files
+	"EEex_Profiler",           --
+	"EEex_Profiler_Patch",     --
 }
 
 EEex_Main_Private_Modules = {

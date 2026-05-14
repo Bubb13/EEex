@@ -165,25 +165,20 @@ The number of times per second the "logic" of the game is ticked.
 This determines the speed of gameplay.
 ]]
 
-uiStrings["EEex_Options_TRANSLATION_UncapFPS_BusyWaitThreshold"] = "Busy Wait Threshold"
-
-uiStrings["EEex_Options_TRANSLATION_UncapFPS_BusyWaitThreshold_Description"] = [[
-If the next frame is scheduled within this number of milliseconds, the engine busy-waits
-instead of yielding the CPU.
-
-Only active when the "Enable FPS Uncap" option is in effect.
-
-Higher values improve frame pacing at the cost of increased CPU usage.
-
-A value of '0' disables yielding. Don't use this unless you are playing on an extremely low-power device.
-]]
-
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_Enable"] = "Enable FPS Uncap"
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_Enable_Description"] = [[
-Removes the engine's usual 30fps cap, allowing the game to render at your monitor's refresh rate.
+Removes the engine's usual 30 FPS cap, allowing the game to render at your monitor's refresh rate.
 
 This improves the smoothness of viewport movement on high refresh rate monitors.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_EnableFPSLimit"] = "Enable FPS Limit"
+
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_EnableFPSLimit_Description"] = [[
+Enables the "FPS Limit" option.
+
+For a smoother experience, leave this option disabled, and either enable VSync or limit the game's FPS through your graphics driver settings.
 ]]
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimit"] = "FPS Limit"
@@ -192,6 +187,31 @@ uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimit_Description"] = [[
 Limits the uncapped FPS to the given value.
 
 This cannot lower the FPS below the "AI Speed" option.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimitBusyWaitThreshold"] = "FPS Limit Busy Wait Threshold"
+
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimitBusyWaitThreshold_Description"] = [[
+If the next frame is scheduled within this number of milliseconds, the engine busy-waits
+instead of yielding the CPU.
+
+Only active when the "Enable FPS Uncap" and "Enable FPS Limit" options are in effect.
+
+Higher values improve frame pacing at the cost of increased CPU usage.
+
+A value of '0' disables yielding. Don't use this unless you are playing on an extremely low-power device.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_LuaGCSteps"] = "Lua Garbage Collection Steps"
+
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_LuaGCSteps_Description"] = [[
+Determines how much time Lua spends cleaning up unused memory after each frame.
+
+Lower values result in a higher FPS, but may cause stuttering due to large amounts of "junk" building up over time.
+
+Higher values prevent stuttering at the cost of lowering the FPS.
+
+Extremely high values may take too long and affect frame pacing.
 ]]
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_RemoveMiddleMouseScrollMultiplier"] = "Remove Middle Mouse Scroll Multiplier"

@@ -641,6 +641,10 @@ Pattern=488B09488B12
 ExeSwitch=1
 ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
+[SDL_GetDisplayForWindow]
+Pattern=488D044048C1E005
+Operations=ADD -22
+
 [SDL_GetKeyFromName]
 Pattern=488BD94885C90F84F2000000
 Operations=ADD -10
@@ -1664,6 +1668,10 @@ Operations=ADD -12
 [Hardcoded_lua_createtable]
 Pattern=418BF8488B4918
 Operations=ADD -18
+
+[Hardcoded_lua_gc]
+Pattern=4889742410574883EC20488B5918
+Operations=ADD -5
 
 [Hardcoded_lua_getfield]
 Pattern=49C7C0FFFFFFFF0F1F840000000000

@@ -704,6 +704,37 @@ function EEex_HookAfterRestoreWithLabels(address, restoreDelay, restoreSize, ret
 	EEex_HookAfterRestoreInternal(address, restoreDelay, restoreSize, returnDelay, labelPairs, assemblyT)
 end
 
+function EEex_HookAttemptProfile(address, hookPart, attemptRestorePart, expectedBytes)
+
+	local opcode = EEex_ReadU8(address)
+
+	if opcode == 0xFF and EEex_ReadU8(address + 1) == 0x25 then
+		local dest = EEex_Read64(address + 6 + EEex_Read32(address + 2))
+		attemptRestorePart = {"jmp ", dest}
+	elseif opcode == 0xE9 then
+		local dest = address + 0x5 + EEex_Read32(address + 0x1)
+		attemptRestorePart = {"jmp short ", dest}
+	else
+		local checkAddress = address
+		for _, expectedByte in ipairs(expectedBytes) do
+			if EEex_ReadU8(checkAddress) ~= expectedByte then
+				print("[?] Unexpected byte during EEex_HookAttemptProfile at "..EEex_ToHex(address).." ("..EEex_ToHex(checkAddress)..") - not tracing.")
+				return
+			end
+			checkAddress = checkAddress + 1
+		end
+	end
+
+	EEex_JITAt(address, {
+		"jmp short ",
+		EEex_JITNear(EEex_FlattenTable({
+			hookPart,
+			"#ENDL",
+			attemptRestorePart,
+		})),
+	})
+end
+
 function EEex_HookBeforeAndAfterCall(address, beforeAssemblyT, afterAssemblyT)
 	EEex_HookBeforeAndAfterCallInternal(address, {}, beforeAssemblyT, afterAssemblyT)
 end
