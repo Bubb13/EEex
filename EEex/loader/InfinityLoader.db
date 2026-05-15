@@ -2235,6 +2235,10 @@ Operations=ADD -10
 Pattern=F6472004
 Operations=ADD 25
 
+[CGameEffectMeleeEffect::ApplyEffect]
+Pattern=4889442430488BF2
+Operations=ADD -25
+
 [Hook-CGameEffectOverrideAnimation::ApplyEffect()-LastParam2Jmp]
 Pattern=4889742420574883EC30488BF1488BFA
 Operations=ADD 40
@@ -2244,6 +2248,10 @@ Pattern=488D8E001D0000
 Operations=ADD 17
 
 [Hook-CGameEffectRangeEffect::ApplyEffect()]
+Pattern=4885C9747B
+Operations=ADD -43
+
+[CGameEffectRangeEffect::ApplyEffect]
 Pattern=4885C9747B
 Operations=ADD -43
 
@@ -2459,6 +2467,14 @@ Operations=ADD -7
 [Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged]
 Pattern=4D8D6F0CE95E010000
 Operations=ADD 36
+
+[Hook-CGameSprite::Swing()-RangedMissResultJmp]
+Pattern=751A488B8BD84A0000
+Operations=ADD 0
+
+[Hook-CGameSprite::Swing()-MeleeMissResultJmp]
+Pattern=0F8464080000
+Operations=ADD 0
 
 [Hook-CGameSprite::Swing()-GetAttackFrameType()]
 Pattern=488983D84A00004439B3A44E0000
