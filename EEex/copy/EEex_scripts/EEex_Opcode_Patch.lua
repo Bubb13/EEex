@@ -1112,6 +1112,117 @@
 	})
 
 	--[[
+	+---------------------------------------------------------------------------------------------------------------------------+
+	| New Opcode #412 (ScreenEffectsList)                                                                                       |
+	+---------------------------------------------------------------------------------------------------------------------------+
+	|   Register a global Lua function that filters a batch of newly added effects before the target sprite resolves its lists. |
+	|   The function name must be 8 characters or less, and be ALL UPPERCASE.                                                   |
+	|                                                                                                                           |
+	|   The function's signature is: FUNC(op412: CGameEffect, effects: table<CGameEffect>, sprite: CGameSprite) -> table        |
+	|                                                                                                                           |
+	|   `effects` contains original queued effect userdata in engine AddEffect order. Lua may remove entries from the returned  |
+	|   table or mutate fields on these effect objects. Only userdata identities from the original `effects` table survive; new |
+	|   or replacement userdata returned by Lua are ignored. The returned table's order is ignored, and surviving effects are   |
+	|   always replayed in original engine order. Missing functions, Lua errors, and non-table returns fail open and log.       |
+	+---------------------------------------------------------------------------------------------------------------------------+
+	|   resource -> Global Lua function name                                                                                    |
+	+---------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_ScreenEffectsList_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int         |
+	|       return:                                                                                                             |
+	|           ->  0 - Halt effect list processing                                                                             |
+	|           -> !0 - Continue effect list processing                                                                         |
+	+---------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_ScreenEffectsList_OnRemove(pEffect: CGameEffect*, pSprite: CGameSprite*)                   |
+	|   [EEex.dll] EEex::Opcode_Hook_ScreenEffectsList_OnBeforeAddEffect(...) -> int                                            |
+	|       return:                                                                                                             |
+	|           ->  0 - Don't alter engine behavior                                                                             |
+	|           -> !0 - Queued the effect; skip the original AddEffect call                                                     |
+	|   [EEex.dll] EEex::Opcode_Hook_ScreenEffectsList_Flush(pSprite: CGameSprite*)                                             |
+	+---------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_ScreenEffectsList = genOpcodeDecode({
+
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_ScreenEffectsList_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+
+		["OnRemove"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_ScreenEffectsList_OnRemove)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	-- Function-entry hook
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::AddEffect()-ScreenEffectsList"), 0, 10, 10, {
+		{"stack_mod", 8}, -- stack_mod=8 preserves Windows x64 call alignment before calling C++ (jeez, we keep forgetting this!)
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}},
+		{"manual_hook_integrity_exit", true}},
+		{[[
+			#MAKE_SHADOW_SPACE(40)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+			mov eax, dword ptr ss:[rsp+#LAST_FRAME_TOP(28h)] ; immediateResolve stack arg
+			mov qword ptr ss:[rsp+20h], rax
+			call #L(EEex::Opcode_Hook_ScreenEffectsList_OnBeforeAddEffect)
+
+			test eax, eax
+			jnz handled
+
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
+			#MANUAL_HOOK_EXIT(0)
+			jmp #L(return)
+
+			handled:
+			#RESUME_SHADOW_ENTRY
+			#DESTROY_SHADOW_SPACE
+			#MANUAL_HOOK_EXIT(1)
+			ret
+		]]}
+	)
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameSprite::AddEffect()-ScreenEffectsList"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
+	})
+
+	-- Flush queued effects just before the sprite processes its effect lists for this tick.
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::ProcessEffectList()-ScreenEffectsListFlush"), 0, 11, 11, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(16)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+			call #L(EEex::Opcode_Hook_ScreenEffectsList_Flush)
+
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	--[[
 	+-------------------------------------+
 	| [JIT] Decode switch for new opcodes |
 	+-------------------------------------+
@@ -1144,8 +1255,13 @@
 
 			_403:
 			cmp eax, 403
-			jne _408
+			jne _412
 			]], EEex_ScreenEffects, [[
+
+			_412:
+			cmp eax, 412
+			jne _408
+			]], EEex_ScreenEffectsList, [[
 
 			_408:
 			cmp eax, 408
