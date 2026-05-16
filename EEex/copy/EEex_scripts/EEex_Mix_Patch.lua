@@ -134,9 +134,9 @@
 		})
 	)
 
-	---------------------------------------------------------
+	----------------------------------------------------------
 	-- [EEex.dll] EEex::Opcode_Hook_ApplyMissMeleeEffects() --
-	---------------------------------------------------------
+	----------------------------------------------------------
 
 	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameSprite::Swing()-MeleeMissResultJmp"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {
@@ -153,9 +153,9 @@
 		]]}
 	)
 
-	----------------------------------------------------------
+	-----------------------------------------------------------
 	-- [EEex.dll] EEex::Opcode_Hook_ApplyMissRangedEffects() --
-	----------------------------------------------------------
+	-----------------------------------------------------------
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::Swing()-RangedMissResultJmp"), 7, {
 		{"hook_integrity_watchdog_ignore_registers", {

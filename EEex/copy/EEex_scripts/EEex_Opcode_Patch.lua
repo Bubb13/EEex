@@ -223,7 +223,7 @@
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   (special & 1) != 0 -> .EFF bypasses op120                                                                                              |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail(pOp248: CGameEffect*, pExtraEffect: CGameEffect*, pNode: CNode*, pSprite: CGameSprite*)       |
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail(pOp248: CGameEffect*, pExtraEffect: CGameEffect*, pNode: CNode*, pSprite: CGameSprite*)    |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   [Lua] [EEex_Mix_Patch.lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -259,7 +259,7 @@
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   (special & 1) != 0 -> .EFF bypasses op120                                                                                              |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail(pOp249: CGameEffect*, pExtraEffect: CGameEffect*, pNode: CNode*, pSprite: CGameSprite*)       |
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail(pOp249: CGameEffect*, pExtraEffect: CGameEffect*, pNode: CNode*, pSprite: CGameSprite*)    |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   [Lua] [EEex_Mix_Patch.lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
