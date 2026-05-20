@@ -155,6 +155,42 @@ function EEex_Resource_Demand(resref, extension)
 	return demanded
 end
 
+-- @bubb_doc { EEex_Resource_DecodeSpell }
+--
+-- @summary: Returns the spell filename corresponding to ``spellIDS``.
+--
+-- @note: The first character of the numeric code identifies the spell prefix:
+--     * 1 -> ``SPPR``
+--     * 2 -> ``SPWI``
+--     * 3 -> ``SPIN``
+--     * 4 -> ``SPCL``
+--     * Anything else defaults to ``MARW``.
+--
+--     The remaining three characters identify the spell filename, i.e. ``1101`` refers to ``SPPR101``.
+--
+-- @param { spellIDS / type=number }: The ID of the spell to decode.
+--
+-- @return { type=string }: See summary.
+
+function EEex_Resource_DecodeSpell(spellIDS)
+	local prefix
+	local spellType = math.floor(spellIDS / 1000)
+	--
+	if spellType == 1 then
+		prefix = "SPPR"
+	elseif spellType == 2 then
+		prefix = "SPWI"
+	elseif spellType == 3 then
+		prefix = "SPIN"
+	elseif spellType == 4 then
+		prefix = "SPCL"
+	else
+		prefix = "MARW"
+	end
+	--
+	return prefix .. string.format("%03d", spellIDS % 1000)
+end
+
 function EEex_Resource_GetSpellAbility(spellHeader, abilityIndex)
 	if spellHeader.abilityCount <= abilityIndex then return end
 	return EEex_PtrToUD(EEex_UDToPtr(spellHeader) + spellHeader.abilityOffset + Spell_ability_st.sizeof * abilityIndex, "Spell_ability_st")
@@ -163,7 +199,7 @@ Spell_Header_st.getAbility = EEex_Resource_GetSpellAbility
 
 function EEex_Resource_GetItemAbility(itemHeader, abilityIndex)
 	if itemHeader.abilityCount <= abilityIndex then return end
-	return EEex_PtrToUD(EEex_UDToPtr(itemHeader) + itemHeader.abilityOffset + Item_Header_st.sizeof * abilityIndex, "Item_ability_st")
+	return EEex_PtrToUD(EEex_UDToPtr(itemHeader) + itemHeader.abilityOffset + Item_ability_st.sizeof * abilityIndex, "Item_ability_st")
 end
 Item_Header_st.getAbility = EEex_Resource_GetItemAbility
 
@@ -957,6 +993,23 @@ function EEex_Resource_KitSymbolToIDS(kitSymbol)
 	return EEex_Resource_Private_KitSymbolToIDS[kitSymbol]
 end
 
+EEex_Resource_Private_IDSToSymbol = {}
+EEex_Resource_Private_SymbolToIDS = {}
+
+function EEex_Resource_IDSToSymbol(file, IDS)
+	return EEex_Resource_Private_IDSToSymbol[file:upper()][IDS]
+end
+
+function EEex_Resource_SymbolToIDS(file, symbol)
+	return EEex_Resource_Private_SymbolToIDS[file:upper()][symbol]
+end
+
+EEex_Resource_Private_2DA = {}
+
+function EEex_Resource_2DA(file, rowLabel, columnLabel)
+	return EEex_Resource_Private_2DA[file:upper()][tostring(rowLabel)][tostring(columnLabel)]
+end
+
 EEex_Resource_Private_KitIgnoresMeleeingWithRangedPenaltyForItemCategory = {}
 
 EEex_GameState_AddInitializedListener(function()
@@ -1003,6 +1056,60 @@ EEex_GameState_AddInitializedListener(function()
 			EEex_Resource_Private_ItemCategoryIDSToSymbol[id] = symbol
 			EEex_Resource_Private_ItemCategorySymbolToIDS[symbol] = id
 		end)
+	end)
+
+	-------------------
+	-- All IDS files --
+	-------------------
+
+	-- Fills:
+	--     [table] EEex_Resource_Private_IDSToSymbol
+	--     [table] EEex_Resource_Private_SymbolToIDS
+
+	EEex_Utility_NewScope(function()
+		local idsFileList = Infinity_GetFilesOfType("ids")
+		-- We need two nested loops in order to get the resref...
+		for _, temp in ipairs(idsFileList) do
+			for _, res in pairs(temp) do
+				EEex_Resource_Private_IDSToSymbol[res:upper()] = {}
+				EEex_Resource_Private_SymbolToIDS[res:upper()] = {}
+				-- Fill in the values for this IDS file
+				local file = EEex_Resource_LoadIDS(res)
+				file:iterateUnpackedEntries(function(id, symbol, _)
+					EEex_Resource_Private_IDSToSymbol[res:upper()][id] = symbol
+					EEex_Resource_Private_SymbolToIDS[res:upper()][symbol] = id
+				end)
+			end
+		end
+	end)
+
+	-------------------
+	-- All 2DA files --
+	-------------------
+
+	-- Fills:
+	--     [table] EEex_Resource_Private_2DA
+
+	EEex_Utility_NewScope(function()
+		local ruleTablesFileList = Infinity_GetFilesOfType("2da")
+		-- We need two nested loops in order to get the resref...
+		for _, temp in ipairs(ruleTablesFileList) do
+			for _, res in pairs(temp) do
+				EEex_Resource_Private_2DA[res:upper()] = {}
+				-- Fill in the values for this 2DA file
+				local data = EEex_Resource_Load2DA(res)
+				local nX, nY = data:getDimensions()
+				nX = nX - 2
+				nY = nY - 1
+				-- [!] Everything is stored as strings, so we don't have to worry about type conversion when filling in the table
+				for rowIndex = 0, nY do
+					EEex_Resource_Private_2DA[res:upper()][data:getRowLabel(rowIndex)] = {} -- Initialize each row
+					for columnIndex = 0, nX do
+						EEex_Resource_Private_2DA[res:upper()][data:getRowLabel(rowIndex)][data:getColumnLabel(columnIndex)] = data:getAtPoint(columnIndex, rowIndex)
+					end
+				end
+			end
+		end
 	end)
 
 	------------------

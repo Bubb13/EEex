@@ -634,3 +634,263 @@ function EEex_Projectile_GetStartingPosForID(projectileID, sourceObject, args)
 		function() projectile:virtual_Destruct(true) end,
 		projectile, sourceObject, args)
 end
+
+-- @bubb_doc { EEex_Projectile_IsPtInArc }
+--
+-- @summary:
+--
+--     Checks if the point (``ptCheckX``, ``ptCheckY``) is within an arc defined by the edge vector (``ptEdgeX``, ``ptEdgeY``) and angle ``nCheckAngle``.
+--
+-- @param { ptEdgeX / type=number }: The X component of the edge of the cone.
+-- @param { ptEdgeY / type=number }: The Y component of the edge of the cone.
+-- @param { nCheckAngle / type=number }: The angle of the cone in degrees.
+-- @param { ptCheckX / type=number }: The X component of the point to check.
+-- @param { ptCheckY / type=number }: The Y component of the point to check.
+--
+-- @return { type=boolean }: See summary.
+
+function EEex_Projectile_IsPtInArc(ptEdgeX, ptEdgeY, nCheckAngle, ptCheckX, ptCheckY)
+
+	--[[
+	print(string.format("  [isPtInArc] ptEdge: (%d,%d), nCheckAngle: %d, ptCheck: (%d,%d)",
+		ptEdgeX, ptEdgeY, nCheckAngle, ptCheckX, ptCheckY))
+	--]]
+
+	if ptCheckX == 0 and ptCheckY == 0 then
+		--print("    result: true")
+		return true
+	end
+
+	local nDotProduct = ptEdgeX * ptCheckX + ptEdgeY * ptCheckY
+
+	local fEdgeMagnitude = math.sqrt(ptEdgeX * ptEdgeX + ptEdgeY * ptEdgeY)
+	local fCheckMagnitude = math.sqrt(ptCheckX * ptCheckX + ptCheckY * ptCheckY)
+
+	local fCosine = nDotProduct / (fEdgeMagnitude * fCheckMagnitude)
+
+	local fClampedCosine = math.max(-1.0, math.min(fCosine, 1.0))
+	local fRadians = math.acos(fClampedCosine)
+	local nAngle = math.floor((fRadians * 180 / math.pi)) -- truncating to match engine
+
+	local result = nAngle <= nCheckAngle / 2
+	--print(string.format("    result: %s", result and "true" or "false"))
+	return result
+end
+
+-- @bubb_doc { EEex_Projectile_TestCone }
+--
+-- @summary:
+--
+--     Checks if the point (``px``, ``py``) is within a cone defined by the origin (``ox``, ``oy``), target (``tx``, ``ty``), and angle ``angle``.
+--
+-- @param { angle / type=number }: The angle of the cone in degrees.
+-- @param { ox / type=number }: The X component of the origin of the cone.
+-- @param { oy / type=number }: The Y component of the origin of the cone.
+-- @param { tx / type=number }: The X component of the target position.
+-- @param { ty / type=number }: The Y component of the target position.
+-- @param { px / type=number }: The X component of the point to check.
+-- @param { py / type=number }: The Y component of the point to check.
+--
+-- @return { type=boolean }: See summary.
+
+function EEex_Projectile_TestCone(angle, ox, oy, tx, ty, px, py)
+
+	if angle <= 180 then
+		-- Vector from cone source to target pos
+		local nEdgeX = tx - ox
+		local nEdgeY = ty - oy
+		-- Vector from cone source to potential target object
+		local nCheckX = px - ox
+		local nCheckY = py - oy
+
+		if EEex_Projectile_IsPtInArc(nEdgeX, nEdgeY, angle, nCheckX, nCheckY) then
+			return true
+		end
+	else
+		-- Vector from cone source to target pos
+		local nEdgeX = ox - tx
+		local nEdgeY = oy - ty
+		-- Vector from cone source to potential target object
+		local nCheckX = px - ox
+		local nCheckY = py - oy
+
+		if not EEex_Projectile_IsPtInArc(nEdgeX, nEdgeY, 360 - angle, nCheckX, nCheckY) then
+			return true
+		end
+	end
+
+	return false
+end
+
+-- @bubb_doc { EEex_Projectile_AoERadiusCheck }
+--
+-- @summary:
+--
+--     Returns ``true`` if casting an AoE projectile at ``targetSprite`` is considered @EOL
+--     worthwhile from the perspective of ``scriptRunner``. @EOL @EOL
+--
+--     For non-AoE projectiles this always returns ``true``. @EOL @EOL
+--
+--     For AoE projectiles the function decodes the projectile, computes its actual launch position, then counts @EOL
+--     two groups of sprites within the explosion radius (or cone, depending on the projectile's area flags): @EOL
+--     those the caster *wants* to hit (``toHitWithinRange``) and those it *wants* to avoid hitting due to @EOL
+--     friendly fire (``toAvoidWithinRange``). The EA of both the caster and the target is used to @EOL
+--     determine which group each nearby sprite belongs to, mirroring the engine's own targeting logic @EOL
+--     (e.g. EA-unfriendly spells such as Fireball count enemies to hit and allies to avoid, while @EOL
+--     EA-friendly spells such as Bless only count allies to hit and ignore friendly fire entirely). @EOL @EOL
+--
+--     The final decision is probabilistic: a random integer in ``[0, toHitWithinRange]`` is rolled, and @EOL
+--     the function returns ``true`` only if that roll **strictly exceeds** ``toAvoidWithinRange``. This @EOL
+--     means the cast is always refused when there are more allies in range than enemies, is guaranteed @EOL
+--     when ``toAvoidWithinRange`` is 0 and at least one enemy is in range, and becomes increasingly @EOL
+--     likely as the enemy count grows relative to the friendly-fire count.
+--
+-- @param { missileType / type=number }: The ID of the projectile (as per MISSILE.IDS).
+-- @param { scriptRunner / type=userdata }: The script runner object.
+-- @param { targetSprite / type=userdata }: The target sprite object.
+--
+-- @return { type=boolean }: See summary.
+
+function EEex_Projectile_AoERadiusCheck(missileType, scriptRunner, targetSprite)
+
+	local toReturn = true
+
+	if scriptRunner == nil then
+		scriptRunner = EEex_LuaTrigger_Object -- CGameSprite
+	end
+
+	if targetSprite == nil then
+		targetSprite = scriptRunner:getStoredScriptingTarget("B3TEST") -- CGameSprite
+	end
+
+	local proResRef = EEex_Resource_IDSToSymbol("PROJECTL", missileType - 1)
+
+	if proResRef == nil then
+		return true
+	end
+
+	local pHeader = EEex_Resource_Demand(proResRef, "pro") -- CProjectileFileFormat
+
+	if pHeader == nil then
+		return true
+	end
+
+	local m_wFileType = pHeader.m_wFileType
+
+	if m_wFileType == 3 then -- AoE
+
+		local projectile = CProjectile.DecodeProjectile(missileType, scriptRunner) -- CProjectile
+
+		if projectile == nil then
+			return true
+		end
+
+		toReturn = false
+
+		EEex_Utility_TryFinally(function()
+
+			-- NB.: the projectile starts at an offset from the caster!!!
+			local projX, projY, projZ = projectile:getStartingPos(scriptRunner, {
+				["targetObject"] = targetSprite,
+			})
+
+			local m_dwAreaFlags = pHeader.m_dwAreaFlags
+			local m_explosionRange = pHeader.m_explosionRange
+			local m_bIgnoreLOS = EEex_IsBitSet(m_dwAreaFlags, 12)
+			local m_checkForNonSprites = EEex_IsBitSet(m_dwAreaFlags, 1)
+			local m_terrainTable = projectile.m_terrainTable -- Array<unsigned __int8,16>
+			local m_coneSize = pHeader.m_coneSize
+
+			local tryToHit, tryToAvoid = {}, {}
+
+			local findObjects = function(aiType)
+				if EEex_IsBitSet(m_dwAreaFlags, 11) then
+					-- cone
+					return scriptRunner.m_pArea:getAllOfTypeInRange(projX, projY, aiType, m_explosionRange, not m_bIgnoreLOS, m_checkForNonSprites, m_terrainTable)
+				else
+					-- circle
+					return targetSprite:getAllOfTypeInRange(aiType, m_explosionRange, not m_bIgnoreLOS, m_checkForNonSprites, m_terrainTable)
+				end
+			end
+
+			if EEex_IsBitUnset(m_dwAreaFlags, 6) and EEex_IsBitUnset(m_dwAreaFlags, 7) then
+
+				-- EA-unfriendly, try avoiding friendly fire (see f.i. Fireball, Arrow of Detonation)
+				-- Assuming target EA is what I want to hit with this spell
+
+				if EEex_GameObject_GetEA(targetSprite) < EEex_Resource_SymbolToIDS("EA", "GOODCUTOFF") then
+					tryToHit = findObjects(EEex_Object_ParseString("[GOODCUTOFF]"))
+					tryToAvoid = findObjects(EEex_Object_ParseString("[EVILCUTOFF]"))
+				elseif EEex_GameObject_GetEA(targetSprite) > EEex_Resource_SymbolToIDS("EA", "EVILCUTOFF") then
+					tryToHit = findObjects(EEex_Object_ParseString("[EVILCUTOFF]"))
+					tryToAvoid = findObjects(EEex_Object_ParseString("[GOODCUTOFF]"))
+				end
+
+			elseif EEex_IsBitSet(m_dwAreaFlags, 6) then
+
+				-- EA-friendly
+
+				if EEex_IsBitSet(m_dwAreaFlags, 7) then
+					-- Only allies of caster, see f.i. Bless/Haste
+					if EEex_GameObject_GetEA(scriptRunner) < EEex_Resource_SymbolToIDS("EA", "GOODCUTOFF") then
+						tryToHit = findObjects(EEex_Object_ParseString("[GOODCUTOFF]"))
+					elseif EEex_GameObject_GetEA(scriptRunner) > EEex_Resource_SymbolToIDS("EA", "EVILCUTOFF") then
+						tryToHit = findObjects(EEex_Object_ParseString("[EVILCUTOFF]"))
+					end
+				else
+					-- Only enemies of caster, see f.i. Glitterdust
+					if EEex_GameObject_GetEA(scriptRunner) < EEex_Resource_SymbolToIDS("EA", "GOODCUTOFF") then
+						tryToHit = findObjects(EEex_Object_ParseString("[EVILCUTOFF]"))
+					elseif EEex_GameObject_GetEA(scriptRunner) > EEex_Resource_SymbolToIDS("EA", "EVILCUTOFF") then
+						tryToHit = findObjects(EEex_Object_ParseString("[GOODCUTOFF]"))
+					end
+				end
+			end
+
+			local toHitWithinRange = 0
+			local toAvoidWithinRange = 0
+
+			--print("--- Projection")
+
+			--[[
+			print(string.format("scriptRunner: %s, targetSprite: %s, scriptRunnerPos: (%d,%d), targetSpritePos: (%d,%d), proj: (%d,%d)",
+				scriptRunner:getName(), targetSprite:getName(),
+				scriptRunner.m_pos.x, scriptRunner.m_pos.y,
+				targetSprite.m_pos.x, targetSprite.m_pos.y,
+				projX, projY
+			))
+			--]]
+
+			--print("trying to hit:")
+			for _, itrSprite in ipairs(tryToHit) do
+				--print(string.format("  itrSprite: %s (%d,%d)", itrSprite:getName(), itrSprite.m_pos.x, itrSprite.m_pos.y))
+				if EEex_IsBitUnset(m_dwAreaFlags, 11) or (
+					itrSprite.m_id ~= scriptRunner.m_id
+					and EEex_Projectile_TestCone(m_coneSize, projX, projY, targetSprite.m_pos.x, targetSprite.m_pos.y, itrSprite.m_pos.x, itrSprite.m_pos.y)
+				) then
+					--print("    "..itrSprite:getName())
+					toHitWithinRange = toHitWithinRange + 1
+				end
+			end
+
+			--print("trying to avoid:")
+			for _, itrSprite in ipairs(tryToAvoid) do
+				--print(string.format("  itrSprite: %s (%d,%d)", itrSprite:getName(), itrSprite.m_pos.x, itrSprite.m_pos.y))
+				if EEex_IsBitUnset(m_dwAreaFlags, 11) or (
+					itrSprite.m_id ~= scriptRunner.m_id
+					and EEex_Projectile_TestCone(m_coneSize, projX, projY, targetSprite.m_pos.x, targetSprite.m_pos.y, itrSprite.m_pos.x, itrSprite.m_pos.y)
+				) then
+					--print("    "..itrSprite:getName())
+					toAvoidWithinRange = toAvoidWithinRange + 1
+				end
+			end
+
+			if math.random(0, toHitWithinRange) > toAvoidWithinRange then
+				toReturn = true
+			end
+		end,
+		function() projectile:virtual_Destruct(true) end)
+	end
+
+	return toReturn
+end

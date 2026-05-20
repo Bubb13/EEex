@@ -259,6 +259,45 @@ function EEex_GameObject_IsSpriteID(objectID, allowDead)
 	return EEex_GameObject_IsSprite(EEex_GameObject_Get(objectID), allowDead)
 end
 
+-- @bubb_doc { EEex_GameObject_GetEA / instance_name=getEA }
+--
+-- @summary: Returns the given ``object``'s EA.
+--
+-- @self { object / usertype=CGameObject }: The object whose EA is being fetched.
+--
+-- @return { type=number }: See summary.
+
+function EEex_GameObject_GetEA(object)
+	return object.m_typeAI.m_EnemyAlly
+end
+CGameObject.getEA = EEex_GameObject_GetEA
+
+-- @bubb_doc { EEex_GameObject_GetGeneral / instance_name=getGeneral }
+--
+-- @summary: Returns the given ``object``'s general.
+--
+-- @self { object / usertype=CGameObject }: The object whose general is being fetched.
+--
+-- @return { type=number }: See summary.
+
+function EEex_GameObject_GetGeneral(object)
+	return object.m_typeAI.m_General
+end
+CGameObject.getGeneral = EEex_GameObject_GetGeneral
+
+-- @bubb_doc { EEex_GameObject_GetRace / instance_name=getRace }
+--
+-- @summary: Returns the given ``object``'s race.
+--
+-- @self { object / usertype=CGameObject }: The object whose race is being fetched.
+--
+-- @return { type=number }: See summary.
+
+function EEex_GameObject_GetRace(object)
+	return object.m_typeAI.m_Race
+end
+CGameObject.getRace = EEex_GameObject_GetRace
+
 -- @bubb_doc { EEex_GameObject_GetClass / instance_name=getClass }
 --
 -- @summary: Returns the given ``object``'s class.
@@ -271,6 +310,45 @@ function EEex_GameObject_GetClass(object)
 	return object.m_typeAI.m_Class
 end
 CGameObject.getClass = EEex_GameObject_GetClass
+
+-- @bubb_doc { EEex_GameObject_GetSpecifics / instance_name=getSpecifics }
+--
+-- @summary: Returns the given ``object``'s specifics.
+--
+-- @self { object / usertype=CGameObject }: The object whose specifics is being fetched.
+--
+-- @return { type=number }: See summary.
+
+function EEex_GameObject_GetSpecifics(object)
+	return object.m_typeAI.m_Specifics
+end
+CGameObject.getSpecifics = EEex_GameObject_GetSpecifics
+
+-- @bubb_doc { EEex_GameObject_GetGender / instance_name=getGender }
+--
+-- @summary: Returns the given ``object``'s gender.
+--
+-- @self { object / usertype=CGameObject }: The object whose gender is being fetched.
+--
+-- @return { type=number }: See summary.
+
+function EEex_GameObject_GetGender(object)
+	return object.m_typeAI.m_Gender
+end
+CGameObject.getGender = EEex_GameObject_GetGender
+
+-- @bubb_doc { EEex_GameObject_GetAlignment / instance_name=getAlignment }
+--
+-- @summary: Returns the given ``object``'s alignment.
+--
+-- @self { object / usertype=CGameObject }: The object whose alignment is being fetched.
+--
+-- @return { type=number }: See summary.
+
+function EEex_GameObject_GetAlignment(object)
+	return object.m_typeAI.m_Alignment
+end
+CGameObject.getAlignment = EEex_GameObject_GetAlignment
 
 ------------------------------
 -- Game Object Manipulation --
