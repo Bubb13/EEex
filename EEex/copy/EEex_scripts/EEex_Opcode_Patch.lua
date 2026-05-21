@@ -274,6 +274,120 @@
 	)
 
 	--[[
+	+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	| Opcode #261                                                                                                                                                    |
+	+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   (special & 1) != 0 -> Process only m_effectAmount; do not continue the vanilla lower-level fallback loop                                                     |
+	|   (special & 2) != 0 -> Replace the vanilla first eligible memorized spell at the current level with a random eligible spell from that same level              |
+	+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op261_SelectRandomSpell(                                                                                                        |
+	|       pEffect: CGameEffect*, pSprite: CGameSprite*, pVanillaSpell: CCreatureFileMemorizedSpell*,                                                               |
+	|       pMemorizedList: CTypedPtrList<CPtrList, CCreatureFileMemorizedSpell*>*) -> CCreatureFileMemorizedSpell*                                                  |
+	|       return -> pVanillaSpell unless bit1 applies and the current mage / priest list has a random eligible replacement                                         |
+	+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op261_ShouldStopAfterCurrentLevel(pEffect: CGameEffect*) -> bool                                                                |
+	|       return -> true when bit0 is set                                                                                                                          |
+	+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_Op261_SelectRandomSpell() --
+	------------------------------------------------------------
+
+	-- Mage path: RBX is the first CCreatureFileMemorizedSpell* whose m_flags bit0 is clear.
+	-- R14 -> CGameEffect, RDI -> CGameSprite, and R12 is the vanilla per-level list offset.
+	-- The C++ helper preserves vanilla behavior for class 19 / 21 empty-resref special paths.
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectRememorizeSpell::ApplyEffect()-MageSelectedSpell"), 0, 6, 6, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RBX, EEex_HookIntegrityWatchdogRegister.RCX,
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,  EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+			mov rcx, r14                                                            ; pEffect
+			mov rdx, rdi                                                            ; pSprite
+			mov r8, rbx                                                             ; pVanillaSpell
+			lea r9, qword ptr ds:[r12+rdi+#OFFSET_OF(CGameSprite.m_memorizedSpellsMage)] ; pMemorizedList for current mage level
+			call #L(EEex::Opcode_Hook_Op261_SelectRandomSpell)
+			mov rbx, rax                                                            ; Use either vanilla or random selected spell
+
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	-- Priest path: same register ownership as the mage path, but the current list is m_memorizedSpellsPriest.
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectRememorizeSpell::ApplyEffect()-PriestSelectedSpell"), 0, 6, 6, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RBX, EEex_HookIntegrityWatchdogRegister.RCX,
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,  EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+			mov rcx, r14                                                               ; pEffect
+			mov rdx, rdi                                                               ; pSprite
+			mov r8, rbx                                                                ; pVanillaSpell
+			lea r9, qword ptr ds:[r12+rdi+#OFFSET_OF(CGameSprite.m_memorizedSpellsPriest)] ; pMemorizedList for current priest level
+			call #L(EEex::Opcode_Hook_Op261_SelectRandomSpell)
+			mov rbx, rax                                                               ; Use either vanilla or random selected spell
+
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	----------------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_Op261_ShouldStopAfterCurrentLevel() --
+	----------------------------------------------------------------------
+
+	local op261StrictLevelLoopHook = function(labelName)
+		-- The hook site is after vanilla decrements ESI for the next lower level and before it adjusts R12/R13.
+		-- If bit0 is set, clear ESI so the untouched vanilla "test esi, esi / jg loop" falls through to completion.
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(labelName), 0, 8, 8, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.RSI, EEex_HookIntegrityWatchdogRegister.R8,  EEex_HookIntegrityWatchdogRegister.R9,
+				EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				#MAKE_SHADOW_SPACE(8)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+
+				mov rcx, r14                                                ; pEffect
+				call #L(EEex::Opcode_Hook_Op261_ShouldStopAfterCurrentLevel)
+				test al, al
+
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				jz #L(return)
+
+				xor esi, esi                                                ; Force vanilla loop condition to fail
+			]]}
+		)
+	end
+
+	op261StrictLevelLoopHook("Hook-CGameEffectRememorizeSpell::ApplyEffect()-MageAfterLevelDecrement")
+	op261StrictLevelLoopHook("Hook-CGameEffectRememorizeSpell::ApplyEffect()-PriestAfterLevelDecrement")
+
+	--[[
 	+------------------------------------------------------------------------------------------------------+
 	| Opcode #280                                                                                          |
 	+------------------------------------------------------------------------------------------------------+
