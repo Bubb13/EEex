@@ -18,6 +18,8 @@ EEex_Marshal_Private_TableFieldType = {
 }
 
 function EEex_Marshal_Private_NewTableBundle()
+	-- A bundle is a top-level sequence of named table payloads. Each handler name lets an
+	-- extension channel ignore unknown entries without corrupting data owned by other handlers.
 	return {
 		["entries"] = {},
 		["entryCount"] = 0,
@@ -58,6 +60,8 @@ function EEex_Marshal_Private_AddTableBundleEntry(bundle, handlerName, toExport,
 end
 
 function EEex_Marshal_Private_DetermineTableNumberInfo(number, context)
+	-- Use the smallest integer encoding that can round-trip the value. The enum values are fixed
+	-- because older saves may already contain any of these field tags.
 	if number ~= number or number % 1 ~= 0 then
 		EEex_Error((context or "Marshal").." number must be an integer")
 	end
@@ -90,6 +94,8 @@ end
 
 function EEex_Marshal_Private_CalculateTableBundleSize(bundle, context)
 
+	-- The writer below is iterative to avoid Lua recursion limits. Keep the sizing walk structurally
+	-- identical so payload allocation exactly matches what WriteTableBundle will emit.
 	local accumulator = 0
 	local lengthTypeSwitch = {
 		["boolean"] = function(v)
@@ -181,6 +187,11 @@ end
 
 function EEex_Marshal_Private_WriteTableBundle(memoryPtr, bundle, context)
 
+	-- Layout:
+	--   handlerName\0, encoded table fields..., TABLE_END
+	--   handlerName\0, encoded table fields..., TABLE_END
+	--   TABLE_END
+	-- The final TABLE_END is read as an empty handler string.
 	local writeNumber = function(number)
 		local typeByte, writeFunc, writeAdvance = EEex_Marshal_Private_DetermineTableNumberInfo(number, context)
 		EEex_Write8(memoryPtr, typeByte)
@@ -278,15 +289,50 @@ function EEex_Marshal_Private_WriteTableBundle(memoryPtr, bundle, context)
 	end
 end
 
-function EEex_Marshal_Private_ReadTableBundle(memory, handlerReader)
+function EEex_Marshal_Private_ReadTableBundle(memory, handlerReader, size)
 
+	-- When size is provided, keep reads inside the extension payload. The sprite extra-effect
+	-- channel predates bounded reads and still calls this without size, preserving that behavior.
 	local baseMemory = memory
+	local endMemory = size and (memory + size) or nil
+
+	local assertAvailable = function(byteCount, what)
+		if endMemory and memory + byteCount > endMemory then
+			EEex_Error("Marshal payload ended while reading "..what)
+		end
+	end
+
+	local readByte = function(what)
+		assertAvailable(1, what)
+		local read = EEex_ReadU8(memory)
+		memory = memory + 1
+		return read
+	end
+
+	local readString = function(what)
+		if not endMemory then
+			local read = EEex_ReadString(memory)
+			memory = memory + #read + 1
+			return read
+		end
+
+		local cursor = memory
+		while cursor < endMemory do
+			if EEex_ReadU8(cursor) == 0 then
+				local read = EEex_ReadString(memory)
+				memory = cursor + 1
+				return read
+			end
+			cursor = cursor + 1
+		end
+
+		EEex_Error("Marshal payload ended while reading "..what)
+	end
 
 	while true do
 
 		local toFill = {}
-		local handlerStr = EEex_ReadString(memory)
-		memory = memory + #handlerStr + 1
+		local handlerStr = readString("handler name")
 
 		-- The top-level list writes TABLE_END('\0') to signal that all
 		-- marshalled data has ended, which reads as an empty string.
@@ -296,46 +342,49 @@ function EEex_Marshal_Private_ReadTableBundle(memory, handlerReader)
 
 		local fieldReadSwitch = {
 			[EEex_Marshal_Private_TableFieldType.STRING] = function()
-				local read = EEex_ReadString(memory)
-				memory = memory + #read + 1
-				return read
+				return readString("string field")
 			end,
 			[EEex_Marshal_Private_TableFieldType.INT8] = function()
+				assertAvailable(1, "int8 field")
 				local read = EEex_Read8(memory)
 				memory = memory + 1
 				return read
 			end,
 			[EEex_Marshal_Private_TableFieldType.INTU8] = function()
-				local read = EEex_ReadU8(memory)
-				memory = memory + 1
-				return read
+				return readByte("uint8 field")
 			end,
 			[EEex_Marshal_Private_TableFieldType.INT16] = function()
+				assertAvailable(2, "int16 field")
 				local read = EEex_Read16(memory)
 				memory = memory + 2
 				return read
 			end,
 			[EEex_Marshal_Private_TableFieldType.INTU16] = function()
+				assertAvailable(2, "uint16 field")
 				local read = EEex_ReadU16(memory)
 				memory = memory + 2
 				return read
 			end,
 			[EEex_Marshal_Private_TableFieldType.INT32] = function()
+				assertAvailable(4, "int32 field")
 				local read = EEex_Read32(memory)
 				memory = memory + 4
 				return read
 			end,
 			[EEex_Marshal_Private_TableFieldType.INTU32] = function()
+				assertAvailable(4, "uint32 field")
 				local read = EEex_ReadU32(memory)
 				memory = memory + 4
 				return read
 			end,
 			[EEex_Marshal_Private_TableFieldType.INT64] = function()
+				assertAvailable(8, "int64 field")
 				local read = EEex_Read64(memory)
 				memory = memory + 8
 				return read
 			end,
 			[EEex_Marshal_Private_TableFieldType.INTU64] = function()
+				assertAvailable(8, "uint64 field")
 				local read = EEex_ReadU64(memory)
 				memory = memory + 8
 				return read
@@ -353,8 +402,7 @@ function EEex_Marshal_Private_ReadTableBundle(memory, handlerReader)
 
 		while true do
 
-			local keyFieldType = EEex_Read8(memory)
-			memory = memory + 1
+			local keyFieldType = readByte("key field type")
 
 			if keyFieldType == EEex_Marshal_Private_TableFieldType.TABLE_END then
 				if tableStackTop == 0 then
@@ -368,8 +416,7 @@ function EEex_Marshal_Private_ReadTableBundle(memory, handlerReader)
 					EEex_Error("Unknown marshal key field type "..keyFieldType)
 				end
 				local key = keyReader()
-				local valueFieldType = EEex_Read8(memory)
-				memory = memory + 1
+				local valueFieldType = readByte("value field type")
 				if valueFieldType == EEex_Marshal_Private_TableFieldType.TABLE_START then
 					local subTable = {}
 					toFill[key] = subTable

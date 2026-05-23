@@ -5,6 +5,8 @@ end
 EEex_UDAux_AlreadyLoaded = true
 
 function EEex_UDAux_Private_AssertPersistentValue(value, path, seenTables)
+	-- Save data must stay in the shared marshal codec's safe domain. Return a deep copy so
+	-- later Lua mutations cannot change the already-validated payload while native code writes it.
 	local valueType = type(value)
 	if valueType == "boolean" then
 		return value
@@ -97,8 +99,11 @@ EEex_UDAux_Private_AreaMarshalData = nil
 EEex_UDAux_Private_AreaMarshalContainerIndex = 0
 EEex_UDAux_Private_AreaUnmarshalContainers = nil
 EEex_UDAux_Private_AreaUnmarshalContainerIndex = 0
+EEex_UDAux_Private_StoreMarshalData = nil
+EEex_UDAux_Private_StoreUnmarshalItems = nil
 
 function EEex_UDAux_Private_ForEachContainerItem(container, func)
+	-- Container items are saved in linked-list order, matching the order used by the area file.
 	local node = container.m_lstItems.m_pNodeHead
 	local index = 1
 	while node do
@@ -111,13 +116,29 @@ function EEex_UDAux_Private_ForEachContainerItem(container, func)
 	end
 end
 
+function EEex_UDAux_Private_ForEachStoreItem(storeItemPtrs, func)
+	-- Native code passes ordinal -> pointer because CStore itself is not a bound userdata type.
+	for index, itemPtr in pairs(storeItemPtrs) do
+		if itemPtr ~= 0 then
+			func(index, EEex_PtrToUD(itemPtr, "CStoreFileItem"))
+		end
+	end
+end
+
 function EEex_UDAux_Private_NewAreaMarshalBundle(marshalData)
 	local bundle = EEex_Marshal_Private_NewTableBundle()
 	EEex_Marshal_Private_AddTableBundleEntry(bundle, "EEex_UDAux_Area", marshalData, "Area UDAux marshal")
 	return bundle
 end
 
+function EEex_UDAux_Private_NewStoreMarshalBundle(marshalData)
+	local bundle = EEex_Marshal_Private_NewTableBundle()
+	EEex_Marshal_Private_AddTableBundleEntry(bundle, "EEex_UDAux_Store", marshalData, "Store UDAux marshal")
+	return bundle
+end
+
 function EEex_UDAux_Private_BeginAreaMarshal(area)
+	-- Area marshal state is filled by CGameContainer::Marshal callbacks as the engine walks containers.
 	EEex_UDAux_Private_AreaMarshalData = {
 		["containers"] = {},
 	}
@@ -134,6 +155,7 @@ function EEex_UDAux_Private_OnAreaContainerMarshal(container)
 	local containerIndex = EEex_UDAux_Private_AreaMarshalContainerIndex
 	local containerData = {}
 
+	-- Persist by ordinal, not pointer. Pointers are process-local and change after load.
 	local containerAux = EEex_UDAux_Private_Export(container, "CGameArea.m_lContainers["..containerIndex.."]")
 	if containerAux then
 		containerData["aux"] = containerAux
@@ -178,6 +200,7 @@ function EEex_UDAux_Private_EndAreaMarshal()
 end
 
 function EEex_UDAux_Private_BeginAreaUnmarshal(memory, size)
+	-- Keep decoded data until each CGameContainer constructor callback supplies the matching runtime object.
 	EEex_UDAux_Private_AreaUnmarshalContainers = {}
 	EEex_UDAux_Private_AreaUnmarshalContainerIndex = 0
 
@@ -189,7 +212,7 @@ function EEex_UDAux_Private_BeginAreaUnmarshal(memory, size)
 		if handlerStr == "EEex_UDAux_Area" and type(toFill) == "table" then
 			EEex_UDAux_Private_AreaUnmarshalContainers = toFill["containers"] or {}
 		end
-	end)
+	end, size)
 end
 
 function EEex_UDAux_Private_OnAreaContainerConstruct(container)
@@ -225,6 +248,82 @@ function EEex_UDAux_Private_EndAreaUnmarshal()
 	EEex_UDAux_Private_AreaUnmarshalContainerIndex = 0
 end
 
+function EEex_UDAux_Private_CalculateStoreMarshalExtensionSize(storeItemPtrs)
+	EEex_UDAux_Private_StoreMarshalData = nil
+
+	local marshalData = {
+		["items"] = {},
+	}
+
+	EEex_UDAux_Private_ForEachStoreItem(storeItemPtrs, function(itemIndex, item)
+		-- Store-owned CStoreFileItem pointers are runtime list nodes; save their aux by list ordinal.
+		local itemAux = EEex_UDAux_Private_Export(item, "CStore.m_lInventory["..itemIndex.."]")
+		if itemAux then
+			marshalData["items"][itemIndex] = itemAux
+		end
+	end)
+
+	if next(marshalData["items"]) == nil then
+		return 0
+	end
+
+	EEex_UDAux_Private_StoreMarshalData = marshalData
+	return EEex_Marshal_Private_CalculateTableBundleSize(EEex_UDAux_Private_NewStoreMarshalBundle(marshalData), "Store UDAux marshal")
+end
+
+function EEex_UDAux_Private_WriteStoreMarshalExtensionPayload(memory, size)
+	local marshalData = EEex_UDAux_Private_StoreMarshalData
+	if not marshalData then
+		return
+	end
+	EEex_Memset(memory, 0, size)
+	EEex_Marshal_Private_WriteTableBundle(memory, EEex_UDAux_Private_NewStoreMarshalBundle(marshalData), "Store UDAux marshal")
+end
+
+function EEex_UDAux_Private_EndStoreMarshal()
+	EEex_UDAux_Private_StoreMarshalData = nil
+end
+
+function EEex_UDAux_Private_BeginStoreUnmarshal(memory, size)
+	-- Store SetResRef has not populated m_lInventory yet; keep item data until the native after-load hook.
+	EEex_UDAux_Private_StoreUnmarshalItems = {}
+
+	if memory == 0 or size == 0 then
+		return
+	end
+
+	EEex_Marshal_Private_ReadTableBundle(memory, function(handlerStr, toFill)
+		if handlerStr == "EEex_UDAux_Store" and type(toFill) == "table" then
+			EEex_UDAux_Private_StoreUnmarshalItems = toFill["items"] or {}
+		end
+	end, size)
+end
+
+function EEex_UDAux_Private_OnStoreLoaded(storeItemPtrs)
+	local items = EEex_UDAux_Private_StoreUnmarshalItems
+	if not items then
+		return
+	end
+
+	EEex_UDAux_Private_ForEachStoreItem(storeItemPtrs, function(itemIndex, item)
+		local itemAux = items[itemIndex]
+		if itemAux then
+			EEex_UDAux_Private_Import(item, itemAux)
+		end
+	end)
+end
+
+function EEex_UDAux_Private_EndStoreUnmarshal()
+	EEex_UDAux_Private_StoreUnmarshalItems = nil
+end
+
+function EEex_UDAux_Private_OnStoreInventoryClear(storeItemPtrs)
+	-- This runs before the engine frees CStoreFileItem nodes, so deleting by pointer is still valid.
+	EEex_UDAux_Private_ForEachStoreItem(storeItemPtrs, function(_, item)
+		EEex_UDAux_Private_DeleteByLightUD(EEex_UDToLightUD(item))
+	end)
+end
+
 function EEex_UDAux_Private_ApplyPendingItemAux(sprite)
 	local spriteAux = EEex_TryGetUDAux(sprite)
 	local pendingItems = spriteAux and spriteAux["EEex_UDAux_PendingItemAux"]
@@ -236,6 +335,8 @@ function EEex_UDAux_Private_ApplyPendingItemAux(sprite)
 	for i = 0, 38 do
 		local auxiliary = pendingItems[i]
 		if auxiliary then
+			-- Creature extra marshal data can arrive before equipment pointers are rebuilt.
+			-- Retry from load/list-resolved callbacks until every saved slot has a CItem.
 			local item = sprite.m_equipment.m_items:get(i)
 			if item then
 				EEex_UDAux_Private_Import(item, auxiliary)
