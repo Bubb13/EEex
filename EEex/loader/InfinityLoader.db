@@ -2142,6 +2142,30 @@ Operations=ADD 26
 Pattern=448B9934060000
 Operations=ADD -15
 
+[Hook-CGameArea::Marshal(unsigned char**,unsigned int*,unsigned char)-FirstInstruction]
+Pattern=4157488DAC2488FEFFFF
+Operations=ADD -8
+
+[Hook-CGameArea::Marshal(unsigned char**,unsigned int*,unsigned char)-AfterMarshal]
+Pattern=4C8BA42470020000488B8D60010000
+Operations=ADD 0
+
+[Hook-CGameArea::Unmarshal(unsigned char*,unsigned int,unsigned char)-FirstInstruction]
+Pattern=405556574154415541564157488DAC24E0FEFFFF
+Operations=ADD 0
+
+[Hook-CGameArea::Unmarshal(unsigned char*,unsigned int,unsigned char)-AfterUnmarshal]
+Pattern=488B9C2470020000418BC4
+Operations=ADD 0
+
+[Hook-CGameContainer::CGameContainer(CGameArea*,CAreaFileContainer*,...)-AfterConstruct]
+Pattern=498BC5488B4D704833CC
+Operations=ADD 0
+
+[Hook-CGameContainer::Marshal(SAreaFileWrapper*)-FirstInstruction]
+Pattern=4889542410555741564157
+Operations=ADD 0
+
 [Hook-CGameContainer::Render()-B3EmptyContainer]
 Pattern=85C00F8893000000
 Operations=ADD 150

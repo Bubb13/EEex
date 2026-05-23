@@ -15,32 +15,6 @@ EEex_Sprite_AddMarshalHandlers("EEex",
 	end
 )
 
-function EEex_Marshal_Private_ApplyPendingItemUDAux(sprite)
-	local spriteAux = EEex_TryGetUDAux(sprite)
-	local pendingItems = spriteAux and spriteAux["EEex_UDAux_PendingItemAux"]
-	if not pendingItems then
-		return
-	end
-
-	local anyPending = false
-	for i = 0, 38 do
-		local auxiliary = pendingItems[i]
-		if auxiliary then
-			local item = sprite.m_equipment.m_items:get(i)
-			if item then
-				EEex_UDAux_Private_Import(item, auxiliary)
-				pendingItems[i] = nil
-			else
-				anyPending = true
-			end
-		end
-	end
-
-	if not anyPending then
-		spriteAux["EEex_UDAux_PendingItemAux"] = nil
-	end
-end
-
 EEex_Sprite_AddMarshalHandlers("EEex_UDAux",
 	function(sprite)
 
@@ -108,7 +82,7 @@ EEex_Sprite_AddMarshalHandlers("EEex_UDAux",
 			-- Equipment item pointers can be unavailable at this point, so keep slot data on the
 			-- sprite and retry from normal post-load/update hooks until each item exists.
 			EEex_GetUDAux(sprite)["EEex_UDAux_PendingItemAux"] = items
-			EEex_Marshal_Private_ApplyPendingItemUDAux(sprite)
+			EEex_UDAux_Private_ApplyPendingItemAux(sprite)
 		end
 	end
 )
@@ -117,16 +91,15 @@ function EEex_Marshal_Private_OnSummonerLoaded(sprite, loadedSprite)
 	sprite.m_lSummonedBy:Set(loadedSprite:virtual_GetAIType())
 end
 
-EEex_Sprite_AddLoadedListener(function(sprite)
-	EEex_Marshal_Private_ApplyPendingItemUDAux(sprite)
+EEex_Sprite_AddLoadedListener(EEex_UDAux_Private_ApplyPendingItemAux)
+EEex_Opcode_AddListsResolvedListener(EEex_UDAux_Private_ApplyPendingItemAux)
 
+EEex_Sprite_AddLoadedListener(function(sprite)
 	local summonerUUID = EEex_GetUDAux(sprite)["EEex_SummonerUUID"]
 	if summonerUUID then
 		sprite:loadedWithUUIDCallback(summonerUUID, EEex_Marshal_Private_OnSummonerLoaded)
 	end
 end)
-
-EEex_Opcode_AddListsResolvedListener(EEex_Marshal_Private_ApplyPendingItemUDAux)
 
 EEex_AIBase_AddScriptingObjectUpdatedListener(function(aiBase, scriptingObject)
 
