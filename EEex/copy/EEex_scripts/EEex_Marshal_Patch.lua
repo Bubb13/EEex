@@ -113,7 +113,7 @@
 		]]}
 	)
 
-	-- rcx = CStore*. Delete item aux before the destructor drains m_lInventory.
+	-- rcx = CStore*. Delete store/item aux before the destructor drains m_lInventory.
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CStore::~CStore()-FirstInstruction"), 0, 5, 5,
 		EEex_Marshal_Patch_Private_EntryStackVolatileRegisterIgnores,
 		{[[
@@ -149,7 +149,7 @@
 		]]}
 	)
 
-	-- rbx = CStore*. Existing runtime CStoreFileItem nodes are about to be freed.
+	-- rbx = CStore*. Existing runtime CStore data is about to be replaced.
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CStore::SetResRef(CResRef const&)-BeforeInventoryClear"), 0, 7, 7,
 		EEex_Marshal_Patch_Private_VolatileRegisterIgnores,
 		{[[

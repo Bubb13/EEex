@@ -100,6 +100,7 @@ EEex_UDAux_Private_AreaMarshalContainerIndex = 0
 EEex_UDAux_Private_AreaUnmarshalContainers = nil
 EEex_UDAux_Private_AreaUnmarshalContainerIndex = 0
 EEex_UDAux_Private_StoreMarshalData = nil
+EEex_UDAux_Private_StoreUnmarshalAux = nil
 EEex_UDAux_Private_StoreUnmarshalItems = nil
 
 function EEex_UDAux_Private_ForEachContainerItem(container, func)
@@ -117,7 +118,7 @@ function EEex_UDAux_Private_ForEachContainerItem(container, func)
 end
 
 function EEex_UDAux_Private_ForEachStoreItem(storeItemPtrs, func)
-	-- Native code passes ordinal -> pointer because CStore itself is not a bound userdata type.
+	-- Native code snapshots ordinal -> pointer because m_lInventory is a native linked list.
 	for index, itemPtr in pairs(storeItemPtrs) do
 		if itemPtr ~= 0 then
 			func(index, EEex_PtrToUD(itemPtr, "CStoreFileItem"))
@@ -248,12 +249,23 @@ function EEex_UDAux_Private_EndAreaUnmarshal()
 	EEex_UDAux_Private_AreaUnmarshalContainerIndex = 0
 end
 
-function EEex_UDAux_Private_CalculateStoreMarshalExtensionSize(storeItemPtrs)
+function EEex_UDAux_Private_CalculateStoreMarshalExtensionSize(store, storeItemPtrs)
 	EEex_UDAux_Private_StoreMarshalData = nil
+	if storeItemPtrs == nil then
+		storeItemPtrs = store
+		store = nil
+	end
 
 	local marshalData = {
 		["items"] = {},
 	}
+
+	if store then
+		local storeAux = EEex_UDAux_Private_Export(store, "CStore")
+		if storeAux then
+			marshalData["aux"] = storeAux
+		end
+	end
 
 	EEex_UDAux_Private_ForEachStoreItem(storeItemPtrs, function(itemIndex, item)
 		-- Store-owned CStoreFileItem pointers are runtime list nodes; save their aux by list ordinal.
@@ -263,7 +275,7 @@ function EEex_UDAux_Private_CalculateStoreMarshalExtensionSize(storeItemPtrs)
 		end
 	end)
 
-	if next(marshalData["items"]) == nil then
+	if not marshalData["aux"] and next(marshalData["items"]) == nil then
 		return 0
 	end
 
@@ -285,7 +297,8 @@ function EEex_UDAux_Private_EndStoreMarshal()
 end
 
 function EEex_UDAux_Private_BeginStoreUnmarshal(memory, size)
-	-- Store SetResRef has not populated m_lInventory yet; keep item data until the native after-load hook.
+	-- Store SetResRef has not populated m_lInventory yet; keep decoded data until the after-load hook.
+	EEex_UDAux_Private_StoreUnmarshalAux = nil
 	EEex_UDAux_Private_StoreUnmarshalItems = {}
 
 	if memory == 0 or size == 0 then
@@ -294,12 +307,23 @@ function EEex_UDAux_Private_BeginStoreUnmarshal(memory, size)
 
 	EEex_Marshal_Private_ReadTableBundle(memory, function(handlerStr, toFill)
 		if handlerStr == "EEex_UDAux_Store" and type(toFill) == "table" then
+			EEex_UDAux_Private_StoreUnmarshalAux = toFill["aux"]
 			EEex_UDAux_Private_StoreUnmarshalItems = toFill["items"] or {}
 		end
 	end, size)
 end
 
-function EEex_UDAux_Private_OnStoreLoaded(storeItemPtrs)
+function EEex_UDAux_Private_OnStoreLoaded(store, storeItemPtrs)
+	if storeItemPtrs == nil then
+		storeItemPtrs = store
+		store = nil
+	end
+
+	local storeAux = EEex_UDAux_Private_StoreUnmarshalAux
+	if storeAux and store then
+		EEex_UDAux_Private_Import(store, storeAux)
+	end
+
 	local items = EEex_UDAux_Private_StoreUnmarshalItems
 	if not items then
 		return
@@ -314,11 +338,20 @@ function EEex_UDAux_Private_OnStoreLoaded(storeItemPtrs)
 end
 
 function EEex_UDAux_Private_EndStoreUnmarshal()
+	EEex_UDAux_Private_StoreUnmarshalAux = nil
 	EEex_UDAux_Private_StoreUnmarshalItems = nil
 end
 
-function EEex_UDAux_Private_OnStoreInventoryClear(storeItemPtrs)
+function EEex_UDAux_Private_OnStoreInventoryClear(store, storeItemPtrs)
+	if storeItemPtrs == nil then
+		storeItemPtrs = store
+		store = nil
+	end
+
 	-- This runs before the engine frees CStoreFileItem nodes, so deleting by pointer is still valid.
+	if store then
+		EEex_UDAux_Private_DeleteByLightUD(EEex_UDToLightUD(store))
+	end
 	EEex_UDAux_Private_ForEachStoreItem(storeItemPtrs, function(_, item)
 		EEex_UDAux_Private_DeleteByLightUD(EEex_UDToLightUD(item))
 	end)
