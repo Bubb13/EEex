@@ -548,6 +548,29 @@ function EEex_Sprite_GetActiveStats(sprite)
 end
 CGameSprite.getActiveStats = EEex_Sprite_GetActiveStats
 
+-- @bubb_doc { EEex_Sprite_GetWeaponStyle / instance_name=getWeaponStyle }
+--
+-- @summary:
+--
+-- Returns the given ``sprite``'s currently active weapon style, the active rank for that style, and the original
+-- rank recorded on the creature before active stat and effect modification.
+--
+-- ``style`` is the engine stat id for the active weapon style. For example, the two-weapon style is
+-- ``PROFICIENCY2WEAPON``.
+--
+-- If ``sprite`` is invalid, returns ``-1``, ``0``, and ``0`` respectively.
+--
+-- @self { sprite / type=CGameSprite }: The sprite whose weapon style is being fetched.
+--
+-- @return { type=number }: First return value; the active weapon style stat id.
+-- @return { type=number }: Second return value; the active rank for ``style`` after derived-stat effects are applied.
+-- @return { type=number }: Third return value; the original rank for ``style`` from the creature's weapon proficiency list.
+
+function EEex_Sprite_GetWeaponStyle(sprite)
+	return EEex.GetWeaponStyle(sprite)
+end
+CGameSprite.getWeaponStyle = EEex_Sprite_GetWeaponStyle
+
 -- @bubb_doc { EEex_Sprite_GetExtendedStat / instance_name=getExtendedStat }
 -- @deprecated: Use ``EEex_Sprite_GetStat()`` instead.
 -- @summary: Returns the value of the extended stat on the given ``sprite``.
