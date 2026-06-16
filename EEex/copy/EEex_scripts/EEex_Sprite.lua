@@ -564,7 +564,7 @@ CGameSprite.getActiveStats = EEex_Sprite_GetActiveStats
 --
 -- @return { type=number }: First return value; the active weapon style stat id.
 -- @return { type=number }: Second return value; the active rank for ``style`` after derived-stat effects are applied.
--- @return { type=number }: Third return value; the original rank for ``style`` from the creature's weapon proficiency list.
+-- @return { type=number }: Third return value; the original rank for ``style`` from the engine's inactive proficiency value.
 
 function EEex_Sprite_GetWeaponStyle(sprite)
 	return EEex.GetWeaponStyle(sprite)

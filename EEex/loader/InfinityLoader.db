@@ -313,6 +313,10 @@ Operations=ADD -16
 Pattern=4883EC300FB681F8100000
 Operations=ADD -22
 
+[CGameSprite::GetInactiveProficiency]
+Pattern=83F82D7728
+Operations=ADD -10
+
 [CGameSprite::GetCasterLevel]
 Pattern=48895C2418555741564883EC30
 
