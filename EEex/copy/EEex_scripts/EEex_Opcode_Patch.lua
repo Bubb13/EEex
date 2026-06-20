@@ -1318,7 +1318,7 @@
 	+-----------------------------------------------------------------------------------------------------------------------+
 	| New Opcodes #413-416 (B3 Damage Resistance Modifier)                                                                  |
 	+-----------------------------------------------------------------------------------------------------------------------+
-	|   Modify B3 extended resistance stats using op28/op401-style arithmetic.                                              |
+	|   Modify B3 extended resistance stats using op401-style arithmetic.                                                   |
 	|                                                                                                                       |
 	|   413 -> B3_RESISTSONIC                                                                                               |
 	|   414 -> B3_RESISTPOSITIVEENERGY                                                                                      |
