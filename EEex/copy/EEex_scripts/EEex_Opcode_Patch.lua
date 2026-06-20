@@ -86,6 +86,155 @@
 	--------------------------------------
 
 	--[[
+	+------------------------------------------------------------------------------------------------------------+
+	| Opcode #12                                                                                                 |
+	+------------------------------------------------------------------------------------------------------------+
+	|   Extend damage resistance, source-specific damage bonus, and combat-log feedback for B3 damage types.     |
+	|                                                                                                            |
+	|   Uses the B3 high-word masks from DMGTYPE.IDS:                                                            |
+	|       B3_SONIC          -> 0x10000000                                                                      |
+	|       B3_POSITIVEENERGY -> 0x20000000                                                                      |
+	|       B3_NEGATIVEENERGY -> 0x40000000                                                                      |
+	|       B3_DIVINE         -> 0x80000000                                                                      |
+	+------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Damage_Hook_ApplyB3DamageType(                                                          |
+	|       pEffect: CGameEffect*, pTarget: CGameSprite*, pSource: CGameSprite*, damage: int) -> uint64          |
+	|       return:                                                                                              |
+	|           ->  0 - Continue through vanilla damage resistance handling                                      |
+	|           -> !0 - High dword marks B3 handled; low dword is replacement damage                             |
+	|                                                                                                            |
+	|   [EEex.dll] EEex::Damage_Hook_GetB3DamageFeedback(pEffect: CGameEffect*) -> uint64                        |
+	|       return:                                                                                              |
+	|           ->  0 - Keep vanilla damage feedback                                                             |
+	|           -> !0 - High dword is text color; low dword is damage-name strref                                |
+	+------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	------------------------------------------------------
+	-- [EEex.dll] EEex::Damage_Hook_ApplyB3DamageType() --
+	------------------------------------------------------
+
+	local applyB3DamageTypeHookAddress = EEex_Label("Hook-CGameEffectDamage::ApplyEffect()-BeforeDamageResistance")
+	local applyB3DamageTypeVanillaResistanceAddress = applyB3DamageTypeHookAddress + 8
+	local applyB3DamageTypeAfterVanillaResistanceAddress = applyB3DamageTypeHookAddress + 0x26
+
+	-- The hook site starts with "test edi, edi; je ...; mov r8d, [r14+1Ch]".
+	-- EEex_HookBeforeRestoreWithLabels() cannot be used here because it would copy
+	-- the short conditional branch into relocated JIT code, making the branch target
+	-- relative to the JIT allocation instead of the original function.
+	--
+	-- This trampoline re-emits the overwritten vanilla branch explicitly:
+	--   * no B3 type: run the same "test/je/mov" sequence and continue in vanilla
+	--     resistance code.
+	--   * B3 type: write the C++-computed damage and jump past vanilla resistance.
+	--
+	-- The stack frame is manual rather than #MAKE_SHADOW_SPACE because nested
+	-- #SHADOW_SPACE_BOTTOM() expansion in EEex_JITNear() previously evaluated before
+	-- the macro state had an active shadow-space entry during startup.
+	local applyB3DamageTypeHook = EEex_JITNear({
+		[[
+			lea rsp, qword ptr ss:[rsp-60h]
+			mov qword ptr ss:[rsp+58h], rax
+			mov qword ptr ss:[rsp+50h], rcx
+			mov qword ptr ss:[rsp+48h], rdx
+			mov qword ptr ss:[rsp+40h], r8
+			mov qword ptr ss:[rsp+38h], r9
+			mov qword ptr ss:[rsp+30h], r10
+			mov qword ptr ss:[rsp+28h], r11
+
+			mov rcx, r14
+			mov rdx, rbx
+			mov r8, qword ptr ss:[rbp-41h]
+			mov r9d, dword ptr ds:[r14+1Ch]
+			call #L(EEex::Damage_Hook_ApplyB3DamageType)
+
+			mov qword ptr ss:[rsp+20h], rax
+			mov r11, rax
+			shr r11, 20h
+			test r11d, r11d
+			jnz b3_damage_type_handled
+
+			mov r11, qword ptr ss:[rsp+28h]
+			mov r10, qword ptr ss:[rsp+30h]
+			mov r9, qword ptr ss:[rsp+38h]
+			mov r8, qword ptr ss:[rsp+40h]
+			mov rdx, qword ptr ss:[rsp+48h]
+			mov rcx, qword ptr ss:[rsp+50h]
+			mov rax, qword ptr ss:[rsp+58h]
+			lea rsp, qword ptr ss:[rsp+60h]
+			test edi, edi
+			je #$(1)
+			mov r8d, dword ptr ds:[r14+1Ch]
+			jmp #$(2)
+
+			b3_damage_type_handled:
+			mov eax, dword ptr ss:[rsp+20h]
+			mov dword ptr ds:[r14+1Ch], eax
+			mov r11, qword ptr ss:[rsp+28h]
+			mov r10, qword ptr ss:[rsp+30h]
+			mov r9, qword ptr ss:[rsp+38h]
+			mov r8, qword ptr ss:[rsp+40h]
+			mov rdx, qword ptr ss:[rsp+48h]
+			mov rcx, qword ptr ss:[rsp+50h]
+			mov rax, qword ptr ss:[rsp+58h]
+			lea rsp, qword ptr ss:[rsp+60h]
+			jmp #$(1)
+		]],
+		{applyB3DamageTypeAfterVanillaResistanceAddress, applyB3DamageTypeVanillaResistanceAddress},
+	})
+
+	EEex_JITAt(applyB3DamageTypeHookAddress, {[[
+		jmp short ]], applyB3DamageTypeHook, [[ #ENDL
+		#REPEAT(3,nop #ENDL)
+	]]})
+
+	--------------------------------------------------------
+	-- [EEex.dll] EEex::Damage_Hook_GetB3DamageFeedback() --
+	--------------------------------------------------------
+
+	-- This label points at a real "call rel32" instruction. Do not use
+	-- EEex_HookBeforeRestoreWithLabels(): copying those call bytes into JIT keeps the
+	-- original rel32 displacement, which redirects execution into invalid memory.
+	-- EEex_HookBeforeCallWithLabels() decodes the original call target and emits a
+	-- fresh call from the JIT block.
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameEffectDamage::DisplayDamageAmount()-AfterDamageStrRefLoad"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.RDI, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(32)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+				mov rcx, rsi
+				call #L(EEex::Damage_Hook_GetB3DamageFeedback)
+
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				test rax, rax
+				jz no_b3_damage_feedback
+
+				mov edx, eax
+				shr rax, 20h
+				mov edi, eax
+				jmp b3_damage_feedback_done
+
+				no_b3_damage_feedback:
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+
+				b3_damage_feedback_done:
+				#DESTROY_SHADOW_SPACE
+			]]},
+		})
+	)
+
+	--[[
 	+------------------------------------------------------------------------------------+
 	| Opcode #146                                                                        |
 	+------------------------------------------------------------------------------------+
@@ -537,6 +686,60 @@
 		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
 		EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
 	})
+
+	--[[
+	+------------------------------------------------------------------------------------------------------------+
+	| Opcode #332                                                                                                |
+	+------------------------------------------------------------------------------------------------------------+
+	|   Extend the vanilla specific-damage modifier table to B3 damage types.                                    |
+	|                                                                                                            |
+	|   param2 -> 11 - B3_SPECIFICDAMAGEBONUSSONIC                                                               |
+	|   param2 -> 12 - B3_SPECIFICDAMAGEBONUSPOSITIVEENERGY                                                      |
+	|   param2 -> 13 - B3_SPECIFICDAMAGEBONUSNEGATIVEENERGY                                                      |
+	|   param2 -> 14 - B3_SPECIFICDAMAGEBONUSDIVINE                                                              |
+	+------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op332_TryApplyB3SpecificDamageMod(                                          |
+	|       pEffect: CGameEffect*, pSprite: CGameSprite*) -> int                                                 |
+	|       return:                                                                                              |
+	|           ->  0 - Continue through vanilla op332 handling                                                  |
+	|           -> !0 - B3 param2 handled                                                                        |
+	+------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	----------------------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_Op332_TryApplyB3SpecificDamageMod() --
+	----------------------------------------------------------------------
+
+	-- The first six bytes are ordinary non-relative instructions, so a restore hook is
+	-- safe here. The C++ hook returns nonzero only for the new B3 param2 values.
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectSpecificDamageMod::ApplyEffect()-FirstInstruction"), 0, 6, 6, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE(16)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+				call #L(EEex::Opcode_Hook_Op332_TryApplyB3SpecificDamageMod)
+
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				test eax, eax
+				#DESTROY_SHADOW_SPACE
+				jz no_b3_specific_damage_mod
+
+				mov eax, 1
+				#MANUAL_HOOK_EXIT(0)
+				ret
+
+				no_b3_specific_damage_mod:
+			]]},
+		})
+	)
 
 	--[[
 	+-----------------------------------------------------------------+
@@ -1112,6 +1315,37 @@
 	})
 
 	--[[
+	+-----------------------------------------------------------------------------------------------------------------------+
+	| New Opcodes #413-416 (B3 Damage Resistance Modifier)                                                                  |
+	+-----------------------------------------------------------------------------------------------------------------------+
+	|   Modify B3 extended resistance stats using op28/op401-style arithmetic.                                              |
+	|                                                                                                                       |
+	|   413 -> B3_RESISTSONIC                                                                                               |
+	|   414 -> B3_RESISTPOSITIVEENERGY                                                                                      |
+	|   415 -> B3_RESISTNEGATIVEENERGY                                                                                      |
+	|   416 -> B3_RESISTDIVINE                                                                                              |
+	|                                                                                                                       |
+	|   param1  -> Modification amount                                                                                      |
+	|   param2  -> Modification type: 0 (Sum), 1 (Set), 2 (Percent)                                                         |
+	+-----------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_B3DamageResistanceMod_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                                         |
+	|           ->  0 - Halt effect list processing                                                                         |
+	|           -> !0 - Continue effect list processing                                                                     |
+	+-----------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_B3DamageResistanceMod = genOpcodeDecode({
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_B3DamageResistanceMod_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	--[[
 	+-------------------------------------+
 	| [JIT] Decode switch for new opcodes |
 	+-------------------------------------+
@@ -1154,8 +1388,28 @@
 
 			_409:
 			cmp eax, 409
-			jne #L(jmp_success)
+			jne _413
 			]], EEex_EnableActionListener, [[
+
+			_413:
+			cmp eax, 413
+			jne _414
+			]], EEex_B3DamageResistanceMod, [[
+
+			_414:
+			cmp eax, 414
+			jne _415
+			]], EEex_B3DamageResistanceMod, [[
+
+			_415:
+			cmp eax, 415
+			jne _416
+			]], EEex_B3DamageResistanceMod, [[
+
+			_416:
+			cmp eax, 416
+			jne #L(jmp_success)
+			]], EEex_B3DamageResistanceMod, [[
 		]]})
 	)
 	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})

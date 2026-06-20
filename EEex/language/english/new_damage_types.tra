@@ -1,0 +1,5 @@
+// Damage type names
+@0 = ~sonic~
+@1 = ~positive energy~
+@2 = ~negative energy~
+@3 = ~divine~
