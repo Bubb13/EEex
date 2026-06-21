@@ -206,6 +206,10 @@ Pattern=48895C240855488BEC4883EC20
 [CDerivedStats::GetSpellState]
 Pattern=81FA000100007320
 
+[Hook-CDerivedStats::GetSpellState()-OutOfBoundsJmp]
+Pattern=81FA000100007320
+Operations=ADD 6
+
 [CDerivedStats::GetWizardLevelCast]
 Pattern=40534883EC200FB6C2488BD9FFC8
 
@@ -283,6 +287,9 @@ Operations=ADD -11
 [CGameEffect::DecodeEffectFromBase]
 Pattern=49895B1057
 Operations=ADD -3
+
+[CGameEffectSetSpellState::ApplyEffect]
+Pattern=4883EC2883794800
 
 [CGameObject::InControl]
 Pattern=80BAC902000001750D

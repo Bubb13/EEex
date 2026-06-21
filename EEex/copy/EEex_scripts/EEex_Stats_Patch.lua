@@ -163,6 +163,41 @@
 		})
 	)
 
+	--[[
+	+--------------------------------------------------------------------------------------------------------------+
+	| Allow engine to fetch extended spell-state values                                                            |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   * Vanilla CDerivedStats::GetSpellState() supports only SPLSTATE ids 0-255                                  |
+	|   * EEex stores ids 256-65535 in side storage rebuilt with the normal derived-stat reload lifecycle          |
+	|   * B3_STATE_DAZED is hard-mapped to B3_DAZED, so GetSpellState(1234) sees opcode 417's condition state      |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Stats_Hook_OnGettingUnknownSpellState(pStats: CDerivedStats*, nSpellStateId: uint) -> int |
+	|       return -> Whether the extended spell state is active                                                   |
+	+--------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CDerivedStats::GetSpellState()-OutOfBoundsJmp"), 5, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		EEex_FlattenTable({
+			{[[
+				#MAKE_SHADOW_SPACE
+
+				; rcx already pStats
+				; edx already nSpellStateId
+				call #L(EEex::Stats_Hook_OnGettingUnknownSpellState)
+
+				#DESTROY_SHADOW_SPACE
+				#MANUAL_HOOK_EXIT(0)
+				ret
+			]]},
+		})
+	)
+
 	EEex_EnableCodeProtection()
 
 end)()

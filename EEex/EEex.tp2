@@ -65,7 +65,7 @@ BEGIN @1 LABEL ~B3-EEex-Main~ DESIGNATED 1
 REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) @1000 // Game not supported.
 REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires the core component to be installed.
 
-	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER BEGIN
+	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER EXTSTATE SPLSTATE BEGIN
 		COPY ~EEex/patch/%file%.IDS~ ~EEex/patch~
 			COUNT_2DA_ROWS 2 rows
 			FOR (i = 0; i <= rows; ++i) BEGIN

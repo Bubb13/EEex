@@ -665,6 +665,38 @@
 		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
+	--[[
+	+--------------------------------------------------------------------------------------------------------------+
+	| Opcode #328 - support SPLSTATE ids above 255                                                                 |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   Vanilla CGameEffectSetSpellState::ApplyEffect() writes only into CDerivedStats' 256-bit spell-state array. |
+	|   EEex mirrors active-mode op328 applications whose ids are in the extended unsigned-word range.             |
+	+--------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_SetSpellState_BeforeApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) |
+	+--------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("CGameEffectSetSpellState::ApplyEffect"), 0, 8, 8, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(16)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+			; rcx already pEffect
+			; rdx already pSprite
+			call #L(EEex::Opcode_Hook_SetSpellState_BeforeApplyEffect)
+
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
 	-----------------------------------
 	--          New Opcodes          --
 	-----------------------------------
@@ -1112,6 +1144,30 @@
 	})
 
 	--[[
+	+-----------------------------------------------------------------------------------------------------------------+
+	| New Opcode #417 (Daze)                                                                                          |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   Set B3_STATE_DAZED for the effect's duration and expose its hard-coded B3_DAZED (SPLSTATE 1234) mapping.      |
+	|   Opcode 328 can expose B3_DAZED, but only opcode 417 applies the behavioral dazed condition.                   |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Daze_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int            |
+	|       return:                                                                                                   |
+	|           ->  0 - Halt effect list processing                                                                   |
+	|           -> !0 - Continue effect list processing                                                               |
+	+-----------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_Daze = genOpcodeDecode({
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_Daze_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	--[[
 	+-------------------------------------+
 	| [JIT] Decode switch for new opcodes |
 	+-------------------------------------+
@@ -1154,8 +1210,13 @@
 
 			_409:
 			cmp eax, 409
-			jne #L(jmp_success)
+			jne _417
 			]], EEex_EnableActionListener, [[
+
+			_417:
+			cmp eax, 417
+			jne #L(jmp_success)
+			]], EEex_Daze, [[
 		]]})
 	)
 	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})
