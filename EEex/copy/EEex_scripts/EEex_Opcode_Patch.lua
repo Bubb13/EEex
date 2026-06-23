@@ -128,6 +128,33 @@
 	)
 
 	--[[
+	+--------------------------------------------------------------------------------+
+	| Opcode #162                                                                    |
+	+--------------------------------------------------------------------------------+
+	|   After vanilla Remove Hold clears op109/op175, also release active op418      |
+	|   constricts on the target.                                                    |
+	+--------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_RemoveHold_ApplyEffect(pEffect: CGameEffect*,   |
+	|                                                       pSprite: CGameSprite*)   |
+	+--------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookAfterRestoreWithLabels(EEex_Label("Hook-CGameEffectRemoveHold::ApplyEffect()-OnDone"), 0, 5, 5, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE
+			mov rcx, r14 ; pEffect
+			mov rdx, rbp ; pSprite
+			call #L(EEex::Opcode_Hook_RemoveHold_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	--[[
 	+--------------------------------------------------------------------------------------------------+
 	| Opcode #214                                                                                      |
 	+--------------------------------------------------------------------------------------------------+
@@ -1112,6 +1139,41 @@
 	})
 
 	--[[
+	+-------------------------------------------------------------------------------------------------------------+
+	| New Opcode #418 (Constrict)                                                                                 |
+	+-------------------------------------------------------------------------------------------------------------+
+	|   Hold one victim per source. Victim escape checks start one round after application and repeat each round. |
+	|   Weapon hits against the source can redirect to the held victim based on param2's clamped 0..100 chance.   |
+	+-------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Constrict_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int   |
+	|       return:                                                                                               |
+	|           ->  0 - Halt effect list processing                                                               |
+	|           -> !0 - Continue effect list processing                                                           |
+	+-------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Constrict_OnRemove(pEffect: CGameEffect*, pSprite: CGameSprite*)             |
+	+-------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_Constrict = genOpcodeDecode({
+
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_Constrict_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+
+		["OnRemove"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_Constrict_OnRemove)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	--[[
 	+-------------------------------------+
 	| [JIT] Decode switch for new opcodes |
 	+-------------------------------------+
@@ -1154,8 +1216,13 @@
 
 			_409:
 			cmp eax, 409
-			jne #L(jmp_success)
+			jne _418
 			]], EEex_EnableActionListener, [[
+
+			_418:
+			cmp eax, 418
+			jne #L(jmp_success)
+			]], EEex_Constrict, [[
 		]]})
 	)
 	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})
