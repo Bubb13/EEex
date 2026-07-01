@@ -117,6 +117,44 @@
 	)
 	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CAIObjectType::Decode()-DefaultJmp"), {{0x68, CAIObjectType.sizeof}})
 
+	--[[
+	+----------------------------------------------------------------------------------------------------------------------+
+	| Implement X-CLASS.2DA wildcard class extensions                                                                      |
+	+----------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Object_Hook_ShouldTreatClassAsWildcardMatch(actualType, requestedType) -> boolean                 |
+	|       return:                                                                                                        |
+	|           -> false - Preserve the engine's native class matching path                                                |
+	|           -> true  - Treat requestedType.m_Class as matched and continue with the remaining native CAIObjectType     |
+	|                      checks for specifics, gender, alignment, instance, and name                                     |
+	+----------------------------------------------------------------------------------------------------------------------+
+	| The hook sits at the start of CAIObjectType::OfType()'s class block, after the engine has already accepted EA,       |
+	| general, and race. A positive result jumps only to the post-class continuation, so every later vanilla object field  |
+	| still has to match normally.                                                                                         |
+	+----------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CAIObjectType::OfType()-ClassCheck"), 0, 6, 6, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(40)
+
+			mov rdx, rdi                                                     ; requestedType
+			mov rcx, rbx                                                     ; actualType
+			call #L(EEex::Object_Hook_ShouldTreatClassAsWildcardMatch)
+			test al, al
+
+			#DESTROY_SHADOW_SPACE
+			jz #L(return)
+
+			#MANUAL_HOOK_EXIT(0)
+			jmp #L(Hook-CAIObjectType::OfType()-PostClassCheck)
+		]]}
+	)
+
 	EEex_EnableCodeProtection()
 
 end)()

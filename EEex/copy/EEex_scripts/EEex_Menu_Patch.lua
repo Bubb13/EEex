@@ -509,6 +509,51 @@
 		]]}
 	)
 
+	--[[
+	+------------------------------------------------------------------------------------------------------------------------------+
+	| Route native CScreenPriestSpell::CanCastPriestSpells() calls through the Lua method table when the method is overridden      |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::PriestSpell_Hook_OnCanCastPriestSpells(screen, sprite, spellListResult) -> number                         |
+	|       return:                                                                                                                |
+	|           -> final CanCastPriestSpells() result                                                                              |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	| The prologue hook stores `this` in rsi, a nonvolatile register already saved/restored by the vanilla function. The return    |
+	| hook runs before the vanilla final general-state mask check, lets the C++ helper compute the vanilla result, and then gives  |
+	| Lua a chance to replace that result by overriding CScreenPriestSpell.CanCastPriestSpells.                                    |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CScreenPriestSpell::CanCastPriestSpells()-SaveThis"), 0, 8, 8, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RSI
+		}}},
+		{[[
+			mov rsi, rcx
+		]]}
+	)
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CScreenPriestSpell::CanCastPriestSpells()-Return"), 0, 10, 10, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.RDI, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(40)
+
+			mov r8d, ebx                                                    ; spellListResult
+			mov rdx, rbp                                                    ; sprite
+			mov rcx, rsi                                                    ; screen
+			call #L(EEex::PriestSpell_Hook_OnCanCastPriestSpells)
+			mov edi, eax                                                    ; final result
+			or eax, 1                                                       ; keep ZF clear for the skipped cmove
+
+			#DESTROY_SHADOW_SPACE
+			#MANUAL_HOOK_EXIT(0)
+			jmp #L(Hook-CScreenPriestSpell::CanCastPriestSpells()-RestoreNonvolatiles)
+		]]}
+	)
+
 	EEex_EnableCodeProtection()
 
 end)()

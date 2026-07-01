@@ -123,6 +123,14 @@ Operations=ADD -6
 Pattern=415441574883EC30488BFA
 Operations=ADD -4
 
+[Hook-CAIObjectType::OfType()-ClassCheck]
+Pattern=39470C7532
+Operations=ADD 271
+
+[Hook-CAIObjectType::OfType()-PostClassCheck]
+Pattern=39470C7532
+Operations=ADD 562
+
 [CAIObjectType::Set]
 Pattern=0FB64208884108
 
@@ -533,6 +541,22 @@ Pattern=81FA000800007736
 
 [CScreenWorld::TogglePauseGame]
 Pattern=48895C241855565741564157488D6C24D9
+
+[CScreenPriestSpell::CanCastPriestSpells]
+Pattern=488BEABB01000000
+Operations=ADD -20
+
+[Hook-CScreenPriestSpell::CanCastPriestSpells()-SaveThis]
+Pattern=488BEABB01000000
+Operations=ADD 0
+
+[Hook-CScreenPriestSpell::CanCastPriestSpells()-Return]
+Pattern=85C075028BDF
+Operations=ADD 6
+
+[Hook-CScreenPriestSpell::CanCastPriestSpells()-RestoreNonvolatiles]
+Pattern=85C075028BDF
+Operations=ADD 16
 
 [CSearchBitmap::GetCost]
 Pattern=48895C242056574154415541564883EC30
