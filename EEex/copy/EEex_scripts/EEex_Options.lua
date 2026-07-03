@@ -300,7 +300,7 @@ function EEex_Options_Private_LayoutVerticalTabArea:_calculateSidebarWidth()
 	local normalPoint = normalStyle.point
 
 	for _, v in ipairs(self.tabs) do
-		local width = EEex_Options_Private_GetTextWidthHeight(normalFont, normalPoint, t(v.label))
+		local width = EEex_Options_Private_GetTextWidthHeight(normalFont, normalPoint, getUiString(v.label))
 		if width > maxWidth then
 			maxWidth = width
 		end
@@ -1495,7 +1495,7 @@ function EEex_Options_Private_TEMPLATE_KeybindButton_Action()
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButton_Tooltip()
-	return instanceId == EEex_Options_Private_KeybindFocusedInstance and t("EEex_Options_TRANSLATION_Accept") or t("EEex_Options_TRANSLATION_Reset_to_Default")
+	return instanceId == EEex_Options_Private_KeybindFocusedInstance and getUiString("EEex_Options_TRANSLATION_Accept") or getUiString("EEex_Options_TRANSLATION_Reset_to_Default")
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButton_Sequence()
@@ -1587,8 +1587,8 @@ end
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Tooltip()
 	local displayEntry = EEex_Options_Private_KeybindButtonUpDown_GetDisplayEntry()
 	local fireType = displayEntry:_getWorkingValue().fireType
-	local result = fireType and t("EEex_Options_TRANSLATION_On_Sequence_Released") or t("EEex_Options_TRANSLATION_On_Sequence_Pressed")
-	return displayEntry._option.type.lockedFireType == nil and result or result.." "..t("EEex_Options_TRANSLATION_Locked")
+	local result = fireType and getUiString("EEex_Options_TRANSLATION_On_Sequence_Released") or getUiString("EEex_Options_TRANSLATION_On_Sequence_Pressed")
+	return displayEntry._option.type.lockedFireType == nil and result or result.." "..getUiString("EEex_Options_TRANSLATION_Locked")
 end
 
 function EEex_Options_Private_TEMPLATE_KeybindButtonUpDown_Sequence()
@@ -1944,7 +1944,7 @@ function EEex_Options_Private_LayoutText:calculateLayout(left, top, right, botto
 
 	if width == nil or height == nil then
 
-		local text = self.translate and t(self.text) or self.text
+		local text = self.translate and getUiString(self.text) or self.text
 		local textWidth, textHeight = EEex_Options_Private_GetTextWidthHeight(self.font, self.point, text)
 
 		if self.action then
@@ -1973,7 +1973,7 @@ function EEex_Options_Private_LayoutText:calculateLayout(left, top, right, botto
 end
 
 function EEex_Options_Private_LayoutText:doLayout()
-	local text = self.translate and t(self.text) or self.text
+	local text = self.translate and getUiString(self.text) or self.text
 	EEex_Options_Private_CreateText(self.menuName, text, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight, {
 		["action"]          = self.action,
 		["font"]            = self.font,
@@ -2346,7 +2346,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 	local optionLabelActionCallback = function(displayEntry, instanceData)
 
 		if instanceData == highlightedTextInstanceData then
-			textAreaInstanceData.text = t("EEex_Options_TRANSLATION_Description_Hint")
+			textAreaInstanceData.text = getUiString("EEex_Options_TRANSLATION_Description_Hint")
 			highlightedTextInstanceData.color = highlightedTextInstanceData.oldColor
 			highlightedTextInstanceData = nil
 			return
@@ -2356,7 +2356,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 			highlightedTextInstanceData.color = highlightedTextInstanceData.oldColor
 		end
 
-		textAreaInstanceData.text = t(displayEntry.description)
+		textAreaInstanceData.text = getUiString(displayEntry.description)
 		instanceData.oldColor = instanceData.color
 		instanceData.color = 0xFFFFFF
 		highlightedTextInstanceData = instanceData
@@ -2611,7 +2611,7 @@ end
 ------------
 
 function EEex_Options_Private_LayoutTextArea:doLayout()
-	local text = self.translate and t(self.text) or self.text
+	local text = self.translate and getUiString(self.text) or self.text
 	local instanceData = EEex_Options_Private_CreateTextArea(self.menuName, text, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight, {
 		["extraScrollbarPad"] = self.extraScrollbarPad,
 		["padLeft"]           = self.padLeft,
@@ -4606,7 +4606,7 @@ function EEex_Options_Private_InstallButtons()
 		local startOptionsMenu = EEex_Menu_Find("START_OPTIONS")
 		if startOptionsMenu == nil then return false end
 
-		local existingButton = EEex_Options_Private_FindItemByText(escapeMenu, t("RETURN_GAME_BUTTON"))
+		local existingButton = EEex_Options_Private_FindItemByText(escapeMenu, getUiString("RETURN_GAME_BUTTON"))
 		if existingButton == nil then return false end
 
 		if EEex_Options_Private_FindItemByListTable(startOptionsMenu, OptionsButtons) == nil then
@@ -4620,7 +4620,7 @@ function EEex_Options_Private_InstallButtons()
 				local startMainMenu = EEex_Menu_Find("START_MAIN")
 				if startMainMenu == nil then return false end
 
-				local continueButton = EEex_Options_Private_FindItemByText(startMainMenu, t("CONTINUE_BUTTON"))
+				local continueButton = EEex_Options_Private_FindItemByText(startMainMenu, getUiString("CONTINUE_BUTTON"))
 				if continueButton == nil then return false end
 
 				injectCopyButton("ESC_MENU",      existingButton, 2)
@@ -4628,7 +4628,7 @@ function EEex_Options_Private_InstallButtons()
 			end
 		else
 			-- Dragonspear UI (BG:EE with SoD or EET with EET_gui)
-			local backButton = EEex_Options_Private_FindItemByText(startOptionsMenu, t("BACK_BUTTON"))
+			local backButton = EEex_Options_Private_FindItemByText(startOptionsMenu, getUiString("BACK_BUTTON"))
 			if backButton == nil then return false end
 
 			injectCopyButton("ESC_MENU",      existingButton, 2)
@@ -4769,7 +4769,7 @@ function EEex_Options_Private_SpecialSortTabs()
 	end
 
 	for i, tabEntry in ipairs(EEex_Options_Private_Tabs) do
-		local tabName = t(tabEntry.label)
+		local tabName = getUiString(tabEntry.label)
 		if #tabName >= 8 and tabName:sub(1, 8) == "Module: " then
 			firstModuleTabIndex = i
 			break
@@ -4958,7 +4958,7 @@ function EEex_Options_AddTab(label, displayEntriesProvider)
 		}
 
 		EEex_Options_Private_TabInsertIndex = EEex_Options_Private_TabInsertIndex + 1
-		EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(tab) return t(tab.label) end)
+		EEex_Utility_AlphanumericSortTable(EEex_Options_Private_Tabs, function(tab) return getUiString(tab.label) end)
 	end)
 end
 

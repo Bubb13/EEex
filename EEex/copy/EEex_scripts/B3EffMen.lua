@@ -156,7 +156,7 @@ function B3EffectMenu_Private_LaunchInfo()
 		end
 
 		local spellName = Infinity_FetchString(spellHeader.genericName)
-		if spellName == "" then spellName = t("B3EffectMenu_TRANSLATION_No_Name") end
+		if spellName == "" then spellName = getUiString("B3EffectMenu_TRANSLATION_No_Name") end
 
 		-- Skip no-icon spells (to hide behind-the-scenes spells)
 		local spellIcon = abilityData.quickSlotIcon:get()
