@@ -802,6 +802,146 @@
 	callAlterBaseWeaponDamageHook(EEex_Label("Hook-CGameSprite::Swing()-CGameSprite::Damage()-1"))
 	callAlterBaseWeaponDamageHook(EEex_Label("Hook-CGameSprite::Swing()-CGameSprite::Damage()-2"))
 
+	--[[
+	+------------------------------------------------------------------------------------------------------------------+
+	| Implement EEex_AttackOnce() - vanilla Attack() that stops after the first real attack roll                       |
+	+------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_AttackOnceGetBaseAttackRoll(sprite, target, attackRoll) -> short                  |
+	|   [EEex.dll] EEex::Sprite_Hook_AttackOnceConsumeAmmoForRoll(sprite, target, weapon, abilityNum)                  |
+	|   [EEex.dll] EEex::Sprite_Hook_AttackOnceShouldEndAction(sprite) -> boolean                                      |
+	|   [EEex.dll] EEex::Sprite_Hook_AttackOnceGetDamageRoll(sprite, target, damageRoll, useModifiers) -> int          |
+	+------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- #MAKE_SHADOW_SPACE(X) already includes the mandatory 32-byte call shadow;
+	-- X is only the extra scratch used by #SHADOW_SPACE_BOTTOM() saves.
+
+	-- di is the raw d20 result. Modify it before the engine copies it into r12
+	-- so both the displayed Roll value and the later hit math use the same base roll.
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::Hit()-AttackOnceBaseAttackRoll"), 0, 7, 7, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11, EEex_HookIntegrityWatchdogRegister.RDI,
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(16)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+			mov rcx, rbx
+			mov rdx, r14
+			movsx r8d, di
+			call #L(EEex::Sprite_Hook_AttackOnceGetBaseAttackRoll)
+			mov di, ax
+
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	local checkAttackOnceShouldEndAction = function(address, labelSuffix)
+		local assembly = [[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+			mov rcx, rbx
+			call #L(EEex::Sprite_Hook_AttackOnceShouldEndAction)
+			mov r10b, al
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			#DESTROY_SHADOW_SPACE
+
+			test r10b, r10b
+			jz attack_once_consume_ammo_]] .. labelSuffix .. [[
+
+			xor eax, eax
+			jmp #L(return_skip)
+
+			attack_once_consume_ammo_]] .. labelSuffix .. [[: #ENDL
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+			; r8/r9 are already the resolved weapon stack and ability number that
+			; CGameSprite::Hit() is about to use. Consume here so misses spend ammo
+			; too, while the later Hit() roll hook still owns AttackOnce completion.
+			mov rcx, rbx
+			mov rdx, r15
+			call #L(EEex::Sprite_Hook_AttackOnceConsumeAmmoForRoll)
+
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			#DESTROY_SHADOW_SPACE
+
+			attack_once_continue_]] .. labelSuffix .. [[: #ENDL
+		]]
+
+		EEex_HookBeforeCallWithLabels(address, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11, EEex_HookIntegrityWatchdogRegister.RDI,
+			}}},
+			{assembly}
+		)
+	end
+
+	checkAttackOnceShouldEndAction(EEex_Label("Hook-CGameSprite::Swing()-AttackOnceHitCall-1"), "1")
+	checkAttackOnceShouldEndAction(EEex_Label("Hook-CGameSprite::Swing()-AttackOnceHitCall-2"), "2")
+
+	local hookAttackOnceWeaponDamageRoll = function(address)
+
+		-- si is the constructed weapon damage roll at both hook sites. Replace it
+		-- before the common Roll formatter consumes it. The high word of eax keeps
+		-- the early modifier/detail branch enabled, so all non-roll feedback stays
+		-- vanilla even when OverrideBaseDamageRoll is 0.
+		EEex_HookBeforeRestoreWithLabels(address, 0, 5, 5, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11, EEex_HookIntegrityWatchdogRegister.RSI, EEex_HookIntegrityWatchdogRegister.R12,
+			}}},
+			{[[
+				#MAKE_SHADOW_SPACE(32)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+
+				mov rcx, rdi
+				mov rdx, r15
+				movsx r8d, si
+				mov r9d, r12d
+				call #L(EEex::Sprite_Hook_AttackOnceGetDamageRoll)
+				mov si, ax
+				shr eax, 16
+				mov r12d, eax
+
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				#DESTROY_SHADOW_SPACE
+			]]}
+		)
+	end
+
+	-- CGameSprite::Damage() has separate primary/no-launcher and launcher roll
+	-- construction paths that merge just before feedback text is formatted.
+	hookAttackOnceWeaponDamageRoll(EEex_Label("Hook-CGameSprite::Damage()-AttackOnceAfterPrimaryWeaponRoll"))
+	hookAttackOnceWeaponDamageRoll(EEex_Label("Hook-CGameSprite::Damage()-AttackOnceAfterLauncherWeaponRoll"))
+
 	EEex_EnableCodeProtection()
 
 end)()
