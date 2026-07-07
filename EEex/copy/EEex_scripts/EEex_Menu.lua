@@ -343,6 +343,12 @@ function EEex_Menu_AddTranslationLoadedListener(listener)
 	table.insert(EEex_Menu_TranslationLoadedListeners, listener)
 end
 
+EEex_Menu_Private_AfterUtilLoadedListeners = {}
+
+function EEex_Menu_AddAfterUtilLoadedListener(listener)
+	table.insert(EEex_Menu_Private_AfterUtilLoadedListeners, listener)
+end
+
 -----------
 -- Hooks --
 -----------
@@ -451,6 +457,12 @@ function EEex_Menu_LuaHook_AfterTranslationLoaded()
 	uiTranslationFile = EEex_Resource_Fetch("L_"..lang, "LUA") ~= nil and lang or nil
 
 	for _, listener in ipairs(EEex_Menu_TranslationLoadedListeners) do
+		EEex_Utility_TryIgnore(listener)
+	end
+end
+
+function EEex_Menu_LuaHook_AfterUtilLoaded()
+	for _, listener in ipairs(EEex_Menu_Private_AfterUtilLoadedListeners) do
 		EEex_Utility_TryIgnore(listener)
 	end
 end

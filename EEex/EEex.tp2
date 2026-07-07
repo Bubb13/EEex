@@ -108,6 +108,14 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires
 	COPY ~EEex/copy/EEex_scripts~ ~EEex_scripts~
 	COPY ~EEex/copy/override~ ~override~
 
+	ACTION_IF FILE_EXISTS ~data/PATCH27.BIF~ BEGIN
+		COPY ~EEex/loader/v2.7.3.0/dll~ ~.~
+		COPY ~EEex/loader/v2.7.3.0/pattern_dbs~ ~EEex_scripts/extra_pattern_dbs~
+	END ELSE BEGIN
+		COPY ~EEex/loader/v2.6.6.0/dll~ ~.~
+		COPY ~EEex/loader/v2.6.6.0/pattern_dbs~ ~EEex_scripts/extra_pattern_dbs~
+	END
+
 //////////////////////////////////////////////////////////////////////////////////
 // Enable effect menu module: LShift-on-hover to view spells affecting creature //
 //////////////////////////////////////////////////////////////////////////////////

@@ -173,10 +173,6 @@ Operations=ADD -25
 Pattern=488D4F1C
 Operations=ADD -42
 
-[CChitin::OnResizeWindow]
-Pattern=488BB110020000
-Operations=ADD -13
-
 [CContingencyList::Process]
 Pattern=41564881ECB8000000
 Operations=ADD -2
@@ -512,10 +508,6 @@ Operations=ADD -4
 [CRes::Construct]
 Pattern=66C741500000488901
 Operations=ADD -7
-
-[CRes::Demand]
-Pattern=488BD94885C97458
-Operations=ADD -6
 
 [CRes::Destruct]
 Pattern=4D39A708020000
@@ -1203,10 +1195,6 @@ Pattern=405541564883EC28
 [CProjectile::DecodeProjectile]
 Pattern=488BF24889542468
 Operations=ADD -49
-
-[CResFont::GetFont]
-Pattern=488B43584883C420
-Operations=ADD -14
 
 [CResPVR::Demand]
 Pattern=41564883EC3083795800
@@ -2057,10 +2045,6 @@ Operations=ADD 11
 Pattern=4C8D45F7488945D7
 Operations=ADD 27
 
-[Hook-CChitin::OnResizeWindow()-B3Scale]
-Pattern=488D542478488B4E20
-Operations=ADD 9
-
 [Hook-CChitin::ProcessEvents()-SDL_PollEvent()-1]
 Pattern=4889451F488BF9
 Operations=ADD 11
@@ -2718,25 +2702,13 @@ ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 Pattern=488B18EB03
 Operations=ADD 79
 
-[Hook-drawItem()-AfterEnabledCheck]
-Pattern=0F84FE250000
-Operations=ADD 6
-
 [Hook-drawItem()-CheckApplyTextHardcodedScrollbarPad]
 Pattern=48F7DB418BFC
 Operations=ADD 8
 
-[Hook-drawItem()-CheckScrollbarContentHeight]
-Pattern=0F85D1040000
-Operations=ADD 17
-
 [Hook-drawItem()-FixForcedScrollbarDivideByZero1]
 Pattern=8B4DC88B45C0
 Operations=ADD 66
-
-[Hook-drawItem()-FixForcedScrollbarDivideByZero2]
-Pattern=8B5DDC488D55E0
-Operations=ADD 10
 
 [Hook-drawTop()-HandleTransitionMenuFadeJmp]
 Pattern=488B9C2460030000

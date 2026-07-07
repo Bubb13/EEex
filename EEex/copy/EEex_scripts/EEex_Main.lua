@@ -81,7 +81,7 @@ EEex_Main_Private_Modules = {
 	EEex_DoFile("EEex_Assembly_Patch")
 
 	-- Contains Lua bindings that map engine structures to Lua
-	EEex_OpenLuaBindings("LuaBindings-v2.7.3.0", function()
+	EEex_OpenLuaBindings("LuaBindings", function()
 		-- Patches in-engine tolua functions with EEex versions.
 		-- These are required for proper bindings operation.
 		EEex_DoFile("EEex_LuaBindings_Patch")

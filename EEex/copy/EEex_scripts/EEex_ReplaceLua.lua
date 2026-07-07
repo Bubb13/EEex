@@ -7,7 +7,7 @@
 	-- Initialize EEex.dll and replace the engine's bootstrap code to make it use the external Lua state --
 	-------------------------------------------------------------------------------------------------------
 
-	EEex_InitLuaBindings("LuaBindings-v2.7.3.0")
+	EEex_InitLuaBindings("LuaBindings")
 	EEex_InitLuaBindings("EEex")
 
 	EEex_JITAt(EEex_Label("bootstrapLua"), {"jmp #L(EEex::Override_bootstrapLua)"})

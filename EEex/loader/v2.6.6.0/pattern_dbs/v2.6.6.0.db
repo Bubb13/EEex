@@ -1,0 +1,39 @@
+
+;----------------------------
+;-- Bound Engine Functions --
+;----------------------------
+
+[CChitin::OnResizeWindow]
+Pattern=48895C2420565741564883EC30
+
+[CRes::Demand]
+Pattern=488BD94885C9743F
+Operations=ADD -6
+
+;----------------------
+;-- Engine Functions --
+;----------------------
+
+[CResFont::GetFont]
+Pattern=488BD94885C9742F
+Operations=ADD -6
+
+;-----------
+;-- Hooks --
+;-----------
+
+[Hook-CChitin::OnResizeWindow()-B3Scale]
+Pattern=488D542460488B4E20
+Operations=ADD 9
+
+[Hook-drawItem()-AfterEnabledCheck]
+Pattern=0F8403260000
+Operations=ADD 6
+
+[Hook-drawItem()-CheckScrollbarContentHeight]
+Pattern=85C00F85CE040000
+Operations=ADD 19
+
+[Hook-drawItem()-FixForcedScrollbarDivideByZero2]
+Pattern=8B5DDC488D55F0
+Operations=ADD 10

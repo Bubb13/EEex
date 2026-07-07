@@ -295,3 +295,17 @@ EEex_Fix_Private_IgnoreLButtonUp = false
 function EEex_Fix_LuaHook_OnLocalMapDoubleClick()
 	EEex_Fix_Private_IgnoreLButtonUp = true
 end
+
+------------------------------------------------------------------------------------------------------------------------------
+-- v2.7.3.0 renamed `t()` to `getUiString()`. While this is a better name, doing so broke a ton of UI mods (including EEex) --
+------------------------------------------------------------------------------------------------------------------------------
+
+EEex_Menu_AddAfterUtilLoadedListener(function()
+	if t == nil then
+		-- Compat for v2.6.6.0 mods expecting t() on v2.7.3.0
+		t = getUiString
+	elseif getUiString == nil then
+		-- Compat for v2.7.3.0 mods expecting getUiString() on v2.6.6.0
+		getUiString = t
+	end
+end)
