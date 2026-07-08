@@ -2211,9 +2211,17 @@ Operations=ADD 64
 Pattern=448964242041FF92E8000000
 Operations=ADD 23
 
+[Hook-CGameEffectDamage::ApplyEffect()-BeforeDamageResistance]
+Pattern=40FEC703F0
+Operations=ADD 503
+
 [Hook-CGameEffectDamage::ApplyEffect()-StartingCalculations]
 Pattern=3881F81000007407
 Operations=ADD 56
+
+[Hook-CGameEffectDamage::DisplayDamageAmount()-AfterDamageStrRefLoad]
+Pattern=4C8D45F74533C9
+Operations=ADD 24
 
 [Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction]
 Pattern=898248130000
@@ -2234,6 +2242,14 @@ Operations=ADD -10
 [Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail]
 Pattern=F6472004
 Operations=ADD 25
+
+[Hook-CGameEffectSpecificDamageMod::ApplyEffect()-FirstInstruction]
+; FindPattern/find_pattern.py cannot generate this leaf-function entry reliably:
+; CGameEffectSpecificDamageMod::ApplyEffect() has no x64 runtime-function record,
+; and the nearest generated cross-binary pattern targets an earlier function
+; (BGEE/BG2EE 0x1401C6B20, IWDEE 0x1401C6BB0) instead of this leaf
+; (BGEE/BG2EE 0x1401C7720, IWDEE 0x1401C77B0).
+Pattern=8B412083F80B730F488D14420FB7411C660182662C0000B801000000C3
 
 [Hook-CGameEffectOverrideAnimation::ApplyEffect()-LastParam2Jmp]
 Pattern=4889742420574883EC30488BF1488BFA
