@@ -295,3 +295,116 @@ EEex_Fix_Private_IgnoreLButtonUp = false
 function EEex_Fix_LuaHook_OnLocalMapDoubleClick()
 	EEex_Fix_Private_IgnoreLButtonUp = true
 end
+
+-------------------------------------------------------------------------------------------
+-- Make sure switching weapons from the actionbar doesn't bypass the weapon requirements --
+-------------------------------------------------------------------------------------------
+
+EEex_Actionbar_AddButtonsUpdatedListener(function()
+
+	local sprite = EEex_Sprite_GetSelected() -- CGameSprite
+	if not sprite then
+		return
+	end
+
+	local array = EEex_Actionbar_GetArray() -- CInfButtonArray
+
+	local selectedWeapon = EEex_Sprite_GetSelectedWeapon(sprite).weapon -- CItem
+	local selectedLauncher = EEex_Sprite_GetSelectedWeapon(sprite).launcher or nil -- CItem
+
+	local weaponHeader = selectedWeapon.pRes.pHeader -- Item_Header_st
+	local launcherHeader = selectedLauncher and selectedLauncher.pRes.pHeader or nil -- Item_Header_st
+
+	local activeStats = EEex_Sprite_GetActiveStats(sprite) -- CDerivedStats
+	local immunitiesItemEquip = activeStats.m_cImmunitiesItemEquip -- CImmunitiesItemEquipList (op180)
+	local immunitiesItemTypeEquip = activeStats.m_cImmunitiesItemTypeEquip -- CImmunitiesItemTypeEquipList (op181)
+
+	local func = function()
+		local toCheck = {weaponHeader, launcherHeader or nil}
+		local strref = {}
+		--
+		for _, v in ipairs(toCheck) do
+			-- Check the weapon requirements and if they aren't met, unequip the weapon
+			if EEex_Sprite_GetLevels(sprite).active.average >= v.minLevelRequired then
+				if activeStats.m_nSTR >= v.minSTRRequired then
+					if activeStats.m_nSTRExtra >= v.minSTRBonusRequired then
+						if activeStats.m_nINT >= v.minINTRequired then
+							if activeStats.m_nWIS >= v.minWISRequired then
+								if activeStats.m_nDEX >= v.minDEXRequired then
+									if activeStats.m_nCON >= v.minCONRequired then
+										if activeStats.m_nCHR >= v.minCHRRequired then
+											-- cnt = cnt + 1
+										else
+											strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_CHR", "StrRef")
+										end
+									else
+										strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_CON", "StrRef")
+									end
+								else
+									strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_DEX", "StrRef")
+								end
+							else
+								strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_WIS", "StrRef")
+							end
+						else
+							strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_INT", "StrRef")
+						end
+					else
+						strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_STR", "StrRef")
+					end
+				else
+					strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_STR", "StrRef")
+				end
+			else
+				strref[#strref + 1] = EEex_Resource_2DA("ENGINEST", "STRREF_ERROR_INADEQUATE_LEVEL", "StrRef")
+			end
+		end
+		--
+		local weaponResRef = selectedWeapon.pRes.resref:get()
+		local launcherResRef = selectedLauncher and selectedLauncher.pRes.resref:get() or ""
+		EEex_Utility_IterateCPtrList(immunitiesItemEquip, function(data)
+			if string.upper(data.m_res:get()) == string.upper(weaponResRef) or string.upper(data.m_res:get()) == string.upper(launcherResRef) then
+				strref[#strref + 1] = data.m_error
+			end
+		end)
+		--
+		local weaponItemType = weaponHeader.itemType
+		local launcherItemType = launcherHeader and launcherHeader.itemType or -1
+		EEex_Utility_IterateCPtrList(immunitiesItemTypeEquip, function(data)
+			if data.m_type == weaponItemType or data.m_type == launcherItemType then
+				strref[#strref + 1] = data.m_error
+			end
+		end)
+		--
+		if #strref > 0 then
+			-- play a sound to indicate the weapon can't be equipped
+			Infinity_PlaySound("ERROR27")
+			-- display the error message(s)
+			for _, v in ipairs(strref) do
+				EEex_Sprite_DisplayTextRef(sprite, tonumber(v))
+			end
+			-- actually unequip the weapon (or, if you prefer, equip fists)
+			local unequip = EEex_Action_ParseResponseString('SelectWeaponAbility(SLOT_FIST,0)')
+			unequip:executeResponseAsAIBaseInstantly(sprite)
+			unequip:free()
+		end
+	end
+
+	for i = 0, 11 do -- Valid values are [0-11]
+
+		if array.m_buttonArray:getReference(i).m_bHighlighted == 1 then -- CInfButtonSettings
+
+			EEex_Utility_Switch(array.m_buttonTypes:get(i), {
+
+				[EEex_Actionbar_ButtonType.QUICK_WEAPON_1] = func,
+				[EEex_Actionbar_ButtonType.QUICK_WEAPON_2] = func,
+				[EEex_Actionbar_ButtonType.QUICK_WEAPON_3] = func,
+				[EEex_Actionbar_ButtonType.QUICK_WEAPON_4] = func,
+
+			}) -- no defaultCase needed: just do nothing if the button type isn't one of the quick weapon slots
+
+		end
+
+	end
+
+end)
