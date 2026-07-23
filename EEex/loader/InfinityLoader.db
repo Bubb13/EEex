@@ -1129,9 +1129,29 @@ Type=LIST
 ;-- Engine Functions --
 ;----------------------
 
+[BGGetPrivateProfileInt]
+Pattern=8987D0170000
+Operations=ADD -8, PUSH, READ DWORD, ADD, ADD 4
+
 [CBaldurEngine::OnLeftPanelButtonClick]
 Pattern=BB010000007576
 Operations=ADD -26
+
+[CChitin::GetVersionString]
+Pattern=BA080000008D4AFA
+Operations=ADD 18, PUSH, READ DWORD, ADD, ADD 4
+
+[CChitin::ParseCommandLine]
+Pattern=5357488DAC2440FFFFFF
+Operations=ADD -2
+
+[CChitin::ProcessEvents]
+Pattern=488958104889701848897820554154415541564157488D68A1
+Operations=ADD -3
+
+[CChitin::Update]
+Pattern=8BD885C00F8EBB000000
+Operations=ADD -35
 
 [CGameArea::GetTintColor]
 Pattern=40555657415541564157488BEC
@@ -1382,6 +1402,10 @@ Operations=ADD -3
 [dimmGetResObject]
 Pattern=4C892F488D55E7
 Operations=ADD -20, PUSH, READ DWORD, ADD, ADD 4
+
+[dimmResolveFileName]
+Pattern=7525488B542450
+Operations=ADD -14, PUSH, READ DWORD, ADD, ADD 4
 
 [dimmServiceFromMemory]
 Pattern=41564883EC204963E8
@@ -2057,12 +2081,20 @@ Operations=ADD -7
 ExeSwitch=1
 ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
+[Hook-CChitin::SynchronousUpdate()-CVidMode::Flip()]
+Pattern=488B8B08020000488B01FF9098010000
+Operations=ADD 78
+
 [Hook-CChitin::SynchronousUpdate()-FirstInstruction]
 Pattern=488BC4534883EC60
 
 [Hook-CChitin::Update()-FirstInstruction]
 Pattern=8BD885C00F8EBB000000
 Operations=ADD -35
+
+[Hook-CChitin::WinMain()-FirstInstruction]
+Pattern=C7804010000001000000
+Operations=ADD 23, PUSH, READ DWORD, ADD, ADD 4
 
 [Hook-CDerivedStats::Construct()-FirstCall]
 Pattern=48894C24085741544155415641574883EC20488BF1

@@ -309,6 +309,25 @@
 
 	EEex_JITAt(EEex_Label("Hook-uiDrawMenuStack()-FirstInstruction"), {"jmp #L(EEex::Override_uiDrawMenuStack)"})
 
+	--[[
+	+-------------------------------------------------------------------+
+	| No-op normal flip call so the uncap code can control when to flip |
+	+-------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CChitin::SynchronousUpdate()-CVidMode::Flip()"), {[[
+		ret
+		#REPEAT(4,nop #ENDL)
+	]]})
+
+	--[[
+	+------------------------------------------------------------------+
+	| Replace Chitin::WinMain() to gain greater control over game loop |
+	+------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CChitin::WinMain()-FirstInstruction"), {"jmp #L(CChitin::Override_WinMain)"})
+
 	EEex_EnableCodeProtection()
 
 end)()

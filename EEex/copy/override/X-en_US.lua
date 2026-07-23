@@ -202,6 +202,16 @@ Higher values improve frame pacing at the cost of increased CPU usage.
 A value of '0' disables yielding. Don't use this unless you are playing on an extremely low-power device.
 ]]
 
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_FullscreenVRR"] = "Fullscreen Variable Refresh Rate Hint"
+
+uiStrings["EEex_Options_TRANSLATION_UncapFPS_FullscreenVRR_Description"] = [[
+Hints to the uncapped FPS system that the graphics driver will enable variable refresh rate when the game is in full screen mode.
+
+This automatically changes the game loop to better handle VRR.
+
+Enabling this option when VRR is *not* enabled on your system will have detrimental effects.
+]]
+
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_LuaGCSteps"] = "Lua Garbage Collection Steps"
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_LuaGCSteps_Description"] = [[

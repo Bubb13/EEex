@@ -89,6 +89,8 @@ EEex_Main_Private_Modules = {
 
 	-- Contains EEex's C++ functionality
 	EEex_OpenLuaBindings("EEex")
+	EEex.OnTargetExecutableInitialized()
+
 	EEex_DoFile("EEex_HookIntegrityWatchdog")
 
 	-- Defines aliases for EEex functions to preserve API compatibility if internal names change

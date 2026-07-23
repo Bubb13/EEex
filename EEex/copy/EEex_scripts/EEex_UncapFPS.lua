@@ -43,6 +43,14 @@ EEex_Options_Register("EEex_UncapFPS_FPSLimitBusyWaitThreshold", EEex_Options_Op
 	["onChange"] = function(self, oldValue) EEex.UncapFPS_BusyWaitThreshold = self:get() end,
 }))
 
+EEex_Options_Register("EEex_UncapFPS_FullscreenVRR", EEex_Options_Option.new({
+	["default"]  = 0,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Uncap FPS Fullscreen VRR" }),
+	["onChange"] = function(self, oldValue) EEex.UncapFPS_FullscreenVRR = self:get() end,
+}))
+
 EEex_Options_Register("EEex_UncapFPS_LuaGCSteps", EEex_Options_Option.new({
 	["default"]  = EEex.UncapFPS_LuaGCSteps,
 	["type"]     = EEex_Options_EditType.new(),
@@ -110,6 +118,12 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_UncapFPS_TabTitle", function() ret
 				["maxCharacters"] = 4,
 				["number"] = true,
 			}),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "EEex_UncapFPS_FullscreenVRR",
+			["label"]       = "EEex_Options_TRANSLATION_UncapFPS_FullscreenVRR",
+			["description"] = "EEex_Options_TRANSLATION_UncapFPS_FullscreenVRR_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
 			["optionID"]    = "EEex_UncapFPS_LuaGCSteps",
@@ -449,3 +463,223 @@ function EEex_UncapFPS_LuaHook_OnAfterDrawInit()
 	if EEex_UncapFPS_Private_VSyncEnabled:get() ~= 0 then return end
 	EEex.SetVSyncEnabled(false, false)
 end
+
+--------------------
+-- Initialization --
+--------------------
+
+-- EEex_Utility_NewScope(function()
+
+-- 	local vmLookingForCall = EEex_Label("CString::Format")
+
+-- 	--=-=-=-=-=-=-=-=-==
+-- 	-- START Register ==
+-- 	--=-=-=-=-=-=-=-=-==
+
+-- 	Register = {}
+-- 	Register.__index = Register
+
+-- 	--////////////
+-- 	--// Static //
+-- 	--////////////
+
+-- 	Register.new = function(initialValue)
+-- 		local o = {}
+-- 		setmetatable(o, Register)
+-- 		o:_init(initialValue)
+-- 		return o
+-- 	end
+
+-- 	--//////////////
+-- 	--// Instance //
+-- 	--//////////////
+
+-- 	-------------
+-- 	-- Private --
+-- 	-------------
+
+-- 	function Register:_init(initialValue)
+-- 		EEex_Utility_CallSuper(Register, "_init", self)
+-- 		self._value = initialValue or 0
+-- 	end
+
+-- 	------------
+-- 	-- Public --
+-- 	------------
+
+-- 	function Register:add(toAdd)
+-- 		local newValue = self._value + toAdd
+-- 		self._value = newValue
+-- 		return newValue
+-- 	end
+
+-- 	function Register:get()
+-- 		return self._value
+-- 	end
+
+-- 	function Register:getDword()
+-- 		return EEex_BAnd(self._value, 0xFFFFFFFF)
+-- 	end
+
+-- 	function Register:set(newValue)
+-- 		self._value = newValue
+-- 		return newValue
+-- 	end
+
+-- 	function Register:setDword(value)
+-- 		local newValue = EEex_BOr(EEex_BAnd(self._value, 0xFFFFFFFF00000000), value)
+-- 		self._value = newValue
+-- 		return newValue
+-- 	end
+
+-- 	--=-=-=-=-=-=-=-==
+-- 	-- END Register ==
+-- 	--=-=-=-=-=-=-=-==
+
+-- 	local vmRegisterRax = Register.new()
+-- 	local vmRegisterRbx = Register.new()
+-- 	local vmRegisterRcx = Register.new()
+-- 	local vmRegisterRdx = Register.new()
+-- 	local vmRegisterRsp = Register.new()
+-- 	local vmRegisterR8  = Register.new()
+-- 	local vmRegisterR9  = Register.new()
+-- 	local vmRegisterRip = Register.new(EEex_Label("CChitin::GetVersionString"))
+-- 	local vmStack = {}
+
+-- 	local vmReadImmediateByte = function()
+-- 		local vmRegisterRipValue = vmRegisterRip:get()
+-- 		vmRegisterRip:set(vmRegisterRipValue + 1)
+-- 		return EEex_ReadU8(vmRegisterRipValue)
+-- 	end
+
+-- 	local vmReadSignedImmediateDword = function()
+-- 		local vmRegisterRipValue = vmRegisterRip:get()
+-- 		vmRegisterRip:set(vmRegisterRipValue + 4)
+-- 		return EEex_Read32(vmRegisterRipValue)
+-- 	end
+
+-- 	local vmResolveImmediateRelativeDword = function()
+-- 		local vmReadOffset = vmReadSignedImmediateDword()
+-- 		return vmRegisterRip:get() + vmReadOffset
+-- 	end
+
+-- 	local vmReadImmediateRelativeDword = function()
+-- 		return EEex_ReadU32(vmResolveImmediateRelativeDword())
+-- 	end
+
+-- 	local vmReadImmediateRelativeQword = function()
+-- 		return EEex_ReadU64(vmResolveImmediateRelativeDword())
+-- 	end
+
+-- 	local vmOpcodeSwitch = {
+-- 		[0x40] = {
+-- 			-- push rbx
+-- 			[0x53] = function()
+-- 				vmStack[vmRegisterRsp:add(-4)] = vmRegisterRbx:get()
+-- 			end,
+-- 		},
+-- 		[0x44] = {
+-- 			[0x8B] = {
+-- 				-- mov r8d, dword ptr ds:[<relative dword>]
+-- 				[0x05] = function()
+-- 					vmRegisterR8:setDword(vmReadImmediateRelativeDword())
+-- 				end,
+-- 				-- mov r9d, dword ptr ds:[<relative dword>]
+-- 				[0x0D] = function()
+-- 					vmRegisterR9:setDword(vmReadImmediateRelativeDword())
+-- 				end,
+-- 			},
+-- 		},
+-- 		[0x48] = {
+-- 			[0x83] = {
+-- 				-- sub rsp, <byte>
+-- 				[0xEC] = function()
+-- 					vmRegisterRsp:add(-vmReadImmediateByte())
+-- 				end,
+-- 			},
+-- 			[0x89] = {
+-- 				-- mov qword ptr ds:[rcx], rax
+-- 				[0x01] = function()
+-- 					-- Ignored
+-- 				end,
+-- 			},
+-- 			[0x8B] = {
+-- 				-- mov rax, qword ptr ds:[<relative dword>]
+-- 				[0x05] = function()
+-- 					vmRegisterRax:set(vmReadImmediateRelativeQword())
+-- 				end,
+-- 				-- mov rbx, rcx
+-- 				[0xD9] = function()
+-- 					vmRegisterRbx:set(vmRegisterRcx:get())
+-- 				end,
+-- 			},
+-- 			[0x8D] = {
+-- 				-- lea rdx, qword ptr ds:[<relative dword>]
+-- 				[0x15] = function()
+-- 					vmRegisterRdx:set(vmResolveImmediateRelativeDword())
+-- 				end,
+-- 			},
+-- 		},
+-- 		[0x89] = {
+-- 			[0x44] = {
+-- 				-- mov dword ptr ss:[rsp+<byte>], eax
+-- 				[0x24] = function()
+-- 					vmStack[vmRegisterRsp:get() + vmReadImmediateByte()] = vmRegisterRax:getDword()
+-- 				end,
+-- 			},
+-- 		},
+-- 		[0x8B] = {
+-- 			-- mov eax, dword ptr ds:[<relative dword>]
+-- 			[0x05] = function()
+-- 				vmRegisterRax:setDword(vmReadImmediateRelativeDword())
+-- 			end,
+-- 		},
+-- 		-- call <relative dword>
+-- 		[0xE8] = function()
+
+-- 			local vmCallTarget = vmResolveImmediateRelativeDword()
+
+-- 			if vmCallTarget == vmLookingForCall then
+
+-- 				local vmRegisterRspValue = vmRegisterRsp:get()
+
+-- 				local nVersionMajor  = vmRegisterR8:get()
+-- 				local nVersionMinor  = vmRegisterR9:get()
+-- 				local nVersionPatch  = vmStack[vmRegisterRspValue + 0x20]
+-- 				local nVersionHotfix = vmStack[vmRegisterRspValue + 0x28]
+
+-- 				print(string.format("nVersionMajor: 0x%X, nVersionMinor: 0x%X, nVersionPatch: 0x%X, nVersionHotfix: 0x%X",
+-- 					nVersionMajor, nVersionMinor, nVersionPatch, nVersionHotfix))
+
+-- 				return true
+-- 			end
+-- 		end,
+-- 	}
+
+-- 	local vmCurOpcodeSwitch = vmOpcodeSwitch
+-- 	local vmCurInstructionOpcodeLength = 0
+
+-- 	while true do
+
+-- 		vmCurInstructionOpcodeLength = vmCurInstructionOpcodeLength + 1
+
+-- 		local vmRegisterRipValue = vmRegisterRip:get()
+-- 		local vmOpcode = EEex_ReadU8(vmRegisterRipValue)
+-- 		local vmCurResolvedOpcode = vmCurOpcodeSwitch[vmOpcode]
+-- 		local vmCurResolvedOpcodeType = type(vmCurResolvedOpcode)
+
+-- 		if vmCurResolvedOpcodeType == "table" then
+-- 			vmRegisterRip:set(vmRegisterRipValue + 1)
+-- 			vmCurOpcodeSwitch = vmCurResolvedOpcode
+-- 		elseif vmCurResolvedOpcodeType == "function" then
+-- 			vmRegisterRip:set(vmRegisterRipValue + 1)
+-- 			if vmCurResolvedOpcode() then
+-- 				break
+-- 			end
+-- 			vmCurOpcodeSwitch = vmOpcodeSwitch
+-- 			vmCurInstructionOpcodeLength = 0
+-- 		else
+-- 			EEex_Error(string.format("Unhandled vmCurResolvedOpcode at [0x%X]: 0x%X", vmRegisterRipValue, vmOpcode))
+-- 		end
+-- 	end
+-- end)
