@@ -6,7 +6,7 @@ call "%~dp0..\ModPackaging\utilities\ie_games.bat"
 
 REM /* MODIFY: set the values of the 3 variables below to reflect the current mod version */
 set "mod_name=EEex"
-set "mod_version=v1.1.0"
+set "mod_version=v1.1.1"
 set mod_folder=EEex
 
 REM /* MODIFY: list here which IE games the mod is compatible with, from this list of possibilities: */
