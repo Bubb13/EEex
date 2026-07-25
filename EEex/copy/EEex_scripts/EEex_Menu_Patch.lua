@@ -496,15 +496,25 @@
 	+-----------------------------------------------------------------------------------------------+
 	--]]
 
-	EEex_HookNOPsWithLabels(EEex_Label("Hook-drawItem()-CheckApplyTextHardcodedScrollbarPad"), 1, {
+	-- v2.6 and v2.7 store the UI item's SDL_Rect area in different stack locations.
+	-- Have to look up the offset dynamically by parsing a surrounding instruction.
+	local paddingHookStart = EEex_Label("Hook-drawItem()-CheckApplyTextHardcodedScrollbarPad")
+
+	if EEex_ReadU8(paddingHookStart + 0x3) ~= 0x29 or EEex_ReadU8(paddingHookStart + 0x4) ~= 0x45 then
+		EEex_Error("Unexpected instruction when reading stack offset for [Hook-drawItem()-CheckApplyTextHardcodedScrollbarPad]")
+	end
+
+	local itemAreaOffsetFromRbp = EEex_Read8(paddingHookStart + 0x5) - EEex_OffsetOf("SDL_Rect.w")
+
+	EEex_HookNOPsWithLabels(paddingHookStart, 1, {
 		{"hook_integrity_watchdog_ignore_registers", {
 			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
 			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
 			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
-			mov rcx, r15                                        ; pItem
-			lea rdx, qword ptr ss:[rbp+0x10]                    ; pItemArea
+			mov rcx, r15                                                      ; pItem
+			lea rdx, qword ptr ss:[rbp+#$(1)] ]], {itemAreaOffsetFromRbp}, [[ ; pItemArea
 			call #L(EEex::Menu_Hook_CheckApplyTextScrollbarPad)
 		]]}
 	)
