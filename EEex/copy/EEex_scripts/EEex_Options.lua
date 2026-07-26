@@ -2371,12 +2371,13 @@ function EEex_Options_Private_LayoutOptionsPanel:_buildLayout()
 			EEex_Options_Private_LayoutSeparator.new({ ["menuName"] = self.menuName, ["width"] = 2 }),
 			EEex_Options_Private_LayoutFixed.new({ ["width"] = EEex_Options_Private_SeparatorPad }),
 			EEex_Options_Private_LayoutTextArea.new({
-				["menuName"]          = self.menuName,
-				["text"]              = "EEex_Options_TRANSLATION_Description_Hint",
-				["translate"]         = true,
-				["width"]             = 250,
-				["extraScrollbarPad"] = EEex_Options_Private_SeparatorPad,
-				["layoutCallback"]    = function(instanceData) textAreaInstanceData = instanceData end,
+				["menuName"]              = self.menuName,
+				["text"]                  = "EEex_Options_TRANSLATION_Description_Hint",
+				["translate"]             = true,
+				["width"]                 = 250,
+				["extraScrollbarPad"]     = EEex_Options_Private_SeparatorPad,
+				["scrollbarPadCollapses"] = true,
+				["layoutCallback"]        = function(instanceData) textAreaInstanceData = instanceData end,
 			})
 			:inset({ ["insetTop"] = 5, ["insetRight"] = 5, ["insetBottom"] = 5 }),
 		},
@@ -2613,11 +2614,12 @@ end
 function EEex_Options_Private_LayoutTextArea:doLayout()
 	local text = self.translate and getUiString(self.text) or self.text
 	local instanceData = EEex_Options_Private_CreateTextArea(self.menuName, text, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight, {
-		["extraScrollbarPad"] = self.extraScrollbarPad,
-		["padLeft"]           = self.padLeft,
-		["padTop"]            = self.padTop,
-		["padRight"]          = self.padRight,
-		["padBottom"]         = self.padBottom,
+		["extraScrollbarPad"]     = self.extraScrollbarPad,
+		["padLeft"]               = self.padLeft,
+		["padTop"]                = self.padTop,
+		["padRight"]              = self.padRight,
+		["padBottom"]             = self.padBottom,
+		["scrollbarPadCollapses"] = self.scrollbarPadCollapses,
 	})
 	self.layoutCallback(instanceData)
 end
@@ -3947,11 +3949,12 @@ function EEex_Options_Private_CreateTextArea(menuName, text, x, y, w, h, extraAr
 	local pad = uiItem.pad
 
 	if extraArgs == nil then extraArgs = {} end
-	if extraArgs.extraScrollbarPad ~= nil then uiItem:setExtraScrollbarPad(extraArgs.extraScrollbarPad) end
-	if extraArgs.padLeft           ~= nil then pad.x = extraArgs.padLeft                                end
-	if extraArgs.padTop            ~= nil then pad.y = extraArgs.padTop                                 end
-	if extraArgs.padRight          ~= nil then pad.w = extraArgs.padRight                               end
-	if extraArgs.padBottom         ~= nil then pad.h = extraArgs.padBottom                              end
+	if extraArgs.extraScrollbarPad     ~= nil then uiItem:setExtraScrollbarPad(extraArgs.extraScrollbarPad)         end
+	if extraArgs.padLeft               ~= nil then pad.x = extraArgs.padLeft                                        end
+	if extraArgs.padTop                ~= nil then pad.y = extraArgs.padTop                                         end
+	if extraArgs.padRight              ~= nil then pad.w = extraArgs.padRight                                       end
+	if extraArgs.padBottom             ~= nil then pad.h = extraArgs.padBottom                                      end
+	if extraArgs.scrollbarPadCollapses ~= nil then uiItem:setScrollbarPadCollapses(extraArgs.scrollbarPadCollapses) end
 
 	return instanceData
 end

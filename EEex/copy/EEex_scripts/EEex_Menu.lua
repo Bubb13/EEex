@@ -1,4 +1,27 @@
 
+--===========
+-- Options ==
+--===========
+
+EEex_Options_Register("EEex_Menu_UniversalScrollbarPadCollapsing", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Universal Scrollbar Pad Collapsing" }),
+	["onChange"] = function(self, oldValue) EEex.Menu_UniversalScrollbarPadCollapsing = self:get() end,
+}))
+
+EEex_Options_AddTab("EEex_Options_TRANSLATION_Menu_TabTitle", function() return {
+	{
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "EEex_Menu_UniversalScrollbarPadCollapsing",
+			["label"]       = "EEex_Options_TRANSLATION_Menu_UniversalScrollbarPadCollapsing",
+			["description"] = "EEex_Options_TRANSLATION_Menu_UniversalScrollbarPadCollapsing_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
+	},
+} end)
+
 -----------------------
 -- General Functions --
 -----------------------
@@ -277,6 +300,11 @@ function EEex_Menu_SetItemExtraScrollbarPad(uiItem, value)
 	EEex.SetUIItemExtraScrollbarPad(uiItem, value)
 end
 uiItem.setExtraScrollbarPad = EEex_Menu_SetItemExtraScrollbarPad
+
+function EEex_Menu_SetItemScrollbarPadCollapses(uiItem, value)
+	EEex.SetUIItemScrollbarPadCollapses(uiItem, value)
+end
+uiItem.setScrollbarPadCollapses = EEex_Menu_SetItemScrollbarPadCollapses
 
 ---------------
 -- Listeners --

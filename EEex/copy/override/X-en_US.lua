@@ -1,4 +1,18 @@
 
+----------
+-- Menu --
+----------
+
+uiStrings["EEex_Options_TRANSLATION_Menu_TabTitle"] = "Menu"
+
+uiStrings["EEex_Options_TRANSLATION_Menu_UniversalScrollbarPadCollapsing"] = "Universal Scrollbar Pad Collapsing"
+
+uiStrings["EEex_Options_TRANSLATION_Menu_UniversalScrollbarPadCollapsing_Description"] = [[
+Automatically collapses the hardcoded 16 pixel padding on the right side of text when a scrollbar graphic is hidden.
+
+Some UI mods expect this padding to be applied regardless of the scrollbar state. Disabling this option will fix relevant instances of misaligned text.
+]]
+
 ----------------------------
 -- Miscellaneous Keybinds --
 ----------------------------
