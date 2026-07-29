@@ -542,7 +542,6 @@ Pattern=33C06685D2
 
 [CSound::Construct]
 ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [CSound::Destruct]
 Pattern=488B8D30110000
@@ -581,7 +580,6 @@ Operations=ADD -14, PUSH, READ DWORD, ADD, ADD 4
 
 [CTlkTable::Fetch]
 ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [CVariable::Construct]
 Pattern=40534883EC2041B820000000
@@ -632,7 +630,6 @@ Pattern=488B09488B12
 
 [OpenIniFile]
 ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [SDL_GetDisplayForWindow]
 Pattern=488D044048C1E005
@@ -817,7 +814,6 @@ Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 
 [lang]
 ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [menuLength]
 Pattern=3D020400000F8556010000
@@ -2079,7 +2075,6 @@ Operations=ADD -7
 
 [Hook-CChitin::ShutDown()-FirstInstruction]
 ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [Hook-CChitin::SynchronousUpdate()-CVidMode::Flip()]
 Pattern=488B8B08020000488B01FF9098010000
@@ -2688,7 +2683,6 @@ Operations=ADD -100
 
 [Hook-OpenIniFile()-_wfopen()]
 ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [Hook-RenderListCallback()-drawItem()]
 Pattern=448BCB4C896C2420
@@ -2731,7 +2725,6 @@ Operations=ADD 67
 
 [Hook-dimmInit()-uiLoadMenu()]
 ExeSwitch=1
-ExeSwitchAlias=SiegeOfDragonspear.exe:Baldur.exe
 
 [Hook-dimmInit-uiDoFile()]
 Pattern=488B18EB03
