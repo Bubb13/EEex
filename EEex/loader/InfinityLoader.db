@@ -2573,6 +2573,9 @@ Operations=ADD 16
 [Hook-CInfinity::Scroll()-FirstInstruction]
 Pattern=4889542410555356574154415541564157488BEC
 
+[Hook-CInfinity::SetScreenShake()-FirstInstruction]
+Pattern=89916C040000
+
 [Hook-CInfinity::SetScrollDest()-FirstInstruction]
 Pattern=488BD948898100030000
 Operations=ADD -9

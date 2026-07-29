@@ -228,13 +228,16 @@
 	EEex_JITAt(EEex_Label("Hook-CScreenWorld::EndDialog()-FirstInstruction"), {"jmp #L(CScreenWorld::Override_EndDialog)"})
 
 	--[[
-	+-------------------------------------------------------------------------------+
-	| Fix duration of screen shakes (e.g. from critical hits) with uncapped fps     |
-	+-------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::UncapFPS_Hook_HandleScreenShake(pInfinity: CInfinity*)     |
-	|   [EEex.dll] EEex::UncapFPS_Hook_HandleScreenShakePost(pInfinity: CInfinity*) |
-	+-------------------------------------------------------------------------------+
+	+-----------------------------------------------------------------------------------------------------------------+
+	| Fix duration of screen shakes (e.g. from critical hits) with uncapped fps                                       |
+	+-----------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] CInfinity::Override_SetScreenShake(bScreenShake: int, duration: ushort, screenShakeDelta: CPoint*) |
+	|   [EEex.dll] EEex::UncapFPS_Hook_HandleScreenShake(pInfinity: CInfinity*)                                       |
+	|   [EEex.dll] EEex::UncapFPS_Hook_HandleScreenShakePost(pInfinity: CInfinity*)                                   |
+	+-----------------------------------------------------------------------------------------------------------------+
 	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CInfinity::SetScreenShake()-FirstInstruction"), {"jmp #L(CInfinity::Override_SetScreenShake)"})
 
 	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CInfinity::Render()-HandleScreenShakeJmp"), 0, {
 		{"hook_integrity_watchdog_ignore_registers", {
