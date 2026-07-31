@@ -331,6 +331,14 @@
 
 	EEex_JITAt(EEex_Label("Hook-CChitin::WinMain()-FirstInstruction"), {"jmp #L(CChitin::Override_WinMain)"})
 
+	--[[
+	+--------------------------------------------------------------------------+
+	| Fix black flicker when a quick save / auto save occurs with uncapped fps |
+	+--------------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-DrawReadPixels()-FirstInstruction"), {"jmp #L(EEex::Override_DrawReadPixels)"})
+
 	EEex_EnableCodeProtection()
 
 end)()

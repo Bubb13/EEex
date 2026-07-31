@@ -1327,6 +1327,14 @@ Operations=ADD 16, PUSH, READ DWORD, ADD, ADD 4
 Pattern=4883EC300F1001
 Operations=ADD -2
 
+[DrawReadPixels_DX]
+Pattern=48898424900000004C8BB424F0000000
+Operations=ADD -2
+
+[DrawReadPixels_GL]
+Pattern=4883EC40418BD9
+Operations=ADD -16
+
 [DrawTexCoord]
 Pattern=448B742420418BC6
 Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
@@ -2664,6 +2672,10 @@ Pattern=48895C2408488974241855574156
 
 [Hook-CVisibilityMap::UpDate()-FirstInstruction]
 Pattern=48895C2408488974242055574154
+
+[Hook-DrawReadPixels()-FirstInstruction]
+Pattern=8B9754010000448B4E0C
+Operations=ADD 37, PUSH, READ DWORD, ADD, ADD 4
 
 [Hook-Infinity_DestroyAnimation()-TemplateMenuOverride]
 Pattern=0F848D000000488B4808
