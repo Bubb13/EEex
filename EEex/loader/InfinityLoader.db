@@ -1329,7 +1329,7 @@ Operations=ADD -2
 
 [DrawReadPixels_DX]
 Pattern=48898424900000004C8BB424F0000000
-Operations=ADD -2
+Operations=ADD -24
 
 [DrawReadPixels_GL]
 Pattern=4883EC40418BD9
