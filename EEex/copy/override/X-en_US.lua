@@ -191,16 +191,12 @@ uiStrings["EEex_Options_TRANSLATION_UncapFPS_EnableFPSLimit"] = "Enable FPS Limi
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_EnableFPSLimit_Description"] = [[
 Enables the "FPS Limit" option.
-
-For a smoother experience, leave this option disabled, and either enable VSync or limit the game's FPS through your graphics driver settings.
 ]]
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimit"] = "FPS Limit"
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimit_Description"] = [[
 Limits the uncapped FPS to the given value.
-
-This cannot lower the FPS below the "AI Speed" option.
 ]]
 
 uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimitBusyWaitThreshold"] = "FPS Limit Busy Wait Threshold"
@@ -209,7 +205,7 @@ uiStrings["EEex_Options_TRANSLATION_UncapFPS_FPSLimitBusyWaitThreshold_Descripti
 If the next frame is scheduled within this number of milliseconds, the engine busy-waits
 instead of yielding the CPU.
 
-Only active when the "Enable FPS Uncap" and "Enable FPS Limit" options are in effect.
+Only takes effect when the "Enable FPS Uncap" option is enabled.
 
 Higher values improve frame pacing at the cost of increased CPU usage.
 
