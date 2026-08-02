@@ -82,11 +82,11 @@
 	)
 
 	--[[
-	+--------------------------------------------------------------------------------------------------+
-	| Flush coalesced lists-resolved listeners near the end of the sprite's real AI processing pass    |
-	+--------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Opcode_Hook_FlushDeferredAfterListsResolved(pSprite: CGameSprite*)            |
-	+--------------------------------------------------------------------------------------------------+
+	+-----------------------------------------------------------------------------------------------+
+	| Flush coalesced lists-resolved listeners near the end of the sprite's real AI processing pass |
+	+-----------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_FlushDeferredAfterListsResolved(pSprite: CGameSprite*)         |
+	+-----------------------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::ProcessAI()-BeforeReturn"), 0, 8, 8, {
@@ -96,7 +96,7 @@
 			EEex_HookIntegrityWatchdogRegister.R11
 		}}},
 		{[[
-			mov rcx, rsi                                  ; pSprite
+			mov rcx, rsi                                               ; pSprite
 			call #L(EEex::Opcode_Hook_FlushDeferredAfterListsResolved)
 		]]}
 	)
