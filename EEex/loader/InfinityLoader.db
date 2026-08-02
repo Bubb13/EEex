@@ -2392,6 +2392,10 @@ Operations=ADD 51
 Pattern=0FB7974C4B0000
 Operations=ADD 121
 
+[Hook-CGameSprite::ProcessAI()-BeforeReturn]
+Pattern=4C8BBC24680100004C8BAC2460010000
+Operations=ADD 0
+
 [Hook-CGameSprite::ProcessEffectList()-AfterListsResolved-1]
 Pattern=837D8C00
 Operations=ADD 20

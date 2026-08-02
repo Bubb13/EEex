@@ -6,9 +6,20 @@
 EEex_Opcode_ListsResolvedListeners = {}
 
 function EEex_Opcode_AddListsResolvedListener(func)
+	-- This legacy listener is called immediately after each engine effect-list
+	-- resolution. High-volume callers, such as item comparison, should use
+	-- EEex_Opcode_AddDeferredListsResolvedListener() instead.
 	-- [EEex.dll]
 	EEex.Opcode_LuaHook_AfterListsResolved_Enabled = true
 	table.insert(EEex_Opcode_ListsResolvedListeners, func)
+end
+
+EEex_Opcode_DeferredListsResolvedListeners = {}
+
+function EEex_Opcode_AddDeferredListsResolvedListener(func)
+	-- [EEex.dll]
+	EEex.Opcode_LuaHook_DeferredAfterListsResolved_Enabled = true
+	table.insert(EEex_Opcode_DeferredListsResolvedListeners, func)
 end
 
 -----------------------
@@ -125,6 +136,12 @@ end
 
 function EEex_Opcode_LuaHook_AfterListsResolved(sprite)
 	for _, func in ipairs(EEex_Opcode_ListsResolvedListeners) do
+		EEex_Utility_TryIgnore(func, sprite)
+	end
+end
+
+function EEex_Opcode_LuaHook_DeferredAfterListsResolved(sprite)
+	for _, func in ipairs(EEex_Opcode_DeferredListsResolvedListeners) do
 		EEex_Utility_TryIgnore(func, sprite)
 	end
 end
