@@ -2376,6 +2376,10 @@ Operations=ADD 10
 Pattern=488D4DD08D7801
 Operations=ADD 18
 
+[Hook-CGameSprite::Hit()-AttackOnceBaseAttackRoll]
+Pattern=488D4DD08D7801
+Operations=ADD 7
+
 [Hook-CGameSprite::Hit()-MeleeingWithRangedPenalty]
 Pattern=2BF90FAFC0
 Operations=ADD 9
@@ -2471,6 +2475,22 @@ Operations=ADD 55
 [Hook-CGameSprite::Swing()-CGameSprite::Damage()-2]
 Pattern=498D57304C8B442470
 Operations=ADD 49
+
+[Hook-CGameSprite::Damage()-AttackOnceAfterLauncherWeaponRoll]
+Pattern=75D0448B642444
+Operations=ADD 52
+
+[Hook-CGameSprite::Damage()-AttackOnceAfterPrimaryWeaponRoll]
+Pattern=75D0448B6C2458
+Operations=ADD 56
+
+[Hook-CGameSprite::Swing()-AttackOnceHitCall-1]
+Pattern=488D442460488B7C2458
+Operations=ADD 31
+
+[Hook-CGameSprite::Swing()-AttackOnceHitCall-2]
+Pattern=488D4424604C8B642458
+Operations=ADD 31
 
 [Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee]
 Pattern=0F85B5070000
