@@ -2271,6 +2271,10 @@ Operations=ADD -43
 Pattern=488D8FC81C0000
 Operations=ADD 20
 
+[Hook-CGameEffectRemoveHold::ApplyEffect()-OnDone]
+Pattern=33F6488BD841BE01000000
+Operations=ADD -8
+
 [Hook-CGameEffectSaveVsDeath::ApplyEffect()-ImmediateSaveWriteOffset]
 Pattern=0F852E0100000FB687AC050000
 Operations=ADD -8
