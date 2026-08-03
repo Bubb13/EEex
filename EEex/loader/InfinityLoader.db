@@ -2275,6 +2275,22 @@ Operations=ADD -43
 Pattern=488D8FC81C0000
 Operations=ADD 20
 
+[Hook-CGameEffectRememorizeSpell::ApplyEffect()-MageAfterLevelDecrement]
+Pattern=0F8FEEFEFFFFE95B010000
+Operations=ADD -10
+
+[Hook-CGameEffectRememorizeSpell::ApplyEffect()-MageSelectedSpell]
+Pattern=0F8E8D020000
+Operations=ADD 91
+
+[Hook-CGameEffectRememorizeSpell::ApplyEffect()-PriestAfterLevelDecrement]
+Pattern=41899E14010000
+Operations=ADD -16
+
+[Hook-CGameEffectRememorizeSpell::ApplyEffect()-PriestSelectedSpell]
+Pattern=85C00F8E2E010000
+Operations=ADD 94
+
 [Hook-CGameEffectSaveVsDeath::ApplyEffect()-ImmediateSaveWriteOffset]
 Pattern=0F852E0100000FB687AC050000
 Operations=ADD -8
