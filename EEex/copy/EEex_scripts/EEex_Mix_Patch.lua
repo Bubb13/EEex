@@ -134,6 +134,44 @@
 		})
 	)
 
+	----------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_ApplyMissMeleeEffects() --
+	----------------------------------------------------------
+
+	EEex_HookConditionalJumpOnSuccessWithLabels(EEex_Label("Hook-CGameSprite::Swing()-MeleeMissResultJmp"), 0, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE
+			mov rdx, r15                              ; target
+			mov rcx, rbx                              ; attacker
+			call #L(EEex::Opcode_Hook_ApplyMissMeleeEffects)
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	-----------------------------------------------------------
+	-- [EEex.dll] EEex::Opcode_Hook_ApplyMissRangedEffects() --
+	-----------------------------------------------------------
+
+	EEex_HookConditionalJumpOnFailWithLabels(EEex_Label("Hook-CGameSprite::Swing()-RangedMissResultJmp"), 7, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE
+			mov rdx, r15                              ; target
+			mov rcx, rbx                              ; attacker
+			call #L(EEex::Opcode_Hook_ApplyMissRangedEffects)
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
 	EEex_EnableCodeProtection()
 
 end)()
