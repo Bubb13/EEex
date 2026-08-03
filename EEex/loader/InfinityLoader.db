@@ -2162,6 +2162,50 @@ Operations=ADD 26
 Pattern=448B9934060000
 Operations=ADD -15
 
+[Hook-CGameArea::Marshal(unsigned char**,unsigned int*,unsigned char)-FirstInstruction]
+Pattern=4157488DAC2488FEFFFF
+Operations=ADD -8
+
+[Hook-CGameArea::Marshal(unsigned char**,unsigned int*,unsigned char)-AfterMarshal]
+Pattern=4C8BA42470020000488B8D60010000
+Operations=ADD 0
+
+[Hook-CGameArea::Unmarshal(unsigned char*,unsigned int,unsigned char)-FirstInstruction]
+Pattern=405556574154415541564157488DAC24E0FEFFFF
+Operations=ADD 0
+
+[Hook-CGameArea::Unmarshal(unsigned char*,unsigned int,unsigned char)-AfterUnmarshal]
+Pattern=488B9C2470020000418BC4
+Operations=ADD 0
+
+[Hook-CGameContainer::CGameContainer(CGameArea*,CAreaFileContainer*,...)-AfterConstruct]
+Pattern=498BC5488B4D704833CC
+Operations=ADD 0
+
+[Hook-CGameContainer::Marshal(SAreaFileWrapper*)-FirstInstruction]
+Pattern=4889542410555741564157
+Operations=ADD 0
+
+[Hook-CStore::~CStore()-FirstInstruction]
+Pattern=4883EC2083B9B800000000
+Operations=ADD -6
+
+[Hook-CStore::Marshal()-dimmServiceFromMemory]
+Pattern=41B101448BC5
+Operations=ADD 9
+
+[Hook-CStore::SetResRef(CResRef const&)-BeforeInventoryClear]
+Pattern=4439BBB80000007426
+Operations=ADD 0
+
+[Hook-CStore::SetResRef(CResRef const&)-BeforeHeaderRead]
+Pattern=488B4C2420488BF8
+Operations=ADD 18
+
+[Hook-CStore::SetResRef(CResRef const&)-AfterInventoryPopulate]
+Pattern=4C8B7C2440488B7C2450
+Operations=ADD -6
+
 [Hook-CGameContainer::Render()-B3EmptyContainer]
 Pattern=85C00F8893000000
 Operations=ADD 150

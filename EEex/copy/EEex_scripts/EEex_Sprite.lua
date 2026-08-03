@@ -1063,207 +1063,7 @@ end
 --
 -- end
 
--- IMPORTANT: This is part of the X-BIV1.0 schema, don't modify existing enum values without implementing migration code!
-EEex_Sprite_Private_MarshalHandlerFieldType = {
-	["TABLE_END"]     = 0,
-	["TABLE_START"]   = 1,
-	["STRING"]        = 2,
-	["INT8"]          = 3,
-	["INTU8"]         = 4,
-	["INT16"]         = 5,
-	["INTU16"]        = 6,
-	["INT32"]         = 7,
-	["INTU32"]        = 8,
-	["INT64"]         = 9,
-	["INTU64"]        = 10,
-	["BOOLEAN_FALSE"] = 11,
-	["BOOLEAN_TRUE"]  = 12,
-}
-
-EEex_Sprite_Private_CurrentSpriteMarshalHandlerData = {}
-EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize = 0
-EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta = {}
-EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = 0
-
-function EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(number)
-	if number >= 0 then
-		if number <= 0xFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU8, EEex_WriteU8, 1
-		elseif number <= 0xFFFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU16, EEex_WriteU16, 2
-		elseif number <= 0xFFFFFFFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU32, EEex_WriteU32, 4
-		elseif number <= 0xFFFFFFFFFFFFFFFF then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INTU64, EEex_WriteU64, 8
-		else
-			EEex_Error("Number too large to be marshalled in creature handler")
-		end
-	else
-		if number >= -0x100 then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INT8, EEex_Write8, 1
-		elseif number >= -0x10000 then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INT16, EEex_Write16, 2
-		elseif number >= -0x100000000 then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INT32, EEex_Write32, 4
-		elseif number >= -0x10000000000000000 then
-			return EEex_Sprite_Private_MarshalHandlerFieldType.INT64, EEex_Write64, 8
-		else
-			EEex_Error("Number too large to be marshalled in creature handler")
-		end
-	end
-end
-
-function EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(t)
-
-	local accumulator = 0
-	local lengthTypeSwitch = {
-		["boolean"] = function(v)
-			return 0
-		end,
-		["number"] = function(v)
-			local _, _, writeAdvance = EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(v)
-			return writeAdvance
-		end,
-		["string"] = function(v)
-			return #v + 1
-		end,
-	}
-
-	local processStack = {{t, nil}} -- toProcessT, iterK
-	local stackTop = 1
-
-	while true do
-
-		::continue::
-		local toProcess = processStack[stackTop]
-		local toProcessT = toProcess[1]
-
-		while true do
-
-			local k, v = next(toProcessT, toProcess[2])
-			if k == nil then
-				break
-			end
-			local kType = type(k)
-			if kType ~= "boolean" and kType ~= "number" and kType ~= "string" then
-				EEex_Error("Only booleans / numbers / strings can be used as keys in creature marshal")
-			end
-
-			toProcess[2] = k
-
-			if stackTop == 1 then
-				local handlerName = EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta[v].handlerName
-				-- HANDLER_STRING_LENGTH
-				accumulator = accumulator + #handlerName + 1
-				stackTop = stackTop + 1
-				processStack[stackTop] = {v, nil}
-				goto continue
-			else
-				local vType = type(v)
-				if vType ~= "boolean" and vType ~= "number" and vType ~= "string" and vType ~= "table" then
-					EEex_Error("Only booleans / numbers / strings / tables can be used as values in creature marshal")
-				end
-				if vType == "table" then
-					-- KEY_FIELD_TYPE + KEY_LENGTH + TABLE_START
-					accumulator = accumulator + 1 + lengthTypeSwitch[kType](k) + 1
-					stackTop = stackTop + 1
-					processStack[stackTop] = {v, nil}
-					goto continue
-				end
-				-- KEY_FIELD_TYPE + KEY_LENGTH + VALUE_FIELD_TYPE + VALUE_LENGTH
-				accumulator = accumulator + 1 + lengthTypeSwitch[kType](k) + 1 + lengthTypeSwitch[vType](v)
-			end
-		end
-
-		accumulator = accumulator + 1 -- TABLE_END
-
-		processStack[stackTop] = nil
-		stackTop = stackTop - 1
-
-		if stackTop == 0 then
-			break
-		end
-	end
-
-	return accumulator
-end
-
-function EEex_Sprite_Private_WriteSpriteMarshalHandlerData(memoryPtr, t)
-
-	local writeNumber = function(number)
-		local typeByte, writeFunc, writeAdvance = EEex_Sprite_Private_DetermineSpriteMarshalHandlerNumberInfo(number)
-		EEex_Write8(memoryPtr, typeByte)
-		memoryPtr = memoryPtr + 1
-		writeFunc(memoryPtr, number)
-		memoryPtr = memoryPtr + writeAdvance
-	end
-
-	local writeTypeSwitch = {
-		["boolean"] = function(v)
-			EEex_Write8(memoryPtr, v
-				and EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_TRUE
-				or  EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_FALSE
-			)
-			memoryPtr = memoryPtr + 1
-		end,
-		["number"] = writeNumber,
-		["string"] = function(v)
-			EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.STRING)
-			memoryPtr = memoryPtr + 1
-			EEex_WriteString(memoryPtr, v)
-			memoryPtr = memoryPtr + #v + 1
-		end,
-		["table"] = function(v)
-			EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_START)
-			memoryPtr = memoryPtr + 1
-		end,
-	}
-
-	local processStack = {{t, nil}} -- toProcessT, iterK
-	local stackTop = 1
-
-	while true do
-
-		::continue::
-		local toProcess = processStack[stackTop]
-		local toProcessT = toProcess[1]
-
-		while true do
-
-			local k, v = next(toProcessT, toProcess[2])
-			if k == nil then
-				break
-			end
-
-			toProcess[2] = k
-
-			if stackTop == 1 then
-				local handlerName = EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta[v].handlerName
-				EEex_WriteString(memoryPtr, handlerName)
-				memoryPtr = memoryPtr + #handlerName + 1
-			else
-				writeTypeSwitch[type(k)](k)
-				writeTypeSwitch[type(v)](v)
-			end
-
-			if type(v) == "table" then
-				stackTop = stackTop + 1
-				processStack[stackTop] = {v, nil}
-				goto continue
-			end
-		end
-
-		EEex_Write8(memoryPtr, EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_END)
-		memoryPtr = memoryPtr + 1
-
-		processStack[stackTop] = nil
-		stackTop = stackTop - 1
-
-		if stackTop == 0 then
-			break
-		end
-	end
-end
+EEex_Sprite_Private_CurrentMarshalBundle = EEex_Marshal_Private_NewTableBundle()
 
 function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 
@@ -1280,11 +1080,7 @@ function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 		if type(toExport) ~= "table" then
 			EEex_Error("Creature marshal handler must export table or nil")
 		end
-		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize = EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize + 1
-		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData[EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize] = toExport
-		EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta[toExport] = {
-			["handlerName"] = handlerName,
-		}
+		EEex_Marshal_Private_AddTableBundleEntry(EEex_Sprite_Private_CurrentMarshalBundle, handlerName, toExport, "Creature marshal")
 	end
 
 	for handlerName, handler in pairs(EEex_Sprite_Private_MarshalHandlers) do
@@ -1302,12 +1098,12 @@ function EEex_Sprite_Hook_CalculateExtraEffectListMarshalSize(sprite)
 	-- Round up to multiple of CGameEffectBase to match an effect boundary on the CRE.
 	-- If only 8 bytes are needed (no data is marshalled), skip writing entirely.
 
-	local extraMarshalSize = 8 + EEex_Sprite_Private_CalculateSpriteMarshalHandlerDataSize(EEex_Sprite_Private_CurrentSpriteMarshalHandlerData)
-	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = (extraMarshalSize ~= 8 and
+	local extraMarshalSize = 8 + EEex_Marshal_Private_CalculateTableBundleSize(EEex_Sprite_Private_CurrentMarshalBundle, "Creature marshal")
+	EEex_Sprite_Private_CurrentMarshalBundle["memorySize"] = (extraMarshalSize ~= 8 and
 		EEex_RoundUp(extraMarshalSize, CGameEffectBase.sizeof)
 		or 0) - 8
 
-	return EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize + 8
+	return EEex_Sprite_Private_CurrentMarshalBundle["memorySize"] + 8
 end
 
 function EEex_Sprite_Hook_WriteExtraEffectListMarshal(memory)
@@ -1316,118 +1112,18 @@ function EEex_Sprite_Hook_WriteExtraEffectListMarshal(memory)
 		return
 	end
 
-	if EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize > 0 then
+	if EEex_Sprite_Private_CurrentMarshalBundle["memorySize"] > 0 then
 		EEex_WriteLString(memory, "X-BIV1.0", 8)
 		local marshalPtr = memory + 8
-		EEex_Memset(marshalPtr, 0, EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize)
-		EEex_Sprite_Private_WriteSpriteMarshalHandlerData(marshalPtr, EEex_Sprite_Private_CurrentSpriteMarshalHandlerData)
+		EEex_Memset(marshalPtr, 0, EEex_Sprite_Private_CurrentMarshalBundle["memorySize"])
+		EEex_Marshal_Private_WriteTableBundle(marshalPtr, EEex_Sprite_Private_CurrentMarshalBundle, "Creature marshal")
 	end
-	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData = {}
-	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableSize = 0
-	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_TableToMeta = {}
-	EEex_Sprite_Private_CurrentSpriteMarshalHandlerData_MemorySize = 0
+	EEex_Marshal_Private_ResetTableBundle(EEex_Sprite_Private_CurrentMarshalBundle)
 end
 
 function EEex_Sprite_LuaHook_ReadExtraEffectListUnmarshal(sprite, baseMemory)
 
-	local memory = baseMemory + 8
-
-	while true do
-
-		local toFill = {}
-		local handlerStr = EEex_ReadString(memory)
-		memory = memory + #handlerStr + 1
-
-		-- The top level list writes TABLE_END('\0') to signal that all
-		-- marshalled data has ended, which reads as an empty string
-		if handlerStr == "" then
-			break
-		end
-
-		local fieldReadSwitch = {
-			[EEex_Sprite_Private_MarshalHandlerFieldType.STRING] = function()
-				local read = EEex_ReadString(memory)
-				memory = memory + #read + 1
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INT8] = function()
-				local read = EEex_Read8(memory)
-				memory = memory + 1
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU8] = function()
-				local read = EEex_ReadU8(memory)
-				memory = memory + 1
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INT16] = function()
-				local read = EEex_Read16(memory)
-				memory = memory + 2
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU16] = function()
-				local read = EEex_ReadU16(memory)
-				memory = memory + 2
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INT32] = function()
-				local read = EEex_Read32(memory)
-				memory = memory + 4
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU32] = function()
-				local read = EEex_ReadU32(memory)
-				memory = memory + 4
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INT64] = function()
-				local read = EEex_Read64(memory)
-				memory = memory + 8
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.INTU64] = function()
-				local read = EEex_ReadU64(memory)
-				memory = memory + 8
-				return read
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_FALSE] = function()
-				return false
-			end,
-			[EEex_Sprite_Private_MarshalHandlerFieldType.BOOLEAN_TRUE] = function()
-				return true
-			end,
-		}
-
-		local tableStack = {}
-		local tableStackTop = 0
-
-		while true do
-
-			local keyFieldType = EEex_Read8(memory)
-			memory = memory + 1
-
-			if keyFieldType == EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_END then
-				if tableStackTop == 0 then
-					break
-				end
-				toFill = tableStack[tableStackTop]
-				tableStackTop = tableStackTop - 1
-			else
-				local key = fieldReadSwitch[keyFieldType]()
-				local valueFieldType = EEex_Read8(memory)
-				memory = memory + 1
-				if valueFieldType == EEex_Sprite_Private_MarshalHandlerFieldType.TABLE_START then
-					local subTable = {}
-					toFill[key] = subTable
-					tableStackTop = tableStackTop + 1
-					tableStack[tableStackTop] = toFill
-					toFill = subTable
-				else
-					toFill[key] = fieldReadSwitch[valueFieldType]()
-				end
-			end
-		end
-
+	local bytesRead = EEex_Marshal_Private_ReadTableBundle(baseMemory + 8, function(handlerStr, toFill)
 		local handlers = EEex_Sprite_Private_MarshalHandlers[handlerStr]
 		if handlers then
 			EEex_Utility_TryIgnore(handlers.importer, sprite, toFill)
@@ -1436,10 +1132,10 @@ function EEex_Sprite_LuaHook_ReadExtraEffectListUnmarshal(sprite, baseMemory)
 			local fallbackStorage = EEex_Utility_GetOrCreateTable(EEex_GetUDAux(sprite), "EEex_Sprite_FallbackMarshalStorage")
 			fallbackStorage[handlerStr] = toFill
 		end
-	end
+	end)
 
 	-- Return to the C++ hook how many effects were EEex binary data
-	return EEex_RoundUp(memory - baseMemory, CGameEffectBase.sizeof) / CGameEffectBase.sizeof
+	return EEex_RoundUp(8 + bytesRead, CGameEffectBase.sizeof) / CGameEffectBase.sizeof
 end
 
 EEex_Sprite_Private_CustomConcentrationCheckFuncName = nil

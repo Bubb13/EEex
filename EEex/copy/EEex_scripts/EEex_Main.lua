@@ -38,6 +38,8 @@ EEex_Main_Private_StartupFiles = {
 	"EEex_Resource",           --
 	"EEex_Script",             --
 	"EEex_Script_Patch",       --
+	"EEex_Marshal_Codec",      --
+	"EEex_UDAux",              --
 	"EEex_Sprite",             --
 	"EEex_Sprite_Patch",       --
 	"EEex_Stats",              --
@@ -54,6 +56,7 @@ EEex_Main_Private_StartupFiles = {
 	"EEex_Fix",                --
 	"EEex_Fix_Patch",          --
 	"EEex_Marshal",            --
+	"EEex_Marshal_Patch",      --
 	"EEex_Module",             --
 	"EEex_OptionsLate",        -- Here so it can register listeners provided by other EEex files
 	"EEex_Profiler",           --
