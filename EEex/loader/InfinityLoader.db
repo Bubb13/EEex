@@ -2259,12 +2259,9 @@ Operations=ADD 25
 Pattern=4889742420574883EC30488BF1488BFA
 Operations=ADD 40
 
-; op135 (CGameEffectPolymorph) hooks
-; Bug fix: form-to-form transition incorrectly calls UnequipAll(animationOnly=0);
-;   the JNE at this address should be NOP'd so animationOnly=1 is always used.
 [Hook-CGameEffectPolymorph::ApplyEffect()-FormToFormUnequipAllBugJne]
-Pattern=4C89AC24D00000004533FF
-Operations=ADD 64
+Pattern=4189B618010000
+Operations=ADD 83
 
 [Hook-CGameEffectProtectionCircle::ApplyEffect()-AddTail]
 Pattern=488D8E001D0000

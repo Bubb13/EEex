@@ -562,33 +562,17 @@
 	EEex_JITAt(EEex_Label("Hook-bsearchrange()-FirstInstruction"), {"jmp #L(EEex::Override_bsearchrange)"})
 
 	--[[
-	+------------------------------------------------------------------------------------+
-	| Fix op135 (CGameEffectPolymorph) form-to-form transition                           |
-	| Issue: uses UnequipAll(animationOnly=0) when already polymorphed                   |
-	|        causing passive equipment bonuses (rings, amulets, etc.)                    |
-	|        to be stripped instead of preserved.                                        |
-	|        Particularly bad for undroppable items like Edwin's Amulet or Nalia's Ring. |
-	+------------------------------------------------------------------------------------+
-	| Root cause: a JNE at the "is already polymorphed?" check incorrectly               |
-	|             skips setting edx=1 (animation-only), so the second                    |
-	|             polymorph always calls UnequipAll with animationOnly=0.                |
-	| Fix: NOP out the 2-byte JNE (75 02) so animationOnly=1 is always used.             |
-	+------------------------------------------------------------------------------------+
+	+-----------------------------------------------------------------------------------------------------------------------------------------------+
+	| Fix op135 (CGameEffectPolymorph) form-to-form transitions causing passive equipment bonuses (rings, amulets, etc.) to be stripped.            |
+	| For some reason the EEs call `CGameSprite::UnequipAll(animationOnly=0)` when the creature is already polymorphed instead of using             |
+	| `animationOnly=1`, which is what the originals always do. All other calls in the function to equip / unequip items specify `animationOnly=1`, |
+	| so this seems like a bug in the EE logic, (and is particularly bad for undroppable items like Edwin's Amulet or Nalia's Ring).                |
+	+-----------------------------------------------------------------------------------------------------------------------------------------------+
+	|   [JIT] Remove the `if (pSprite->m_derivedStats.m_bPolymorphed == 0)` branch so the code always falls through to using `animationOnly=1`.     |
+	+-----------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
-	EEex_Utility_NewScope(function()
-		local jneAddr = EEex_Label("Hook-CGameEffectPolymorph::ApplyEffect()-FormToFormUnequipAllBugJne")
-		local byte0 = EEex_ReadU8(jneAddr)
-		if byte0 == 0x90 then return end -- already patched
-		if byte0 ~= 0x75 then            -- sanity: expect JNE short opcode
-			EEex_Error(string.format(
-				"[op135 form-to-form bug fix] Unexpected opcode 0x%02X at hook label, cannot patch",
-				byte0))
-			return
-		end
-		EEex_WriteU8(jneAddr,     0x90)  -- NOP (was 0x75 = JNE short)
-		EEex_WriteU8(jneAddr + 1, 0x90)  -- NOP (was 0x02 = rel8 offset)
-	end)
+	EEex_JITAt(EEex_Label("Hook-CGameEffectPolymorph::ApplyEffect()-FormToFormUnequipAllBugJne"), {"#REPEAT(2,nop #ENDL)"})
 
 	EEex_EnableCodeProtection()
 
