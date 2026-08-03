@@ -2309,6 +2309,10 @@ Operations=ADD 5
 Pattern=753585F6
 Operations=ADD 4
 
+[Hook-CGameSprite::AddEffect()-ScreenEffectsList]
+Pattern=48895424104156
+Operations=ADD -10
+
 [Hook-CGameSprite::AddSpecialAbility()-LastCall]
 Pattern=740A488B4C2448
 Operations=ADD 7
@@ -2422,6 +2426,10 @@ Operations=ADD 37
 [Hook-CGameSprite::ProcessEffectList()-FirstRandCall]
 Pattern=8B81A03F00008986544E0000
 Operations=ADD 12
+
+[Hook-CGameSprite::ProcessEffectList()-ScreenEffectsListFlush]
+Pattern=488DAC2428FEFFFF
+Operations=ADD -3
 
 [Hook-CGameSprite::QuickLoad()-CDerivedStats::Reload()]
 Pattern=4C8D8F800B0000
