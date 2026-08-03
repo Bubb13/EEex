@@ -306,6 +306,14 @@ Pattern=48895C24105556574154415541564157488D6C24F9
 Pattern=488D81C81D0000C3
 Operations=ADD -16
 
+[CGameSprite::GetActiveWeaponStyleAndLevel]
+Pattern=4883EC300FB681F8100000
+Operations=ADD -22
+
+[CGameSprite::GetInactiveProficiency]
+Pattern=83F82D7728
+Operations=ADD -10
+
 [CGameSprite::GetCasterLevel]
 Pattern=48895C2418555741564883EC30
 
@@ -366,6 +374,10 @@ Operations=ADD -6
 [CGameSprite::SpellPoint]
 Pattern=41554157488D6C24D0
 Operations=ADD -4
+
+[CGameSprite::Swing]
+Pattern=664183FC027507
+Operations=ADD -7
 
 [CGameSprite::UpdateTarget]
 Pattern=488BD94885D2740F
@@ -2235,6 +2247,10 @@ Operations=ADD 23
 Pattern=3881F81000007407
 Operations=ADD 56
 
+[Hook-CGameEffectDamageMod::ApplyEffect()-FirstInstruction]
+Pattern=40534883EC208B4120
+Operations=ADD -112
+
 [Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction]
 Pattern=898248130000
 Operations=ADD -3
@@ -2364,6 +2380,18 @@ Operations=ADD -8
 Pattern=03457F894577
 Operations=ADD -8
 
+[Hook-CGameSprite::GetMaxDamage()-AdjustDisplayedDamage]
+Pattern=4C8BC88B5010
+Operations=ADD 81
+
+[Hook-CGameSprite::GetMinDamage()-AdjustDisplayedDamage]
+Pattern=83EA0C7416
+Operations=ADD 51
+
+[Hook-CGameSprite::Damage()-AdjustRollHandBonus]
+Pattern=488D542448488D4DBF
+Operations=ADD -12
+
 [Hook-CGameSprite::GetRatingWithItem()-CGameSprite::Copy()]
 Pattern=410FB69D283A0000
 Operations=ADD 38
@@ -2383,6 +2411,10 @@ Operations=ADD 18
 [Hook-CGameSprite::Hit()-MeleeingWithRangedPenalty]
 Pattern=2BF90FAFC0
 Operations=ADD 9
+
+[Hook-CGameSprite::Hit()-FinalTHAC0Compare]
+Pattern=66443B7D48
+Operations=ADD 0
 
 [Hook-CGameSprite::IsOver()-B3Invis]
 Pattern=3843387627
@@ -2490,6 +2522,10 @@ Operations=ADD 36
 [Hook-CGameSprite::Swing()-GetAttackFrameType()]
 Pattern=488983D84A00004439B3A44E0000
 Operations=ADD 75
+
+[Hook-CGameSprite::Swing()-Op342OffhandFrame]
+Pattern=0FBF073BC8
+Operations=ADD 53
 
 [Hook-CGameSprite::Swing()-NoCImmunitiesWeaponElseContinue]
 Pattern=418B47484D8D6F0C

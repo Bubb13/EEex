@@ -106,6 +106,56 @@
 	--------------------------------------
 
 	--[[
+	+-----------------------------------------------------------------------------------------------------------+
+	| Opcode #73                                                                                                |
+	+-----------------------------------------------------------------------------------------------------------+
+	|   special bit0 -> Apply to main-hand damage bonus only                                                    |
+	|   special bit1 -> Apply to off-hand damage bonus only                                                     |
+	|   special 0 or both bits -> Vanilla opcode #73 behavior                                                   |
+	+-----------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_DamageMod_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                             |
+	|           ->  0 - Don't alter engine behavior                                                             |
+	|           -> !0 - Effect was handled                                                                      |
+	+-----------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectDamageMod::ApplyEffect()-FirstInstruction"), 0, 7, 7, {
+		{"stack_mod", 8},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+			EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(16)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+
+			; rcx already pEffect
+			; rdx already pSprite
+			call #L(EEex::Opcode_Hook_DamageMod_ApplyEffect)
+
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+
+			test eax, eax
+			jz #L(return)
+
+			mov eax, 1
+			#MANUAL_HOOK_EXIT(1)
+			ret
+		]]}
+	)
+
+	-- Manually define the ignored registers for the unusual `ret` above
+	EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(EEex_Label("Hook-CGameEffectDamageMod::ApplyEffect()-FirstInstruction"), 1, {
+		EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+		EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+		EEex_HookIntegrityWatchdogRegister.R11
+	})
+
+	--[[
 	+------------------------------------------------------------------------------------+
 	| Opcode #146                                                                        |
 	+------------------------------------------------------------------------------------+
@@ -600,10 +650,16 @@
 	|   param2 == 5  -> Override `combat_round_<param1>` in animation INI to `resource`:                   |
 	|       param1   -> Combat round slot                                                                  |
 	|       resource -> Resref of RNDBASE*-like .BMP                                                       |
+	|       special bit0 -> Tag repeated offhand frame type 11 attacks for THAC0 adjustment                |
+	|       param3       -> Direct THAC0 delta for tagged repeated offhand attacks                         |
 	+------------------------------------------------------------------------------------------------------+
 	|   [EEex.dll] EEex::Opcode_Hook_Op342_OnUnhandledParam2(pEffect: CGameEffect*, pSprite: CGameSprite*) |
 	|                                                                                                      |
 	|   [EEex.dll] EEex::Sprite_Hook_OnGetAttackFrameType(pSprite: CGameSprite*, numAttacks: byte) -> byte |
+	|       return: Palette index of fetched pixel in RNDBASE*-like .BMP                                   |
+	|   [EEex.dll] EEex::Sprite_Hook_OnSwingGetAttackFrameType(                                            |
+	|                  pSprite: CGameSprite*, numAttacks: byte                                             |
+	|              ) -> byte                                                                               |
 	|       return: Palette index of fetched pixel in RNDBASE*-like .BMP                                   |
 	+------------------------------------------------------------------------------------------------------+
 	--]]
@@ -621,7 +677,7 @@
 		]]}
 	)
 
-	local patchGetAttackFrameType = function(label, spriteRegister)
+	local patchGetAttackFrameType = function(label, spriteRegister, hookLabel)
 		EEex_HookNOPsWithLabels(EEex_Label(label), 1, {
 			{"hook_integrity_watchdog_ignore_registers", {
 				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
@@ -631,13 +687,13 @@
 			{[[
 				mov rcx, #$(1) ]], {spriteRegister}, [[ #ENDL   ; pSprite
 																; dl already numAttacks
-				call #L(EEex::Sprite_Hook_OnGetAttackFrameType)
+				call #L(]] .. hookLabel .. [[)
 			]]}
 		)
 	end
 
-	patchGetAttackFrameType("Hook-CGameSprite::OneSwing()-GetAttackFrameType()", "rdi")
-	patchGetAttackFrameType("Hook-CGameSprite::Swing()-GetAttackFrameType()", "rbx")
+	patchGetAttackFrameType("Hook-CGameSprite::OneSwing()-GetAttackFrameType()", "rdi", "EEex::Sprite_Hook_OnGetAttackFrameType")
+	patchGetAttackFrameType("Hook-CGameSprite::Swing()-GetAttackFrameType()", "rbx", "EEex::Sprite_Hook_OnSwingGetAttackFrameType")
 
 	--[[
 	+------------------------------------------------------------------------------------------------+
