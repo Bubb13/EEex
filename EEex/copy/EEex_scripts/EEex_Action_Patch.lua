@@ -4,6 +4,73 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+-------------------------------------------------------------------------------------------------------------+
+	| Block disallowed actions while B3_STATE_DAZED is active                                                     |
+	+-------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Action_Hook_ShouldDazeBlockAction(evaluator: CGameAIBase*) -> int                        |
+	|       return:                                                                                               |
+	|           ->  0 - Allow the current action                                                                  |
+	|           -> !0 - Current action was converted to NoAction(); keep the engine on its normal dispatch path   |
+	+-------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultJmp"), 0, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], r8
+
+			mov rcx, rbx                                          ; pAIBase
+			call #L(EEex::Action_Hook_ShouldDazeBlockAction)
+
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			test eax, eax
+			jz daze_allow_base
+
+			xor r8d, r8d                                          ; Dispatch as NoAction()
+
+			daze_allow_base:
+			#DESTROY_SHADOW_SPACE
+			cmp r8d, 0x1D5
+		]]}
+	)
+
+	EEex_HookBeforeConditionalJumpWithLabels(EEex_Label("Hook-CGameSprite::ExecuteAction()-DefaultJmp"), 0, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r9
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r10
+
+			mov rcx, rdi                                          ; pSprite as CGameAIBase
+			call #L(EEex::Action_Hook_ShouldDazeBlockAction)
+
+			mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			test eax, eax
+			jz daze_allow_sprite
+
+			xor ecx, ecx                                          ; Dispatch as NoAction()
+
+			daze_allow_sprite:
+			#DESTROY_SHADOW_SPACE
+			cmp ecx, 0x1D7
+		]]}
+	)
+
+	--[[
 	+--------------------------------------------------------------------------------+
 	| Implement new actions                                                          |
 	+--------------------------------------------------------------------------------+
