@@ -2111,6 +2111,12 @@ Operations=ADD 14
 Pattern=3DC9000000
 Operations=ADD 5
 
+[Hook-CDerivedStats::GetSpellState()-FirstInstruction]
+Pattern=81FA000100007320
+
+[Hook-CDerivedStats::SetSpellState()-FirstInstruction]
+Pattern=4C8BC981FA00010000
+
 [Hook-CDerivedStats::operator_equ()-FirstCall]
 Pattern=48894424288B02
 Operations=ADD 641

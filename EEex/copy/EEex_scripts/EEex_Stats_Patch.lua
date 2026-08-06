@@ -163,6 +163,28 @@
 		})
 	)
 
+	--[[
+	+---------------------------------------------------------------------------------------------------------+
+	| Effectively uncap the spell state limit, (raise to 4,294,967,295)                                       |
+	+---------------------------------------------------------------------------------------------------------+
+	|   * Extended spell states are those with ids outside of the vanilla range of [0-255] in `SPLSTATE.IDS`. |
+	|   * Can be set via `op328` or `op335`.                                                                  |
+	+---------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] CDerivedStats::Override_GetSpellState(uint bit) -> int                                     |
+	|       return:                                                                                           |
+	|           -> 0 - The spell state is not set on the creature.                                            |
+	|           -> 1 - The spell state is set on the creature.                                                |
+	|                                                                                                         |
+	|   [EEex.dll] CDerivedStats::Override_SetSpellState(uint bit) -> int                                     |
+	|       return:                                                                                           |
+	|           -> 0 - The spell state was already set on the creature.                                       |
+	|           -> 1 - The spell state was not already set on the creature.                                   |
+	+---------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_JITAt(EEex_Label("Hook-CDerivedStats::GetSpellState()-FirstInstruction"), {"jmp #L(CDerivedStats::Override_GetSpellState)"})
+	EEex_JITAt(EEex_Label("Hook-CDerivedStats::SetSpellState()-FirstInstruction"), {"jmp #L(CDerivedStats::Override_SetSpellState)"})
+
 	EEex_EnableCodeProtection()
 
 end)()
