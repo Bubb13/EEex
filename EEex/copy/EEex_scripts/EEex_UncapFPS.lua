@@ -16,7 +16,7 @@ EEex_Options_Register("EEex_UncapFPS_Enable", EEex_Options_Option.new({
 	["type"]     = EEex_Options_ToggleType.new(),
 	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Uncap FPS" }),
-	["onChange"] = function(self, oldValue) EEex.UncapFPS_Enabled = self:get() end,
+	["onChange"] = function(self, oldValue) EEex.SetUncapFPSEnabled(self:get()) end,
 }))
 
 EEex_Options_Register("EEex_UncapFPS_EnableFPSLimit", EEex_Options_Option.new({
