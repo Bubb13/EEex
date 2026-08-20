@@ -1287,24 +1287,31 @@ end
 -----------------------
 
 EEex_UserDataAuxiliary = {}
+EEex_UserDataAuxiliaryPersistent = {}
 
 function EEex_DeleteUserDataAuxiliary(ud)
 	if type(ud) ~= "userdata" then
 		EEex_Error("ud is not a userdata object ("..type(ud)..")!")
 	end
-	EEex_UserDataAuxiliary[EEex_UDToLightUD(ud)] = nil
+	EEex_UDAux_Private_DeleteByLightUD(EEex_UDToLightUD(ud))
 end
 EEex_DeleteUDAux = EEex_DeleteUserDataAuxiliary
 
-function EEex_GetUserDataAuxiliary(ud)
+function EEex_GetUserDataAuxiliary(ud, persistent)
 	if type(ud) ~= "userdata" then
 		EEex_Error("ud is not a userdata object ("..type(ud)..")!")
+	end
+	if persistent ~= nil and type(persistent) ~= "boolean" then
+		EEex_Error("persistent must be nil or a boolean ("..type(persistent)..")!")
 	end
 	local lud = EEex_UDToLightUD(ud)
 	local auxiliary = EEex_UserDataAuxiliary[lud]
 	if not auxiliary then
 		auxiliary = {}
 		EEex_UserDataAuxiliary[lud] = auxiliary
+	end
+	if persistent then
+		EEex_UserDataAuxiliaryPersistent[lud] = true
 	end
 	return auxiliary
 end
