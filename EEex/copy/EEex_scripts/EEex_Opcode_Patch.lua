@@ -1132,6 +1132,40 @@
 	})
 
 	--[[
+	+----------------------------------------------------------------------------------------------------------------+
+	| New Opcode #419 (Concealment)                                                                                  |
+	+----------------------------------------------------------------------------------------------------------------+
+	|   Modify the target's B3_CONCEALMENT extended stat. Its final value supplies cosmetic translucency after the   |
+	|   engine finishes resolving the target's effect lists.                                                         |
+	|   This opcode is registered only when the v2.7.3.0-specific engine labels are available.                       |
+	+----------------------------------------------------------------------------------------------------------------+
+	|   param1 -> Stat modifier                                                                                      |
+	|   param2 -> 0 (Sum), 1 (Set), 2 (Percent)                                                                      |
+	+----------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Concealment_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int    |
+	+----------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local concealmentHitHook = EEex_TryLabel("Hook-CGameSprite::Hit()-Concealment")
+	local concealmentRenderBeginHook = EEex_TryLabel("Hook-CGameSprite::Render()-ConcealmentTranslucency-Begin")
+	local concealmentRenderEndHook = EEex_TryLabel("Hook-CGameSprite::Render()-ConcealmentTranslucency-End")
+	local EEex_Concealment
+
+	if concealmentHitHook ~= nil and concealmentRenderBeginHook ~= nil and concealmentRenderEndHook ~= nil then
+
+		EEex_Concealment = genOpcodeDecode({
+			["ApplyEffect"] = {[[
+				#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+				#MAKE_SHADOW_SPACE
+				call #L(EEex::Opcode_Hook_Concealment_ApplyEffect)
+				#DESTROY_SHADOW_SPACE
+				ret
+			]]},
+		})
+
+	end
+
+	--[[
 	+-------------------------------------+
 	| [JIT] Decode switch for new opcodes |
 	+-------------------------------------+
@@ -1174,8 +1208,16 @@
 
 			_409:
 			cmp eax, 409
-			jne #L(jmp_success)
+			jne _419
 			]], EEex_EnableActionListener, [[
+
+			_419:
+		]], EEex_Concealment ~= nil and EEex_FlattenTable({[[
+			cmp eax, 419
+			jne #L(jmp_success)
+			]], EEex_Concealment}) or {[[
+			jmp #L(jmp_success)
+		]]}, [[
 		]]})
 	)
 	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})

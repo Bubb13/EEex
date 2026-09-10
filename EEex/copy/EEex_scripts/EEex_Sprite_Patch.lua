@@ -653,14 +653,104 @@
 	+---------------------------------------------------------------------------------------------------------------------------------+
 	--]]
 
-	local CGameSprite_Hit_SavedVariables = EEex_Malloc(EEex_PtrSize * 2)
+	local CGameSprite_Hit_SavedVariables = EEex_Malloc(EEex_PtrSize * 3)
 	local CGameSprite_Hit_SavedItem = CGameSprite_Hit_SavedVariables
 	local CGameSprite_Hit_SavedItemAbilityNum = CGameSprite_Hit_SavedVariables + EEex_PtrSize
+	local CGameSprite_Hit_SavedTarget = CGameSprite_Hit_SavedVariables + EEex_PtrSize * 2
 
 	EEex_HookAfterCall(EEex_Label("Hook-CGameSprite::Hit()-FirstCall"), {[[
 		mov qword ptr ds:[#$(1)], r15 ]], {CGameSprite_Hit_SavedItem}, [[ #ENDL
-		mov qword ptr ds:[#$(1)], rsi ]], {CGameSprite_Hit_SavedItemAbilityNum}
+		mov qword ptr ds:[#$(1)], rsi ]], {CGameSprite_Hit_SavedItemAbilityNum}, [[ #ENDL
+		mov qword ptr ds:[#$(1)], r14 ]], {CGameSprite_Hit_SavedTarget}
 	})
+
+	--[[
+	+----------------------------------------------------------------------------------------------------------------+
+	| Apply concealment only after CGameSprite::Hit() has finalized the engine hit result                            |
+	+----------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_ResolveConcealment(pAttacker: CGameSprite*, pTarget: CGameSprite*) -> bool      |
+	|       return:                                                                                                  |
+	|           -> false - Convert the successful attack roll into a miss                                            |
+	|           -> true  - Preserve the successful attack roll                                                       |
+	+----------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local concealmentHitHook = EEex_TryLabel("Hook-CGameSprite::Hit()-Concealment")
+	if concealmentHitHook ~= nil then
+		-- r14d is the engine's final hit boolean here. Original misses bypass the
+		-- resolver, so they consume no concealment roll and produce no feedback.
+		EEex_HookBeforeRestoreWithLabels(concealmentHitHook, 0, 7, 7, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX,
+				EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+				EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11, EEex_HookIntegrityWatchdogRegister.R14
+			}}},
+			{[[
+				test r14d, r14d
+				jz no_concealment
+
+				#MAKE_SHADOW_SPACE
+				mov rcx, rbx                                      ; pAttacker
+				mov rdx, qword ptr ds:[#$(1)]                     ; pTarget
+			]], {CGameSprite_Hit_SavedTarget}, [[
+				call #L(EEex::Sprite_Hook_ResolveConcealment)
+				#DESTROY_SHADOW_SPACE
+
+				test al, al
+				jnz no_concealment
+				xor r14d, r14d
+
+				no_concealment:
+			]]}
+		)
+	end
+
+	--[[
+	+----------------------------------------------------------------------------------------------------------------+
+	| Keep concealment translucency consistent when Sprite Outlines are enabled                                      |
+	+----------------------------------------------------------------------------------------------------------------+
+	|   The sprite shader mishandles low-range translucency. Temporarily select the legacy alpha path for concealed  |
+	|   sprites, covering both mirror-image and primary animation renders, then restore the original renderer.       |
+	+----------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_BeginConcealmentRender(pSprite: CGameSprite*)                                   |
+	|   [EEex.dll] EEex::Sprite_Hook_EndConcealmentRender(pSprite: CGameSprite*)                                     |
+	+----------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local concealmentRenderBeginHook = EEex_TryLabel("Hook-CGameSprite::Render()-ConcealmentTranslucency-Begin")
+	local concealmentRenderEndHook = EEex_TryLabel("Hook-CGameSprite::Render()-ConcealmentTranslucency-End")
+	if concealmentRenderBeginHook ~= nil and concealmentRenderEndHook ~= nil then
+		EEex_HookBeforeRestoreWithLabels(concealmentRenderBeginHook, 0, 7, 7, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX,
+				EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+				EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				#MAKE_SHADOW_SPACE
+				mov rcx, rsi                                      ; pSprite
+				call #L(EEex::Sprite_Hook_BeginConcealmentRender)
+				#DESTROY_SHADOW_SPACE
+			]]}
+		)
+
+		EEex_HookBeforeRestoreWithLabels(concealmentRenderEndHook, 0, 8, 8, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX,
+				EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+				EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				#MAKE_SHADOW_SPACE
+				mov rcx, rsi                                      ; pSprite
+				call #L(EEex::Sprite_Hook_EndConcealmentRender)
+				#DESTROY_SHADOW_SPACE
+			]]}
+		)
+	end
 
 	EEex_HookNOPsWithLabels(EEex_Label("Hook-CGameSprite::Hit()-MeleeingWithRangedPenalty"), 2, {
 		{"hook_integrity_watchdog_ignore_registers", {

@@ -65,6 +65,12 @@ BEGIN @1 LABEL ~B3-EEex-Main~ DESIGNATED 1
 REQUIRE_PREDICATE (GAME_IS ~bgee bg2ee eet iwdee~ AND FILE_EXISTS ~data/PATCH26.BIF~) @1000 // Game not supported.
 REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires the core component to be installed.
 
+	ACTION_IF FILE_EXISTS ~data/PATCH27.BIF~ BEGIN
+		OUTER_SPRINT game_version ~v2.7.3.0~
+	END ELSE BEGIN
+		OUTER_SPRINT game_version ~v2.6.6.0~
+	END
+
 	ACTION_FOR_EACH file IN ACTION OBJECT TRIGGER BEGIN
 		COPY ~EEex/patch/%file%.IDS~ ~EEex/patch~
 			COUNT_2DA_ROWS 2 rows
@@ -72,6 +78,19 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires
 				READ_2DA_ENTRY i 0 2 "col1"
 				READ_2DA_ENTRY i 1 2 "col2"
 				DEFINE_ASSOCIATIVE_ARRAY EEex_append_array BEGIN ~%file%~ , ~%col1%~ , ~%col2%~ => ~~ END
+			END
+		BUT_ONLY
+	END
+
+	// Opcode 419 is only available on the v2.7.3.0 executable family. Keeping its
+	// public stat out of v2.6 installs makes the version boundary explicit.
+	ACTION_IF FILE_EXISTS ~data/PATCH27.BIF~ BEGIN
+		COPY ~EEex/patch/STATS.IDS~ ~EEex/patch~
+			COUNT_2DA_ROWS 2 rows
+			FOR (i = 0; i <= rows; ++i) BEGIN
+				READ_2DA_ENTRY i 0 2 "col1"
+				READ_2DA_ENTRY i 1 2 "col2"
+				DEFINE_ASSOCIATIVE_ARRAY EEex_append_array BEGIN ~STATS~ , ~%col1%~ , ~%col2%~ => ~~ END
 			END
 		BUT_ONLY
 	END
@@ -108,12 +127,6 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires
 	COPY ~EEex/copy/EEex_scripts~ ~EEex_scripts~
 	COPY ~EEex/copy/override~ ~override~
 
-	ACTION_IF FILE_EXISTS ~data/PATCH27.BIF~ BEGIN
-		OUTER_SPRINT game_version ~v2.7.3.0~
-	END ELSE BEGIN
-		OUTER_SPRINT game_version ~v2.6.6.0~
-	END
-
 	ACTION_IF GAME_IS ~bgee~ BEGIN
 		OUTER_SPRINT game_folder ~bgee~
 	END ELSE ACTION_IF GAME_IS ~bg2ee eet~ BEGIN
@@ -127,6 +140,28 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires
 	COPY ~EEex/loader/%game_version%~ ~.~
 	COPY ~EEex/loader/%game_version%/pattern_dbs~ ~EEex_scripts/extra_pattern_dbs~
 	COPY ~EEex/loader/%game_version%/%game_folder%~ ~EEex_scripts/profiler~
+
+	ACTION_IF FILE_EXISTS ~data/PATCH27.BIF~ BEGIN
+		WITH_SCOPE BEGIN
+			WITH_TRA "EEex\language\english\concealment.tra" "EEex\language\%LANGUAGE%\concealment.tra" BEGIN
+				OUTER_SET "strref" = RESOLVE_STR_REF (@0)
+				//
+				APPEND ~ENGINEST.2DA~ ~STRREF_TARGET_CONCEALED %strref%~ UNLESS ~^[ %TAB%]*STRREF_TARGET_CONCEALED[ %TAB%]~
+				// formatting
+				COPY_EXISTING ~ENGINEST.2DA~ ~override~
+					PRETTY_PRINT_2DA
+				BUT_ONLY_IF_IT_CHANGES
+			END
+		END
+
+		WITH_SCOPE BEGIN
+			APPEND ~X-STATS.2DA~ ~B3_CONCEALMENT 0 100 0~ UNLESS ~^[ %TAB%]*B3_CONCEALMENT[ %TAB%]~
+			// formatting
+			COPY_EXISTING "X-STATS.2DA" ~override~
+				PRETTY_PRINT_2DA
+			BUT_ONLY_IF_IT_CHANGES
+		END
+	END
 
 //////////////////////////////////////////////////////////////////////////////////
 // Enable effect menu module: LShift-on-hover to view spells affecting creature //

@@ -38,3 +38,13 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+[Hook-CGameSprite::Hit()-Concealment]
+Pattern=4438A3B04B0000
+
+[Hook-CGameSprite::Render()-ConcealmentTranslucency-Begin]
+Pattern=488B56188B4648
+
+[Hook-CGameSprite::Render()-ConcealmentTranslucency-End]
+Pattern=014590
+Operations=ADD -53
