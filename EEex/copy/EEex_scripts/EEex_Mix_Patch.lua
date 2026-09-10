@@ -12,12 +12,36 @@
 	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248() --
 	-------------------------------------------------------
 
+	-- r15 holds the resolved melee target at this point. Let op418 replace it before
+	-- base weapon damage, weapon on-hit effects, and the existing Lua hooks observe it.
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Melee"), {
-		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R15}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(72)
+				#MAKE_SHADOW_SPACE(112)
+				; Preserve volatile registers across the C++ resolver; this hook runs
+				; immediately before the existing Lua calls that still need swing state.
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r9
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r10
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)], r11
+
+				; The resolver returns either the original target or the captive that
+				; should receive this weapon hit.
+				mov rcx, r15
+				mov rdx, r15
+				call #L(EEex::Opcode_Hook_Constrict_ResolveRedirectTarget)
+				mov r15, rax
+
+				mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)]
+				mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
 			]]},
 			EEex_GenLuaCall("EEex_Sprite_Hook_CheckBlockWeaponHit", {
 				["labelSuffix"] = "_1",
@@ -71,12 +95,36 @@
 	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249() --
 	-------------------------------------------------------
 
+	-- r15 is also the live target for the ranged path; redirect it before any later
+	-- damage/on-hit consumers read the target register.
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameSprite::Swing()-CImmunitiesWeapon::OnList()-Ranged"), {
-		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.R15}}},
 		EEex_FlattenTable({
 			{[[
-				#MAKE_SHADOW_SPACE(72)
+				#MAKE_SHADOW_SPACE(112)
+				; Preserve volatile registers across the C++ resolver; this hook runs
+				; immediately before the existing Lua calls that still need swing state.
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r9
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r10
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)], r11
+
+				; The resolver returns either the original target or the captive that
+				; should receive this weapon hit.
+				mov rcx, r15
+				mov rdx, r15
+				call #L(EEex::Opcode_Hook_Constrict_ResolveRedirectTarget)
+				mov r15, rax
+
+				mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)]
+				mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
 			]]},
 			EEex_GenLuaCall("EEex_Sprite_Hook_CheckBlockWeaponHit", {
 				["labelSuffix"] = "_1",
