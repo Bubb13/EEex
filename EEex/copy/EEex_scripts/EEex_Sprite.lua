@@ -1514,6 +1514,11 @@ function EEex_Sprite_Hook_OnSetCurrAction(sprite)
 	local spriteAux = EEex_GetUDAux(sprite)
 	spriteAux["EEex_Fix_HasSpellOrSpellPointStartedCasting"] = 0
 	spriteAux["EEex_Sprite_DamageEntriesSinceActionStarted"] = {}
+	-- AttackOnce uses NoAction to end the current Attack while its consumed
+	-- state still guards any remaining same-swing Hit() callsites.
+	if sprite.m_curAction.m_actionID ~= 0 then
+		EEex.ClearAttackOnce(sprite)
+	end
 end
 
 --------------------------------------------------------------------------------------------
