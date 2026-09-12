@@ -160,6 +160,20 @@ end
 
 EEex_GameObject_GetAllSelectedIDs = EEex_Sprite_GetAllSelectedIDs
 
+-- @bubb_doc { EEex_Sprite_GetAllSelected }
+--
+-- @summary: Returns a table populated with all the sprites the player currently has selected and is controlling.
+--
+-- @return { type=table }: See summary.
+
+function EEex_Sprite_GetAllSelected()
+	local toReturn = {}
+	EEex_Sprite_IterateSelected(function(sprite)
+		table.insert(toReturn, sprite)
+	end)
+	return toReturn
+end
+
 -- @bubb_doc { EEex_Sprite_GetNumCharacters }
 --
 -- @summary: Returns the number of characters currently in the party.
