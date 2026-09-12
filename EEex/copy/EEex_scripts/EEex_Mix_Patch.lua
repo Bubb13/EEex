@@ -7,6 +7,16 @@
 
 	EEex_DisableCodeProtection()
 
+	-- Run only on the native ranged delivery branch, after BlockWeaponHit
+	-- listeners have allowed it. The melee branch may hold a cached projectile
+	-- but applies its damage directly; it must keep the original immunity test.
+	local op120RangedImmunity = EEex.Op120Installed and {[[
+		mov edx, eax ; Original CImmunitiesWeapon::OnList result
+		mov rcx, rbx ; Attacking sprite (verified in all three v2.7.3.0 images)
+		call #L(EEex::Op120_Hook_RangedImmunity)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+	]]} or {}
+
 	-------------------------------------------------------
 	-- [Lua] EEex_Sprite_Hook_CheckBlockWeaponHit()      --
 	-- [Lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248() --
@@ -109,6 +119,7 @@
 				#RESUME_SHADOW_ENTRY
 				mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
 			]]},
+			op120RangedImmunity,
 			EEex_GenLuaCall("EEex_Opcode_Hook_OnAfterSwingCheckedOp249", {
 				["labelSuffix"] = "_2",
 				["args"] = {

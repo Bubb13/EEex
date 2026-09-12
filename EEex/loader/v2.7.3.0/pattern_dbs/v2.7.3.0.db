@@ -38,3 +38,77 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Opcode 120 (engine fix)
+
+[Op120-Swing]
+Pattern=66894594
+Operations=ADD -122
+
+[Op120-AddEffect]
+Pattern=41384215
+Operations=ADD -95
+
+[Op120-OnList]
+Pattern=0FB72A
+Operations=ADD -44
+
+[Op120-OverrideWeaponType]
+Pattern=488B368B03
+Operations=ADD -68
+
+[Op120-CopySelective]
+Pattern=B930000000488B3F
+Operations=ADD -100
+
+[Op120-ApplyCriticals]
+Pattern=49394D18
+Operations=ADD -104
+
+[Op120-FireArea]
+Pattern=FF90D80000004883C440
+Operations=ADD -64
+
+[Op120-FireColorSpray]
+Pattern=0FB7457F488BF9
+Operations=ADD -42
+
+[Op120-FireConeOfCold]
+Pattern=83F9F6
+Operations=ADD -102
+
+[Op120-FireNewScorcher]
+Pattern=89BBD0040000
+Operations=ADD -58
+
+[Op120-FireChain]
+Pattern=488BB180000000
+Operations=ADD -30
+
+[Op120-FireFall]
+Pattern=488B018BF3
+Operations=ADD -81
+
+[Op120-FireMulti]
+Pattern=C3488D55DF
+Operations=ADD -85
+
+[Op120-AIUpdateBAM]
+Pattern=418BDD84C0
+Operations=ADD -124
+
+[Op120-RangedCriticalsCall]
+Pattern=894C24484C8BC6
+Operations=ADD -43
+
+[Op120-CaptureWeaponCall]
+Pattern=0FBF1403
+Operations=ADD -121
+
+[Op120-RangedImmunityCall]
+Pattern=458BCD4C8BC7
+Operations=ADD 83
+
+[Op120-MeleeImmunityCall]
+Pattern=458BCD4D8BC4
+Operations=ADD 126
