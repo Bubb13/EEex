@@ -1006,6 +1006,8 @@ end
 EEex_Sprite_Private_BlockWeaponHitListeners = {}
 
 function EEex_Sprite_AddBlockWeaponHitListener(listener)
+	-- [EEex.dll]
+	EEex.Sprite_LuaHook_CheckBlockWeaponHit_Enabled = true
 	table.insert(EEex_Sprite_Private_BlockWeaponHitListeners, listener)
 end
 
@@ -1053,7 +1055,7 @@ function EEex_Sprite_LuaHook_OnSpellDisableStateChanged(sprite)
 	end
 end
 
-function EEex_Sprite_Hook_CheckBlockWeaponHit(attackingSprite, targetSprite, weapon, weaponAbility)
+function EEex_Sprite_LuaHook_CheckBlockWeaponHit(attackingSprite, targetSprite, weapon, weaponAbility)
 
 	local listenerContext = {
 		["attackingSprite"] = attackingSprite,

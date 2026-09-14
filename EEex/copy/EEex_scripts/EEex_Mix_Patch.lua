@@ -18,29 +18,14 @@
 			{[[
 				#MAKE_SHADOW_SPACE(72)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-			]]},
-			EEex_GenLuaCall("EEex_Sprite_Hook_CheckBlockWeaponHit", {
-				["labelSuffix"] = "_1",
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end, -- attackingSprite
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "CGameSprite" end, -- targetSprite
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r12 #ENDL", {rspOffset}}, "CItem" end, -- weapon
-					-- weaponAbility
-					function(rspOffset) return {[[
-						mov rax, qword ptr ds:[rsp+#LAST_FRAME_TOP(68h)]
-						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
-					]]}, "Item_ability_st" end,
-				},
-				["returnType"] = EEex_LuaCallReturnType.Boolean,
-			}),
-			{[[
-				jmp no_error_1
 
-				call_error_1:
-				xor rax, rax
+				mov rcx, rbx                                    ; attackingSprite
+				mov rdx, r15                                    ; targetSprite
+				mov r8, r12                                     ; weapon
+				mov r9, qword ptr ds:[rsp+#LAST_FRAME_TOP(68h)] ; weaponAbility
+				call #L(EEex::Sprite_Hook_OnCheckBlockWeaponHit)
 
-				no_error_1:
-				test rax, rax
+				test al, al
 				jz do_not_block_base_weapon_damage_and_onhit_effects
 
 				#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
@@ -77,29 +62,14 @@
 			{[[
 				#MAKE_SHADOW_SPACE(72)
 				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
-			]]},
-			EEex_GenLuaCall("EEex_Sprite_Hook_CheckBlockWeaponHit", {
-				["labelSuffix"] = "_1",
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rbx #ENDL", {rspOffset}}, "CGameSprite" end, -- attackingSprite
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], r15 #ENDL", {rspOffset}}, "CGameSprite" end, -- targetSprite
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rdi #ENDL", {rspOffset}}, "CItem" end, -- weapon
-					-- weaponAbility
-					function(rspOffset) return {[[
-						mov rax, qword ptr ds:[rsp+#LAST_FRAME_TOP(68h)]
-						mov qword ptr ss:[rsp+#$(1)], rax ]], {rspOffset}, [[ #ENDL
-					]]}, "Item_ability_st" end,
-				},
-				["returnType"] = EEex_LuaCallReturnType.Boolean,
-			}),
-			{[[
-				jmp no_error_1
 
-				call_error_1:
-				xor rax, rax
+				mov rcx, rbx                                    ; attackingSprite
+				mov rdx, r15                                    ; targetSprite
+				mov r8, rdi                                     ; weapon
+				mov r9, qword ptr ds:[rsp+#LAST_FRAME_TOP(68h)] ; weaponAbility
+				call #L(EEex::Sprite_Hook_OnCheckBlockWeaponHit)
 
-				no_error_1:
-				test rax, rax
+				test al, al
 				jz do_not_block_base_weapon_damage_and_onhit_effects
 
 				#DESTROY_SHADOW_SPACE(KEEP_ENTRY)
