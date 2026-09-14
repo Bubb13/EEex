@@ -1648,6 +1648,7 @@ function EEex_Options_Private_LayoutToggle:_init()
 	EEex_Utility_CallSuper(EEex_Options_Private_LayoutToggle, "_init", self)
 
 	if self.displayEntry == nil then EEex_Error("displayEntry required") end
+	if self.widget       == nil then EEex_Error("widget required")       end
 end
 
 ------------
@@ -1655,73 +1656,44 @@ end
 ------------
 
 function EEex_Options_Private_LayoutToggle:doLayout()
-	EEex_Options_Private_CreateToggle(self.menuName, self.displayEntry, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
+	EEex_Options_Private_CreateToggle(self.menuName, self.displayEntry, self.widget, self._layoutLeft, self._layoutTop, self._layoutWidth, self._layoutHeight)
 end
 
 --//////////////
 --// Template //
 --//////////////
 
-function EEex_Options_Private_ToggleAction(displayEntry)
+function EEex_Options_Private_ToggleAction(displayEntry, widget)
 
-	local widget = displayEntry.widget
 	local newToggleState = not widget.toggleState
 
 	if not newToggleState and widget.disallowToggleOff then
 		return
 	end
 
-	widget.toggleState = newToggleState
-
-	local forceOthers = widget.forceOthers
-
-	if forceOthers then
-
-		for _, forceEntry in ipairs(forceOthers[widget.toggleState] or {}) do
-
-			local forceDisplayEntry = EEex_Options_Private_IdToDisplayEntry[forceEntry[1]]
-			local forceWidget = forceDisplayEntry.widget
-			local newForceToggleState = forceEntry[2]
-
-			if type(newForceToggleState) == "function" then
-				newForceToggleState = newForceToggleState()
-			end
-
-			if newForceToggleState ~= nil then
-
-				forceWidget.toggleState = newForceToggleState
-
-				if newForceToggleState or not forceWidget.disallowToggleOff then
-					local mainForceDisplayEntry = forceWidget.deferTo and EEex_Options_Private_IdToDisplayEntry[forceWidget.deferTo] or forceDisplayEntry
-					local newForceVal = newForceToggleState and mainForceDisplayEntry.widget.toggleValue or 0
-					mainForceDisplayEntry:_setWorkingValue(newForceVal)
-				end
-			end
-		end
-	end
-
-	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
-	local newVal = newToggleState and mainDisplayEntry.widget.toggleValue or 0
-	mainDisplayEntry:_setWorkingValue(newVal)
+	local newVal = newToggleState and widget.toggleValue or 0
+	displayEntry:_setWorkingValue(newVal)
 end
 
 function EEex_Options_Private_TEMPLATE_Toggle_Action()
 
-	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
+	local instanceData = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId]
+	local displayEntry = instanceData.displayEntry
+	local widget = instanceData.widget
 
 	local doToggle = function()
-		EEex_Options_Private_ToggleAction(displayEntry)
+		EEex_Options_Private_ToggleAction(displayEntry, widget)
 	end
 
-	local toggleWarning = displayEntry.widget.toggleWarning
+	local toggleWarning = widget.toggleWarning
 	if toggleWarning == nil or not toggleWarning(doToggle) then
 		doToggle()
 	end
 end
 
 function EEex_Options_Private_TEMPLATE_Toggle_Frame()
-	local displayEntry = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].displayEntry
-	return displayEntry.widget.toggleState and 2 or 0
+	local widget = EEex_Options_Private_TemplateInstancesByName["EEex_Options_TEMPLATE_Toggle"][instanceId].widget
+	return widget.toggleState and 2 or 0
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
@@ -2320,7 +2292,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_mapOptions()
 				EEex_Error(string.format("option with id \"%s\" not found", optionID))
 			end
 
-			EEex_Options_Private_IdToDisplayEntry[optionID] = displayEntry
+			table.insert(option._displayEntries, displayEntry)
 			displayEntry._option = option
 			displayEntry.widget:_onMap(displayEntry, optionID)
 
@@ -2510,9 +2482,7 @@ function EEex_Options_Private_LayoutOptionsPanel:_writeNewValues()
 
 		for _, displayEntry in ipairs(group) do
 
-			if not displayEntry.widget.deferTo then
-				displayEntry:_set(displayEntry:_getWorkingValue())
-			end
+			displayEntry:_set(displayEntry:_getWorkingValue())
 
 			if displayEntry.subOptions then
 				handleGroup(displayEntry.subOptions)
@@ -2704,6 +2674,9 @@ function EEex_Options_Option:_init()
 	if self.requiresRestart == nil then self.requiresRestart = false                              end
 	-- Optional
 	--   self.storage
+
+	-- Derived
+	self._displayEntries = {}
 end
 
 function EEex_Options_Option:_canReadEarly()
@@ -2754,8 +2727,17 @@ function EEex_Options_Option:_set(newValue, fromRead, needCopy)
 end
 
 function EEex_Options_Option:_setWorkingValue(newValue, needCopy)
+
+	local oldValue = self:_getWorkingValue()
 	newValue = self.accessor:validate(self, newValue, needCopy)
 	self._workingValue = newValue
+
+	if newValue ~= oldValue then
+		for _, displayEntry in ipairs(self._displayEntries) do
+			displayEntry:_onWorkingValueChanged(newValue)
+		end
+	end
+
 	return newValue
 end
 
@@ -2862,6 +2844,10 @@ end
 
 function EEex_Options_DisplayEntry:_getWorkingValue()
 	return self._option:_getWorkingValue()
+end
+
+function EEex_Options_DisplayEntry:_onWorkingValueChanged(newValue)
+	self.widget:_onWorkingValueChanged(newValue)
 end
 
 function EEex_Options_DisplayEntry:_set(newValue, fromRead, needCopy)
@@ -3599,9 +3585,67 @@ function EEex_Options_Widget:_onShowAfterLayout(displayEntry)
 	-- Empty stub
 end
 
+function EEex_Options_Widget:_onWorkingValueChanged(newValue)
+	-- Empty stub
+end
+
 --=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_Widget  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_ParentWidget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_ParentWidget = {}
+EEex_Options_ParentWidget.__index = EEex_Options_ParentWidget
+setmetatable(EEex_Options_ParentWidget, EEex_Options_Widget)
+--print("EEex_Options_ParentWidget: "..tostring(EEex_Options_ParentWidget))
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_ParentWidget:_init()
+	EEex_Utility_CallSuper(EEex_Options_ParentWidget, "_init", self)
+end
+
+function EEex_Options_ParentWidget:_onMap(displayEntry, optionName)
+	for child in self:_getChildWidgetsItr() do
+		child:_onMap(displayEntry, optionName)
+	end
+end
+
+function EEex_Options_ParentWidget:_getChildWidgetsItr()
+	-- Empty stub
+	return function() return nil end
+end
+
+function EEex_Options_ParentWidget:_onShowBeforeLayout(displayEntry)
+	for child in self:_getChildWidgetsItr() do
+		child:_onShowBeforeLayout(displayEntry)
+	end
+end
+
+function EEex_Options_ParentWidget:_onShowAfterLayout(displayEntry)
+	for child in self:_getChildWidgetsItr() do
+		child:_onShowBeforeLayout(displayEntry)
+	end
+end
+
+function EEex_Options_ParentWidget:_onWorkingValueChanged(newValue)
+	for child in self:_getChildWidgetsItr() do
+		child:_onWorkingValueChanged(newValue)
+	end
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_ParentWidget  ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- START EEex_Options_EditWidget  ==
@@ -3757,7 +3801,6 @@ end
 function EEex_Options_ToggleWidget:_init()
 	EEex_Utility_CallSuper(EEex_Options_ToggleWidget, "_init", self)
 	if self.disallowToggleOff == nil then self.disallowToggleOff = false end
-	if self.forceOthers       == nil then self.forceOthers       = {}    end
 	if self.toggleValue       == nil then self.toggleValue       = 1     end
 	-- Optional
 	--   self.toggleState
@@ -3768,18 +3811,119 @@ function EEex_Options_ToggleWidget:_buildLayout(displayEntry, menuName)
 	return EEex_Options_Private_LayoutToggle.new({
 		["menuName"]     = menuName,
 		["displayEntry"] = displayEntry,
+		["widget"]       = self,
 	})
 end
 
 function EEex_Options_ToggleWidget:_onShowBeforeLayout(displayEntry)
-	local widget = displayEntry.widget
-	local mainDisplayEntry = widget.deferTo and EEex_Options_Private_IdToDisplayEntry[widget.deferTo] or displayEntry
-	widget.toggleState = mainDisplayEntry:_getWorkingValue() == widget.toggleValue
+	self.toggleState = displayEntry:_getWorkingValue() == self.toggleValue
+end
+
+function EEex_Options_ToggleWidget:_onWorkingValueChanged(newValue)
+	self.toggleState = newValue == self.toggleValue
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 -- END EEex_Options_ToggleWidget  ==
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- START EEex_Options_HorizontalMultiToggleWidget ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+
+EEex_Options_HorizontalMultiToggleWidget = {}
+EEex_Options_HorizontalMultiToggleWidget.__index = EEex_Options_HorizontalMultiToggleWidget
+setmetatable(EEex_Options_HorizontalMultiToggleWidget, EEex_Options_ParentWidget)
+--print("EEex_Options_HorizontalMultiToggleWidget: "..tostring(EEex_Options_HorizontalMultiToggleWidget))
+
+--////////////
+--// Static //
+--////////////
+
+EEex_Options_HorizontalMultiToggleWidget.new = function(o)
+	if o == nil then o = {} end
+	setmetatable(o, EEex_Options_HorizontalMultiToggleWidget)
+	o:_init()
+	return o
+end
+
+--//////////////
+--// Instance //
+--//////////////
+
+-------------
+-- Private --
+-------------
+
+function EEex_Options_HorizontalMultiToggleWidget:_init()
+
+	EEex_Utility_CallSuper(EEex_Options_HorizontalMultiToggleWidget, "_init", self)
+	if self.toggles   == nil then EEex_Error("toggles required") end
+	if self.togglePad == nil then self.togglePad = 5             end
+	if self.entryPad  == nil then self.entryPad  = 10            end
+
+	-- Derived
+	self._widgets = {}
+end
+
+function EEex_Options_HorizontalMultiToggleWidget:_buildLayout(displayEntry, menuName)
+
+	local childLayouts = {}
+	local childLayoutI = 0
+
+	for i, toggleEntry in ipairs(self.toggles) do
+
+		local toggleData = toggleEntry.data
+		toggleData.disallowToggleOff = true
+
+		local toggleWidget = EEex_Options_ToggleWidget.new(toggleData)
+		table.insert(self._widgets, toggleWidget)
+
+		childLayoutI = childLayoutI + 1
+		childLayouts[childLayoutI] = toggleWidget:_buildLayout(displayEntry, menuName)
+
+		childLayoutI = childLayoutI + 1
+		childLayouts[childLayoutI] = EEex_Options_Private_LayoutFixed.new({ ["width"] = self.togglePad })
+
+		childLayoutI = childLayoutI + 1
+		childLayouts[childLayoutI] = EEex_Options_Private_LayoutText.new({
+			["menuName"]      = menuName,
+			["font"]          = styles["EEex_Options_Normal"].font,
+			["point"]         = styles["EEex_Options_Normal"].point,
+			["color"]         = EEex_Options_Private_GetFontStyleColor(styles["EEex_Options_Normal"]),
+			["verticalAlign"] = EEex_Options_Private_LayoutText_VerticalAlign.CENTER,
+			["text"]          = toggleEntry.label,
+			["translate"]     = true,
+		})
+
+		childLayoutI = childLayoutI + 1
+		childLayouts[childLayoutI] = EEex_Options_Private_LayoutFixed.new({ ["width"] = self.entryPad })
+	end
+
+	if childLayoutI > 0 then
+		childLayouts[childLayoutI] = nil
+	end
+
+	return EEex_Options_Private_LayoutHBox.new({
+		["growHorizontally"] = true,
+		["growVertically"]   = true,
+		["children"]         = childLayouts,
+	})
+end
+
+function EEex_Options_HorizontalMultiToggleWidget:_getChildWidgetsItr()
+	local i = 1
+	return function()
+		local widget = self._widgets[i]
+		if widget == nil then return nil end
+		i = i + 1
+		return widget
+	end
+end
+
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+-- END EEex_Options_HorizontalMultiToggleWidget ==
+--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
 
 --===========
 -- Globals ==
@@ -3788,7 +3932,6 @@ end
 EEex_Options_Private_AlreadyRead                   = false
 EEex_Options_Private_EditCaptured                  = nil -- uiItem
 EEex_Options_Private_EditPendingFocus              = nil -- string
-EEex_Options_Private_IdToDisplayEntry              = {}
 EEex_Options_Private_IdToOption                    = {}
 EEex_Options_Private_KeybindFocusedInstance        = nil -- number
 EEex_Options_Private_KeybindPendingFocusedInstance = nil -- number
@@ -3827,27 +3970,7 @@ function EEex_Options_Private_PackColor(alpha, blue, green, red)
 end
 
 function EEex_Options_Private_GetTextWidthHeight(font, pointSize, text)
-
-	-- Ensure space so that the text wraps
-	if text:sub(-1) ~= " " then
-		text = text.." "
-	end
-
-	local effectivePoint = math.floor(EngineGlobals.g_pBaldurChitin.cVideo.pCurrentMode.nHeight * pointSize / CVidMode.SCREENHEIGHT)
-	if effectivePoint == 0 then
-		 -- This case causes Infinity_GetContentHeight() to crash (yes, really...)
-		return 0, 0
-	end
-
-	local oneLineHeight = Infinity_GetContentHeight(font, 0, "", pointSize, 0)
-	local currentWidth = 0
-	local currentHeight = nil
-	repeat
-		currentWidth = currentWidth + 1
-		currentHeight = Infinity_GetContentHeight(font, currentWidth, text, pointSize, 0)
-	until currentHeight <= oneLineHeight
-
-	return currentWidth, oneLineHeight
+	return EEex_Menu_GetTextWidthHeight(text, font, pointSize, false)
 end
 
 function EEex_Options_Private_GetMaxTextBounds(font, pointSize, numChars)
@@ -3961,9 +4084,10 @@ function EEex_Options_Private_CreateTextArea(menuName, text, x, y, w, h, extraAr
 	return instanceData
 end
 
-function EEex_Options_Private_CreateToggle(menuName, displayEntry, x, y, w, h)
+function EEex_Options_Private_CreateToggle(menuName, displayEntry, widget, x, y, w, h)
 	local instanceData = EEex_Options_Private_CreateInstance(menuName, "EEex_Options_TEMPLATE_Toggle", x, y, w, h)
 	instanceData.displayEntry = displayEntry
+	instanceData.widget = widget
 	return instanceData
 end
 
@@ -4971,6 +5095,22 @@ end
 
 function EEex_Options_Get(id)
 	return EEex_Options_Private_IdToOption[id]
+end
+
+-- @bubb_doc { EEex_Options_Set }
+--
+-- @summary: If it exists, sets the option with the given ``id`` to ``value``.
+--
+-- @param { id / type=string }: The id of the option whose value is to be set.
+--
+-- @param { value / type=``<non-nil>`` }: The value to set the option to. If ``nil``, sets the option to its default value.
+--
+-- @return { type=``<any>`` }: The new value of the option, or ``nil`` if the option did not exist.
+
+function EEex_Options_Set(id, value)
+	local option = EEex_Options_Get(id)
+	if option == nil then return nil end
+	return option:set(value)
 end
 
 -------------------------
