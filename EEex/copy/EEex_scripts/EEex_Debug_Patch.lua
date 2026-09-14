@@ -77,6 +77,10 @@
 		)
 	end
 
+	if EEex_Debug_LogFontWraps then
+		EEex_JITAt(EEex_Label("Hook-fontWrap()-FirstInstruction"), {"jmp #L(EEex::Override_fontWrap)"})
+	end
+
 	EEex_EnableCodeProtection()
 
 end)()

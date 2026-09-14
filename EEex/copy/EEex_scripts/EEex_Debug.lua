@@ -6,6 +6,7 @@
 EEex_Debug_DisableExtraCreatureMarshalling = false
 EEex_Debug_LogActions = false
 EEex_Debug_LogEventTriggers = false
+EEex_Debug_LogFontWraps = false
 
 --===========
 -- General ==

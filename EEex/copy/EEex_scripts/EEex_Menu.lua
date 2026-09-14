@@ -120,6 +120,32 @@ function EEex_Menu_GetItemArea(menuItemName)
 	return item:getArea()
 end
 
+-- @bubb_doc { EEex_Menu_GetTextWidthHeight }
+--
+-- @summary: Calculates the minimum width and height needed to render ``sText``.
+--
+-- @param { sText / type=string }: The text whose dimensions are to be calculated.
+--
+-- @param { sFont / type=string }: The font of the text.
+--
+-- @param { nPointSize / usertype=number }: The point size of the text.
+--
+-- @param { bUseFontZoom / usertype=boolean }: Determines if ``nPointSize`` is scaled by the game's 'font zoom' option.
+--
+-- @param { nWidth / usertype=number }:
+--
+--     The width available to the text. Text wrapping will occur if the text overruns this width.
+--
+--     A value of ``nil`` signifies unlimited width.
+--
+-- @return { type=number }: The calculated width of the text.
+--
+-- @return { type=number }: The calculated height of the text.
+
+function EEex_Menu_GetTextWidthHeight(sText, sFont, nPointSize, bUseFontZoom, nWidth)
+	return EEex.GetTextWidthHeight(sText, sFont, nPointSize, bUseFontZoom, nWidth)
+end
+
 function EEex_Menu_IsCursorWithin(menuName, menuItemName)
 	local menuX, menuY, menuW, menuH = EEex_Menu_GetArea(menuName)
 	local itemX, itemY, itemWidth, itemHeight = Infinity_GetArea(menuItemName)

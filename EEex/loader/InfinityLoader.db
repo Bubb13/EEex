@@ -1343,12 +1343,24 @@ Operations=ADD -16
 Pattern=448B742420418BC6
 Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 
+[DrawTransformFromScreenH]
+Pattern=8B459003C7
+Operations=ADD 13, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawTransformFromScreenW]
+Pattern=0F2FF07720
+Operations=ADD 28, PUSH, READ DWORD, ADD, ADD 4
+
 [DrawTransformToScreen]
 Pattern=81E1FF0F00004D896B20
 Operations=ADD 60, PUSH, READ DWORD, ADD, ADD 4
 
 [DrawTransformToScreenH]
 Pattern=F30F2CC0488D5580
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[DrawTransformToScreenW]
+Pattern=F30F2CC0488D542464
 Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
 
 [DrawVertex]
@@ -2770,6 +2782,10 @@ Operations=ADD 66
 [Hook-drawTop()-HandleTransitionMenuFadeJmp]
 Pattern=488B9C2460030000
 Operations=ADD 8
+
+[Hook-fontWrap()-FirstInstruction]
+Pattern=4155415641574881EC00010000
+Operations=ADD -6
 
 [Hook-saveMenus()-CheckItemSave]
 Pattern=498B1E4885DB0F8482000000
