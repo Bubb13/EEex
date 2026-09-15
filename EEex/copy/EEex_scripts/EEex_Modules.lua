@@ -1,5 +1,6 @@
 
 EEex_Modules = {
+	["B3AttackInfo"]     = false,
 	["B3EffMen"]         = false,
 	["B3EmptyContainer"] = false,
 	["B3Hotkey"]         = false,

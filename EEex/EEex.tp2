@@ -17,6 +17,7 @@ QUICK_MENU
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
 	@3001 BEGIN
 		1 // B3-EEex-Main
+		9 // B3-EEex-Module-Attack-Info
 		2 // B3-EEex-Module-Effect-Menu
 		3 // B3-EEex-Module-Empty-Containers
 		4 // B3-EEex-Module-Hotkey
@@ -29,6 +30,7 @@ QUICK_MENU
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	@3002 BEGIN
 		1 // B3-EEex-Main
+		9 // B3-EEex-Module-Attack-Info
 		2 // B3-EEex-Module-Effect-Menu
 		3 // B3-EEex-Module-Empty-Containers
 		4 // B3-EEex-Module-Hotkey
@@ -127,6 +129,18 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires
 	COPY ~EEex/loader/%game_version%~ ~.~
 	COPY ~EEex/loader/%game_version%/pattern_dbs~ ~EEex_scripts/extra_pattern_dbs~
 	COPY ~EEex/loader/%game_version%/%game_folder%~ ~EEex_scripts/profiler~
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// Enable attack info module: Show to-hit chances when hovering attack cursor over target //
+////////////////////////////////////////////////////////////////////////////////////////////
+
+BEGIN @9 LABEL ~B3-EEex-Module-Attack-Info~ DESIGNATED 9
+GROUP @2000 // Optional
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ (ID_OF_LABEL ~EEex.tp2~ ~B3-EEex-Main~) @1002 // This component requires the main component to be installed.
+
+	COPY ~EEex.ini~ ~.~
+		LPF SetINIString STR_VAR section=~Attack Info Module~ key=~Enable~ value=~1~ END
+	BUT_ONLY
 
 //////////////////////////////////////////////////////////////////////////////////
 // Enable effect menu module: LShift-on-hover to view spells affecting creature //

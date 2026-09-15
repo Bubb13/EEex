@@ -13,6 +13,7 @@
 @6 = ~Enable time step module: Advance 1 game tick on keypress~
 @7 = ~Enable timer module: Visual indicators for modal actions, contingencies, and spell/item cooldowns~
 @8 = ~Experimental - Use LuaJIT: Can help stuttering | WARNING: May cause crashes when combined with certain mods~
+@9 = ~Enable attack info module: Show to-hit chances when hovering attack cursor over target~
 
 // Error messages
 @1000 = ~Game not supported.~

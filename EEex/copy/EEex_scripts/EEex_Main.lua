@@ -61,6 +61,7 @@ EEex_Main_Private_StartupFiles = {
 }
 
 EEex_Main_Private_Modules = {
+	{ "B3AttackInfo",     "EEex_Module_AttackInfo"     },
 	{ "B3EffMen",         "EEex_Module_EffectMenu"     },
 	{ "B3EmptyContainer", "EEex_Module_EmptyContainer" },
 	{ "B3Hotkey",         nil                          },

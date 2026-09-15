@@ -39,6 +39,24 @@ When enabled, any time a key is pressed EEex will output the pressed key's keyco
 
 uiStrings["EEex_Options_TRANSLATION_Modules_TabTitle"] = "Modules"
 
+uiStrings["EEex_Options_TRANSLATION_Modules_EnableAttackInfo"] = "Enable Attack Info Module"
+
+uiStrings["EEex_Options_TRANSLATION_Modules_EnableAttackInfo_Description"] = [[
+Enables the attack information popup.
+
+The attack information popup opens and displays various attack information when hovering an attack cursor over a creature.
+
+This information includes:
+
+- The to-hit probabilities each selected party member has against the target.
+
+- And optionally, whether the target is immune to the weapon of each selected party member.
+
+The attack direction can be reversed by holding a keybind, (by default 'Left Alt').
+
+Reversing the attack direction causes the popup to display attack information for the creature under the cursor, as if it was attacking each selected party member.
+]]
+
 uiStrings["EEex_Options_TRANSLATION_Modules_EnableEffectMenu"] = "Enable Effect Menu Module"
 
 uiStrings["EEex_Options_TRANSLATION_Modules_EnableEffectMenu_Description"] = [[
@@ -76,6 +94,75 @@ uiStrings["EEex_Options_TRANSLATION_Modules_EnableTimerModule"] = "Enable Timer 
 uiStrings["EEex_Options_TRANSLATION_Modules_EnableTimerModule_Description"] = [[
 Enables visual indicators next to party member portraits that display various timer information.
 ]]
+
+-------------------------
+-- Module: Attack Info --
+-------------------------
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_TabTitle"] = "Module: Attack Info"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_Enable"] = "Enabled"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_Enable_Description"] = uiStrings["EEex_Options_TRANSLATION_Modules_EnableAttackInfo_Description"]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_FontPoint"] = "Font Point"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_FontPoint_Description"] = [[
+The point (size) of the font used to display the attack information.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType"] = "Immunity Display Type"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Description"] = [[
+The method used to display target immunities in the popup.
+
+'Color' - Change the color used to display hit percentages for entries where the target is immune to the attacker.
+
+'None' - Do not display immunity data.
+
+'Text' - Replace the hit percentages for entries where the target is immune to the attacker.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Color"] = "Color"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_None"] = "None"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Text"] = "Text"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey"] = "Show Color Key"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey_Description"] = [[
+Determines whether a color key is displayed in the top right of the popup when the "Immunity Display Type" option is set to 'Color'.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind"] = "Reverse Keybind"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind_Description"] = [[
+When pressed, this keybind causes the attack information popup to reverse the attack direction - 
+i.e. show the hit chance(s) the target has against the selected party members.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders"] = "Show Column Headers"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders_Description"] = [[
+Determines whether the first line of the popup's information list is used to display column headers.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_HideUnusedOffhandHeader"] = "Hide Unused Offhand Header"
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_HideUnusedOffhandHeader_Description"] = [[
+Determines whether the offhand column header is hidden when the current view has zero entries to display in that column.
+]]
+
+uiStrings["EEex_TRANSLATION_AttackInfo_PartyAttacksTarget"] = "Party attacks target"
+
+uiStrings["EEex_TRANSLATION_AttackInfo_TargetAttacksParty"] = "Target attacks party"
+
+uiStrings["EEex_TRANSLATION_AttackInfo_ImmuneColorKey"] = "Immune = "
+
+uiStrings["EEex_TRANSLATION_AttackInfo_Mainhand"] = "Main"
+
+uiStrings["EEex_TRANSLATION_AttackInfo_Offhand"] = "Offhand"
 
 -------------------------
 -- Module: Effect Menu --

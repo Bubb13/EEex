@@ -197,6 +197,10 @@ Operations=ADD -5
 Pattern=83F8147776
 Operations=ADD -8
 
+[CDerivedStats::GetCriticalValue]
+Pattern=4C8B91580C0000
+Operations=ADD -6
+
 [CDerivedStats::GetPriestLevelCast]
 Pattern=48895C240855488BEC4883EC20
 
@@ -303,6 +307,10 @@ Operations=ADD -11
 Pattern=488945F7488B4577
 Operations=ADD -35
 
+[CGameSprite::DisableOffhand]
+Pattern=4889742418574883EC200FB681F8100000
+Operations=ADD -5
+
 [CGameSprite::FeedBack]
 Pattern=48895C24105556574154415541564157488D6C24F9
 
@@ -366,6 +374,10 @@ Operations=ADD -33
 [CGameSprite::ReadySpell]
 Pattern=5657488D6C2480
 Operations=ADD -6
+
+[CGameSprite::ShouldAvertCriticalHit]
+Pattern=4889742410574883EC2033DB
+Operations=ADD -5
 
 [CGameSprite::SpellPoint]
 Pattern=41554157488D6C24D0
@@ -456,6 +468,10 @@ Operations=ADD -2
 Pattern=48896C242048895424105657
 Operations=ADD -5
 
+[CItem::Demand]
+Pattern=48837B0800740B
+Operations=ADD -43
+
 [CItem::GetAbility]
 Pattern=7535488B4B08
 Operations=ADD -40
@@ -544,6 +560,10 @@ Pattern=4C894C24204C89442418488954241053
 [CSearchBitmap::GetStructureHeight]
 Pattern=33C06685D2
 
+[CSelectiveBonusList::GetBonus]
+Pattern=4889742418574883EC30488B5908
+Operations=ADD -10
+
 [CSound::Construct]
 ExeSwitch=1
 
@@ -584,6 +604,10 @@ Operations=ADD -14, PUSH, READ DWORD, ADD, ADD 4
 
 [CTlkTable::Fetch]
 ExeSwitch=1
+
+[CUtil::UtilRandInt]
+Pattern=4883EC208BFA8BD9
+Operations=ADD -6
 
 [CVariable::Construct]
 Pattern=40534883EC2041B820000000
@@ -727,6 +751,10 @@ Operations=ADD 71, PUSH, READ DWORD, ADD, ADD 4
 [CGameObject::DEFAULT_VISIBLE_TERRAIN_TABLE]
 Pattern=4C8D83D8030000
 Operations=ADD 27, PUSH, READ DWORD, ADD, ADD 4
+
+[CGameSprite::DEFAULT_ATTACK]
+Pattern=48894DDF4D85FF
+Operations=ADD -8, PUSH, READ DWORD, ADD, ADD 4
 
 [CInfinity::MAXZOOM_OUT]
 Pattern=488BF94881C1C8050000
@@ -1199,6 +1227,10 @@ Operations=ADD -10
 Pattern=488D6C24F94881EC00010000
 Operations=ADD -16
 
+[CImmunitiesWeapon::OnList]
+Pattern=41574C8B4908
+Operations=ADD -22
+
 [CInfGame::GetArea]
 Pattern=574883EC20488BF2488BE9
 Operations=ADD -15
@@ -1224,9 +1256,24 @@ Operations=ADD -15
 Pattern=4889442430488B01
 Operations=ADD -14
 
+[CResRef::operator==(const char*)]
+Pattern=443BDA751A
+Operations=ADD -59
+
+[CSelectiveWeaponTypeList::OverrideWeaponType]
+Pattern=48896C242056415641574883EC30
+
 [CString::Format]
 Pattern=448BC54889442420488D4C2420
 Operations=ADD 14, PUSH, READ DWORD, ADD, ADD 4
+
+[CString::operator+=(CString*)]
+Pattern=488BD94C8BC0
+Operations=ADD -9
+
+[CString::operator+=(char*)]
+Pattern=4889842420010000488BFA
+Operations=ADD 25, PUSH, READ DWORD, ADD, ADD 4
 
 [CTimerWorld::StartTime]
 Pattern=C6410401

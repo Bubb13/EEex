@@ -1,4 +1,12 @@
 
+EEex_Module_Private_AttackInfo = EEex_Options_Register("EEex_Module_AttackInfo", EEex_Options_Option.new({
+	["default"]         = 0,
+	["type"]            = EEex_Options_ToggleType.new(),
+	["accessor"]        = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]         = EEex_Options_NumberINIStorage.new({ ["path"] = "EEex.ini", ["section"] = "Attack Info Module", ["key"] = "Enable" }),
+	["requiresRestart"] = true,
+}))
+
 EEex_Module_Private_EffectMenu = EEex_Options_Register("EEex_Module_EffectMenu", EEex_Options_Option.new({
 	["default"]         = 0,
 	["type"]            = EEex_Options_ToggleType.new(),
@@ -41,6 +49,12 @@ EEex_Module_Private_Timer = EEex_Options_Register("EEex_Module_Timer", EEex_Opti
 
 EEex_Options_AddTab("EEex_Options_TRANSLATION_Modules_TabTitle", function() return {
 	{
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "EEex_Module_AttackInfo",
+			["label"]       = "EEex_Options_TRANSLATION_Modules_EnableAttackInfo",
+			["description"] = "EEex_Options_TRANSLATION_Modules_EnableAttackInfo_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
 		EEex_Options_DisplayEntry.new({
 			["optionID"]    = "EEex_Module_EffectMenu",
 			["label"]       = "EEex_Options_TRANSLATION_Modules_EnableEffectMenu",
