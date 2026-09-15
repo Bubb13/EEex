@@ -1,5 +1,130 @@
 
 -------------
+-- Options --
+-------------
+
+EEex_Options_Register("B3AttackInfo_Enable", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info" }),
+	["onChange"] = function(self, oldValue) B3AttackInfo_SetEnabled(self:get() ~= 0) end,
+}))
+
+B3AttackInfo_Private_FontPoint = EEex_Options_Register("B3AttackInfo_FontPoint", EEex_Options_Option.new({
+	["default"]  = 11,
+	["type"]     = EEex_Options_EditType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 1, ["max"] = 99 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Font Point" }),
+}))
+
+B3AttackInfo_Private_ImmunityDisplayType = EEex_Options_Register("B3AttackInfo_ImmunityDisplayType", EEex_Options_Option.new({
+	["default"]  = 0,
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 2 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Immunity Display Type" }),
+}))
+
+B3AttackInfo_Private_ImmunityDisplayTypeShowColorKey = EEex_Options_Register("B3AttackInfo_ImmunityDisplayType_ShowColorKey", EEex_Options_Option.new({
+	["default"]  = 0,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Immunity Display Type Show Color Key" }),
+}))
+
+EEex_Options_Register("B3AttackInfo_ReverseKeybind", EEex_Options_Option.new({
+	["default"]  = EEex_Options_UnmarshalKeybind("Left Alt|Down"),
+	["type"]     = EEex_Options_KeybindType.new({
+		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
+		["callback"]       = function() B3AttackInfo_Private_Menu_Reversed = true end,
+	}),
+	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3AttackInfo_ReverseKeybind" }),
+	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Reverse Keybind" }),
+}))
+
+B3AttackInfo_Private_ShowColumnHeaders = EEex_Options_Register("B3AttackInfo_ShowColumnHeaders", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Show Column Headers" }),
+}))
+
+B3AttackInfo_Private_HideUnusedOffhandHeader = EEex_Options_Register("B3AttackInfo_HideUnusedOffhandHeader", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Hide Unused Offhand Header" }),
+}))
+
+EEex_Options_AddTab("EEex_Options_TRANSLATION_AttackInfo_TabTitle", function() return {
+	{
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_Enable",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_Enable",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_Enable_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_FontPoint",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_FontPoint",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_FontPoint_Description",
+			["widget"]      = EEex_Options_EditWidget.new({
+				["maxCharacters"] = 2,
+				["number"]        = true,
+			}),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_ImmunityDisplayType",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Description",
+			["widget"]      = EEex_Options_HorizontalMultiToggleWidget.new({
+				["toggles"] = {
+					{
+						["label"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Color",
+						["data"] = { ["toggleValue"] = 0 },
+					},
+					{
+						["label"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_None",
+						["data"] = { ["toggleValue"] = 1 },
+					},
+					{
+						["label"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Text",
+						["data"] = { ["toggleValue"] = 2 },
+					},
+				},
+			}),
+			["subOptions"] = {
+				EEex_Options_DisplayEntry.new({
+					["optionID"]    = "B3AttackInfo_ImmunityDisplayType_ShowColorKey",
+					["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey",
+					["description"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey_Description",
+					["widget"]      = EEex_Options_ToggleWidget.new(),
+				}),
+			},
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_ReverseKeybind",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind_Description",
+			["widget"]      = EEex_Options_KeybindWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_ShowColumnHeaders",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+			["subOptions"]  = {
+				EEex_Options_DisplayEntry.new({
+					["optionID"]    = "B3AttackInfo_HideUnusedOffhandHeader",
+					["label"]       = "EEex_Options_TRANSLATION_AttackInfo_HideUnusedOffhandHeader",
+					["description"] = "EEex_Options_TRANSLATION_AttackInfo_HideUnusedOffhandHeader_Description",
+					["widget"]      = EEex_Options_ToggleWidget.new(),
+				}),
+			}
+		}),
+	},
+} end)
+
+-------------
 -- Globals --
 -------------
 
@@ -371,8 +496,7 @@ function B3AttackInfo_Private_Layout(targetSprite)
 				rightHandChance, rightHandIneffective, rightHandReasoning = B3AttackInfo_Private_GetWeaponHitChance(selectedSprite, targetSprite, false) -- Party Member vs Target
 			end
 
-			local leftHandString1 = ""
-			local leftHandString2 = ""
+			local leftHandString = ""
 
 			if EEex.CanAttackWithLeftHand(reverse and targetSprite or selectedSprite) then
 
@@ -383,15 +507,14 @@ function B3AttackInfo_Private_Layout(targetSprite)
 					leftHandChance, leftHandIneffective, leftHandReasoning = B3AttackInfo_Private_GetWeaponHitChance(selectedSprite, targetSprite, true) -- Party Member vs Target
 				end
 
-				leftHandString1 = formatChanceStr(leftHandChance, leftHandIneffective, false)
-				leftHandString2 = leftHandIneffective and " (Immune)" or ""
+				leftHandString = formatChanceStr(leftHandChance, leftHandIneffective, false)
 				hadOffhand = true
 			end
 
 			local columnsText = {
 				[nameColumnIndex]     = string.format("%s ", selectedSprite:getName()),
 				[mainHandColumnIndex] = formatChanceStr(rightHandChance, rightHandIneffective, true),
-				[offHandColumnIndex]  = leftHandString1,
+				[offHandColumnIndex]  = leftHandString,
 			}
 
 			calculate(columnsText, not dummy and insertIntoList or nil)
@@ -681,131 +804,6 @@ function B3AttackInfo_Private_Menu_SetOpen(open)
 		B3AttackInfo_Private_Menu_Close()
 	end
 end
-
--------------
--- Options --
--------------
-
-EEex_Options_Register("B3AttackInfo_Enable", EEex_Options_Option.new({
-	["default"]  = 1,
-	["type"]     = EEex_Options_ToggleType.new(),
-	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
-	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info" }),
-	["onChange"] = function(self, oldValue) B3AttackInfo_SetEnabled(self:get() ~= 0) end,
-}))
-
-B3AttackInfo_Private_FontPoint = EEex_Options_Register("B3AttackInfo_FontPoint", EEex_Options_Option.new({
-	["default"]  = 11,
-	["type"]     = EEex_Options_EditType.new(),
-	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 1, ["max"] = 99 }),
-	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Font Point" }),
-}))
-
-B3AttackInfo_Private_ImmunityDisplayType = EEex_Options_Register("B3AttackInfo_ImmunityDisplayType", EEex_Options_Option.new({
-	["default"]  = 0,
-	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 2 }),
-	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Immunity Display Type" }),
-}))
-
-B3AttackInfo_Private_ImmunityDisplayTypeShowColorKey = EEex_Options_Register("B3AttackInfo_ImmunityDisplayType_ShowColorKey", EEex_Options_Option.new({
-	["default"]  = 0,
-	["type"]     = EEex_Options_ToggleType.new(),
-	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
-	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Immunity Display Type Show Color Key" }),
-}))
-
-EEex_Options_Register("B3AttackInfo_ReverseKeybind", EEex_Options_Option.new({
-	["default"]  = EEex_Options_UnmarshalKeybind("Left Alt|Down"),
-	["type"]     = EEex_Options_KeybindType.new({
-		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
-		["callback"]       = function() B3AttackInfo_Private_Menu_Reversed = true end,
-	}),
-	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3AttackInfo_ReverseKeybind" }),
-	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Reverse Keybind" }),
-}))
-
-B3AttackInfo_Private_ShowColumnHeaders = EEex_Options_Register("B3AttackInfo_ShowColumnHeaders", EEex_Options_Option.new({
-	["default"]  = 1,
-	["type"]     = EEex_Options_ToggleType.new(),
-	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
-	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Show Column Headers" }),
-}))
-
-B3AttackInfo_Private_HideUnusedOffhandHeader = EEex_Options_Register("B3AttackInfo_HideUnusedOffhandHeader", EEex_Options_Option.new({
-	["default"]  = 1,
-	["type"]     = EEex_Options_ToggleType.new(),
-	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
-	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Hide Unused Offhand Header" }),
-}))
-
-EEex_Options_AddTab("EEex_Options_TRANSLATION_AttackInfo_TabTitle", function() return {
-	{
-		EEex_Options_DisplayEntry.new({
-			["optionID"]    = "B3AttackInfo_Enable",
-			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_Enable",
-			["description"] = "EEex_Options_TRANSLATION_AttackInfo_Enable_Description",
-			["widget"]      = EEex_Options_ToggleWidget.new(),
-		}),
-		EEex_Options_DisplayEntry.new({
-			["optionID"]    = "B3AttackInfo_FontPoint",
-			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_FontPoint",
-			["description"] = "EEex_Options_TRANSLATION_AttackInfo_FontPoint_Description",
-			["widget"]      = EEex_Options_EditWidget.new({
-				["maxCharacters"] = 2,
-				["number"]        = true,
-			}),
-		}),
-		EEex_Options_DisplayEntry.new({
-			["optionID"]    = "B3AttackInfo_ImmunityDisplayType",
-			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType",
-			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Description",
-			["widget"]      = EEex_Options_HorizontalMultiToggleWidget.new({
-				["toggles"] = {
-					{
-						["label"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Color",
-						["data"] = { ["toggleValue"] = 0 },
-					},
-					{
-						["label"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_None",
-						["data"] = { ["toggleValue"] = 1 },
-					},
-					{
-						["label"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_Text",
-						["data"] = { ["toggleValue"] = 2 },
-					},
-				},
-			}),
-			["subOptions"] = {
-				EEex_Options_DisplayEntry.new({
-					["optionID"]    = "B3AttackInfo_ImmunityDisplayType_ShowColorKey",
-					["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey",
-					["description"] = "EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey_Description",
-					["widget"]      = EEex_Options_ToggleWidget.new(),
-				}),
-			},
-		}),
-		EEex_Options_DisplayEntry.new({
-			["optionID"]    = "B3AttackInfo_ReverseKeybind",
-			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind",
-			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind_Description",
-			["widget"]      = EEex_Options_KeybindWidget.new(),
-		}),
-		EEex_Options_DisplayEntry.new({
-			["optionID"]    = "B3AttackInfo_ShowColumnHeaders",
-			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders",
-			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders_Description",
-			["widget"]      = EEex_Options_ToggleWidget.new(),
-			["subOptions"]  = {
-				EEex_Options_DisplayEntry.new({
-					["optionID"]    = "B3AttackInfo_HideUnusedOffhandHeader",
-					["label"]       = "EEex_Options_TRANSLATION_AttackInfo_HideUnusedOffhandHeader",
-					["description"] = "EEex_Options_TRANSLATION_AttackInfo_HideUnusedOffhandHeader_Description",
-					["widget"]      = EEex_Options_ToggleWidget.new(),
-				}),
-			}
-		}),
-	},
-} end)
 
 ---------------
 -- Listeners --
