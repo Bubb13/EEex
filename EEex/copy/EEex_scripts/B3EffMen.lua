@@ -7,7 +7,7 @@ EEex_Options_Register("B3EffectMenu_LaunchKeybind", EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("Left Shift|Down"),
 	["type"]     = EEex_Options_KeybindType.new({
 		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
-		["callback"]       = function() B3EffectMenu_Private_Menu_KeybindActive = true end,
+		["callback"]       = function() B3EffectMenu_Private_KeybindActive = true end,
 	}),
 	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3EffectMenu_LaunchKeybind" }),
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Effect Menu Module: Launch Keybind" }),
@@ -44,61 +44,37 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_EffectMenu_TabTitle", function() r
 -- Globals --
 -------------
 
-B3EffectMenu_Private_Menu_Enabled       = false
-B3EffectMenu_Private_Menu_KeybindActive = false
+B3EffectMenu_Private_CurrentActorID = nil
+B3EffectMenu_Private_EnableDelay    = -1
+B3EffectMenu_Private_KeybindActive  = false
+B3EffectMenu_Private_Menu_Enabled   = false
 
------------------------
--- Hooks / Listeners --
------------------------
+----------------------
+-- Public Functions --
+----------------------
 
-B3EffectMenu_Private_OldIsActorTooltipDisabled = EEex_Sprite_Hook_CheckSuppressTooltip
-EEex_Sprite_Hook_CheckSuppressTooltip = function()
-	return B3EffectMenu_Private_Menu_Enabled or B3EffectMenu_Private_OldIsActorTooltipDisabled()
+function B3EffectMenu_IsOpen()
+	return B3EffectMenu_Private_CurrentActorID ~= nil
 end
 
-EEex_Menu_AddMainFileLoadedListener(function()
+-----------------------
+-- Private Functions --
+-----------------------
 
-	EEex_Menu_LoadFile("B3EffMen")
-
-	local actionbarMenu = EEex_Menu_Find("WORLD_ACTIONBAR")
-
-	local oldActionbarOnOpen = EEex_Menu_GetItemFunction(actionbarMenu.reference_onOpen)
-	EEex_Menu_SetItemFunction(actionbarMenu.reference_onOpen, function()
-		local openResult = oldActionbarOnOpen()
-		B3EffectMenu_Private_Open()
-		return openResult
-	end)
-
-	local oldActionbarOnClose = EEex_Menu_GetItemFunction(actionbarMenu.reference_onClose)
-	EEex_Menu_SetItemFunction(actionbarMenu.reference_onClose, function()
-		B3EffectMenu_Private_Close()
-		return oldActionbarOnClose()
-	end)
-end)
-
-EEex_Key_AddReleasedListener(function()
-	B3EffectMenu_Private_Menu_KeybindActive = false
-end)
-
-----------
--- Main --
-----------
-
-function B3EffectMenu_Private_Init()
+function B3EffectMenu_Private_Reset()
 	B3EffectMenu_Private_CurrentActorID = nil
 	B3EffectMenu_Private_EnableDelay = -1
 	B3EffectMenu_Private_Menu_Enabled = false
 end
-B3EffectMenu_Private_Init()
 
 function B3EffectMenu_Private_Open()
-	B3EffectMenu_Private_Init()
+	B3EffectMenu_Private_Reset()
 	Infinity_PushMenu("B3EffectMenu_Menu")
 end
 
 function B3EffectMenu_Private_Close()
 	Infinity_PopMenu("B3EffectMenu_Menu")
-	B3EffectMenu_Private_Init()
+	B3EffectMenu_Private_Reset()
 end
 
 function B3EffectMenu_Private_DoLayout()
@@ -200,12 +176,44 @@ function B3EffectMenu_Private_Menu_Tick()
 	end
 
 	local object = EEex_GameObject_GetUnderCursor()
-	if B3EffectMenu_Private_Menu_KeybindActive and object and object:isSprite() then
+	if B3EffectMenu_Private_KeybindActive and object and object:isSprite() then
 		if object.m_id ~= B3EffectMenu_Private_CurrentActorID then
 			B3EffectMenu_Private_CurrentActorID = object.m_id
 			B3EffectMenu_Private_LaunchInfo()
 		end
-	elseif (not B3EffectMenu_Private_Menu_KeybindActive) or (not EEex_Menu_IsCursorWithin("B3EffectMenu_Menu", "B3EffectMenu_Menu_Background")) then
-		B3EffectMenu_Private_Init()
+	elseif (not B3EffectMenu_Private_KeybindActive) or (not EEex_Menu_IsCursorWithin("B3EffectMenu_Menu", "B3EffectMenu_Menu_Background")) then
+		B3EffectMenu_Private_Reset()
 	end
 end
+
+-----------------------
+-- Hooks / Listeners --
+-----------------------
+
+B3EffectMenu_Private_OldIsActorTooltipDisabled = EEex_Sprite_Hook_CheckSuppressTooltip
+EEex_Sprite_Hook_CheckSuppressTooltip = function()
+	return B3EffectMenu_Private_Menu_Enabled or B3EffectMenu_Private_OldIsActorTooltipDisabled()
+end
+
+EEex_Menu_AddMainFileLoadedListener(function()
+
+	EEex_Menu_LoadFile("B3EffMen")
+	local actionbarMenu = EEex_Menu_Find("WORLD_ACTIONBAR")
+
+	local oldActionbarOnOpen = EEex_Menu_GetItemFunction(actionbarMenu.reference_onOpen)
+	EEex_Menu_SetItemFunction(actionbarMenu.reference_onOpen, function()
+		local openResult = oldActionbarOnOpen()
+		B3EffectMenu_Private_Open()
+		return openResult
+	end)
+
+	local oldActionbarOnClose = EEex_Menu_GetItemFunction(actionbarMenu.reference_onClose)
+	EEex_Menu_SetItemFunction(actionbarMenu.reference_onClose, function()
+		B3EffectMenu_Private_Close()
+		return oldActionbarOnClose()
+	end)
+end)
+
+EEex_Key_AddReleasedListener(function()
+	B3EffectMenu_Private_KeybindActive = false
+end)
