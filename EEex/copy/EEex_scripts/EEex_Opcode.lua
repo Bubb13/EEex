@@ -130,6 +130,28 @@ function EEex_Opcode_Private_ApplyExtraRangedEffects(sprite, targetSprite)
 	end)
 end
 
+function EEex_Opcode_Private_IterateMissEffects(sprite, ranged, func)
+
+	-- op410/op411 children are owned by EEex-side derived-stat storage rather than
+	-- the vanilla m_cExtraMeleeEffects / m_cExtraRangedEffects lists.
+	local count = ranged and EEex.GetMissRangedEffectCount(sprite) or EEex.GetMissMeleeEffectCount(sprite)
+
+	for i = 0, count - 1 do
+		local effect = ranged and EEex.GetMissRangedEffect(sprite, i) or EEex.GetMissMeleeEffect(sprite, i)
+		if effect ~= nil then
+			func(effect, i)
+		end
+	end
+end
+
+function EEex_Opcode_IterateMissMeleeEffects(sprite, func)
+	EEex_Opcode_Private_IterateMissEffects(sprite, false, func)
+end
+
+function EEex_Opcode_IterateMissRangedEffects(sprite, func)
+	EEex_Opcode_Private_IterateMissEffects(sprite, true, func)
+end
+
 -----------
 -- Hooks --
 -----------
