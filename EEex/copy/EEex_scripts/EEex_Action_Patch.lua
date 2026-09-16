@@ -4,31 +4,33 @@
 	EEex_DisableCodeProtection()
 
 	--[[
-	+--------------------------------------------------------------------------------+
-	| Implement new actions                                                          |
-	+--------------------------------------------------------------------------------+
-	|   472 EEex_LuaAction(S:Chunk*)                                                 |
-	|   473 EEex_MatchObject(S:Chunk*)                                               |
-	|   473 EEex_MatchObjectEx(S:Chunk*,I:Nth*,I:Range*,I:Flags*X-MATOBJ)            |
-	|   474 EEex_SetTarget(S:Name*,O:Target*)                                        |
-	|   476 EEex_SpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)                |
-	|   476 EEex_SpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)                    |
-	|   477 EEex_SpellObjectOffsetNoDec(O:Target*,I:Spell*Spell,P:Offset*)           |
-	|   477 EEex_SpellObjectOffsetNoDecRES(S:RES*,O:Target*,P:Offset*)               |
-	|   478 EEex_ForceSpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)           |
-	|   478 EEex_ForceSpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)               |
-	|   479 EEex_ReallyForceSpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)     |
-	|   479 EEex_ReallyForceSpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)         |
-	+--------------------------------------------------------------------------------+
-	|   [Lua] EEex_Action_Hook_OnEvaluatingUnknown(evaluator: CGameAIBase) -> number |
-	|       return -> Set as internal action return value:                           |
-	|           -> EEex_Action_ReturnType.ACTION_STOPPED                             |
-	|           -> EEex_Action_ReturnType.ACTION_ERROR                               |
-	|           -> EEex_Action_ReturnType.ACTION_DONE                                |
-	|           -> EEex_Action_ReturnType.ACTION_NORMAL                              |
-	|           -> EEex_Action_ReturnType.ACTION_INTERRUPTABLE                       |
-	|           -> EEex_Action_ReturnType.ACTION_NO_ACTION                           |
-	+--------------------------------------------------------------------------------+
+	+---------------------------------------------------------------------------------+
+	| Implement new actions                                                           |
+	+---------------------------------------------------------------------------------+
+	|   472 EEex_LuaAction(S:Chunk*)                                                  |
+	|   473 EEex_MatchObject(S:Chunk*)                                                |
+	|   473 EEex_MatchObjectEx(S:Chunk*,I:Nth*,I:Range*,I:Flags*X-MATOBJ)             |
+	|   474 EEex_SetTarget(S:Name*,O:Target*)                                         |
+	|   476 EEex_SpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)                 |
+	|   476 EEex_SpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)                     |
+	|   477 EEex_SpellObjectOffsetNoDec(O:Target*,I:Spell*Spell,P:Offset*)            |
+	|   477 EEex_SpellObjectOffsetNoDecRES(S:RES*,O:Target*,P:Offset*)                |
+	|   478 EEex_ForceSpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)            |
+	|   478 EEex_ForceSpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)                |
+	|   479 EEex_ReallyForceSpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)      |
+	|   479 EEex_ReallyForceSpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)          |
+	|   480 EEex_AttackOnce(O:Target*,I:BaseAttackRollMod*,                           |
+	|       I:OverrideBaseDamageRoll*,I:ConsumeAmmo*Boolean)                          |
+	+---------------------------------------------------------------------------------+
+	|   [Lua] EEex_Action_Hook_OnEvaluatingUnknown(evaluator: CGameAIBase) -> number  |
+	|       return -> Set as internal action return value:                            |
+	|           -> EEex_Action_ReturnType.ACTION_STOPPED                              |
+	|           -> EEex_Action_ReturnType.ACTION_ERROR                                |
+	|           -> EEex_Action_ReturnType.ACTION_DONE                                 |
+	|           -> EEex_Action_ReturnType.ACTION_NORMAL                               |
+	|           -> EEex_Action_ReturnType.ACTION_INTERRUPTABLE                        |
+	|           -> EEex_Action_ReturnType.ACTION_NO_ACTION                            |
+	+---------------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameAIBase::ExecuteAction()-DefaultCase"), 0, 7, 7, {
