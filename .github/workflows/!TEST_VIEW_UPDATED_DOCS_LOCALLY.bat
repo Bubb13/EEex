@@ -15,7 +15,7 @@ if not exist ".\EEex-Docs\.venv\" (
 	call .\EEex-Docs\.venv\Scripts\activate.bat
 )
 
-java -cp .\java\out\production\java\ UpdateDocs ..\..\EEex\copy ".\EEex-Docs\source\EEex Functions"
+java -cp .\java\out\production\java\ UpdateDocs ..\..\EEex\copy\EEex_scripts ".\EEex-Docs\source\EEex Functions"
 
 cd .\EEex-Docs\
 call .\make.bat html
