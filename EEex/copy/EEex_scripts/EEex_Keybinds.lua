@@ -298,7 +298,7 @@ function EEex_Keybinds_Update(id, args)
 	local fireType       = args.fireType
 	local keys           = args.keys
 	local modifierKeys   = args.modifierKeys
-	local onSatisfied    = args.onSatisfied or args.callback
+	local onSatisfied    = args.onSatisfied
 	local onUnsatisfied  = args.onUnsatisfied
 
 	if allowOtherKeys ~= nil then t.allowOtherKeys = allowOtherKeys              end
