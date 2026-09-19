@@ -177,19 +177,25 @@ end
 -- **The Keybind Table**
 -- *********************
 --
--- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
--- | Key          | Value Type             | Description                                                                                                             |
--- +==============+========================+=========================================================================================================================+
--- | callback     | function               | Function that is called when the conditions required by ``fireType`` are satisfied.                                     |
--- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
--- | fireType     | EEex_Keybinds_FireType | The situation in which ``callback`` is invoked.                                                                         |
--- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
--- | keys         | table                  | Table of keycodes defining the keybind's main sequence of keys.                                       :raw-html:`<br/>` |
--- |              |                        | These keys must be pressed in the defined order for the keybind to be satisfied.                                        |
--- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
--- | modifierKeys | table                  | Table of keycodes defining the keys that are required to be down when the main sequence is satisfied. :raw-html:`<br/>` |
--- |              |                        | Allowed keys include the left / right variants of Ctrl, Shift, and Alt.                                                 |
--- +--------------+------------------------+-------------------------------------------------------------------------------------------------------------------------+
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+-- | Key            | Value Type             | Description                                                                                                                            |
+-- +================+========================+========================================================================================================================================+
+-- | allowOtherKeys | boolean                | If ``true``, the keybind will not fail to match if unrelated keys are pressed.                                                         |
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+-- | callback       | function               | Function that is called when the conditions required by ``fireType`` are satisfied.                                                    |
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+-- | fireType       | EEex_Keybinds_FireType | The situation in which ``callback`` is invoked.                                                                                        |
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+-- | keys           | table                  | Table of keycodes defining the keybind's main sequence of keys.                                       :raw-html:`<br/>`                |
+-- |                |                        | These keys must be pressed in the defined order for the keybind to be satisfied.                                                       |
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+-- | modifierKeys   | table                  | Table of keycodes defining the keys that are required to be down when the main sequence is satisfied. :raw-html:`<br/>`                |
+-- |                |                        | Allowed keys include the left / right variants of Ctrl, Shift, and Alt.                                                                |
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+-- | onSatisfied    | function               | Called when the keybind is satisfied, including both the initial trigger, and during a state rebuild after releasing a subsequent key. |
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+-- | onUnsatisfied  | function               | Called when the keybind is unsatisfied, which occurs after releasing a key in its sequence.                                            |
+-- +----------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
 --
 -- ==========================================================================================================================================================================================================
 --
@@ -209,11 +215,51 @@ function EEex_Keybinds_Get(id)
 	local t = EEex_Keybinds_Private_Definitions[id]
 	if t == nil then return nil end
 	return {
-		["callback"]     = t.callback,
-		["fireType"]     = t.fireType,
-		["keys"]         = EEex.DeepCopy(t.keys),
-		["modifierKeys"] = EEex.DeepCopy(t.modifierKeys),
+		["allowOtherKeys"] = t.allowOtherKeys,
+		["callback"]       = t.callback,
+		["fireType"]       = t.fireType,
+		["keys"]           = EEex.DeepCopy(t.keys),
+		["modifierKeys"]   = EEex.DeepCopy(t.modifierKeys),
+		["onSatisfied"]    = t.onSatisfied,
+		["onUnsatisfied"]  = t.onUnsatisfied,
 	}
+end
+
+-- @bubb_doc { EEex_Keybinds_IsSatisfied }
+--
+-- @summary: Returns whether the keybind with the given ``id`` is satisfied.
+--
+-- @note: If the key stack is currently being replayed this returns the current satisfaction state,
+--        which might be `false` even if the keybind is satisfied later on in the sequence.
+--
+-- @param { id / type=string }: The unique id of the associated keybind.
+--
+-- @return { type=boolean }: See summary.
+
+function EEex_Keybinds_IsSatisfied(id)
+	local hotkeyDef = EEex_Keybinds_Private_Definitions[id]
+	if hotkeyDef == nil then return false end
+	return hotkeyDef._satisfied
+end
+
+-- @bubb_doc { EEex_Keybinds_Reset }
+--
+-- @summary: Resets the keybind with the given ``id``, such that it can immediately start matching keys again from the beginning of its sequence.
+--
+-- @param { id / type=string }: The unique id of the associated keybind.
+
+function EEex_Keybinds_Reset(id)
+
+	local hotkeyDef = EEex_Keybinds_Private_Definitions[id]
+	if hotkeyDef == nil then return end
+
+	local wasSatisfied = hotkeyDef._satisfied
+	hotkeyDef._satisfied = false
+	hotkeyDef._stage = 1
+
+	if wasSatisfied then
+		EEex_Utility_TryIgnore(hotkeyDef.onUnsatisfied)
+	end
 end
 
 -- @bubb_doc { EEex_Keybinds_Update }
@@ -233,24 +279,35 @@ function EEex_Keybinds_Update(id, args)
 
 	if t == nil then
 		t = {
-			["callback"]     = function() end,
-			["fireType"]     = EEex_Keybinds_FireType.UP,
-			["keys"]         = {},
-			["modifierKeys"] = {},
-			["_stage"]       = 1,
+			["allowOtherKeys"]        = false,
+			["callback"]              = function() end,
+			["fireType"]              = EEex_Keybinds_FireType.UP,
+			["keys"]                  = {},
+			["modifierKeys"]          = {},
+			["onSatisfied"]           = function() end,
+			["onUnsatisfied"]         = function() end,
+			["_satisfied"]            = false,
+			["_satisfiedBeforeReset"] = false,
+			["_stage"]                = 1,
 		}
 		EEex_Keybinds_Private_Definitions[id] = t
 	end
 
-	local callback     = args.callback
-	local fireType     = args.fireType
-	local keys         = args.keys
-	local modifierKeys = args.modifierKeys
+	local allowOtherKeys = args.allowOtherKeys
+	local callback       = args.callback
+	local fireType       = args.fireType
+	local keys           = args.keys
+	local modifierKeys   = args.modifierKeys
+	local onSatisfied    = args.onSatisfied or args.callback
+	local onUnsatisfied  = args.onUnsatisfied
 
-	if callback     ~= nil then t.callback     = callback                    end
-	if fireType     ~= nil then t.fireType     = fireType                    end
-	if keys         ~= nil then t.keys         = EEex.DeepCopy(keys)         end
-	if modifierKeys ~= nil then t.modifierKeys = EEex.DeepCopy(modifierKeys) end
+	if allowOtherKeys ~= nil then t.allowOtherKeys = allowOtherKeys              end
+	if callback       ~= nil then t.callback       = callback                    end
+	if fireType       ~= nil then t.fireType       = fireType                    end
+	if keys           ~= nil then t.keys           = EEex.DeepCopy(keys)         end
+	if modifierKeys   ~= nil then t.modifierKeys   = EEex.DeepCopy(modifierKeys) end
+	if onSatisfied    ~= nil then t.onSatisfied    = onSatisfied                 end
+	if onUnsatisfied  ~= nil then t.onUnsatisfied  = onUnsatisfied               end
 end
 
 --=-=-=-=-=-==
@@ -276,6 +333,9 @@ function EEex_Keybinds_Private_HandleKey(key, isReplay)
 
 	EEex_Keybinds_Private_PendingOnReleaseKeybind = nil
 
+	local satisfiedHotkeyDefs = {}
+	local satisfiedHotkeyDefsI = 0
+
 	for hotkeyName, hotkeyDef in pairs(EEex_Keybinds_Private_Definitions) do
 
 		local stage = hotkeyDef._stage
@@ -285,6 +345,7 @@ function EEex_Keybinds_Private_HandleKey(key, isReplay)
 			goto continue
 		end
 
+		local allowOtherKeys = hotkeyDef.allowOtherKeys
 		local isModifier = EEex_Utility_Find(hotkeyDef.modifierKeys, key)
 		local hotkeyCombo = hotkeyDef.keys
 		local onlyModifiers = hotkeyCombo[1] == nil and hotkeyDef.modifierKeys[1] ~= nil
@@ -297,21 +358,25 @@ function EEex_Keybinds_Private_HandleKey(key, isReplay)
 				goto continue
 			end
 
-			if hotkeyCombo[stage] ~= key then
-				-- ... and the key isn't the expected value for the current keybind stage, STOP PROCESSING and END
-				hotkeyDef._stage = 0
+			if hotkeyCombo[stage] == key then
+				-- ... and the key is the expected value for the current keybind stage, ADVANCE ...
+				hotkeyDef._stage = stage + 1
+			else
+				-- ... and the key isn't the expected value ...
+				if not allowOtherKeys then
+					-- ... and the keybind doesn't allow for other keys, STOP PROCESSING and ...
+					hotkeyDef._stage = 0
+				end
+				--- ... END
 				goto continue
 			end
-
-			-- ADVANCE
-			hotkeyDef._stage = stage + 1
 
 			if stage ~= #hotkeyCombo then
 				-- ... and the current keybind stage isn't the end of the sequence, END
 				goto continue
 			end
 
-		elseif not isModifier then
+		elseif not allowOtherKeys and not isModifier then
 			-- If the keybind is only modifiers, and the key isn't a specified modifier, STOP PROCESSING and END
 			hotkeyDef._stage = 0
 			goto continue
@@ -336,13 +401,26 @@ function EEex_Keybinds_Private_HandleKey(key, isReplay)
 			goto continue
 		end
 
+		-- Success, STOP PROCESSING
+		hotkeyDef._stage = 0
+
 		if isReplay then
-			-- If this is a replay event, STOP PROCESSING and END
-			hotkeyDef._stage = 0
+
+			local resumedSatisfied = hotkeyDef._satisfiedBeforeReset
+			hotkeyDef._satisfied = resumedSatisfied
+
+			if resumedSatisfied then
+				satisfiedHotkeyDefsI = satisfiedHotkeyDefsI + 1
+				satisfiedHotkeyDefs[satisfiedHotkeyDefsI] = hotkeyDef
+			end
+
+			-- If this is a replay event, END
 			goto continue
 		end
 
-		-- Success
+		hotkeyDef._satisfied = true
+		satisfiedHotkeyDefsI = satisfiedHotkeyDefsI + 1
+		satisfiedHotkeyDefs[satisfiedHotkeyDefsI] = hotkeyDef
 
 		if hotkeyDef.fireType == EEex_Keybinds_FireType.UP then
 			-- Keybind fires on release
@@ -355,11 +433,20 @@ function EEex_Keybinds_Private_HandleKey(key, isReplay)
 		do break end
 		::continue::
 	end
+
+	-- Delayed to here because an `onSatisfied()` callback might want to reset another keybinding.
+	-- Doing this in the middle of processing the hotkey defs could reset the keybinding too early,
+	-- before it has processed the current key, causing it to fail right after it was reset.
+	for _, hotkeyDef in ipairs(satisfiedHotkeyDefs) do
+		EEex_Utility_TryIgnore(hotkeyDef.onSatisfied)
+	end
 end
 
 function EEex_Keybinds_Private_Reset()
 
 	for _, hotkeyDef in pairs(EEex_Keybinds_Private_Definitions) do
+		hotkeyDef._satisfiedBeforeReset = hotkeyDef._satisfied
+		hotkeyDef._satisfied = false
 		hotkeyDef._stage = 1
 	end
 
@@ -367,6 +454,12 @@ function EEex_Keybinds_Private_Reset()
 	-- This rebuild is not allowed to activate keybindings by itself.
 	for _, key in ipairs(EEex_Key_GetPressedStack()) do
 		EEex_Keybinds_Private_HandleKey(key, true)
+	end
+
+	for _, hotkeyDef in pairs(EEex_Keybinds_Private_Definitions) do
+		if hotkeyDef._satisfiedBeforeReset and not hotkeyDef._satisfied then
+			EEex_Utility_TryIgnore(hotkeyDef.onUnsatisfied)
+		end
 	end
 end
 
