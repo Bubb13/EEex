@@ -31,11 +31,32 @@ B3AttackInfo_Private_ImmunityDisplayTypeShowColorKey = EEex_Options_Register("B3
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Immunity Display Type Show Color Key" }),
 }))
 
+EEex_Options_Register("B3AttackInfo_OpenKeybind", EEex_Options_Option.new({
+	["default"]  = EEex_Options_UnmarshalKeybind("Left Ctrl|Down"),
+	["type"]     = EEex_Options_KeybindType.new({
+		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
+		["callback"]       = function() B3AttackInfo_Private_OnOpenKeybindPressed()     end,
+		["onSatisfied"]    = function() B3AttackInfo_Private_OnOpenKeybindSatisfied()   end,
+		["onUnsatisfied"]  = function() B3AttackInfo_Private_OnOpenKeybindUnsatisfied() end,
+	}),
+	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3AttackInfo_OpenKeybind" }),
+	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Open Keybind" }),
+}))
+
+B3AttackInfo_Private_OpenWithAttackCursor = EEex_Options_Register("B3AttackInfo_OpenWithAttackCursor", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Open With Attack Cursor" }),
+}))
+
 EEex_Options_Register("B3AttackInfo_ReverseKeybind", EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("Left Alt|Down"),
 	["type"]     = EEex_Options_KeybindType.new({
 		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
-		["callback"]       = function() B3AttackInfo_Private_Menu_Reversed = true end,
+		["callback"]       = function() B3AttackInfo_Private_OnReverseKeybindPressed()     end,
+		["onSatisfied"]    = function() B3AttackInfo_Private_OnReverseKeybindSatisfied()   end,
+		["onUnsatisfied"]  = function() B3AttackInfo_Private_OnReverseKeybindUnsatisfied() end,
 	}),
 	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3AttackInfo_ReverseKeybind" }),
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Reverse Keybind" }),
@@ -102,6 +123,18 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_AttackInfo_TabTitle", function() r
 			},
 		}),
 		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_OpenKeybind",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_OpenKeybind",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_OpenKeybind_Description",
+			["widget"]      = EEex_Options_KeybindWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_OpenWithAttackCursor",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
 			["optionID"]    = "B3AttackInfo_ReverseKeybind",
 			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind",
 			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind_Description",
@@ -124,11 +157,24 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_AttackInfo_TabTitle", function() r
 	},
 } end)
 
+---------------
+-- Constants --
+---------------
+
+B3AttackInfo_Private_OpenMode = {
+	["NORMAL"]   = 0,
+	["REVERSED"] = 1,
+}
+
 -------------
 -- Globals --
 -------------
 
 B3AttackInfo_Private_Enabled = false
+B3AttackInfo_Private_OpenKeybindPressed = false
+B3AttackInfo_Private_OpenModeStack = {}
+B3AttackInfo_Private_OpenModeStackI = 0
+B3AttackInfo_Private_ReverseKeybindPressed = false
 
 -------------
 -- General --
@@ -150,6 +196,10 @@ end
 ----------
 -- Misc --
 ----------
+
+function B3AttackInfo_Private_GetOpenMode()
+	return B3AttackInfo_Private_OpenModeStackI > 0 and B3AttackInfo_Private_OpenModeStack[B3AttackInfo_Private_OpenModeStackI] or nil
+end
 
 function B3AttackInfo_Private_GetWeaponHitChance(sourceSprite, targetSprite, leftHand)
 
@@ -215,6 +265,7 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	--     Layout constants     --
 	------------------------------
 
+	local reversed = B3AttackInfo_Private_GetOpenMode() == B3AttackInfo_Private_OpenMode.REVERSED
 	local spaceW, spaceH = EEex_Menu_GetTextWidthHeight(" ", styles["normal"].font, fontPoint, styles["normal"].useFontZoom)
 
 	-----------
@@ -271,7 +322,7 @@ function B3AttackInfo_Private_Layout(targetSprite)
 
 	local otherLabelText
 
-	if B3AttackInfo_Private_Menu_Reversed then
+	if reversed then
 		B3AttackInfo_Private_Menu_Label = uiStrings["EEex_TRANSLATION_AttackInfo_TargetAttacksParty"]
 		otherLabelText = uiStrings["EEex_TRANSLATION_AttackInfo_PartyAttacksTarget"]
 	else
@@ -523,12 +574,12 @@ function B3AttackInfo_Private_Layout(targetSprite)
 		return hadOffhand
 	end
 
-	local normalHadOffhand = calculateSprites(false, B3AttackInfo_Private_Menu_Reversed)
-	local reverseHadOffhand = calculateSprites(true, not B3AttackInfo_Private_Menu_Reversed)
+	local normalHadOffhand = calculateSprites(false, reversed)
+	local reverseHadOffhand = calculateSprites(true, not reversed)
 
 	if showColumnHeaders then
 
-		local currentViewHadOffhand = (not B3AttackInfo_Private_Menu_Reversed and normalHadOffhand) or (B3AttackInfo_Private_Menu_Reversed and reverseHadOffhand)
+		local currentViewHadOffhand = (not reversed and normalHadOffhand) or (reversed and reverseHadOffhand)
 
 		local mainhandLabel = uiStrings["EEex_TRANSLATION_AttackInfo_Mainhand"]
 		local offhandLabel = uiStrings["EEex_TRANSLATION_AttackInfo_Offhand"]
@@ -723,10 +774,16 @@ function B3AttackInfo_Private_Menu_Ticker_Tick()
 		return
 	end
 
-	local nCurrentCursor = pObjectCursor.nCurrentCursor
+	local attemptOpen = B3AttackInfo_Private_OpenKeybindPressed or B3AttackInfo_Private_ReverseKeybindPressed
+
+	if not attemptOpen and B3AttackInfo_Private_OpenWithAttackCursor:get() ~= 0 then
+		local nCurrentCursor = pObjectCursor.nCurrentCursor
+		attemptOpen = nCurrentCursor == 12 or (nCurrentCursor == 101 and EEex.IsDefaultAttackCursor())
+	end
+
 	local shouldBeOpen = false
 
-	if nCurrentCursor == 12 or (nCurrentCursor == 101 and EEex.IsDefaultAttackCursor()) then
+	if attemptOpen then
 
 		local targetSprite = EEex_GameObject_GetUnderCursor()
 
@@ -777,11 +834,10 @@ B3AttackInfo_Private_Menu_InfoListColumnUDsSize = nil   -- number
 B3AttackInfo_Private_Menu_IsOpen                = false
 B3AttackInfo_Private_Menu_Label                 = ""
 B3AttackInfo_Private_Menu_LabelUD               = nil   -- uiItem
-B3AttackInfo_Private_Menu_Reversed              = false
 B3AttackInfo_Private_Menu_ShowImmuneColorKey    = false
 
 function B3AttackInfo_Private_Menu_InfoList_BamFrame()
-	return B3AttackInfo_Private_Menu_Reversed and 1 or 0
+	return B3AttackInfo_Private_GetOpenMode() == B3AttackInfo_Private_OpenMode.REVERSED and 1 or 0
 end
 
 function B3AttackInfo_Private_Menu_Open()
@@ -805,9 +861,71 @@ function B3AttackInfo_Private_Menu_SetOpen(open)
 	end
 end
 
----------------
--- Listeners --
----------------
+-----------------------
+-- Keybind Listeners --
+-----------------------
+
+-- All of this nonsense is to allow the normal / reverse keybinds to build off each other,
+-- e.g. allow CTRL (normal), ALT (reversed), CTRL+ALT (reversed), and ALT+CTRL (normal).
+--
+-- Doesn't work as well for multi-key bindings, e.g. in Z+X (normal) and Z+X+C+V (reversed),
+-- unpressing 'Z' or 'X' completely kills the popup and doesn't show the reversed mode even
+-- though C+V is still down. The question is whether the keybinds should act like an unordered
+-- set of modifier keys or act like a proper key sequence.
+--
+-- No one will use multi-key keybinds anyway - leave it as is.
+
+function B3AttackInfo_Private_OnOpenKeybindPressed()
+
+	B3AttackInfo_Private_OpenKeybindPressed = true
+
+	-- Add my open mode to the stack
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI + 1
+	B3AttackInfo_Private_OpenModeStack[B3AttackInfo_Private_OpenModeStackI] = B3AttackInfo_Private_OpenMode.NORMAL
+end
+
+function B3AttackInfo_Private_OnOpenKeybindSatisfied()
+	if EEex_Keybinds_IsSatisfied("B3AttackInfo_ReverseKeybind") then return end
+	-- Allow the reverse keybinding to start after this one
+	EEex_Keybinds_Reset("B3AttackInfo_ReverseKeybind")
+end
+
+function B3AttackInfo_Private_OnOpenKeybindUnsatisfied()
+
+	B3AttackInfo_Private_OpenKeybindPressed = false
+
+	-- Remove my open mode from the stack
+	EEex_Utility_RemoveValue(B3AttackInfo_Private_OpenModeStack, B3AttackInfo_Private_OpenMode.NORMAL)
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI - 1
+end
+
+function B3AttackInfo_Private_OnReverseKeybindPressed()
+
+	B3AttackInfo_Private_ReverseKeybindPressed = true
+
+	-- Add my open mode to the stack
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI + 1
+	B3AttackInfo_Private_OpenModeStack[B3AttackInfo_Private_OpenModeStackI] = B3AttackInfo_Private_OpenMode.REVERSED
+end
+
+function B3AttackInfo_Private_OnReverseKeybindSatisfied()
+	if EEex_Keybinds_IsSatisfied("B3AttackInfo_OpenKeybind") then return end
+	-- Allow the normal keybinding to start after this one
+	EEex_Keybinds_Reset("B3AttackInfo_OpenKeybind")
+end
+
+function B3AttackInfo_Private_OnReverseKeybindUnsatisfied()
+
+	B3AttackInfo_Private_ReverseKeybindPressed = false
+
+	-- Remove my open mode from the stack
+	EEex_Utility_RemoveValue(B3AttackInfo_Private_OpenModeStack, B3AttackInfo_Private_OpenMode.REVERSED)
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI - 1
+end
+
+---------------------
+-- Other Listeners --
+---------------------
 
 function B3AttackInfo_Private_OnActionbarOpened()
 	B3AttackInfo_Private_Menu_Ticker_SetShouldBeOpen(true)
@@ -855,10 +973,6 @@ EEex_Menu_AddMainFileLoadedListener(function()
 	local menu = EEex_Menu_Find("WORLD_ACTIONBAR")
 	listenToEngineEvent(menu.reference_onOpen, B3AttackInfo_Private_OnActionbarOpened)
 	listenToEngineEvent(menu.reference_onClose, B3AttackInfo_Private_OnActionbarClosed)
-end)
-
-EEex_Key_AddReleasedListener(function()
-	B3AttackInfo_Private_Menu_Reversed = false
 end)
 
 EEex.RegisterSlicedRect("B3AttackInfo_BackgroundRect", {
