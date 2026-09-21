@@ -22,9 +22,49 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_Menu_TabTitle", function() return 
 	},
 } end)
 
------------------------
--- General Functions --
------------------------
+------------------------
+-- Coordinate Helpers --
+------------------------
+
+-- @bubb_doc { EEex_Menu_ScaleX }
+--
+-- @summary: Scales ``screenX`` from the raw screen coordinate space to the scaled UI coordinate space.
+--
+-- @param { screenX / type=number }: The x coordinate to scale.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Menu_ScaleX(screenX)
+	return EngineGlobals.DrawTransformFromScreenW(screenX)
+end
+
+-- @bubb_doc { EEex_Menu_ScaleY }
+--
+-- @summary: Scales ``screenY`` from the raw screen coordinate space to the scaled UI coordinate space.
+--
+-- @param { screenY / type=number }: The y coordinate to scale.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Menu_ScaleY(screenY)
+	return EngineGlobals.DrawTransformFromScreenH(screenY)
+end
+
+-- @bubb_doc { EEex_Menu_ScaleXY }
+--
+-- @summary: Scales ``screenX`` and ``screenY`` from the raw screen coordinate space to the scaled UI coordinate space.
+--
+-- @param { screenX / type=number }: The x coordinate to scale.
+--
+-- @param { screenY / type=number }: The y coordinate to scale.
+--
+-- @return { type=number }: The scaled x coordinate.
+--
+-- @return { type=number }: The scaled y coordinate.
+
+function EEex_Menu_ScaleXY(screenX, screenY)
+	return EEex_Menu_ScaleX(screenX), EEex_Menu_ScaleY(screenY)
+end
 
 function EEex_Menu_TranslateXYFromGame(gameX, gameY)
 
@@ -44,6 +84,50 @@ function EEex_Menu_TranslateXYFromGame(gameX, gameY)
 	local uiY = math.floor(screenHeight * (realY / viewPort.bottom) + 0.5)
 	return uiX, uiY
 end
+
+-- @bubb_doc { EEex_Menu_UnscaleX }
+--
+-- @summary: Unscales ``uiX`` from the scaled UI coordinate space to the raw screen coordinate space. 
+--
+-- @param { uiX / type=number }: The x coordinate to unscale.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Menu_UnscaleX(uiX)
+	return EngineGlobals.DrawTransformToScreenW(uiX)
+end
+
+-- @bubb_doc { EEex_Menu_UnscaleY }
+--
+-- @summary: Unscales ``uiY`` from the scaled UI coordinate space to the raw screen coordinate space. 
+--
+-- @param { uiY / type=number }: The y coordinate to unscale.
+--
+-- @return { type=number }: See summary.
+
+function EEex_Menu_UnscaleY(uiY)
+	return EngineGlobals.DrawTransformToScreenH(uiY)
+end
+
+-- @bubb_doc { EEex_Menu_UnscaleXY }
+--
+-- @summary: Unscales ``uiX`` and ``uiY`` from the scaled UI coordinate space to the raw screen coordinate space. 
+--
+-- @param { uiX / type=number }: The x coordinate to unscale.
+--
+-- @param { uiY / type=number }: The y coordinate to unscale.
+--
+-- @return { type=number }: The unscaled x coordinate.
+--
+-- @return { type=number }: The unscaled y coordinate.
+
+function EEex_Menu_UnscaleXY(uiX, uiY)
+	return EEex_Menu_UnscaleX(uiX), EEex_Menu_UnscaleY(uiY)
+end
+
+-----------------------
+-- General Functions --
+-----------------------
 
 function EEex_Menu_GetMousePos()
 	local cMousePosition = EEex_EngineGlobal_CBaldurChitin.cMousePosition
