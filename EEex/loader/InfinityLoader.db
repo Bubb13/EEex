@@ -639,17 +639,6 @@ Operations=ADD -18
 Pattern=483B020F84A9000000
 Operations=ADD -43
 
-[CVidFont::GetStringHeight]
-Pattern=48896C24184889742420574883EC30488BF1
-
-[CVidFont::GetStringLength]
-Pattern=4883EC30488B7910
-Operations=ADD -14
-
-[CVidFont::RenderTextWrap]
-Pattern=56574881ECC8000000
-Operations=ADD -5
-
 [CVisualEffect::Load]
 Pattern=4055534154415541564157
 
@@ -1278,6 +1267,29 @@ Operations=ADD 25, PUSH, READ DWORD, ADD, ADD 4
 [CTimerWorld::StartTime]
 Pattern=C6410401
 
+[CVidFont::Construct]
+Pattern=488D8FE0170000
+Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
+
+[CVidFont::Destruct]
+Pattern=488D8BB0170000
+Operations=ADD -4, PUSH, READ DWORD, ADD, ADD 4
+
+[CVidFont::GetStringHeight]
+Pattern=48896C24184889742420574883EC30488BF1
+
+[CVidFont::GetStringLength]
+Pattern=4883EC30488B7910
+Operations=ADD -14
+
+[CVidFont::RenderTextWrap]
+Pattern=56574881ECC8000000
+Operations=ADD -5
+
+[CVidFont::SetResRef]
+Pattern=488D8BE017000041B801000000
+Operations=ADD 19, PUSH, READ DWORD, ADD, ADD 4
+
 [CVidMode::ApplyBrightnessContrast]
 Pattern=4883EC480FB68180010000
 
@@ -1309,6 +1321,9 @@ Pattern=40534883EC20488BD9488B49084885C9
 [Chitin_GetSectionCallback]
 Pattern=4889742418574883EC20BA01000000
 Operations=ADD -10
+
+[DecodeUTF8Char]
+Pattern=4C8B014C8BD9
 
 [DrawAlpha]
 Pattern=83CF02448BCD
@@ -1505,6 +1520,25 @@ Operations=ADD -7
 Pattern=4885DB0F8426010000
 Operations=ADD -24
 
+[fontAddTempGlyph]
+Pattern=41574883EC40498BE9
+Operations=ADD -11
+
+[fontGetGlyphIndex]
+Pattern=81B9D4000000ED7F0000
+Operations=ADD -10
+
+[fontGetGlyphMap]
+Pattern=488BD933FF8BF2
+Operations=ADD -15
+
+[fontGetKernAdvance]
+Pattern=4155415641574883EC204C63FA
+Operations=ADD -18
+
+[fontIsCommandLetter]
+Pattern=48895C2410574883EC2033C0
+
 [fwrite]
 Pattern=4C894018488950104889480855
 Operations=ADD -7
@@ -1519,6 +1553,10 @@ Operations=ADD -6
 
 [panic]
 Pattern=4883EC284533C0418D50FF
+
+[stbtt_FindGlyphIndex]
+Pattern=448B7130
+Operations=ADD -28
 
 [strtoul]
 Pattern=488B08448D420A
@@ -2830,6 +2868,10 @@ Operations=ADD 66
 Pattern=488B9C2460030000
 Operations=ADD 8
 
+[Hook-fontGetGlyphIndex()-FirstInstruction]
+Pattern=81B9D4000000ED7F0000
+Operations=ADD -10
+
 [Hook-fontWrap()-FirstInstruction]
 Pattern=4155415641574881EC00010000
 Operations=ADD -6
@@ -2861,6 +2903,9 @@ Operations=ADD 223
 [Hook-uiRefreshMenu()-saveMenuStack()]
 Pattern=48C7C7FFFFFFFF6690
 Operations=ADD -235
+
+[Hook-wordwrap()-FirstInstruction]
+Pattern=4C894C24204C894424188954241048894C240853
 
 ;-------------------------------
 ;-- Lua Replacement Functions --
