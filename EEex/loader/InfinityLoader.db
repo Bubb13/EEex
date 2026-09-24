@@ -1267,6 +1267,14 @@ Operations=ADD 25, PUSH, READ DWORD, ADD, ADD 4
 [CTimerWorld::StartTime]
 Pattern=C6410401
 
+[CVidCell::GetCurrentCenterPoint]
+Pattern=0F85A2010000488D55EF
+Operations=ADD 18, PUSH, READ DWORD, ADD, ADD 4
+
+[CVidCell::GetCurrentFrameSize]
+Pattern=498D8E700400004803CB
+Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
+
 [CVidFont::Construct]
 Pattern=488D8FE0170000
 Operations=ADD 15, PUSH, READ DWORD, ADD, ADD 4
