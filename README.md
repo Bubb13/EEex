@@ -22,11 +22,13 @@ Operating systems:
 <br>
 <br>
 
-- Windows — Yes (native)
-- Linux — Proton / Wine
-- MacOS — Wine? (untested)
+| OS      | Compatibility | Notes             |
+| ------- | ------------- | ----------------- |
+| Windows | Full          | Native support    |
+| Linux   | Partial       | Via Proton / Wine |
+| MacOS   | Limited       | Via CrossOver     |
 
-Supported games:
+Game versions:
 
 | Games                 | Engine Version | Compatible EEex Versions |
 | --------------------- | -------------- | ------------------------ |
