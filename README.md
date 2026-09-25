@@ -26,10 +26,13 @@ Operating systems:
 - Linux — Proton / Wine
 - MacOS — Wine? (untested)
 
-Game versions:
+Supported games:
 
-- BG:EE v2.6.6.0, BG2:EE v2.6.6.0, and IWD:EE v2.6.6.0 — EEex versions ≥ v0.9.0-alpha
-- BG:EE v2.5.17.0, BG2:EE v2.5.16.6, and IWD:EE v2.5.17.0 — EEex versions < v0.9.0-alpha
+| Games                 | Engine Version | Compatible EEex Versions |
+| --------------------- | -------------- | ------------------------ |
+| BG:EE, BG2:EE, IWD:EE | v2.7           | ≥ v1.1.0                 |
+| BG:EE, BG2:EE, IWD:EE | v2.6           | ≥ v0.9.0-alpha           |
+| BG:EE, BG2:EE, IWD:EE | v2.5           | < v0.9.0-alpha           |
 
 Dependencies:
 
