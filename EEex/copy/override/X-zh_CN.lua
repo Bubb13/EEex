@@ -135,11 +135,23 @@ uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey_
 决定当“免疫显示类型”选项设为“彩色”时，是否在弹出窗口右上角显示颜色图例。
 ]]
 
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenKeybind"] = "打开键位"
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenKeybind_Description"] = [[
+此键位用于打开攻击信息弹出窗口。
+]]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor"] = "使用攻击光标打开"
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor_Description"] = [[
+决定当攻击光标悬停在生物上时，攻击信息弹出窗口是否自动打开。
+]]
+
 uiStrings["EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind"] = "反转键位"
 
 uiStrings["EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind_Description"] = [[
 按下此键位时，会使攻击信息弹出窗口反转攻击方向——
 即显示目标对选中队员的命中几率。
+
+此键位可以在攻击信息弹出窗口当前处于关闭状态时将其打开。
 ]]
 
 uiStrings["EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders"] = "显示列标题"
