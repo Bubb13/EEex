@@ -38,3 +38,13 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; ITEMANIM.2DA["SEQUENCE"] sscanf(cell, "%c", &byteLocal) calls (verified by pattern/itemanim/audit.py)
+
+[Hook-CGameSprite::UseItem()-ItemAnimSequenceSscanfCall]
+Pattern=488B4D9F4C8D4597
+Operations=ADD 15
+
+[Hook-CGameSprite::UseItemPoint()-ItemAnimSequenceSscanfCall]
+Pattern=488B4DB74C8D4597
+Operations=ADD 15
