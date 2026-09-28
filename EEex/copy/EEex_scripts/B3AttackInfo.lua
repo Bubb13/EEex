@@ -170,7 +170,10 @@ B3AttackInfo_Private_OpenMode = {
 -- Globals --
 -------------
 
+B3AttackInfo_Private_CurrentTargetID = -1
 B3AttackInfo_Private_Enabled = false
+B3AttackInfo_Private_LastTargetID = -1
+B3AttackInfo_Private_OpenDelayTarget = -1
 B3AttackInfo_Private_OpenKeybindPressed = false
 B3AttackInfo_Private_OpenModeStack = {}
 B3AttackInfo_Private_OpenModeStackI = 0
@@ -197,8 +200,35 @@ end
 -- Misc --
 ----------
 
+function B3AttackInfo_Private_GetCursorRenderData()
+
+	local vidMode = EngineGlobals.g_pBaldurChitin.cVideo.pCurrentMode
+	local cursorCell = vidMode.pPointerVidCell
+	if cursorCell == nil then return end
+
+	local centerX, centerY = cursorCell:GetCurrentCenterPoint()
+	local w, h = cursorCell:GetCurrentFrameSize()
+	return EEex_Menu_ScaleX(centerX), EEex_Menu_ScaleY(centerY), EEex_Menu_ScaleX(w), EEex_Menu_ScaleY(h)
+end
+
 function B3AttackInfo_Private_GetOpenMode()
 	return B3AttackInfo_Private_OpenModeStackI > 0 and B3AttackInfo_Private_OpenModeStack[B3AttackInfo_Private_OpenModeStackI] or nil
+end
+
+function B3AttackInfo_Private_GetSelectedSprites(targetSprite)
+
+	local selectedSprites = {}
+
+	EEex_Sprite_IterateSelected(function(sprite)
+		if EEex_UDEqual(sprite, targetSprite) then return end
+		table.insert(selectedSprites, sprite)
+	end)
+
+	EEex_Utility_AlphanumericSortTable(selectedSprites, function(sprite)
+		return sprite:getName()
+	end)
+
+	return selectedSprites
 end
 
 function B3AttackInfo_Private_GetWeaponHitChance(sourceSprite, targetSprite, leftHand)
@@ -231,25 +261,7 @@ end
 B3AttackInfo_Private_Menu_Ticker_IsOpen = false
 B3AttackInfo_Private_Menu_Ticker_ShouldBeOpen = false
 
-function B3AttackInfo_Private_Layout(targetSprite)
-
-	-----------------------------------------------------------------------
-	--     Filter and sort sprites to display attack information for     --
-	-----------------------------------------------------------------------
-
-	local selectedSprites = {}
-	EEex_Sprite_IterateSelected(function(sprite)
-		if EEex_UDEqual(sprite, targetSprite) then return end
-		table.insert(selectedSprites, sprite)
-	end)
-
-	if selectedSprites[1] == nil then
-		return false
-	end
-
-	EEex_Utility_AlphanumericSortTable(selectedSprites, function(sprite)
-		return sprite:getName()
-	end)
+function B3AttackInfo_Private_Layout(selectedSprites, targetSprite)
 
 	--------------------------
 	--     Read options     --
@@ -272,8 +284,8 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	-- Popup --
 	-----------
 
-	local popupLeftSideAdjust  = 6
-	local popupRightSideAdjust = 20
+	local popupLeftSideAdjust  = 5
+	local popupRightSideAdjust = 5
 
 	----------------
 	-- Background --
@@ -706,12 +718,16 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	--     Layout background (part 1)      --
 	-----------------------------------------
 
-	-- `cursorX` and `cursorY` used in layout
 	local cursorX, cursorY = EEex_Menu_GetMousePos()
+	local cursorCenterX, cursorCenterY, cursorW, cursorH = B3AttackInfo_Private_GetCursorRenderData()
+
+	-- `cursorRenderX` used in layout
+	local cursorRenderX = cursorX - cursorCenterX
+	local cursorRenderY = cursorY - cursorCenterY
 
 	-- `backgroundX`, `backgroundY`, and `backgroundWidth` used in layout
-	local backgroundX = cursorX + popupRightSideAdjust
-	local backgroundY = cursorY
+	local backgroundX = cursorRenderX + cursorW + popupRightSideAdjust
+	local backgroundY = cursorRenderY
 	local backgroundWidth = math.max(totalHeaderW, infoListW) + backgroundPad * 2
 
 	------------------------------------
@@ -741,7 +757,7 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	local screenW, screenH = Infinity_GetScreenSize()
 
 	if backgroundRight > screenW then
-		backgroundX = cursorX - backgroundWidth - popupLeftSideAdjust
+		backgroundX = cursorRenderX - backgroundWidth - popupLeftSideAdjust
 	end
 
 	if backgroundBottom > screenH then
@@ -758,41 +774,79 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	Infinity_SetOffset("B3AttackInfo_Menu", backgroundX, backgroundY)
 	Infinity_SetArea("B3AttackInfo_Menu_InfoList", infoListX, infoListY, infoListW, infoListH)
 	Infinity_SetArea("B3AttackInfo_Menu_BackgroundRect", 0, 0, backgroundWidth, backgroundHeight)
-
-	return true
 end
 
 function B3AttackInfo_Private_Menu_Ticker_Tick()
 
-	local chitin = EngineGlobals.g_pBaldurChitin
-	local game = chitin.m_pObjectGame
-	local pObjectCursor = chitin.m_pObjectCursor
+	local targetSprite = EEex_GameObject_GetUnderCursor()
 
-	if (game.m_nState ~= 2 and EEex_Key_IsDown(SDL_Keycode.SDLK_TAB)) or (B3EffectMenu_IsOpen ~= nil and B3EffectMenu_IsOpen()) then
+	if not EEex_GameObject_IsSprite(targetSprite) then
+		-- Hide the popup if no sprite is under the cursor
+		B3AttackInfo_Private_LastTargetID = -1
+		B3AttackInfo_Private_Menu_SetOpen(false)
+		return
+	end
+
+	local lastTargetId = B3AttackInfo_Private_LastTargetID
+	local targetId = targetSprite.m_id
+	B3AttackInfo_Private_LastTargetID = targetId
+
+	local chitin = EngineGlobals.g_pBaldurChitin
+
+	if (chitin.m_pObjectGame.m_nState ~= 2 and EEex_Key_IsDown(SDL_Keycode.SDLK_TAB)) or (B3EffectMenu_IsOpen ~= nil and B3EffectMenu_IsOpen()) then
 		-- Hide the popup if a tooltip is being forced or the effect menu popup is open
 		B3AttackInfo_Private_Menu_SetOpen(false)
 		return
 	end
 
-	local attemptOpen = B3AttackInfo_Private_OpenKeybindPressed or B3AttackInfo_Private_ReverseKeybindPressed
+	local selectedSprites = B3AttackInfo_Private_GetSelectedSprites(targetSprite)
 
-	if not attemptOpen and B3AttackInfo_Private_OpenWithAttackCursor:get() ~= 0 then
-		local nCurrentCursor = pObjectCursor.nCurrentCursor
-		attemptOpen = nCurrentCursor == 12 or (nCurrentCursor == 101 and EEex.IsDefaultAttackCursor())
+	if selectedSprites[1] == nil then
+		-- Hide the popup if no currently selected sprites are eligible
+		B3AttackInfo_Private_Menu_SetOpen(false)
+		return
 	end
 
-	local shouldBeOpen = false
+	-- Checking if the popup should open from a keybind
+	local shouldBeOpen = B3AttackInfo_Private_OpenKeybindPressed or B3AttackInfo_Private_ReverseKeybindPressed
 
-	if attemptOpen then
+	-- Checking if the popup should open from an attack cursor
+	if not shouldBeOpen and B3AttackInfo_Private_OpenWithAttackCursor:get() ~= 0 then
+		local nCurrentCursor = chitin.m_pObjectCursor.nCurrentCursor
+		shouldBeOpen = nCurrentCursor == 12 or (nCurrentCursor == 101 and EEex.IsDefaultAttackCursor())
+	end
 
-		local targetSprite = EEex_GameObject_GetUnderCursor()
+	if not shouldBeOpen then
+		-- Hide the popup if neither a keybind or the cursor shape are attempting to open it
+		B3AttackInfo_Private_Menu_SetOpen(false)
+		return
+	end
 
-		if EEex_GameObject_IsSprite(targetSprite) then
-			shouldBeOpen = B3AttackInfo_Private_Layout(targetSprite)
+	local waiting = true
+
+	-- Delay opening by 1 tick to wait for the cursor shape to update
+	if targetId ~= lastTargetId or B3AttackInfo_Private_OpenDelayTarget == -1 then
+		B3AttackInfo_Private_OpenDelayTarget = Infinity_GetFrameCounter() + 1
+	elseif Infinity_GetFrameCounter() >= B3AttackInfo_Private_OpenDelayTarget then
+		waiting = false
+	end
+
+	if waiting then
+
+		-- Attempt to layout with the previous target if we are currently waiting
+		local lastTarget = EEex_GameObject_Get(B3AttackInfo_Private_CurrentTargetID)
+		if EEex_GameObject_IsSprite(lastTarget) then
+			B3AttackInfo_Private_Layout(selectedSprites, lastTarget)
+		else
+			B3AttackInfo_Private_Menu_SetOpen(false, true)
 		end
+
+		return
 	end
 
-	B3AttackInfo_Private_Menu_SetOpen(shouldBeOpen)
+	B3AttackInfo_Private_CurrentTargetID = targetId
+	B3AttackInfo_Private_Layout(selectedSprites, targetSprite)
+	B3AttackInfo_Private_Menu_SetOpen(true)
 end
 
 function B3AttackInfo_Private_Menu_Ticker_Open()
@@ -851,12 +905,16 @@ function B3AttackInfo_Private_Menu_Close()
 	B3AttackInfo_Private_Menu_IsOpen = false
 end
 
-function B3AttackInfo_Private_Menu_SetOpen(open)
+function B3AttackInfo_Private_Menu_SetOpen(open, dontResetOpenDelay)
 	if open then
 		if not B3AttackInfo_Private_Menu_IsOpen then
 			B3AttackInfo_Private_Menu_Open()
 		end
 	elseif B3AttackInfo_Private_Menu_IsOpen then
+		if not dontResetOpenDelay then
+			B3AttackInfo_Private_OpenDelayTarget = -1
+		end
+		B3AttackInfo_Private_CurrentTargetID = -1
 		B3AttackInfo_Private_Menu_Close()
 	end
 end
