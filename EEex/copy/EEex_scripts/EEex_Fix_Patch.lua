@@ -574,6 +574,174 @@
 
 	EEex_JITAt(EEex_Label("Hook-CGameEffectPolymorph::ApplyEffect()-FormToFormUnequipAllBugJne"), {"#REPEAT(2,nop #ENDL)"})
 
+	--[[
+	+------------------------------------------------------------------------------------------------------------------------------+
+	| BUG: v2.7.3.0 - op180 (CGameEffectRestrictEquipItem) is only honored when actually equipping, unlike op181                   |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	| op180 (by item resref) and op181 (by item type) add an entry to the target's m_derivedStats, in a list chosen by param2:     |
+	|                                                                                                                              |
+	|              param2 == 0 ("equip")             param2 != 0 ("use")                                                           |
+	|     op180    m_cImmunitiesItemEquip            m_cImmunitiesItemUse                                                          |
+	|     op181    m_cImmunitiesItemTypeEquip        m_cImmunitiesItemTypeUse                                                      |
+	|                                                                                                                              |
+	| The engine reads the op181 lists in more places than the op180 ones:                                                         |
+	|   1) CInfGame::GetItemTint() (Lua `item.tint`: "STORTINT" is the inventory's red "unusable" tint) and                        |
+	|      CInfGame::CheckItemUsable(short, ...) (inventory Use button, chargen drop slots, CGameSprite::GetRatingWithItem())      |
+	|      test m_cImmunitiesItemTypeEquip right after CheckItemUsable(CGameSprite*, ...), but never m_cImmunitiesItemEquip.       |
+	|      Only CInfGame::CheckItemSlot() / CInfGame::SwapItemPersonal() (actually equipping) test both lists.                     |
+	|   2) CGameSprite::UseItem() refuses items on m_cImmunitiesItemTypeUse, but no code ever reads m_cImmunitiesItemUse.          |
+	|                                                                                                                              |
+	| op177 / op182 / op183 / op283 decode their .EFF into a temporary child and call its ApplyEffect() directly, which fills the  |
+	| very same lists. The fixes below therefore act where the lists are READ, so every way op180 can be applied is covered.       |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_CheckItemUsable(pThis: CInfGame*, pSprite: CGameSprite*, item: CItem*, errorCode: uint&,         |
+	|                                             bAsync: int) -> int                                                              |
+	|       return:                                                                                                                |
+	|           -> 0        - Not usable (engine result, or the item's resref is on the op180 equip restriction list)              |
+	|           -> non-zero - Don't alter engine behavior                                                                          |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_ShouldRestrictCurItemUse(pSprite: CGameSprite*) -> bool                                          |
+	|       return:                                                                                                                |
+	|           -> false - Don't alter engine behavior                                                                             |
+	|           -> true  - m_curItem's resref is on the op180 use restriction list: take UseItem()'s op181 refusal path            |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	| Why these hooks (every engine fact below is verified for BG2:EE, BG:EE, and IWD:EE):                                         |
+	|   * 1) EEex_ReplaceCall() on both `call CInfGame::CheckItemUsable(CGameSprite*, ...)`. The C++ hook has that function's      |
+	|     exact Win64 signature, calls the original, and can only turn "usable" into 0. Both callers already route 0 to the        |
+	|     same "unusable" path an op181 hit takes, so no assembly and no register assumptions are needed.                          |
+	|   * 2) EEex_HookAfterCallWithLabels() on UseItem()'s `call CImmunitiesItemTypeEquipList::OnList()` (op181 use list). The     |
+	|     item being used is not an argument there, but rbx is UseItem()'s `this`: the site itself reads [rbx+m_curItem] and       |
+	|     [rbx+m_bAllowEffectListCall] and adds rbx to the list offset. A non-zero eax makes the engine take its own op181         |
+	|     refusal path. OnList() already zeroed its effect-copy out-parameter on the miss, so that path deletes nothing extra.     |
+	|     The engine reads no volatile register other than eax after the call, which is why only rax is written back.              |
+	+------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		-- These labels are only shipped in v2.7.3.0's pattern database (pattern_dbs/v2.7.3.0.db).
+		-- On other engine versions all of them are absent, and vanilla behavior is kept.
+		local tintCheckCallAddress = EEex_TryLabel("Hook-CInfGame::GetItemTint()-CheckItemUsableCall")
+		local usableCheckCallAddress = EEex_TryLabel("Hook-CInfGame::CheckItemUsable(short,CItem*,ulong&,int)-CheckItemUsableCall")
+		local useItemOnListCallAddress = EEex_TryLabel("Hook-CGameSprite::UseItem()-ItemTypeUseOnListCall")
+
+		if tintCheckCallAddress == nil and usableCheckCallAddress == nil and useItemOnListCallAddress == nil then
+			return -- Engine version without these labels: keep vanilla op180 behavior
+		end
+
+		if tintCheckCallAddress == nil or usableCheckCallAddress == nil or useItemOnListCallAddress == nil then
+			-- Fixing only some sites would make op180 behave differently depending on which screen / action consults it
+			EEex_Error("op180 fix: incomplete pattern database, expected the GetItemTint(), CheckItemUsable(short), and UseItem() labels")
+		end
+
+		----------------------------------------------------------------------------------------------------------
+		-- The short pattern signatures only locate the three sites. Validate every instruction the hooks rely  --
+		-- on before writing anything, so a mismatch never leaves a half-applied fix behind.                    --
+		----------------------------------------------------------------------------------------------------------
+
+		-- `address` must hold `bytes` (`false` matches any byte), optionally followed by an unsigned 32-bit value `u32`
+		local expectInstruction = function(address, bytes, u32, description)
+			for i = 1, #bytes do
+				local byte = bytes[i]
+				if byte ~= false and EEex_ReadU8(address + i - 1) ~= byte then
+					EEex_Error(string.format("op180 fix: expected `%s` at %s", description, EEex_ToHex(address)))
+				end
+			end
+			if u32 ~= nil and EEex_ReadU32(address + #bytes) ~= u32 then
+				EEex_Error(string.format("op180 fix: unexpected 32-bit operand in `%s` at %s", description, EEex_ToHex(address)))
+			end
+		end
+
+		-- Absolute target of the `call rel32` (E8 xx xx xx xx) at `address`. rel32 is relative to the end of the call.
+		local callTarget = function(address)
+			return address + 5 + EEex_Read32(address + 1)
+		end
+
+		-- 1) CInfGame::GetItemTint(): `call CheckItemUsable(CGameSprite*, ...)`, then `test eax, eax` / `je <"STORTINT">`
+		expectInstruction(tintCheckCallAddress, {0xE8}, nil, "call rel32")
+		expectInstruction(tintCheckCallAddress + 5, {0x85, 0xC0, 0x0F, 0x84}, nil, "test eax, eax / je rel32")
+
+		-- 1) CInfGame::CheckItemUsable(short, ...): `call CheckItemUsable(CGameSprite*, ...)`, then
+		--    `test rdi, rdi` / `je <return eax>` / `test eax, eax` / `je <return 0>` (rdi = item)
+		expectInstruction(usableCheckCallAddress, {0xE8}, nil, "call rel32")
+		expectInstruction(usableCheckCallAddress + 5, {0x48, 0x85, 0xFF, 0x74, false, 0x85, 0xC0, 0x74, false}, nil,
+			"test rdi, rdi / je rel8 / test eax, eax / je rel8")
+
+		-- Both sites must call the same function: CInfGame::CheckItemUsable(CGameSprite*, CItem*, unsigned long&, int)
+		local checkItemUsableAddress = callTarget(tintCheckCallAddress)
+		if callTarget(usableCheckCallAddress) ~= checkItemUsableAddress then
+			EEex_Error("op180 fix: GetItemTint() and CheckItemUsable(short) no longer call the same CheckItemUsable()")
+		end
+
+		-- 2) CGameSprite::UseItem(): the op181 use list check around the hooked call (useItemOnListCallAddress = C)
+		--     C-47  mov rcx, qword ptr [rbx+m_curItem]
+		--     C-40  mov edi, dword ptr [rbx+m_bAllowEffectListCall]
+		--     C-34  call CItem::GetItemType
+		--     C-29  movzx edx, ax                ; nType
+		--     C-26  lea r9, [rbp-0x49]           ; CGameEffect*& (effect copy, deleted by the refusal path when non-null)
+		--     C-22  mov eax, m_tempStats.m_cImmunitiesItemTypeUse
+		--     C-17  lea r8, [rbp-0x51]           ; unsigned long& (error strref, unused by the refusal path)
+		--     C-13  test edi, edi
+		--     C-11  mov ecx, m_derivedStats.m_cImmunitiesItemTypeUse
+		--     C-6   cmove ecx, eax
+		--     C-3   add rcx, rbx
+		--     C     call CImmunitiesItemTypeEquipList::OnList   ; hooked
+		--     C+5   test eax, eax
+		--     C+7   je rel32                    ; <not restricted>, falls through into the refusal path
+		local C = useItemOnListCallAddress
+		expectInstruction(C - 47, {0x48, 0x8B, 0x8B}, EEex_OffsetOf("CGameSprite.m_curItem"), "mov rcx, qword ptr [rbx+m_curItem]")
+		expectInstruction(C - 40, {0x8B, 0xBB}, EEex_OffsetOf("CGameSprite.m_bAllowEffectListCall"), "mov edi, dword ptr [rbx+m_bAllowEffectListCall]")
+		expectInstruction(C - 34, {0xE8}, nil, "call rel32")
+		expectInstruction(C - 29, {0x0F, 0xB7, 0xD0}, nil, "movzx edx, ax")
+		expectInstruction(C - 26, {0x4C, 0x8D, 0x4D, 0xB7}, nil, "lea r9, [rbp-0x49]")
+		expectInstruction(C - 22, {0xB8}, EEex_OffsetOf("CGameSprite.m_tempStats.m_cImmunitiesItemTypeUse"), "mov eax, imm32")
+		expectInstruction(C - 17, {0x4C, 0x8D, 0x45, 0xAF}, nil, "lea r8, [rbp-0x51]")
+		expectInstruction(C - 13, {0x85, 0xFF}, nil, "test edi, edi")
+		expectInstruction(C - 11, {0xB9}, EEex_OffsetOf("CGameSprite.m_derivedStats.m_cImmunitiesItemTypeUse"), "mov ecx, imm32")
+		expectInstruction(C - 6, {0x0F, 0x44, 0xC8}, nil, "cmove ecx, eax")
+		expectInstruction(C - 3, {0x48, 0x03, 0xCB}, nil, "add rcx, rbx")
+		expectInstruction(C, {0xE8}, nil, "call rel32")
+		expectInstruction(C + 5, {0x85, 0xC0, 0x0F, 0x84}, nil, "test eax, eax / je rel32")
+
+		-- Resolve the native side up front (errors if the matching EEex.dll does not export it)
+		local hookCheckItemUsableAddress = EEex_Label("EEex::Fix_Hook_CheckItemUsable")
+		local originalCheckItemUsableSlot = EEex_Label("EEex::Fix_Original_CheckItemUsable")
+		EEex_Label("EEex::Fix_Hook_ShouldRestrictCurItemUse")
+
+		-------------------------------------------------
+		-- [EEex.dll] EEex::Fix_Hook_CheckItemUsable() --
+		-------------------------------------------------
+
+		-- The C++ hook calls the engine's CheckItemUsable(CGameSprite*, ...) through this pointer, so it must be set before
+		-- any call is retargeted
+		EEex_WritePtr(originalCheckItemUsableSlot, checkItemUsableAddress)
+
+		-- `call CheckItemUsable` -> `call EEex::Fix_Hook_CheckItemUsable` (through a near jmp stub, since EEex.dll can be
+		-- further than rel32 away from the executable). Same arguments, same stack, same return register.
+		EEex_ReplaceCall(tintCheckCallAddress, hookCheckItemUsableAddress)
+		EEex_ReplaceCall(usableCheckCallAddress, hookCheckItemUsableAddress)
+
+		---------------------------------------------------------
+		-- [EEex.dll] EEex::Fix_Hook_ShouldRestrictCurItemUse() --
+		---------------------------------------------------------
+
+		-- Runs right after the engine's op181 OnList() returned. The default after-call watchdog set already ignores
+		-- rcx / rdx / r8-r11 (the OnList() call clobbered them anyway); rax is written here on purpose.
+		EEex_HookAfterCallWithLabels(useItemOnListCallAddress, {
+			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+			{[[
+				test eax, eax
+				jnz #L(return)                                       ; op181 already refuses the item: keep the engine's result
+
+				#MAKE_SHADOW_SPACE
+				mov rcx, rbx                                         ; pSprite (UseItem()'s `this`, validated above)
+				call #L(EEex::Fix_Hook_ShouldRestrictCurItemUse)
+				#DESTROY_SHADOW_SPACE
+				movzx eax, al                                        ; The engine follows with `test eax, eax` / `je <not restricted>`
+			]]}
+		)
+	end)
+
 	EEex_EnableCodeProtection()
 
 end)()
