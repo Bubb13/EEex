@@ -31,11 +31,32 @@ B3AttackInfo_Private_ImmunityDisplayTypeShowColorKey = EEex_Options_Register("B3
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Immunity Display Type Show Color Key" }),
 }))
 
+EEex_Options_Register("B3AttackInfo_OpenKeybind", EEex_Options_Option.new({
+	["default"]  = EEex_Options_UnmarshalKeybind("Left Ctrl|Down"),
+	["type"]     = EEex_Options_KeybindType.new({
+		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
+		["callback"]       = function() B3AttackInfo_Private_OnOpenKeybindPressed()     end,
+		["onSatisfied"]    = function() B3AttackInfo_Private_OnOpenKeybindSatisfied()   end,
+		["onUnsatisfied"]  = function() B3AttackInfo_Private_OnOpenKeybindUnsatisfied() end,
+	}),
+	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3AttackInfo_OpenKeybind" }),
+	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Open Keybind" }),
+}))
+
+B3AttackInfo_Private_OpenWithAttackCursor = EEex_Options_Register("B3AttackInfo_OpenWithAttackCursor", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Open With Attack Cursor" }),
+}))
+
 EEex_Options_Register("B3AttackInfo_ReverseKeybind", EEex_Options_Option.new({
 	["default"]  = EEex_Options_UnmarshalKeybind("Left Alt|Down"),
 	["type"]     = EEex_Options_KeybindType.new({
 		["lockedFireType"] = EEex_Keybinds_FireType.DOWN,
-		["callback"]       = function() B3AttackInfo_Private_Menu_Reversed = true end,
+		["callback"]       = function() B3AttackInfo_Private_OnReverseKeybindPressed()     end,
+		["onSatisfied"]    = function() B3AttackInfo_Private_OnReverseKeybindSatisfied()   end,
+		["onUnsatisfied"]  = function() B3AttackInfo_Private_OnReverseKeybindUnsatisfied() end,
 	}),
 	["accessor"] = EEex_Options_KeybindAccessor.new({ ["keybindID"] = "B3AttackInfo_ReverseKeybind" }),
 	["storage"]  = EEex_Options_KeybindLuaStorage.new({ ["section"] = "EEex", ["key"] = "Attack Info Module: Reverse Keybind" }),
@@ -102,6 +123,18 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_AttackInfo_TabTitle", function() r
 			},
 		}),
 		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_OpenKeybind",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_OpenKeybind",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_OpenKeybind_Description",
+			["widget"]      = EEex_Options_KeybindWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3AttackInfo_OpenWithAttackCursor",
+			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor",
+			["description"] = "EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
 			["optionID"]    = "B3AttackInfo_ReverseKeybind",
 			["label"]       = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind",
 			["description"] = "EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind_Description",
@@ -124,11 +157,27 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_AttackInfo_TabTitle", function() r
 	},
 } end)
 
+---------------
+-- Constants --
+---------------
+
+B3AttackInfo_Private_OpenMode = {
+	["NORMAL"]   = 0,
+	["REVERSED"] = 1,
+}
+
 -------------
 -- Globals --
 -------------
 
+B3AttackInfo_Private_CurrentTargetID = -1
 B3AttackInfo_Private_Enabled = false
+B3AttackInfo_Private_LastTargetID = -1
+B3AttackInfo_Private_OpenDelayTarget = -1
+B3AttackInfo_Private_OpenKeybindPressed = false
+B3AttackInfo_Private_OpenModeStack = {}
+B3AttackInfo_Private_OpenModeStackI = 0
+B3AttackInfo_Private_ReverseKeybindPressed = false
 
 -------------
 -- General --
@@ -150,6 +199,37 @@ end
 ----------
 -- Misc --
 ----------
+
+function B3AttackInfo_Private_GetCursorRenderData()
+
+	local vidMode = EngineGlobals.g_pBaldurChitin.cVideo.pCurrentMode
+	local cursorCell = vidMode.pPointerVidCell
+	if cursorCell == nil then return end
+
+	local centerX, centerY = cursorCell:GetCurrentCenterPoint()
+	local w, h = cursorCell:GetCurrentFrameSize()
+	return EEex_Menu_ScaleX(centerX), EEex_Menu_ScaleY(centerY), EEex_Menu_ScaleX(w), EEex_Menu_ScaleY(h)
+end
+
+function B3AttackInfo_Private_GetOpenMode()
+	return B3AttackInfo_Private_OpenModeStackI > 0 and B3AttackInfo_Private_OpenModeStack[B3AttackInfo_Private_OpenModeStackI] or nil
+end
+
+function B3AttackInfo_Private_GetSelectedSprites(targetSprite)
+
+	local selectedSprites = {}
+
+	EEex_Sprite_IterateSelected(function(sprite)
+		if EEex_UDEqual(sprite, targetSprite) then return end
+		table.insert(selectedSprites, sprite)
+	end)
+
+	EEex_Utility_AlphanumericSortTable(selectedSprites, function(sprite)
+		return sprite:getName()
+	end)
+
+	return selectedSprites
+end
 
 function B3AttackInfo_Private_GetWeaponHitChance(sourceSprite, targetSprite, leftHand)
 
@@ -181,25 +261,7 @@ end
 B3AttackInfo_Private_Menu_Ticker_IsOpen = false
 B3AttackInfo_Private_Menu_Ticker_ShouldBeOpen = false
 
-function B3AttackInfo_Private_Layout(targetSprite)
-
-	-----------------------------------------------------------------------
-	--     Filter and sort sprites to display attack information for     --
-	-----------------------------------------------------------------------
-
-	local selectedSprites = {}
-	EEex_Sprite_IterateSelected(function(sprite)
-		if EEex_UDEqual(sprite, targetSprite) then return end
-		table.insert(selectedSprites, sprite)
-	end)
-
-	if selectedSprites[1] == nil then
-		return false
-	end
-
-	EEex_Utility_AlphanumericSortTable(selectedSprites, function(sprite)
-		return sprite:getName()
-	end)
+function B3AttackInfo_Private_Layout(selectedSprites, targetSprite)
 
 	--------------------------
 	--     Read options     --
@@ -215,14 +277,15 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	--     Layout constants     --
 	------------------------------
 
+	local reversed = B3AttackInfo_Private_GetOpenMode() == B3AttackInfo_Private_OpenMode.REVERSED
 	local spaceW, spaceH = EEex_Menu_GetTextWidthHeight(" ", styles["normal"].font, fontPoint, styles["normal"].useFontZoom)
 
 	-----------
 	-- Popup --
 	-----------
 
-	local popupLeftSideAdjust  = 6
-	local popupRightSideAdjust = 20
+	local popupLeftSideAdjust  = 5
+	local popupRightSideAdjust = 5
 
 	----------------
 	-- Background --
@@ -271,7 +334,7 @@ function B3AttackInfo_Private_Layout(targetSprite)
 
 	local otherLabelText
 
-	if B3AttackInfo_Private_Menu_Reversed then
+	if reversed then
 		B3AttackInfo_Private_Menu_Label = uiStrings["EEex_TRANSLATION_AttackInfo_TargetAttacksParty"]
 		otherLabelText = uiStrings["EEex_TRANSLATION_AttackInfo_PartyAttacksTarget"]
 	else
@@ -523,12 +586,12 @@ function B3AttackInfo_Private_Layout(targetSprite)
 		return hadOffhand
 	end
 
-	local normalHadOffhand = calculateSprites(false, B3AttackInfo_Private_Menu_Reversed)
-	local reverseHadOffhand = calculateSprites(true, not B3AttackInfo_Private_Menu_Reversed)
+	local normalHadOffhand = calculateSprites(false, reversed)
+	local reverseHadOffhand = calculateSprites(true, not reversed)
 
 	if showColumnHeaders then
 
-		local currentViewHadOffhand = (not B3AttackInfo_Private_Menu_Reversed and normalHadOffhand) or (B3AttackInfo_Private_Menu_Reversed and reverseHadOffhand)
+		local currentViewHadOffhand = (not reversed and normalHadOffhand) or (reversed and reverseHadOffhand)
 
 		local mainhandLabel = uiStrings["EEex_TRANSLATION_AttackInfo_Mainhand"]
 		local offhandLabel = uiStrings["EEex_TRANSLATION_AttackInfo_Offhand"]
@@ -655,12 +718,16 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	--     Layout background (part 1)      --
 	-----------------------------------------
 
-	-- `cursorX` and `cursorY` used in layout
 	local cursorX, cursorY = EEex_Menu_GetMousePos()
+	local cursorCenterX, cursorCenterY, cursorW, cursorH = B3AttackInfo_Private_GetCursorRenderData()
+
+	-- `cursorRenderX` used in layout
+	local cursorRenderX = cursorX - cursorCenterX
+	local cursorRenderY = cursorY - cursorCenterY
 
 	-- `backgroundX`, `backgroundY`, and `backgroundWidth` used in layout
-	local backgroundX = cursorX + popupRightSideAdjust
-	local backgroundY = cursorY
+	local backgroundX = cursorRenderX + cursorW + popupRightSideAdjust
+	local backgroundY = cursorRenderY
 	local backgroundWidth = math.max(totalHeaderW, infoListW) + backgroundPad * 2
 
 	------------------------------------
@@ -690,7 +757,7 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	local screenW, screenH = Infinity_GetScreenSize()
 
 	if backgroundRight > screenW then
-		backgroundX = cursorX - backgroundWidth - popupLeftSideAdjust
+		backgroundX = cursorRenderX - backgroundWidth - popupLeftSideAdjust
 	end
 
 	if backgroundBottom > screenH then
@@ -707,35 +774,79 @@ function B3AttackInfo_Private_Layout(targetSprite)
 	Infinity_SetOffset("B3AttackInfo_Menu", backgroundX, backgroundY)
 	Infinity_SetArea("B3AttackInfo_Menu_InfoList", infoListX, infoListY, infoListW, infoListH)
 	Infinity_SetArea("B3AttackInfo_Menu_BackgroundRect", 0, 0, backgroundWidth, backgroundHeight)
-
-	return true
 end
 
 function B3AttackInfo_Private_Menu_Ticker_Tick()
 
-	local chitin = EngineGlobals.g_pBaldurChitin
-	local game = chitin.m_pObjectGame
-	local pObjectCursor = chitin.m_pObjectCursor
+	local targetSprite = EEex_GameObject_GetUnderCursor()
 
-	if (game.m_nState ~= 2 and EEex_Key_IsDown(SDL_Keycode.SDLK_TAB)) or (B3EffectMenu_IsOpen ~= nil and B3EffectMenu_IsOpen()) then
+	if not EEex_GameObject_IsSprite(targetSprite) then
+		-- Hide the popup if no sprite is under the cursor
+		B3AttackInfo_Private_LastTargetID = -1
+		B3AttackInfo_Private_Menu_SetOpen(false)
+		return
+	end
+
+	local lastTargetId = B3AttackInfo_Private_LastTargetID
+	local targetId = targetSprite.m_id
+	B3AttackInfo_Private_LastTargetID = targetId
+
+	local chitin = EngineGlobals.g_pBaldurChitin
+
+	if (chitin.m_pObjectGame.m_nState ~= 2 and EEex_Key_IsDown(SDL_Keycode.SDLK_TAB)) or (B3EffectMenu_IsOpen ~= nil and B3EffectMenu_IsOpen()) then
 		-- Hide the popup if a tooltip is being forced or the effect menu popup is open
 		B3AttackInfo_Private_Menu_SetOpen(false)
 		return
 	end
 
-	local nCurrentCursor = pObjectCursor.nCurrentCursor
-	local shouldBeOpen = false
+	local selectedSprites = B3AttackInfo_Private_GetSelectedSprites(targetSprite)
 
-	if nCurrentCursor == 12 or (nCurrentCursor == 101 and EEex.IsDefaultAttackCursor()) then
-
-		local targetSprite = EEex_GameObject_GetUnderCursor()
-
-		if EEex_GameObject_IsSprite(targetSprite) then
-			shouldBeOpen = B3AttackInfo_Private_Layout(targetSprite)
-		end
+	if selectedSprites[1] == nil then
+		-- Hide the popup if no currently selected sprites are eligible
+		B3AttackInfo_Private_Menu_SetOpen(false)
+		return
 	end
 
-	B3AttackInfo_Private_Menu_SetOpen(shouldBeOpen)
+	-- Checking if the popup should open from a keybind
+	local shouldBeOpen = B3AttackInfo_Private_OpenKeybindPressed or B3AttackInfo_Private_ReverseKeybindPressed
+
+	-- Checking if the popup should open from an attack cursor
+	if not shouldBeOpen and B3AttackInfo_Private_OpenWithAttackCursor:get() ~= 0 then
+		local nCurrentCursor = chitin.m_pObjectCursor.nCurrentCursor
+		shouldBeOpen = nCurrentCursor == 12 or (nCurrentCursor == 101 and EEex.IsDefaultAttackCursor())
+	end
+
+	if not shouldBeOpen then
+		-- Hide the popup if neither a keybind or the cursor shape are attempting to open it
+		B3AttackInfo_Private_Menu_SetOpen(false)
+		return
+	end
+
+	local waiting = true
+
+	-- Delay opening by 1 tick to wait for the cursor shape to update
+	if targetId ~= lastTargetId or B3AttackInfo_Private_OpenDelayTarget == -1 then
+		B3AttackInfo_Private_OpenDelayTarget = Infinity_GetFrameCounter() + 1
+	elseif Infinity_GetFrameCounter() >= B3AttackInfo_Private_OpenDelayTarget then
+		waiting = false
+	end
+
+	if waiting then
+
+		-- Attempt to layout with the previous target if we are currently waiting
+		local lastTarget = EEex_GameObject_Get(B3AttackInfo_Private_CurrentTargetID)
+		if EEex_GameObject_IsSprite(lastTarget) then
+			B3AttackInfo_Private_Layout(selectedSprites, lastTarget)
+		else
+			B3AttackInfo_Private_Menu_SetOpen(false, true)
+		end
+
+		return
+	end
+
+	B3AttackInfo_Private_CurrentTargetID = targetId
+	B3AttackInfo_Private_Layout(selectedSprites, targetSprite)
+	B3AttackInfo_Private_Menu_SetOpen(true)
 end
 
 function B3AttackInfo_Private_Menu_Ticker_Open()
@@ -777,11 +888,10 @@ B3AttackInfo_Private_Menu_InfoListColumnUDsSize = nil   -- number
 B3AttackInfo_Private_Menu_IsOpen                = false
 B3AttackInfo_Private_Menu_Label                 = ""
 B3AttackInfo_Private_Menu_LabelUD               = nil   -- uiItem
-B3AttackInfo_Private_Menu_Reversed              = false
 B3AttackInfo_Private_Menu_ShowImmuneColorKey    = false
 
 function B3AttackInfo_Private_Menu_InfoList_BamFrame()
-	return B3AttackInfo_Private_Menu_Reversed and 1 or 0
+	return B3AttackInfo_Private_GetOpenMode() == B3AttackInfo_Private_OpenMode.REVERSED and 1 or 0
 end
 
 function B3AttackInfo_Private_Menu_Open()
@@ -795,19 +905,85 @@ function B3AttackInfo_Private_Menu_Close()
 	B3AttackInfo_Private_Menu_IsOpen = false
 end
 
-function B3AttackInfo_Private_Menu_SetOpen(open)
+function B3AttackInfo_Private_Menu_SetOpen(open, dontResetOpenDelay)
 	if open then
 		if not B3AttackInfo_Private_Menu_IsOpen then
 			B3AttackInfo_Private_Menu_Open()
 		end
 	elseif B3AttackInfo_Private_Menu_IsOpen then
+		if not dontResetOpenDelay then
+			B3AttackInfo_Private_OpenDelayTarget = -1
+		end
+		B3AttackInfo_Private_CurrentTargetID = -1
 		B3AttackInfo_Private_Menu_Close()
 	end
 end
 
----------------
--- Listeners --
----------------
+-----------------------
+-- Keybind Listeners --
+-----------------------
+
+-- All of this nonsense is to allow the normal / reverse keybinds to build off each other,
+-- e.g. allow CTRL (normal), ALT (reversed), CTRL+ALT (reversed), and ALT+CTRL (normal).
+--
+-- Doesn't work as well for multi-key bindings, e.g. in Z+X (normal) and Z+X+C+V (reversed),
+-- unpressing 'Z' or 'X' completely kills the popup and doesn't show the reversed mode even
+-- though C+V is still down. The question is whether the keybinds should act like an unordered
+-- set of modifier keys or act like a proper key sequence.
+--
+-- No one will use multi-key keybinds anyway - leave it as is.
+
+function B3AttackInfo_Private_OnOpenKeybindPressed()
+
+	B3AttackInfo_Private_OpenKeybindPressed = true
+
+	-- Add my open mode to the stack
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI + 1
+	B3AttackInfo_Private_OpenModeStack[B3AttackInfo_Private_OpenModeStackI] = B3AttackInfo_Private_OpenMode.NORMAL
+end
+
+function B3AttackInfo_Private_OnOpenKeybindSatisfied()
+	if EEex_Keybinds_IsSatisfied("B3AttackInfo_ReverseKeybind") then return end
+	-- Allow the reverse keybinding to start after this one
+	EEex_Keybinds_Reset("B3AttackInfo_ReverseKeybind")
+end
+
+function B3AttackInfo_Private_OnOpenKeybindUnsatisfied()
+
+	B3AttackInfo_Private_OpenKeybindPressed = false
+
+	-- Remove my open mode from the stack
+	EEex_Utility_RemoveValue(B3AttackInfo_Private_OpenModeStack, B3AttackInfo_Private_OpenMode.NORMAL)
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI - 1
+end
+
+function B3AttackInfo_Private_OnReverseKeybindPressed()
+
+	B3AttackInfo_Private_ReverseKeybindPressed = true
+
+	-- Add my open mode to the stack
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI + 1
+	B3AttackInfo_Private_OpenModeStack[B3AttackInfo_Private_OpenModeStackI] = B3AttackInfo_Private_OpenMode.REVERSED
+end
+
+function B3AttackInfo_Private_OnReverseKeybindSatisfied()
+	if EEex_Keybinds_IsSatisfied("B3AttackInfo_OpenKeybind") then return end
+	-- Allow the normal keybinding to start after this one
+	EEex_Keybinds_Reset("B3AttackInfo_OpenKeybind")
+end
+
+function B3AttackInfo_Private_OnReverseKeybindUnsatisfied()
+
+	B3AttackInfo_Private_ReverseKeybindPressed = false
+
+	-- Remove my open mode from the stack
+	EEex_Utility_RemoveValue(B3AttackInfo_Private_OpenModeStack, B3AttackInfo_Private_OpenMode.REVERSED)
+	B3AttackInfo_Private_OpenModeStackI = B3AttackInfo_Private_OpenModeStackI - 1
+end
+
+---------------------
+-- Other Listeners --
+---------------------
 
 function B3AttackInfo_Private_OnActionbarOpened()
 	B3AttackInfo_Private_Menu_Ticker_SetShouldBeOpen(true)
@@ -855,10 +1031,6 @@ EEex_Menu_AddMainFileLoadedListener(function()
 	local menu = EEex_Menu_Find("WORLD_ACTIONBAR")
 	listenToEngineEvent(menu.reference_onOpen, B3AttackInfo_Private_OnActionbarOpened)
 	listenToEngineEvent(menu.reference_onClose, B3AttackInfo_Private_OnActionbarClosed)
-end)
-
-EEex_Key_AddReleasedListener(function()
-	B3AttackInfo_Private_Menu_Reversed = false
 end)
 
 EEex.RegisterSlicedRect("B3AttackInfo_BackgroundRect", {

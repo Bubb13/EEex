@@ -3040,10 +3040,13 @@ end
 function EEex_Options_KeybindAccessor:set(option, newValue, needCopy)
 	newValue = self:validate(option, newValue, needCopy)
 	EEex_Keybinds_Update(self.keybindID, {
-		["callback"]     = option.type.callback,
-		["fireType"]     = newValue.fireType,
-		["keys"]         = newValue.keys,
-		["modifierKeys"] = newValue.modifierKeys,
+		["allowOtherKeys"] = option.type.allowOtherKeys,
+		["callback"]       = option.type.callback,
+		["fireType"]       = newValue.fireType,
+		["keys"]           = newValue.keys,
+		["modifierKeys"]   = newValue.modifierKeys,
+		["onSatisfied"]    = option.type.onSatisfied,
+		["onUnsatisfied"]  = option.type.onUnsatisfied,
 	})
 	return newValue
 end
@@ -3517,7 +3520,10 @@ function EEex_Options_KeybindType:_init()
 	EEex_Utility_CallSuper(EEex_Options_KeybindType, "_init", self)
 	if self.callback == nil then EEex_Error("callback required") end
 	-- Optional
+	--   self.allowOtherKeys
 	--   self.lockedFireType
+	--   self.onSatisfied
+	--   self.onUnsatisfied
 end
 
 --=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==

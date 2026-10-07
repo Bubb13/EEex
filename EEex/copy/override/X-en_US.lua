@@ -135,11 +135,23 @@ uiStrings["EEex_Options_TRANSLATION_AttackInfo_ImmunityDisplayType_ShowColorKey_
 Determines whether a color key is displayed in the top right of the popup when the "Immunity Display Type" option is set to 'Color'.
 ]]
 
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenKeybind"] = "Open Keybind"
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenKeybind_Description"] = [[
+This keybind opens the attack information popup.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor"] = "Open With Attack Cursor"
+uiStrings["EEex_Options_TRANSLATION_AttackInfo_OpenWithAttackCursor_Description"] = [[
+Determines whether the attack information popup automatically opens when an attack cursor is hovered over a creature.
+]]
+
 uiStrings["EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind"] = "Reverse Keybind"
 
 uiStrings["EEex_Options_TRANSLATION_AttackInfo_ReverseKeybind_Description"] = [[
 When pressed, this keybind causes the attack information popup to reverse the attack direction - 
 i.e. show the hit chance(s) the target has against the selected party members.
+
+This keybind can open the attack information popup if it is currently closed.
 ]]
 
 uiStrings["EEex_Options_TRANSLATION_AttackInfo_ShowColumnHeaders"] = "Show Column Headers"

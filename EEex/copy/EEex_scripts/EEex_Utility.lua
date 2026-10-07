@@ -146,6 +146,11 @@ function EEex_Utility_NewScope(func)
 	return func()
 end
 
+function EEex_Utility_RemoveValue(t, element)
+	local i = EEex_Utility_Find(t, element)
+	if i ~= nil then table.remove(t, i) end
+end
+
 function EEex_Utility_Split(text, splitBy, usePattern, allowEmptyCapture)
 	return EEex_Split(text, splitBy, usePattern, allowEmptyCapture)
 end
