@@ -10,3 +10,4 @@
 478 EEex_ForceSpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)
 479 EEex_ReallyForceSpellObjectOffset(O:Target*,I:Spell*Spell,P:Offset*)
 479 EEex_ReallyForceSpellObjectOffsetRES(S:RES*,O:Target*,P:Offset*)
+480 EEex_AttackOnce(O:Target*,I:BaseAttackRollMod*,I:OverrideBaseDamageRoll*,I:ConsumeAmmo*Boolean)
