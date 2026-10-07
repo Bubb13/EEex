@@ -148,6 +148,175 @@
 	)
 
 	--[[
+	+---------------------------------------------------------------------------------------+
+	| Opcode #178 / #179                                                                    |
+	+---------------------------------------------------------------------------------------+
+	|   Parameter 4 (`m_effectAmount3`) now selects an optional equipment-slot restriction: |
+	|     `0` -> Native global behavior                                                     |
+	|     `1` -> The sprite's selected main-hand slot when effects resolve                  |
+	|     `2` -> The off-hand slot                                                          |
+	|     `3` -> Originating equipped-effect slot; unrestricted when no source slot exists  |
+	|     Other values -> Native global behavior                                            |
+	+---------------------------------------------------------------------------------------+
+	|   [JIT]                                                                               |
+	+---------------------------------------------------------------------------------------+
+	--]]
+
+	local function installHandSelectiveBonuses()
+
+		-- Parameter 4 (m_effectAmount3): 0 / unknown = native global bonus,
+		-- 1 = selected main-hand slot when effects resolve, 2 = off-hand slot.
+		-- 3 = originating equipped slot; native slot -1 means unrestricted.
+		-- special and Parameter 3 retain their native bonus-amount behavior.
+		--
+		-- The v2.7.3.0 database advertises this capability. An older database
+		-- does not install these hooks; a partial advertised capability is an
+		-- initialization error, never a partially working combat modification.
+		local capability = EEex_TryLabel("Data-EEex::Op178179HandModeVersion")
+		if capability == nil then return end
+		if capability ~= 2 then EEex_Error("Unsupported op178/179 hand mode hook version") end
+
+		local sites = {
+			add178 = EEex_Label("Hook-CGameEffectSelectiveToHitBonus::ApplyEffect()-HandMode-AddTail"),
+			add179 = EEex_Label("Hook-CGameEffectSelectiveDamageBonus::ApplyEffect()-HandMode-AddTail"),
+			hit = EEex_Label("Hook-CGameSprite::Hit()-HandMode-GetBonus"),
+			damage = EEex_Label("Hook-CGameSprite::Damage()-HandMode-GetBonus"),
+			copy = EEex_Label("Hook-CSelectiveBonusList::operator_equ()-HandMode-RemoveAll"),
+			clear = EEex_Label("Hook-CSelectiveBonusList::ClearAll()-HandMode-RemoveAll"),
+			drive177 = EEex_Label("Hook-CGameEffectApplyEffect::ApplyEffect()-HandMode-DecodeEffectFromBase"),
+			drive182 = EEex_Label("Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-HandMode-DecodeEffectFromBase"),
+			drive183 = EEex_Label("Hook-CGameEffectApplyEffectEquipItemType::ApplyEffect()-HandMode-DecodeEffectFromBase"),
+			drive283 = EEex_Label("Hook-CGameEffectCurseApplyEffect::ApplyEffect()-HandMode-DecodeEffectFromBase"),
+		}
+		-- Resolve every DLL helper before patching anything in this group. This
+		-- also catches an old EEex.dll paired with the new pattern database.
+		for _, name in ipairs({"OnAddTail", "GetBonus", "OnListCopy", "OnListClear", "CaptureDrivenContext"}) do
+			EEex_Label("EEex::Opcode_Hook_Op178179_"..name)
+		end
+
+		local requireBytes = function(address, bytes)
+			for i = 1, #bytes, 2 do
+				if EEex_ReadU8(address + (i - 1) / 2) ~= tonumber(bytes:sub(i, i + 1), 16) then
+					EEex_Error("op178/179 hand mode hook instruction contract changed")
+				end
+			end
+		end
+		local branchTarget = function(address, opcode)
+			if EEex_ReadU8(address) ~= opcode then EEex_Error("op178/179 hand mode hook is not the expected rel32 branch") end
+			return address + 5 + EEex_Read32(address + 1)
+		end
+		local requireCall = function(address, target)
+			if branchTarget(address, 0xE8) ~= EEex_Label(target) then EEex_Error("op178/179 hand mode hook call target changed") end
+		end
+
+		-- These bytes establish the list choices/registers used below in addition to
+		-- pattern uniqueness; no runtime hook uses an absolute engine address.
+		requireCall(sites.add178, "CObList::AddTail")
+		requireCall(sites.add179, "CObList::AddTail")
+		requireCall(sites.hit, "CSelectiveBonusList::GetBonus")
+		requireCall(sites.damage, "CSelectiveBonusList::GetBonus")
+		requireCall(sites.drive177, "CGameEffect::DecodeEffectFromBase")
+		requireCall(sites.drive182, "CGameEffect::DecodeEffectFromBase")
+		requireCall(sites.drive183, "CGameEffect::DecodeEffectFromBase")
+		requireCall(sites.drive283, "CGameEffect::DecodeEffectFromBase")
+		if branchTarget(sites.copy, 0xE8) ~= branchTarget(sites.clear, 0xE9) then
+			EEex_Error("op178/179 native list copy / clear targets disagree")
+		end
+		requireBytes(sites.add178 - 16, "8B4360488D8E18150000488BD7894718")
+		requireBytes(sites.add179 - 16, "8B4360488D8E50150000488BD7894718")
+		requireBytes(sites.hit - 19, "B918150000488BD0B8C02100000F44C84803CB")
+		requireBytes(sites.damage - 19, "B8F8210000B950150000498BD40F44C84803CF")
+		requireBytes(sites.copy - 3, "488BCE")
+		requireBytes(sites.copy + 5, "488B7D08")
+		requireBytes(sites.clear - 13, "488BCE488B5C24384883C4205E")
+		requireBytes(sites.drive177 + 5, "488BF8488D4830")
+		requireBytes(sites.drive182 + 5, "488BD8488D4830")
+		requireBytes(sites.drive183 + 5, "488BD8488D4830")
+		requireBytes(sites.drive283 + 5, "488BF8488D4830")
+
+		-- The engine has appended a CSelectiveBonus, not a CGameEffect. Record
+		-- its list index and slot in C++; no pointer to a driven EFF child is
+		-- retained after the driver destroys that child. AddTail's RAX is dead.
+		for _, address in ipairs({sites.add178, sites.add179}) do
+			EEex_HookAfterCallWithLabels(address, {
+				{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+				{[[
+					mov rdx, rsi                                  ; pSprite
+					mov rcx, rbx                                  ; pEffect
+					call #L(EEex::Opcode_Hook_Op178179_OnAddTail)
+				]]}
+			)
+		end
+
+		-- Replace just these two offensive lookups. The protection list's
+		-- GetBonus call in Hit(), saving throws, and the bound GetBonus method
+		-- keep their native meaning. The original call frame already reserves
+		-- shadow space; the native helper takes its extra args in R8/R9.
+		EEex_HookRemoveCall(sites.hit, {[[
+			mov r8, rbx                                       ; attacker
+			mov r9d, dword ptr ss:[rbp+0x68]                  ; explicit native hand argument
+			call #L(EEex::Opcode_Hook_Op178179_GetBonus)      ; RCX=list, RDX=target type
+		]]})
+		EEex_HookRemoveCall(sites.damage, {[[
+			mov r8, rdi                                       ; attacker
+			mov r9d, dword ptr ss:[rbp-0x79]                  ; lastSwing AND off-hand weapon (not shield)
+			call #L(EEex::Opcode_Hook_Op178179_GetBonus)      ; RCX=list, RDX=target type
+		]]})
+
+		-- operator= clears without calling ClearAll, then clones source entries
+		-- in order. RSI is the destination; RBP is still the source LIST here,
+		-- before it is reused for the current source entry in the copy loop.
+		EEex_HookAfterCallWithLabels(sites.copy, {
+			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+			{[[
+				mov rdx, rbp                                  ; pSourceList
+				mov rcx, rsi                                  ; pDestinationList
+				call #L(EEex::Opcode_Hook_Op178179_OnListCopy)
+			]]}
+		)
+
+		-- ClearAll ends in a tail jump to RemoveAll after restoring its frame.
+		-- At this site RSP mod 16 is 8, and RCX must survive as RemoveAll's this.
+		-- Allocate our own aligned shadow space; never borrow the caller's.
+		EEex_HookRelativeJumpWithLabels(sites.clear, {
+			{"stack_mod", 8},
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9,
+				EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				#MAKE_SHADOW_SPACE(16)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rcx
+				call #L(EEex::Opcode_Hook_Op178179_OnListClear)
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]}
+		)
+
+		-- op177/283 overwrite the freshly decoded child's Parameter 4 with
+		-- their own cache when the parent's m_firstCall == 0. Capture even zero.
+		-- All four drivers omit m_slotNum, so carry the parent's equipped slot
+		-- through EEex metadata, including when the child is another driver.
+		-- RAX contains the child and is immediately consumed by native code,
+		-- so preserve it across this C++ call. The parent is RBX in op177/283
+		-- and RDI in op182/183, proven from each function's saved this pointer.
+		for _, entry in ipairs({{sites.drive177, "rbx"}, {sites.drive182, "rdi"}, {sites.drive183, "rdi"}, {sites.drive283, "rbx"}}) do
+			EEex_HookAfterCall(entry[1], {[[
+				#MAKE_SHADOW_SPACE(8)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+				mov rdx, #$(1) ]], {entry[2]}, [[                        ; parent CGameEffect*
+				mov rcx, rax                                             ; decoded CGameEffect*
+				call #L(EEex::Opcode_Hook_Op178179_CaptureDrivenContext)
+				mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]})
+		end
+	end
+	installHandSelectiveBonuses()
+
+	--[[
 	+--------------------------------------------------------------------------------------------------+
 	| Opcode #214                                                                                      |
 	+--------------------------------------------------------------------------------------------------+
