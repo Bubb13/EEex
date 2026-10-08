@@ -4,6 +4,111 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------+
+	| Fix CItem::GetUsabilityText() candidate lists (BGEE / BG2EE / IWDEE v2.7.3.0, x64)                     |
+	+--------------------------------------------------------------------------------------------------------+
+	| Barbarian lacks the parent Fighter gate that the other Fighter kits have. Mage multiclass descriptions |
+	| choose only the first eligible school, and triple-class descriptions retain Mage when generalist is    |
+	| forbidden. Native helpers supply the missing gate and enumerate every existing eligible school.        |
+	+--------------------------------------------------------------------------------------------------------+
+	| [EEex.dll] EEex::Fix_Hook_ItemUsabilityBarbarianClassAllowed(notUsableBy: uint) -> bool                |
+	| [EEex.dll] EEex::Fix_Hook_ItemUsabilityAppendMageMulticlass(text: CString*, notUsableBy: uint,         |
+	|                notUsableBy2: uint, combinationBit: uint) -> bool                                       |
+	|     false -> execute the original Mage block; true -> candidate updated (possibly empty), skip it      |
+	+--------------------------------------------------------------------------------------------------------+
+	| Why EEex_HookConditionalJumpOnFailWithLabels(): each original `jae` already skips an ineligible entry. |
+	| The helper runs only on the eligible fallthrough, and `jmp_success` resumes at the native block's end. |
+	| This retains the surrounding candidate selection, item-use flags and separate opcode 319 hook.         |
+	+--------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		local hookPrefix = "Hook-CItem::GetUsabilityText()-FixItemUsability-"
+		local mageHooks = {
+			{ "ClericMage",        8,  "0F8340010000" },
+			{ "FighterMage",       13, "0F8340010000" },
+			{ "FighterMageCleric",  15, "0F83E8000000" },
+			{ "FighterMageThief",   16, "0F83E8000000" },
+			{ "MageThief",         19, "0F8343010000" },
+		}
+		local barbarianHooks = { "BarbarianUnusable", "BarbarianUsable" }
+		local barbarianHelper = "EEex::Fix_Hook_ItemUsabilityBarbarianClassAllowed"
+		local mageHelper = "EEex::Fix_Hook_ItemUsabilityAppendMageMulticlass"
+
+		-- The labels live exclusively in the v2.7.3.0 database. Older versions
+		-- have none and retain their current patches. A partially installed set
+		-- is an error: preflight EVERY site/helper before writing a detour.
+		local present = 0
+		for _, hook in ipairs(mageHooks) do
+			if EEex_TryLabel(hookPrefix..hook[1]) then present = present + 1 end
+		end
+		for _, name in ipairs(barbarianHooks) do
+			if EEex_TryLabel(hookPrefix..name) then present = present + 1 end
+		end
+		if present == 0 then return end
+		if present ~= #mageHooks + #barbarianHooks then
+			EEex_Error("Incomplete v2.7.3.0 item-usability hook labels")
+		end
+		EEex_Label(barbarianHelper)
+		EEex_Label(mageHelper)
+
+		local function verifyBytes(address, expected, name)
+			for i = 1, #expected, 2 do
+				if EEex_ReadU8(address + (i - 1) / 2) ~= tonumber(expected:sub(i, i + 1), 16) then
+					EEex_Error("Unexpected engine instructions at "..hookPrefix..name)
+				end
+			end
+		end
+		for _, hook in ipairs(mageHooks) do
+			verifyBytes(EEex_Label(hookPrefix..hook[1]), hook[3], hook[1])
+		end
+		for _, name in ipairs(barbarianHooks) do
+			-- Two-byte jae plus the complete five-byte mov edx, Barbarian-strref.
+			verifyBytes(EEex_Label(hookPrefix..name), "733FBA4203F000", name)
+		end
+
+		for _, hook in ipairs(mageHooks) do
+			local address = EEex_Label(hookPrefix..hook[1])
+			EEex_HookConditionalJumpOnFailWithLabels(address, 0, {}, {[[
+				; The engine prolog leaves rsp 16-byte aligned at every site.
+				; Save all volatile GPRs, allocate Win64 shadow space, and leave
+				; rbp-relative engine locals accessible at their original offsets.
+
+				#MAKE_PROLOG(rax rcx rdx r8 r9 r10 r11)
+				lea rcx, qword ptr ss:[rbp-0x31]                          ; existing usable-candidate CString
+				mov edx, r14d                                             ; original notUsableBy (not complement)
+				mov r8d, r13d                                             ; original packed notUsableBy2
+				mov r9d, #$(1) ]], {hook[2]}, [[                          ; verified combination bit index
+				call #L(EEex::Fix_Hook_ItemUsabilityAppendMageMulticlass)
+				test al, al
+
+				; Restoring registers and rsp uses mov/lea, preserving this ZF.
+
+				#DESTROY_PROLOG
+				jnz #L(jmp_success)             ; handled: skip the native builder
+				jmp #L(jmp_fail)                ; fallback: run the complete native block
+			]]})
+			-- rbp = original rsp + 69h; rbp-31h = rsp+38h. Only this
+			-- CString's eight-byte pointer changes in the original frame.
+			-- All GPRs are restored, so no register exemptions are needed.
+			EEex_HookIntegrityWatchdog_IgnoreStackSizes(address, { {0x38, 8} })
+		end
+
+		for _, name in ipairs(barbarianHooks) do
+			EEex_HookConditionalJumpOnFailWithLabels(EEex_Label(hookPrefix..name), 5, {}, {[[
+				#MAKE_PROLOG(rax rcx rdx r8 r9 r10 r11)
+				mov ecx, r14d                                              ; original primary restrictions, shared by both lists
+				call #L(EEex::Fix_Hook_ItemUsabilityBarbarianClassAllowed)
+				test al, al
+				#DESTROY_PROLOG
+				jz #L(jmp_success)                                         ; forbidden Fighter: skip this redundant/false entry
+				; Otherwise the hook restores mov edx, strref and runs native code.
+			]]})
+		end
+	end)
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+
