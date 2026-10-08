@@ -4,6 +4,81 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Fix HP tables ignoring MODIFIER when ROLLS is nonzero (v2.7.3.0)                                                   |
+	+--------------------------------------------------------------------------------------------------------------------+
+	| [EEex.dll] EEex::Fix_Hook_AddHPTableModifier(nHitPoints: int, nRolls: int, nModifier: int) -> int                  |
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Both the random / first-level path and the maximum-HP option omit MODIFIER on rows with nonzero ROLLS. Hook their  |
+	| common join BEFORE signed division and the minimum-one clamp, so multiclass scaling includes the modifier.         |
+	| A post-call hook would add it too late; replacing the whole function would duplicate native dice and option logic. |
+	+--------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		local address = EEex_TryLabel("Hook-CRuleTables::RollHitPoints()-HPTableModifier")
+		if not address then
+			-- Only the v2.7.3.0 database advertises this verified instruction contract.
+			return
+		end
+
+		-- Preflight both dependencies before writing any code. These two complete
+		-- instructions are identical in all three verified v2.7.3.0 executables:
+		--   cdq                               ; sign-extend the corrected eax
+		--   mov dword ptr [rbp-0x30], 1       ; native minimum-gain clamp argument
+		EEex_Label("EEex::Fix_Hook_AddHPTableModifier")
+		local expectedBytes = {0x99, 0xC7, 0x45, 0xD0, 0x01, 0x00, 0x00, 0x00}
+		for i, expected in ipairs(expectedBytes) do
+			if EEex_ReadU8(address + i - 1) ~= expected then
+				EEex_Error("HP table modifier hook: unexpected instructions at the pre-division join")
+			end
+		end
+
+		-- PDB-backed disassembly proves this state on EVERY incoming path:
+		--   eax         = native row gain (MODIFIER already included only if ROLLS == 0)
+		--   [rbp-0x40]  = parsed ROLLS (r14d is not initialized on the maximum-HP path)
+		--   r12d        = effective MODIFIER, including the force-modifier override
+		-- Both maximum-HP branches target the first byte; no branch enters the
+		-- middle of the eight-byte restored span. The surrounding frame is aligned.
+		EEex_HookBeforeRestoreWithLabels(address, 0, 8, 8, {
+			{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+			{[[
+				; Preserve all other volatile GPRs and flags, even those currently dead.
+				; The helper is integer-only; the engine routine has no live SIMD state.
+
+				#MAKE_SHADOW_SPACE(56)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r10
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r11
+				pushfq #STACK_MOD(8)
+				pop r11 #STACK_MOD(-8)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)], r11
+
+				mov ecx, eax                               ; nHitPoints
+				mov edx, dword ptr ss:[rbp-0x40]           ; nRolls
+				mov r8d, r12d                              ; nModifier
+				call #L(EEex::Fix_Hook_AddHPTableModifier)
+
+				; Preserve the corrected eax while restoring the caller's full state.
+
+				push qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)] #STACK_MOD(8)
+				popfq #STACK_MOD(-8)
+				mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+				mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+			]]}
+		)
+	end)
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+
