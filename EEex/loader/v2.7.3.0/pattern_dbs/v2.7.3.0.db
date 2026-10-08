@@ -38,3 +38,36 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Item usability: shortest exact whole-instruction signatures over the entire
+; PDB-delimited GetUsabilityText() contribution, unique in executable sections
+; of ALL three v2.7.3.0 images. ADD offsets are derived, not absolute addresses.
+; Anchors are outside all seven detours and the existing opcode 319 hook.
+
+[Hook-CItem::GetUsabilityText()-FixItemUsability-ClericMage]
+Pattern=83E014
+Operations=ADD 772
+
+[Hook-CItem::GetUsabilityText()-FixItemUsability-FighterMage]
+Pattern=83E014
+Operations=ADD 1594
+
+[Hook-CItem::GetUsabilityText()-FixItemUsability-FighterMageCleric]
+Pattern=83E014
+Operations=ADD 2088
+
+[Hook-CItem::GetUsabilityText()-FixItemUsability-FighterMageThief]
+Pattern=83E014
+Operations=ADD 2330
+
+[Hook-CItem::GetUsabilityText()-FixItemUsability-MageThief]
+Pattern=83E014
+Operations=ADD 2819
+
+[Hook-CItem::GetUsabilityText()-FixItemUsability-BarbarianUnusable]
+Pattern=3B48F8
+Operations=ADD -2679
+
+[Hook-CItem::GetUsabilityText()-FixItemUsability-BarbarianUsable]
+Pattern=3B48F8
+Operations=ADD -365
