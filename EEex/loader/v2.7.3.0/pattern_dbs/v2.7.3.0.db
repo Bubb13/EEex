@@ -23,6 +23,12 @@ Operations=ADD -14
 ;-- Hooks --
 ;-----------
 
+; All three v2.7.3.0 EXE/PDB pairs: shortest common exact instruction pattern.
+; The unique idiv [rbp+0x58] is eight bytes after the shared pre-division cdq.
+[Hook-CRuleTables::RollHitPoints()-HPTableModifier]
+Pattern=F77D58
+Operations=ADD -8
+
 [Hook-CChitin::OnResizeWindow()-B3Scale]
 Pattern=488D542478488B4E20
 Operations=ADD 9
