@@ -4,6 +4,66 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+-----------------------------------------------------------------------------------------------------------------+
+	| BUG: op236 param2 == 3 (Simulacrum) calculates the dual-class drain from LEVEL1 instead of the class average    |
+	+-----------------------------------------------------------------------------------------------------------------+
+	| [EEex.dll] EEex::Fix_Hook_Op236_GetAverageLevel(pStats: CDerivedStats*, pSprite: CGameSprite*) -> byte          |
+	+-----------------------------------------------------------------------------------------------------------------+
+	| Replace only CGameEffectCopySelf::ApplyEffect()'s GetAverageLevel() call. The C++ helper supplies the sprite's  |
+	| combined class ID to the original engine helper. Native averaging, 40% truncation, op216 construction, and      |
+	| clone lifecycle remain in the engine. op177/182/183/283 dispatch their EFF children to this same ApplyEffect(), |
+	| so this hook also covers driven EFFs without depending on ordinary effect-list application or child lifetime.   |
+	+-----------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		local hookAddress = EEex_TryLabel("Hook-CGameEffectCopySelf::ApplyEffect()-Simulacrum-GetAverageLevel")
+		if not hookAddress then
+			-- Only the audited v2.7.3.0 database advertises this site.
+			return
+		end
+
+		local helper = EEex_TryLabel("EEex::Fix_Hook_Op236_GetAverageLevel")
+		local original = EEex_TryLabel("CDerivedStats::GetAverageLevel")
+		if not helper or not original then
+			EEex_Error("op236 Simulacrum fix requires matching EEex.dll and GetAverageLevel labels")
+		end
+
+		-- Preflight every overwritten byte via its opcode and resolved rel32 target,
+		-- plus the argument setup and AL consumer. No JIT allocation/write occurs
+		-- until these checks pass. The temp-stat offset comes from the bindings;
+		-- the instruction/register/stack-local contract is re-proved by the audit.
+		local argumentBytes = {0x0F, 0xB6, 0x54, 0x24, 0x40, 0x48, 0x8D, 0x8E}
+		for i, expected in ipairs(argumentBytes) do
+			if EEex_ReadU8(hookAddress - 12 + i - 1) ~= expected then
+				EEex_Error("op236 Simulacrum fix: unexpected GetAverageLevel argument instructions")
+			end
+		end
+		if EEex_Read32(hookAddress - 4) ~= EEex_OffsetOf("CGameSprite.m_tempStats")
+			or EEex_ReadU8(hookAddress) ~= 0xE8
+			or hookAddress + 5 + EEex_Read32(hookAddress + 1) ~= original
+			or EEex_ReadU8(hookAddress + 5) ~= 0x0F
+			or EEex_ReadU8(hookAddress + 6) ~= 0xB6
+			or EEex_ReadU8(hookAddress + 7) ~= 0xC8
+		then
+			EEex_Error("op236 Simulacrum fix: unexpected GetAverageLevel call/return contract")
+		end
+
+		-- RCX already points to the source's m_tempStats; RSI holds the source
+		-- sprite. This is a call replacement with the original aligned RSP and
+		-- 32-byte shadow area, so no additional stack frame is needed. The helper
+		-- returns the byte average in AL. Native instructions overwrite the other
+		-- volatile registers before use (EDX is replaced by the following IMUL).
+		-- HookRemoveCall supplies the call ABI watchdog allowances and resumes
+		-- immediately after the original five-byte call; no instructions relocate.
+		EEex_HookRemoveCallWithLabels(hookAddress, {}, {[[
+			mov rdx, rsi ; pSprite (RCX retains pStats)
+			call #L(EEex::Fix_Hook_Op236_GetAverageLevel)
+		]]})
+	end)
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+

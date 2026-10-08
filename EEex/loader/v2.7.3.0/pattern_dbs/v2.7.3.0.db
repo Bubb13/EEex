@@ -38,3 +38,8 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Derived from all three matching v2.7.3.0 PDBs; shortest exact instruction window.
+[Hook-CGameEffectCopySelf::ApplyEffect()-Simulacrum-GetAverageLevel]
+Pattern=418B4F20
+Operations=ADD 120
