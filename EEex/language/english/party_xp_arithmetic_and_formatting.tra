@@ -1,0 +1,2 @@
+// Character XP feedback: the engine supplies the name and expands the token.
+@0 = ~has lost <EXPERIENCEAMOUNT> quest experience points.~

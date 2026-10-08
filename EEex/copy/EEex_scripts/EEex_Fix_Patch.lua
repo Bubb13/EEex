@@ -4,6 +4,169 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+-----------------------------------------------------------------------------+
+	| Fix signed XP losses in the three x64 v2.7.3.0 engines. The permanent op104 |
+	| ADD can underflow; character feedback always chooses the gain string; party |
+	| distribution uses unsigned DIV and consumes only positive remainders.       |
+	+-----------------------------------------------------------------------------+
+	| C++ owns the arithmetic and formatting. ASM only adapts verified operands.  |
+	+-----------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		local names = {
+			"Hook-CGameEffectXP::ApplyEffect()-PermanentAdd",
+			"Hook-CGameSprite::FeedBack()-ExperienceFormatCall",
+			"Hook-CGameSprite::FeedBack()-ExperienceFetchCall",
+			"Hook-CInfGame::AddPartyXP()-SignedSplit",
+			"Hook-CInfGame::AddPartyXP()-SignedRemainder",
+			"Hook-CInfGame::FeedBack()-ExperienceFormatCall",
+		}
+		local sites, present = {}, 0
+		for i, name in ipairs(names) do
+			sites[i] = EEex_TryLabel(name)
+			if sites[i] == 0 then EEex_Error("XP loss fix: null "..name) end
+			if sites[i] ~= nil then present = present + 1 end
+		end
+		-- The shared scripts also run with v2.6.6.0 databases and DLLs. None of
+		-- their sites are advertised, so do not ask them for the new helpers.
+		if present == 0 then return end
+		if present ~= #names then EEex_Error("XP loss fix: incomplete pattern database") end
+
+		local function requireLabel(name)
+			local value = EEex_TryLabel(name)
+			if value == nil or value == 0 then EEex_Error("XP loss fix: missing "..name) end
+			return value
+		end
+		for _, name in ipairs({
+			"EEex::Fix_Hook_ClampXPLoss", "EEex::Fix_Hook_FormatExperienceAmount",
+			"EEex::Fix_Hook_SplitPartyXP", "EEex::Fix_Hook_NextPartyXPShare",
+		}) do requireLabel(name) end
+		local formatTarget = requireLabel("CString::Format")
+		local fetchTarget = requireLabel("CTlkTable::Fetch")
+		local lossStrref = EEex_Fix_Private_ExperienceLossStrref
+		if type(lossStrref) ~= "number" or lossStrref ~= math.floor(lossStrref)
+			or lossStrref < 0 or lossStrref > 0xFFFFFF then
+			EEex_Error("XP loss fix: reinstall EEex to assign its loss-message TLK reference")
+		end
+
+		local function expectBytes(address, hex)
+			for i = 1, #hex, 2 do
+				if EEex_ReadU8(address + (i - 1) / 2) ~= tonumber(hex:sub(i, i + 1), 16) then
+					EEex_Error("XP loss fix: unexpected instruction bytes")
+				end
+			end
+		end
+		local function expectCall(address, target)
+			expectBytes(address, "E8")
+			if address + 5 + EEex_Read32(address + 1) ~= target then
+				EEex_Error("XP loss fix: unexpected native call target")
+			end
+		end
+		local function expectFormatPointer(address)
+			expectBytes(address, "488D15") -- lea rdx, [rip+disp32]
+			expectBytes(address + 7 + EEex_Read32(address + 3), "256400") -- %d\0
+		end
+
+		-- Preflight ALL six contracts before allocating/writing the first hook.
+		-- Relative operands are decoded, not compared to one game's raw addresses.
+		local xpOffset = EEex_OffsetOf("CGameSprite.m_baseStats.m_xp")
+		expectBytes(sites[1] - 11, "4183782401418B401C7522")
+		expectBytes(sites[1], "0182")
+		if EEex_Read32(sites[1] + 2) ~= xpOffset then EEex_Error("XP loss fix: XP offset differs") end
+		expectBytes(sites[1] + 6, "B80100000041C780180100000100000041C7801401000001000000C3")
+		expectBytes(sites[2] - 14, "458BC7") -- r8d = original signed int1 in r15d
+		expectFormatPointer(sites[2] - 11)
+		expectBytes(sites[2] - 4, "488D4D97") -- existing CString local
+		expectCall(sites[2], formatTarget)
+		expectBytes(sites[3] - 19, "4C8D45CF4881C1501100004533C9BA9E00F000")
+		expectCall(sites[3], fetchTarget)
+		expectBytes(sites[4] - 4, "410FBFC9") -- ecx = native positive recipient count
+		expectBytes(sites[4], "33D28BC3F7F1")
+		expectBytes(sites[4] + 6, "488D4C24408BEA448BF8BA68000000")
+		expectBytes(sites[5], "6685ED7E0D418D470166FFCD89442444EB0544897C2444")
+		expectBytes(sites[5] + 23, "4C8D4C2430")
+		expectFormatPointer(sites[6] - 23)
+		expectBytes(sites[6] - 16, "F7D8488D4DB74585F6440F4EF0458BC6")
+		expectCall(sites[6], formatTarget)
+
+		-- These three helpers are verified integer-only leaves in the built DLL.
+		-- Save every volatile integer register except RAX (the result), and save
+		-- flags outside the callee's 32-byte shadow space. The macros account for
+		-- the leaf effect's RSP%16 == 8 and the party routine's aligned frame.
+		local function arithmeticCall(helper, args, result)
+			return EEex_FlattenTable({{[[
+				#MAKE_SHADOW_SPACE(56)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r10
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r11
+				pushfq
+				pop r11
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)], r11
+			]]}, args, {"call #L("..helper..") #ENDL"}, {[[
+				mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+				mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+			]]}, result or {}, {[[
+				push qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)]
+				popfq
+				#DESTROY_SHADOW_SPACE
+			]]}})
+		end
+		local registers = EEex_HookIntegrityWatchdogRegister
+		EEex_HookBeforeRestoreWithLabels(sites[1], 0, 6, 6, {
+			{"stack_mod", 8}, {"hook_integrity_watchdog_ignore_registers", {registers.RAX}}},
+			arithmeticCall("EEex::Fix_Hook_ClampXPLoss", {
+				"mov ecx, dword ptr ds:[rdx+#$(1)] #ENDL", {xpOffset}, "mov edx, eax #ENDL",
+			})
+		)
+
+		-- Both are call replacements with the original RCX/RDX/R8 arguments and
+		-- caller-provided shadow space. C++ forwards to the bound engine formatter;
+		-- no extra frame, allocation policy, or character-name handling is invented.
+		for _, site in ipairs({sites[2], sites[6]}) do
+			EEex_HookRemoveCallWithLabels(site, {}, {"call #L(EEex::Fix_Hook_FormatExperienceAmount) #ENDL"})
+		end
+		EEex_HookBeforeCallWithLabels(sites[3], {
+			{"hook_integrity_watchdog_ignore_registers", {registers.RDX}}},
+			{"pushfq #ENDL test r15d, r15d #ENDL jns keep_gain #ENDL mov edx, #$(1) #ENDL keep_gain: #ENDL popfq #ENDL", {lossStrref}}
+		)
+
+		-- Replace XOR/MOV/DIV, then unpack the proven eight-byte Win64 result
+		-- into the original EAX quotient / EDX remainder. The native following
+		-- instructions still copy them to R15D / EBP and construct the XP effect.
+		EEex_HookBeforeRestoreWithLabels(sites[4], 0, 0, 6, {
+			{"hook_integrity_watchdog_ignore_registers", {registers.RAX, registers.RDX}}},
+			arithmeticCall("EEex::Fix_Hook_SplitPartyXP", {"mov edx, ecx #ENDL mov ecx, ebx #ENDL"}, {
+				"mov rdx, rax #ENDL shr rdx, 32 #ENDL mov eax, eax #ENDL",
+			})
+		)
+
+		-- Replace the WHOLE remainder branch, rather than relocating its relative
+		-- jumps. No outside branch enters its interior (proved by the audit).
+		-- RSP+44h is this routine's verified Item_effect_st.effectAmount local;
+		-- LAST_FRAME_TOP compensates for the helper frame. R15D remains the base
+		-- quotient. EAX is dead after the store; EBP becomes the next remainder.
+		EEex_HookBeforeRestoreWithLabels(sites[5], 0, 0, 23, {
+			{"hook_integrity_watchdog_ignore_registers", {registers.RAX, registers.RBP}}},
+			arithmeticCall("EEex::Fix_Hook_NextPartyXPShare", {"mov ecx, r15d #ENDL mov edx, ebp #ENDL"}, {
+				"mov dword ptr ss:[rsp+#LAST_FRAME_TOP(44h)], eax #ENDL shr rax, 32 #ENDL mov ebp, eax #ENDL",
+			})
+		)
+
+		-- This replacement writes the engine local before the watchdog exit;
+		-- permit exactly that DWORD, in addition to the ordinary caller shadow.
+		EEex_HookIntegrityWatchdog_IgnoreStackSizes(sites[5], {{0x44, 4}})
+	end)
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+

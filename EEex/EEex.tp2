@@ -130,6 +130,19 @@ REQUIRE_PREDICATE MOD_IS_INSTALLED ~EEex.tp2~ 0 @1001 // This component requires
 	COPY ~EEex/loader/%game_version%/pattern_dbs~ ~EEex_scripts/extra_pattern_dbs~
 	COPY ~EEex/loader/%game_version%/%game_folder%~ ~EEex_scripts/profiler~
 
+	// Allocate a translatable TLK entry. Its index belongs to this installation
+	// and must never be baked into a runtime hook or pattern database.
+	WITH_TRA "EEex\language\english\party_xp_arithmetic_and_formatting.tra" "EEex\language\%LANGUAGE%\party_xp_arithmetic_and_formatting.tra" BEGIN
+		WITH_SCOPE BEGIN
+			ACTION_IF ~%game_version%~ STRING_EQUAL ~v2.7.3.0~ BEGIN
+				OUTER_SET "EEex_xp_loss_strref" = RESOLVE_STR_REF (@0)
+				COPY ~EEex_scripts\EEex_Fix.lua~ ~EEex_scripts~
+					REPLACE_TEXTUALLY CASE_SENSITIVE EXACT_MATCH ~EEex_Fix_Private_ExperienceLossStrref = -1~ ~EEex_Fix_Private_ExperienceLossStrref = %EEex_xp_loss_strref%~
+				BUT_ONLY
+			END
+		END
+	END
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Enable attack info module: Show to-hit chances when hovering attack cursor over target //
 ////////////////////////////////////////////////////////////////////////////////////////////
