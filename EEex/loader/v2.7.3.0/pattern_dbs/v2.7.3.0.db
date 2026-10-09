@@ -23,6 +23,16 @@ Operations=ADD -14
 ;-- Hooks --
 ;-----------
 
+; Area flag bit 1 + fireball flag bit 16: enable the native includeDead argument.
+
+[Hook-CProjectileArea::AreaEffect()-IncludeDeadTrigger]
+Pattern=2B5610
+Operations=ADD -730
+
+[Hook-CProjectileArea::AreaEffect()-IncludeDeadExplosion]
+Pattern=2B5610
+Operations=ADD -489
+
 [Hook-CChitin::OnResizeWindow()-B3Scale]
 Pattern=488D542478488B4E20
 Operations=ADD 9
