@@ -4,6 +4,93 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+------------------------------------------------------------------------------+
+	| Opcode #233 increment fixes (v2.7.3.0):                                      |
+	|  * Halberd loads an uninitialized home-slot pointer after already adding P1. |
+	|  * Axe selects derived stats instead of bonus stats.                         |
+	|  * Nonzero special subtracts temp Long Sword for every proficiency.          |
+	|  * EFF drivers 182/183 retain firstCall but discard the cached P3 delta.     |
+	+------------------------------------------------------------------------------+
+	| The increment arm is a frameless leaf with effect=rcx and sprite=rdx.        |
+	| Tail-jump into C++ before the defective switch; set mode stays native.       |
+	| Wrap all four drivers' child virtual calls to track nested EFF provenance.   |
+	| Eligibility, decoding, destruction and firstCall transfers remain native.    |
+	+------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+		local incrementLabel = "Hook-CGameEffectProficiency::ApplyEffect()-Op233Increment"
+		local drivers = {
+			{"Hook-CGameEffectApplyEffect::ApplyEffect()-Op233DrivenCall", "rdi", "rbx", {0x48, 0x8B, 0xCF, 0xFF, 0x50, 0x10}},
+			{"Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-Op233DrivenCall", "rbx", "rdi", {0x48, 0x8B, 0x03, 0xFF, 0x50, 0x10}},
+			{"Hook-CGameEffectApplyEffectEquipItemType::ApplyEffect()-Op233DrivenCall", "rbx", "rdi", {0x48, 0x8B, 0x03, 0xFF, 0x50, 0x10}},
+			{"Hook-CGameEffectCurseApplyEffect::ApplyEffect()-Op233DrivenCall", "rdi", "rbx", {0x48, 0x8B, 0xCF, 0xFF, 0x50, 0x10}},
+		}
+		local labels = {incrementLabel}
+		for _, driver in ipairs(drivers) do
+			labels[#labels + 1] = driver[1]
+		end
+
+		-- These labels live in the version-specific database. Older versions
+		-- with none of them do not install this fix; a partial set is an error.
+		local found = 0
+		for _, label in ipairs(labels) do
+			if EEex_TryLabel(label) ~= nil then found = found + 1 end
+		end
+		if found == 0 then return end
+		labels[#labels + 1] = "EEex::Fix_Hook_Op233_ApplyIncrement"
+		labels[#labels + 1] = "EEex::Fix_Hook_Op233_ApplyDrivenEffect"
+		for _, label in ipairs(labels) do
+			local address = EEex_TryLabel(label)
+			if type(address) ~= "number" or address <= 0 then
+				EEex_Error("Opcode 233 preflight: missing or invalid label "..label)
+			end
+		end
+
+		-- Check every overwritten byte before allocating or writing any hook.
+		-- All instruction bytes, including this JA displacement, agree across
+		-- the three matching builds.
+		local function checkBytes(label, expected)
+			local address = EEex_Label(label)
+			for index, byte in ipairs(expected) do
+				if EEex_ReadU8(address + index - 1) ~= byte then
+					EEex_Error("Opcode 233 preflight: unexpected instruction bytes at "..label)
+				end
+			end
+		end
+		checkBytes(incrementLabel, {0x83, 0xF8, 0x2D, 0x0F, 0x87, 0x47, 0x02, 0x00, 0x00})
+		for _, driver in ipairs(drivers) do checkBytes(driver[1], driver[4]) end
+
+		-- A near trampoline avoids assuming the DLL is within rel32 reach.
+		-- No new return address or stack frame is introduced into the leaf.
+		EEex_JITAt(EEex_Label(incrementLabel), {
+			"jmp short ", EEex_JITNear({"jmp #L(EEex::Fix_Hook_Op233_ApplyIncrement) #ENDL"}),
+			" #ENDL #REPEAT(4,nop #ENDL)",
+		})
+
+		for _, driver in ipairs(drivers) do
+			-- This replaces one original virtual call, whose Win64 volatile
+			-- registers may already change. The normal hook helper instruments
+			-- entry/exit when the integrity watchdog is enabled.
+			EEex_HookBeforeRestoreWithLabels(EEex_Label(driver[1]), 0, 0, 6, {
+				{"hook_integrity_watchdog_ignore_registers", {
+					EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX,
+					EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+					EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+					EEex_HookIntegrityWatchdogRegister.R11,
+				}},
+			}, {
+				"#MAKE_SHADOW_SPACE(0) #ENDL",
+				"mov rcx, ", driver[2], " #ENDL", -- child
+				"mov rdx, rsi #ENDL",             -- sprite
+				"mov r8, ", driver[3], " #ENDL",  -- driver
+				"call #L(EEex::Fix_Hook_Op233_ApplyDrivenEffect) #ENDL",
+				"#DESTROY_SHADOW_SPACE #ENDL",
+			})
+		end
+	end)
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+
