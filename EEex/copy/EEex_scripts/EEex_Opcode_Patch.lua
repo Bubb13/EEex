@@ -106,6 +106,223 @@
 	--------------------------------------
 
 	--[[
+	+-------------------------------------------------------------------------------------------------------+
+	| Opcode #135: param2 == 0, special bits 0..8 suppress the nine passive equipment slots.                |
+	+-------------------------------------------------------------------------------------------------------+
+	| C++ collects actual applications, including EFF drivers, and reconciles after both lists are merged.  |
+	| Mutations run outside list traversal and request the native retry loop when equipment effects change. |
+	| Source ordinals preserve self-suppressing chains without duplicating or restarting them on restore.   |
+	+-------------------------------------------------------------------------------------------------------+
+	--]]
+
+	do
+
+		local sites = {
+			{ "Hook-CGameSprite::ProcessEffectList()-Op135Begin", { "E8184ADAFF", "E8684ADAFF" } },
+			{ "Hook-CGameSprite::ProcessEffectList()-Op135Commit", { "E8DF3BDAFF", "E82F3CDAFF" } },
+			{ "Hook-CGameEffectPolymorph::ApplyEffect()-Op135Observe", { "488B4DF04833CC" } },
+			{ "Hook-CItem::Equip()-Op135", { "405355564155" } },
+			{ "Hook-CItem::Unequip()-Op135", { "405556574154" } },
+			{ "Hook-CItem::Equip()-Op135ItemEffect", { "41FFD2488B4E08" } },
+			{ "Hook-CGameEffectApplyEffect::ApplyEffect()-Op135Driven", { "488BCFFF5010" } },
+			{ "Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-Op135Driven", { "488B03FF5010" } },
+			{ "Hook-CGameEffectApplyEffectEquipItemType::ApplyEffect()-Op135Driven", { "488B03FF5010" } },
+			{ "Hook-CGameEffectCurseApplyEffect::ApplyEffect()-Op135Driven", { "488BCFFF5010" } },
+			{ "Hook-CItem::Destruct()-Op135", { "48895C2408" } },
+		}
+		local helpers = {
+			"EEex::Opcode135_BeginPass", "EEex::Opcode135_CommitPass", "EEex::Opcode135_Observe",
+			"EEex::Opcode135_ShouldSkipEquip", "EEex::Opcode135_Unequipped", "EEex::Opcode135_ItemEffect",
+			"EEex::Opcode135_ApplyDriven", "EEex::Opcode135_BindingsReady", "EEex::Opcode135_ItemDestroyed",
+		}
+		local present = 0
+
+		for _, entry in ipairs(sites) do
+			if EEex_TryLabel(entry[1]) ~= nil then
+				present = present + 1
+			end
+		end
+		if present == 0 then return end -- An older, unverified version database.
+
+		local function requireLabel(name)
+			local address = EEex_TryLabel(name)
+			if type(address) ~= "number" or address <= 0 or address ~= math.floor(address) then
+				EEex_Error("op135: missing/invalid label "..name)
+			end
+			return address
+		end
+		local function bytesMatch(address, hex)
+			for i = 1, #hex, 2 do
+				if EEex_ReadU8(address + (i - 1) / 2) ~= tonumber(hex:sub(i, i + 1), 16) then return false end
+			end
+			return true
+		end
+
+		-- Validate the entire feature before its first allocation or write. Exact
+		-- alternative call encodings account for the verified IWDEE placement.
+
+		for _, entry in ipairs(sites) do
+			local address, valid = requireLabel(entry[1]), false
+			for _, hex in ipairs(entry[2]) do
+				if bytesMatch(address, hex) then
+					valid = true;
+					break
+				end
+			end
+			if not valid then
+				EEex_Error("op135: guarded bytes changed at "..entry[1])
+			end
+		end
+
+		for _, name in ipairs(helpers) do requireLabel(name) end
+		if EEex_ReadU8(EEex_Label("EEex::Opcode135_BindingsReady")) ~= 1 then
+			EEex_Error("op135: native equipment bindings were not resolved")
+		end
+
+		local offsets = {
+			{ "CGameEffect.m_dWFlags", 0x20 }, { "CGameEffect.m_special", 0x48 },
+			{ "CGameEffect.m_done", 0x114 }, { "CGameEffect.m_slotNum", 0xA4 },
+			{ "CGameEffect.m_sourceType", 0x90 }, { "CGameEffect.m_sourceRes", 0x94 },
+			{ "CGameSprite.m_equipment", 0xFC0 }, { "CGameSprite.m_derivedStats", 0x1120 },
+			{ "CGameSprite.m_equipedEffectList", 0x49B0 }, { "CGameSprite.m_timedEffectList", 0x4A00 },
+			{ "CDerivedStats.m_cImmunitiesItemEquip", 0x468 }, { "CDerivedStats.m_cImmunitiesItemTypeEquip", 0x4A0 },
+		}
+		for _, entry in ipairs(offsets) do
+			if EEex_OffsetOf(entry[1]) ~= entry[2] then
+				EEex_Error("op135: stale binding "..entry[1])
+			end
+		end
+
+		local volatile = {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX,
+			EEex_HookIntegrityWatchdogRegister.RDX, EEex_HookIntegrityWatchdogRegister.R8,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11,
+		}
+		local function labels(registers, stackMod)
+			return { { "hook_integrity_watchdog_ignore_registers", registers or volatile }, { "stack_mod", stackMod or 0 } }
+		end
+		EEex_HookAfterCallWithLabels(EEex_Label(sites[1][1]), labels(), {[[
+			#MAKE_SHADOW_SPACE
+			mov rcx, rsi
+			call #L(EEex::Opcode135_BeginPass)
+			#DESTROY_SHADOW_SPACE
+		]]})
+
+		local commitRegisters = {}
+		for i, register in ipairs(volatile) do commitRegisters[i] = register end
+		commitRegisters[#commitRegisters + 1] = EEex_HookIntegrityWatchdogRegister.RDI
+
+		EEex_HookAfterCallWithLabels(EEex_Label(sites[2][1]), labels(commitRegisters), {[[
+			#MAKE_SHADOW_SPACE
+			mov rcx, rsi
+			call #L(EEex::Opcode135_CommitPass)
+			movzx eax, al
+			or edi, eax ; Preserve native retry requests; add the equipment-change request.
+			#DESTROY_SHADOW_SPACE
+		]]})
+
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(sites[3][1]), 0, 7, 7, labels(), {[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+			mov rcx, r14
+			mov rdx, rbx
+			call #L(EEex::Opcode135_Observe)
+			mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)] ; Original ApplyEffect result.
+			#DESTROY_SHADOW_SPACE
+		]]})
+
+		-- At entry the native prolog has not executed: stack_mod=8. Save all
+		-- incoming arguments outside the callee's shadow space before calling C++.
+
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(sites[4][1]), 0, 6, 6, labels(nil, 8), {[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+			call #L(EEex::Opcode135_ShouldSkipEquip)
+			test al, al
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			#DESTROY_SHADOW_SPACE ; LEA preserves the predicate's flags.
+			jz #L(return)
+			#MANUAL_HOOK_EXIT(0)
+			ret ; A suppressed slot never enters native Equip.
+		]]})
+
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(sites[5][1]), 0, 6, 6, labels(nil, 8), {[[
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+			mov r9d, dword ptr ss:[rsp+#LAST_FRAME_TOP(40)] ; Original fifth argument: animationOnly.
+			call #L(EEex::Opcode135_Unequipped)
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			#DESTROY_SHADOW_SPACE
+		]]})
+
+		-- Preserve the actual virtual AddEffect target and its arguments. The
+		-- original caller's fifth argument remains in its original shadow frame.
+
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(sites[6][1]), 3, 4, 7, labels(), {[[
+			#MAKE_SHADOW_SPACE(48)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r10
+			mov dword ptr ss:[rsp+32], edi ; Fifth helper argument: source effect ordinal.
+			mov rcx, rbp
+			mov rdx, rbx
+			mov r8, rsi
+			mov r9d, r15d
+			call #L(EEex::Opcode135_ItemEffect)
+			test al, al
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+			#DESTROY_SHADOW_SPACE
+			jz #L(return) ; C++ destroyed the omitted fresh source effect.
+			call r10 ; Otherwise preserve the exact native AddEffect dispatch.
+		]]})
+
+		for i = 7, 10 do
+			local child, driver = "rdi", "rbx"
+			if i == 8 or i == 9 then
+				child, driver = "rbx", "rdi"
+			end
+			EEex_HookBeforeRestoreWithLabels(EEex_Label(sites[i][1]), 0, 0, 6, labels(), {[[
+				#MAKE_SHADOW_SPACE
+				mov rcx, #$(1) ]], {child}, [[ #ENDL
+				mov rdx, rsi
+				mov r8, #$(1) ]], {driver}, [[ #ENDL
+				call #L(EEex::Opcode135_ApplyDriven)
+				#DESTROY_SHADOW_SPACE
+			]]})
+		end
+
+		-- Native ClearMarshal may delete items directly. Clear provenance before
+		-- the destructor can release storage and make its address reusable.
+
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(sites[11][1]), 0, 5, 5, labels(nil, 8), {[[
+			#MAKE_SHADOW_SPACE(8)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			call #L(EEex::Opcode135_ItemDestroyed)
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]})
+	end
+
+	--[[
 	+------------------------------------------------------------------------------------+
 	| Opcode #146                                                                        |
 	+------------------------------------------------------------------------------------+
