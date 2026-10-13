@@ -23,6 +23,13 @@ Operations=ADD -14
 ;-- Hooks --
 ;-----------
 
+; Shortest common unique whole-instruction signature.
+; ADD resolves to the five-byte ammunition-speed read in all three v2.7.3.0 variants.
+
+[Hook-CGameSprite::Swing()-ForceLauncherWeaponSpeed]
+Pattern=83FE22
+Operations=ADD 596
+
 [Hook-CChitin::OnResizeWindow()-B3Scale]
 Pattern=488D542478488B4E20
 Operations=ADD 9
