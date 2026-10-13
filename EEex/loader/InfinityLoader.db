@@ -2717,6 +2717,14 @@ Operations=ADD -22
 Pattern=488BC3488B4D58
 Operations=ADD -5
 
+[Hook-CProjectileArea::AreaEffect()-IncludeDeadExplosion]
+Pattern=448BBE44040000
+Operations=ADD -9
+
+[Hook-CProjectileArea::AreaEffect()-IncludeDeadTrigger]
+Pattern=448974243048894424284C897C2420
+Operations=ADD 15
+
 [Hook-CRuleTables::Construct()-CHECK_MODE-ConvertStrToInt]
 Pattern=663BBD58030000
 Operations=ADD 35

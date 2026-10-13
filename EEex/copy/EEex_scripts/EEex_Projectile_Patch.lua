@@ -4,114 +4,67 @@
 	EEex_DisableCodeProtection()
 
 	--[[
-	+--------------------------------------------------------------------------------------------------------+
-	| v2.7.3.0: area flag bit 1 enables non-sprite matching;                                                 |
-	| fireball flag bit 16 additionally admits dead sprites on those same paths.                             |
-	+--------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Projectile_Hook_ShouldIncludeDeadSprites(const CProjectileArea* pProjectile) -> int |
-	|       The constructors preserve the complete fireball DWORD. GetAllInRangeBack                         |
-	|       already supports includeDead, but AreaEffect passes zero both when checking                      |
-	|       for trigger targets and when collecting explosion targets. Change only that                      |
-	|       argument; the engine continues to enforce type, activity, animation, LOS,                        |
-	|       range, cone, immunity, and target-count rules. Rectangle/ray helper collection                   |
-	|       does not honor area flag bit 1 and deliberately retains its native behavior.                     |
-	+--------------------------------------------------------------------------------------------------------+
+	+-----------------------------------------------------------------------------------------------------+
+	| Implement fireball flag bit 16: Enables matching of dead sprites                                    |
+	+-----------------------------------------------------------------------------------------------------+
+	|   `CGameArea::GetAllInRangeBack()` already supports matching dead sprites via the `dead` parameter, |
+	|   but `CProjectileArea::AreaEffect()` passes zero both when checking for trigger targets and when   |
+	|   collecting explosion targets. This hook conditionally overrides the passed `dead` argument.       |
+	|                                                                                                     |
+	|   To match *only* dead sprites, use this bit in conjunction with:                                   |
+	|   `Extended flags` |= `IWD style check (30)` and `Creature type 1` = `GENERAL != DEAD (75)`.        |
+	|                                                                                                     |
+	|   NOTE: Rectangle / ray AoEs do not use `CGameArea::GetAllInRangeBack()`, and thus the new bit does |
+	|   not function for these AoE types.                                                                 |
+	+-----------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Projectile_Hook_ShouldIncludeDeadSprites(pProjectile: CProjectileArea*) -> int   |
+	|       return:                                                                                       |
+	|           ->  0 - Don't match dead sprites (default engine behavior)                                |
+	|           -> !0 - Also match dead sprites                                                           |
+	+-----------------------------------------------------------------------------------------------------+
 	--]]
 
-	do
+	EEex_Utility_NewScope(function()
 
-		local triggerSite = EEex_TryLabel("Hook-CProjectileArea::AreaEffect()-IncludeDeadTrigger")
-		local explosionSite = EEex_TryLabel("Hook-CProjectileArea::AreaEffect()-IncludeDeadExplosion")
+		local callHook = EEex_JITNear([[
 
-		-- These labels are supplied only by the v2.7.3.0 database. A legacy database
-		-- skips this feature while continuing to install the existing projectile hooks.
-		if triggerSite ~= nil or explosionSite ~= nil then
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE(32)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
 
-			local helper = EEex_TryLabel("EEex::Projectile_Hook_ShouldIncludeDeadSprites")
-			local function requireAddress(address, name)
-				if type(address) ~= "number" or address <= 0 or address >= 0x20000000000000
-					or address ~= math.floor(address)
-				then
-					EEex_Error("Dead-sprite projectile hook: missing or invalid "..name)
-				end
-			end
-			requireAddress(triggerSite, "trigger hook")
-			requireAddress(explosionSite, "explosion hook")
-			requireAddress(helper, "EEex.dll helper")
+			mov rcx, rsi ; pProjectile
+			call #L(EEex::Projectile_Hook_ShouldIncludeDeadSprites)
 
-			-- These offsets and the following complete argument/call byte contracts are
-			-- re-proved from all three matching EXE/PDB pairs by the permanent audit.
-			-- Binding paths are dotted. No executable VA is embedded in this installer.
-			if EEex_OffsetOf("CProjectileArea.m_checkForNonSprites") ~= 0x404
-				or EEex_OffsetOf("CProjectileArea.m_fireBallFlags") ~= 0x46C
-			then
-				EEex_Error("Dead-sprite projectile hook: incompatible CProjectileArea bindings")
-			end
-			local function requireBytes(address, hex)
-				for index = 1, #hex, 2 do
-					if EEex_ReadU8(address + (index - 1) / 2) ~= tonumber(hex:sub(index, index + 1), 16) then
-						EEex_Error("Dead-sprite projectile hook: native argument/call contract changed")
-					end
-				end
-			end
-			requireBytes(triggerSite - 52,
-				"8B86040400004C8BC3440FB78EC2030000498BD5488B4E1889442440488D45A84489642438448974243048894424284C897C2420E82552F5FF")
-			requireBytes(explosionSite - 63,
-				"8B8604040000418BCC398E2C0400004C8BC3440FB78EC0030000498BD5894424400F94C14489642438488D45A8894C2430488B4E1848894424284C897C2420E83451F5FF")
-			if triggerSite + 5 + EEex_Read32(triggerSite + 1)
-				~= explosionSite + 5 + EEex_Read32(explosionSite + 1)
-			then
-				EEex_Error("Dead-sprite projectile hook: collector destinations differ")
-			end
+			mov dword ptr ss:[rsp+#LAST_FRAME_TOP(40h)], eax ; Override caller's `dead` argument
 
-			-- All dependencies and both native contracts pass before any allocation or
-			-- code write. A before-call hook reconstructs the original relative call
-			-- from its decoded destination, rather than relocating its encoded bytes.
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+			mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+			ret
+		]])
 
-			for _, site in ipairs({triggerSite, explosionSite}) do
-				EEex_HookBeforeCallWithLabels(site, {}, {[[
-					; [EEex.dll] int EEex::Projectile_Hook_ShouldIncludeDeadSprites(const CProjectileArea*)
-					; RSI is this in both audited paths; caller RSP is already 16-byte aligned.
-					; Allocate separate ABI shadow space so native stack arguments remain intact.
+		local hookSite = function(label)
 
-					#MAKE_SHADOW_SPACE(56)
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r10
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r11
-					pushfq #STACK_MOD(8)
-					pop r11 #STACK_MOD(-8)
-					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)], r11
+			local site = EEex_Label(label)
 
-					mov rcx, rsi
-					call #L(EEex::Projectile_Hook_ShouldIncludeDeadSprites)
+			EEex_HookBeforeCallWithLabels(site, {
+				{"hook_integrity_watchdog_ignore_registers", {
+					EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+				}}},
+				{"call ", callHook, "#ENDL"}
+			)
 
-					; Native includeDead is an int at the original caller's RSP+38h.
-					; RAX is volatile across the original void call and may hold our result.
-
-					mov dword ptr ss:[rsp+#LAST_FRAME_TOP(38h)], eax
-
-					push qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)] #STACK_MOD(8)
-					popfq #STACK_MOD(-8)
-					mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
-					mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
-					mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
-					mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
-					mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
-					mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
-					#DESTROY_SHADOW_SPACE
-				]]})
-
-				if EEex_HookIntegrityWatchdog_Load then
-					-- The standard before-call constructor already permits RAX and ABI
-					-- shadow space changes. Permit precisely our additional four-byte int.
-					EEex_HookIntegrityWatchdog_IgnoreStackSizes(site, {{0x38, 4}})
-				end
-			end
+			EEex_HookIntegrityWatchdog_IgnoreStackSizes(site, {{0x38, 4}})
 		end
-	end
+
+		hookSite("Hook-CProjectileArea::AreaEffect()-IncludeDeadTrigger")
+		hookSite("Hook-CProjectileArea::AreaEffect()-IncludeDeadExplosion")
+	end)
 
 	--[[
 	+----------------------------------------------------------------------------------------------------------------------------------+
