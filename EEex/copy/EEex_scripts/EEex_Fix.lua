@@ -1,3 +1,7 @@
+-- Assigned by WeiDU when installing EEex.
+-- A v2.7.3.0 runtime without an assigned TLK reference fails before installing any XP hook.
+-- Older databases skip it.
+EEex_Fix_Private_ExperienceLossStrref = -1
 
 ----------------------------------------------------------------------------------------------------------
 -- Fix quick spell slots not updating when a special ability is added (for example, by op171 or act279) --
