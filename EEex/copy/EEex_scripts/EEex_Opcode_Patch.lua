@@ -106,6 +106,166 @@
 	--------------------------------------
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Opcode #65                                                                                                         |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   (param1 & 1) != 0 -> Only apply the blur graphical displacement, never STATE_BLUR. Also applies to .EFF children |
+	|                        driven by op177 / op182 / op183 / op283.                                                    |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op65_ShouldSetStateBlur(pEffect: CGameEffect*, pSprite: CGameSprite*) -> bool       |
+	|       return:                                                                                                      |
+	|           -> false - (param1 & 1) != 0: Skip STATE_BLUR (a visual-only flag was recorded instead)                  |
+	|           -> true  - Don't alter engine behavior                                                                   |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_Op65_ShouldKeepBlurVisual(pSprite: CGameSprite*) -> bool                            |
+	|       return:                                                                                                      |
+	|           -> false - Don't alter engine behavior (remove the blur displacement)                                    |
+	|           -> true  - A visual-only op65 is active: keep the blur displacement                                      |
+	+--------------------------------------------------------------------------------------------------------------------+
+	| Why these hooks (every engine fact below is verified for BG2:EE, BG:EE, and IWD:EE):                               |
+	|   * CGameEffectBlur::ApplyEffect() only sets STATE_BLUR and sends CMessageVisualEffect(BLUR, on), which is what    |
+	|     sets CGameSprite::m_bBlur (the displacement). op177 / op182 / op183 / op283 decode their .EFF into a temporary |
+	|     child effect (m_effectAmount copied from the file) and call its ApplyEffect() directly, without any effect     |
+	|     list, so the STATE_BLUR write inside ApplyEffect() is the one place that sees every op65 application.          |
+	|   * EEex_HookNOPsWithLabels() replaces that single 10-byte `or` outright. When the engine's behavior is kept, the  |
+	|     original bytes are replayed verbatim, so no STATE_BLUR constant is duplicated here.                            |
+	|   * CGameSprite::ProcessEffectList() removes the displacement when STATE_BLUR is missing right after re-applying   |
+	|     the effect lists. EEex_HookConditionalJumpOnFailWithLabels() on its "m_bBlur == 0" `je` only runs when the     |
+	|     engine is about to remove it, and can keep it by resuming at the `je`'s own target.                            |
+	|   * The visual-only flag lives in EEex's per-CDerivedStats data, which EEex_Stats_Patch.lua already resets on      |
+	|     CDerivedStats::Reload() and copies on CDerivedStats::operator=(), exactly like m_generalState. So it has       |
+	|     STATE_BLUR's lifetime: it disappears the first time the effect lists are re-applied without such an op65.      |
+	+--------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		-- These labels are only shipped in v2.7.3.0's pattern database (pattern_dbs/v2.7.3.0.db).
+		-- On other engine versions both are absent, and vanilla behavior is kept.
+		local setStateBlurAddress = EEex_TryLabel("Hook-CGameEffectBlur::ApplyEffect()-SetStateBlur")
+		local clearBlurVisualJmpAddress = EEex_TryLabel("Hook-CGameSprite::ProcessEffectList()-ClearBlurVisualJmp")
+
+		if setStateBlurAddress == nil and clearBlurVisualJmpAddress == nil then
+			return -- Engine version without these labels: keep vanilla op65 behavior
+		end
+
+		if setStateBlurAddress == nil or clearBlurVisualJmpAddress == nil then
+			-- One hook without the other would either never record or never honor the visual-only flag
+			EEex_Error("Opcode #65: incomplete pattern database, expected both SetStateBlur and ClearBlurVisualJmp labels")
+		end
+
+		----------------------------------------------------------------------------------------------------------
+		-- The short pattern signatures only locate the two sites. Validate every instruction the hooks rely on --
+		-- before writing anything, so a mismatch never leaves a half-applied feature behind.                   --
+		----------------------------------------------------------------------------------------------------------
+
+		local generalStateOffset = EEex_OffsetOf("CGameSprite.m_derivedStats.m_generalState")
+		local blurOffset = EEex_OffsetOf("CGameSprite.m_bBlur")
+
+		-- `address` must hold the opcode / ModRM `bytes`, optionally followed by a disp32 equal to `disp32`
+		local expectInstruction = function(address, bytes, disp32, description)
+			for i, byte in ipairs(bytes) do
+				if EEex_ReadU8(address + i - 1) ~= byte then
+					EEex_Error(string.format("Opcode #65: expected `%s` at %s", description, EEex_ToHex(address)))
+				end
+			end
+			if disp32 ~= nil and EEex_Read32(address + #bytes) ~= disp32 then
+				EEex_Error(string.format("Opcode #65: unexpected displacement in `%s` at %s", description, EEex_ToHex(address)))
+			end
+		end
+
+		-- CGameEffectBlur::ApplyEffect(): the 10-byte instruction hook 1 replaces (and replays verbatim)
+		expectInstruction(setStateBlurAddress, {0x81, 0x8A}, generalStateOffset, "or dword ptr [rdx+m_generalState], imm32")
+
+		-- CGameSprite::ProcessEffectList(): the blur sync block around hook 2 (clearBlurVisualJmpAddress = J)
+		--     J-19  mov eax, dword ptr [rsi+m_generalState]
+		--     J-13  bt eax, <STATE_BLUR bit>
+		--     J-9   jb <keep>
+		--     J-7   cmp byte ptr [rsi+m_bBlur], r12b
+		--     J     je <keep>                  ; hooked
+		--     J+2   mov ecx, imm32             ; restored by the hook (5 bytes)
+		expectInstruction(clearBlurVisualJmpAddress - 19, {0x8B, 0x86}, generalStateOffset, "mov eax, dword ptr [rsi+m_generalState]")
+		expectInstruction(clearBlurVisualJmpAddress - 13, {0x0F, 0xBA, 0xE0}, nil, "bt eax, imm8")
+		expectInstruction(clearBlurVisualJmpAddress - 9, {0x72}, nil, "jb rel8")
+		expectInstruction(clearBlurVisualJmpAddress - 7, {0x44, 0x38, 0xA6}, blurOffset, "cmp byte ptr [rsi+m_bBlur], r12b")
+		expectInstruction(clearBlurVisualJmpAddress, {0x74}, nil, "je rel8")
+		expectInstruction(clearBlurVisualJmpAddress + 2, {0xB9}, nil, "mov ecx, imm32")
+
+		-- Both hooks must be about the same state bit: the one ApplyEffect() sets is the one ProcessEffectList() tests
+		local stateBit = EEex_ReadU8(clearBlurVisualJmpAddress - 10)
+		if EEex_Read32(setStateBlurAddress + 6) ~= EEex_LShift(1, stateBit) then
+			EEex_Error("Opcode #65: CGameEffectBlur::ApplyEffect() and CGameSprite::ProcessEffectList() disagree on the STATE_BLUR bit")
+		end
+
+		-- `jb` and `je` must share <keep>, which the engine otherwise enters right after reloading eax (hook 2 rebuilds it)
+		local keepAddress = clearBlurVisualJmpAddress + 2 + EEex_Read8(clearBlurVisualJmpAddress + 1)
+		if clearBlurVisualJmpAddress - 7 + EEex_Read8(clearBlurVisualJmpAddress - 8) ~= keepAddress then
+			EEex_Error("Opcode #65: the STATE_BLUR and m_bBlur checks no longer branch to the same place")
+		end
+		expectInstruction(keepAddress - 6, {0x8B, 0x86}, generalStateOffset, "mov eax, dword ptr [rsi+m_generalState]")
+
+		-------------------------------------------------------------
+		-- [EEex.dll] EEex::Opcode_Hook_Op65_ShouldSetStateBlur() --
+		-------------------------------------------------------------
+
+		-- Replaces CGameEffectBlur::ApplyEffect()'s `or dword ptr [rdx+m_derivedStats.m_generalState], STATE_BLUR`
+		-- (10 bytes = the 5-byte jmp + 5 NOPs). Here rcx = this (pEffect) and rdx = pSprite. The engine still reads rdx
+		-- afterwards (m_bBlur / m_bForceVisualEffects checks), but writes rax, rcx, and r8-r11 before reading them again.
+		EEex_HookNOPsWithLabels(setStateBlurAddress, 5, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.R8,
+				EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			EEex_FlattenTable({
+				{[[
+					#MAKE_SHADOW_SPACE(8)
+					mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx ; Still needed by the engine after the hook
+
+					                                                     ; rdx already pSprite
+					                                                     ; rcx already pEffect
+					call #L(EEex::Opcode_Hook_Op65_ShouldSetStateBlur)
+
+					mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+					#DESTROY_SHADOW_SPACE
+					test al, al
+					jz #L(return)                                        ; false -> visual only: skip STATE_BLUR
+				]]},
+				-- true -> Run the engine's original `or` (copied byte-for-byte; it has no position-dependent operand)
+				EEex_StoreBytesAssembly(setStateBlurAddress, 10),
+			})
+		)
+
+		---------------------------------------------------------------
+		-- [EEex.dll] EEex::Opcode_Hook_Op65_ShouldKeepBlurVisual() --
+		---------------------------------------------------------------
+
+		-- CGameSprite::ProcessEffectList(), right after re-applying the effect lists, and only if STATE_BLUR is missing:
+		--     cmp byte ptr [rsi+m_bBlur], r12b ; r12 = 0
+		--     je <keep>                        ; <- hooked: the fail path is about to send CMessageVisualEffect(BLUR, off)
+		--     mov ecx, 0x18                    ; <- restored by the hook (5 bytes)
+		-- rsi = this (pSprite). <keep> is otherwise only reached right after `mov eax, [rsi+m_generalState]`, so eax is
+		-- the only volatile register the engine reads there.
+		EEex_HookConditionalJumpOnFailWithLabels(clearBlurVisualJmpAddress, 5, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				#MAKE_SHADOW_SPACE
+				mov rcx, rsi                                                                    ; pSprite
+				call #L(EEex::Opcode_Hook_Op65_ShouldKeepBlurVisual)
+				#DESTROY_SHADOW_SPACE
+				test al, al
+				jz #L(jmp_fail)                                                                 ; false -> remove the displacement
+
+				mov eax, dword ptr ds:[rsi+#OFFSET_OF(CGameSprite.m_derivedStats.m_generalState)] ; Rebuild what <keep> expects in eax
+				jmp #L(jmp_success)                                                             ; true  -> keep the displacement
+			]]}
+		)
+	end)
+
+	--[[
 	+------------------------------------------------------------------------------------+
 	| Opcode #146                                                                        |
 	+------------------------------------------------------------------------------------+

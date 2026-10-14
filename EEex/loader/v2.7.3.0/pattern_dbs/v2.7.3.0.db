@@ -38,3 +38,13 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Opcode #65 (Blur) param1 BIT0 "visual only" hook sites
+
+[Hook-CGameEffectBlur::ApplyEffect()-SetStateBlur]
+Pattern=80BA723F000000
+Operations=ADD -10
+
+[Hook-CGameSprite::ProcessEffectList()-ClearBlurVisualJmp]
+Pattern=0FBAE01D
+Operations=ADD 13
