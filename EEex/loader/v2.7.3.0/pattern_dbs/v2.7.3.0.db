@@ -38,3 +38,17 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Opcode #346 (CGameEffectSaveVsSchoolMod) schools 12-255 / New Opcode #420 (SaveVsSecondaryTypeMod)
+
+[Hook-CDerivedStats::BonusInit()-FirstInstruction]
+Pattern=48895928
+Operations=ADD -63
+
+[Hook-CGameEffect::CheckSave()-AfterSchoolSaveBonus]
+Pattern=037B44
+Operations=ADD 87
+
+[Hook-CGameEffectSaveVsSchoolMod::ApplyEffect()-FirstInstruction]
+Pattern=4183F90C
+Operations=ADD -7
