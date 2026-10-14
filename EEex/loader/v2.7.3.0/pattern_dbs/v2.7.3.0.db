@@ -38,3 +38,17 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Opcode #180 (CGameEffectRestrictEquipItem) item restrictions
+
+[Hook-CInfGame::GetItemTint()-CheckItemUsableCall]
+Pattern=4D8B6CD408
+Operations=ADD 30
+
+[Hook-CInfGame::CheckItemUsable(short,CItem*,ulong&,int)-CheckItemUsableCall]
+Pattern=663914CE
+Operations=ADD 25
+
+[Hook-CGameSprite::UseItem()-ItemTypeUseOnListCall]
+Pattern=B948180000
+Operations=ADD 11
