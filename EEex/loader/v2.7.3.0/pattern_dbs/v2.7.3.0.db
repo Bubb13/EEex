@@ -23,6 +23,54 @@ Operations=ADD -14
 ;-- Hooks --
 ;-----------
 
+; op178 / op179 explicit hand modes.
+; ClearAll uses a PDB GetBonus anchor and a proven stable internal branch.
+; Value is a capability version, not an executable address. Older databases
+; omit it, while incomplete installations of this capability fail at startup.
+
+[Data-EEex::Op178179HandModeVersion]
+Value=2
+
+[Hook-CGameEffectSelectiveToHitBonus::ApplyEffect()-HandMode-AddTail]
+Pattern=488D8E18150000
+Operations=ADD 13
+
+[Hook-CGameEffectSelectiveDamageBonus::ApplyEffect()-HandMode-AddTail]
+Pattern=488D8E50150000
+Operations=ADD 13
+
+[Hook-CGameSprite::Hit()-HandMode-GetBonus]
+Pattern=394DC0
+Operations=ADD -220
+
+[Hook-CGameSprite::Damage()-HandMode-GetBonus]
+Pattern=44396D6F
+Operations=ADD -79
+
+[Hook-CSelectiveBonusList::operator_equ()-HandMode-RemoveAll]
+Pattern=8B4518894318
+Operations=ADD -66
+
+[Hook-CSelectiveBonusList::ClearAll()-HandMode-RemoveAll]
+Pattern=743533ED
+Operations=ADD -198
+
+[Hook-CGameEffectApplyEffect::ApplyEffect()-HandMode-DecodeEffectFromBase]
+Pattern=0FB64C2477
+Operations=ADD 193
+
+[Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-HandMode-DecodeEffectFromBase]
+Pattern=488BF2488B5170
+Operations=ADD 57
+
+[Hook-CGameEffectApplyEffectEquipItemType::ApplyEffect()-HandMode-DecodeEffectFromBase]
+Pattern=0FB75720
+Operations=ADD -45
+
+[Hook-CGameEffectCurseApplyEffect::ApplyEffect()-HandMode-DecodeEffectFromBase]
+Pattern=0FB64C2467
+Operations=ADD 193
+
 [Hook-CChitin::OnResizeWindow()-B3Scale]
 Pattern=488D542478488B4E20
 Operations=ADD 9
