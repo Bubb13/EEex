@@ -243,7 +243,7 @@
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   (special & 1) != 0 -> .EFF bypasses op120                                                                                              |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail(pOp248: CGameEffect*, pExtraEffect: CGameEffect*)                                          |
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp248AddTail(pOp248: CGameEffect*, pExtraEffect: CGameEffect*, pNode: CNode*, pSprite: CGameSprite*)    |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   [Lua] [EEex_Mix_Patch.lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp248(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -254,11 +254,22 @@
 	---------------------------------------------------
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectMeleeEffect::ApplyEffect()-AddTail"),  {
-		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
 		{[[
+			; op410 reuses CGameEffectMeleeEffect::ApplyEffect(), so the child is
+			; appended to m_cExtraMeleeEffects first. Pass the newly returned node and
+			; sprite to C++ so op410 can detach that exact child into miss-only storage.
+			mov r9, rsi                               ; pSprite
+			mov r8, rax                               ; pNode
 			mov rdx, rbx                              ; pEffect
-			mov rcx, rdi                              ; pOp248
+			mov rcx, rdi                              ; pOp248 / pOp410
+			#MAKE_SHADOW_SPACE(32)
 			call #L(EEex::Opcode_Hook_OnOp248AddTail)
+			#DESTROY_SHADOW_SPACE
 		]]}
 	)
 
@@ -268,7 +279,7 @@
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   (special & 1) != 0 -> .EFF bypasses op120                                                                                              |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
-	|   [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail(pOp249: CGameEffect*, pExtraEffect: CGameEffect*)                                          |
+	|   [EEex.dll] EEex::Opcode_Hook_OnOp249AddTail(pOp249: CGameEffect*, pExtraEffect: CGameEffect*, pNode: CNode*, pSprite: CGameSprite*)    |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
 	|   [Lua] [EEex_Mix_Patch.lua] EEex_Opcode_Hook_OnAfterSwingCheckedOp249(sprite: CGameSprite, targetSprite: CGameSprite, blocked: boolean) |
 	+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -285,11 +296,22 @@
 	]]})
 
 	EEex_HookAfterCallWithLabels(EEex_Label("Hook-CGameEffectRangeEffect::ApplyEffect()-AddTail"), {
-		{"hook_integrity_watchdog_ignore_registers", {EEex_HookIntegrityWatchdogRegister.RAX}}},
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
 		{[[
+			; op411 reuses CGameEffectRangeEffect::ApplyEffect(), so the child is
+			; appended to m_cExtraRangedEffects first. Pass the parent, child, node,
+			; and sprite to C++ so only op411 children are moved to miss-only storage.
+			mov r9, rdi                                              ; pSprite
+			mov r8, rax                                              ; pNode
 			mov rdx, rbx                                             ; pEffect
-			mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ ; pOp249
+			mov rcx, qword ptr ss:[#$(1)] ]], {op249SavedEffect}, [[ ; pOp249 / pOp411
+			#MAKE_SHADOW_SPACE(32)
 			call #L(EEex::Opcode_Hook_OnOp249AddTail)
+			#DESTROY_SHADOW_SPACE
 		]]}
 	)
 
@@ -1132,6 +1154,54 @@
 	})
 
 	--[[
+	+------------------------------------------------------------------------------------------------------------+
+	| New Opcode #410 (MeleeMissEffect)                                                                          |
+	+------------------------------------------------------------------------------------------------------------+
+	|   This opcode intentionally reuses CGameEffectMeleeEffect::ApplyEffect() so its child EFF decoding stays   |
+	|   byte-for-byte aligned with vanilla op248. The temporary vanilla list insertion is handled by the op248   |
+	|   AddTail hook above: when the parent effect ID is 410, C++ removes the just-added child from              |
+	|   m_cExtraMeleeEffects and stores it in EEex-owned miss-only derived-stat storage.                         |
+	|                                                                                                            |
+	|   EEex_Mix_Patch.lua applies those stored children from the melee attack-roll miss branch only.            |
+	+------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_MeleeMissEffect = genOpcodeDecode({
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(CGameEffectMeleeEffect::ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	--[[
+	+------------------------------------------------------------------------------------------------------------+
+	| New Opcode #411 (RangeMissEffect)                                                                          |
+	+------------------------------------------------------------------------------------------------------------+
+	|   This opcode intentionally reuses CGameEffectRangeEffect::ApplyEffect() so its child EFF decoding stays   |
+	|   byte-for-byte aligned with vanilla op249. The temporary vanilla list insertion is handled by the op249   |
+	|   AddTail hook above: when the parent effect ID is 411, C++ removes the just-added child from              |
+	|   m_cExtraRangedEffects and stores it in EEex-owned miss-only derived-stat storage.                        |
+	|                                                                                                            |
+	|   EEex_Mix_Patch.lua applies those stored children from the ranged attack-roll miss branch only; the C++   |
+	|   applicator mirrors op249 target handling, except target type 0 is delivered directly to the missed       |
+	|   target because a miss has no later projectile impact to carry preset-target children.                    |
+	+------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_RangeMissEffect = genOpcodeDecode({
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(CGameEffectRangeEffect::ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	--[[
 	+-------------------------------------+
 	| [JIT] Decode switch for new opcodes |
 	+-------------------------------------+
@@ -1174,8 +1244,18 @@
 
 			_409:
 			cmp eax, 409
-			jne #L(jmp_success)
+			jne _410
 			]], EEex_EnableActionListener, [[
+
+			_410:
+			cmp eax, 410
+			jne _411
+			]], EEex_MeleeMissEffect, [[
+
+			_411:
+			cmp eax, 411
+			jne #L(jmp_success)
+			]], EEex_RangeMissEffect, [[
 		]]})
 	)
 	EEex_HookIntegrityWatchdog_IgnoreStackSizes(EEex_Label("Hook-CGameEffect::DecodeEffect()-DefaultJmp"), {{0x60, 8}})
