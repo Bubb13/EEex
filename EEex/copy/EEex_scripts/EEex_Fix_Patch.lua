@@ -4,6 +4,56 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+------------------------------------------------------------------------------------------------------+
+	| Opcodes #6 / #10 / #15 / #19 / #44 / #49, param2 = 3: remove their rolled equipped effects correctly |
+	+------------------------------------------------------------------------------------------------------+
+	| Mode 3 overwrites Parameter 1, but Unequip() reconstructs the original ITM value for removal.        |
+	| Scope the exception to that removal call and require the stored equipment slot instead of the roll.  |
+	| Native source and identity checks, OnRemove(), destruction and stat rebuilding remain in charge.     |
+	+------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookRemoveCall(EEex_Label("Hook-CItem::Unequip()-RemoveClassSpellAbility"), {[[
+		; RCX/RDX/R8/R9 retain the native list/query/sprite/compareSource arguments.
+		#MAKE_SHADOW_SPACE(16)
+		mov dword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], r13d ; fifth arg: actual equipment slot
+		mov rax, #L(original)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax ; sixth arg: original native remover
+		call #L(EEex::Fix_Hook_UnequipClassSpellAbility_Remove)
+		#DESTROY_SHADOW_SPACE
+	]]})
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameEffectList::Remove()-ClassSpellAbilityAmountCompare"), 3, 3, 6, {}, {[[
+		; Replace only Parameter 1 equality. The accumulated opcode-match result
+		; and all later comparison inputs are live here, including volatile registers.
+
+		#MAKE_SHADOW_SPACE(56)
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rcx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], rdx
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r8
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r9
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r10
+		mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)], r11
+
+		mov rcx, r13 ; pList
+		mov rdx, rsi ; pQuery
+		mov r8, rdi ; pCandidate
+		mov r9d, ebp ; Native compareSource; keep nested calls with source checks disabled unchanged.
+		call #L(EEex::Fix_Hook_ClassSpellAbility_AmountMatches)
+		cmp al, 1 ; ZF = equality, as consumed by the native cmove after the restored mov.
+
+		mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-56)]
+		mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+		mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+		mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+		mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+		mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+		mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+		#DESTROY_SHADOW_SPACE
+	]]})
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+

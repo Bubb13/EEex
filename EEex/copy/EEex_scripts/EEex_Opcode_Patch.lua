@@ -106,6 +106,73 @@
 	--------------------------------------
 
 	--[[
+	+-----------------------------------------------------------------------------------------+
+	| Opcodes #6 / #10 / #19 / #49: param2 = 3 rolls from CLSSPLAB's CHA / CON / INT / WIS    |
+	+-----------------------------------------------------------------------------------------+
+	| C++ prepares the persistent bonus; each opcode's native cumulative path applies it.     |
+	| Preserve RDX (sprite) and R8 (native lower bound), which are live at that continuation. |
+	+-----------------------------------------------------------------------------------------+
+	--]]
+
+	for _, effectClass in ipairs({"CGameEffectCHR", "CGameEffectCON", "CGameEffectINT", "CGameEffectWIS"}) do
+		local hook = EEex_Label("Hook-"..effectClass.."::ApplyEffect()-ClassSpellAbility")
+		local ignored = {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX,
+			EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10, EEex_HookIntegrityWatchdogRegister.R11,
+		}
+
+		EEex_HookConditionalJumpOnSuccessWithLabels(hook, 0, {
+			{"hook_integrity_watchdog_ignore_registers", ignored},
+			{"class_spell_ability_cumulative", EEex_Label("Data-"..effectClass.."::ApplyEffect()-ClassSpellAbilityCumulative")}},
+			{[[
+				cmp dword ptr ds:[rbx+#OFFSET_OF(CGameEffect.m_dWFlags)], 3
+				jne #L(jmp_success) ; Preserve the native return for other unsupported modes.
+
+				#MAKE_SHADOW_SPACE(16)
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], r8
+				mov rcx, rbx ; pEffect
+				mov rdx, rdi ; pSprite
+				mov r8, #L(rand) ; Use the game's RNG, not EEex.dll's CRT RNG.
+				call #L(EEex::Opcode_Hook_ClassSpellAbility_Prepare)
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+				#DESTROY_SHADOW_SPACE
+				test al, al
+				jz #L(jmp_success)
+
+				#MANUAL_HOOK_EXIT(1)
+				jmp #L(class_spell_ability_cumulative)
+			]]}
+		)
+		EEex_HookIntegrityWatchdog_IgnoreRegistersForInstance(hook, 1, ignored)
+		EEex_HookIntegrityWatchdog_DefaultIgnoreStackForInstance(hook, 1)
+	end
+
+	-- The EFF drivers recreate their child instead of resolving an effect list.
+	-- Replace only the child virtual call; restore its following done check verbatim.
+	-- The C++ frame keeps nested drivers' serialized rolls attached to their owner.
+	for _, entry in ipairs({
+		{"CGameEffectApplyEffect", "rbx"},
+		{"CGameEffectApplyEffectEquipItem", "rdi"},
+		{"CGameEffectApplyEffectEquipItemType", "rdi"},
+		{"CGameEffectCurseApplyEffect", "rbx"},
+	}) do
+		EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-"..entry[1].."::ApplyEffect()-ClassSpellAbilityDriver"), 3, 7, 10, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11,
+			}}},
+			{[[
+				; RCX = decoded child, RDX = sprite, as at the original virtual call.
+				mov r8, #$(1) ]], {entry[2]}, [[ #ENDL ; pParent
+				call #L(EEex::Opcode_Hook_ClassSpellAbility_ApplyDrivenEffect)
+			]]}
+		)
+	end
+
+	--[[
 	+------------------------------------------------------------------------------------+
 	| Opcode #146                                                                        |
 	+------------------------------------------------------------------------------------+
