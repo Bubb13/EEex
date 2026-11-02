@@ -1004,6 +1004,59 @@
 	]]})
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------------------+
+	| New Opcode #404 (OverrideButtonType)                                                                               |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   Overrides all instances of an actionbar button with type `param1` with the type specified by `param2`.           |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   param1 -> Button type to override                                                                                |
+	|   param2 -> New button type                                                                                        |
+	+--------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OverrideButtonType_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int |
+	|       return:                                                                                                      |
+	|           ->  0 - Halt effect list processing                                                                      |
+	|           -> !0 - Continue effect list processing                                                                  |
+	+--------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_OverrideButtonType = genOpcodeDecode({
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_OverrideButtonType_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	--[[
+	+--------------------------------------------------------------------------------------------------------------------------------------+
+	| New Opcode #405 (OverrideButtonIndex)                                                                                                |
+	+--------------------------------------------------------------------------------------------------------------------------------------+
+	|   Overrides the actionbar button at index `param1` with the type specified by `param2` on the actionbar config defined by `special`. |
+	+--------------------------------------------------------------------------------------------------------------------------------------+
+	|   param1  -> Button index to override                                                                                                |
+	|   param2  -> New button type                                                                                                         |
+	|   special -> Target actionbar config. If `-1` matches any default class bar, (not generic bar used by charmed / summoned creatures). |
+	+--------------------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Opcode_Hook_OverrideButtonIndex_ApplyEffect(pEffect: CGameEffect*, pSprite: CGameSprite*) -> int                  |
+	|       return:                                                                                                                        |
+	|           ->  0 - Halt effect list processing                                                                                        |
+	|           -> !0 - Continue effect list processing                                                                                    |
+	+--------------------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	local EEex_OverrideButtonIndex = genOpcodeDecode({
+		["ApplyEffect"] = {[[
+			#STACK_MOD(8) ; This was called, the ret ptr broke alignment
+			#MAKE_SHADOW_SPACE
+			call #L(EEex::Opcode_Hook_OverrideButtonIndex_ApplyEffect)
+			#DESTROY_SHADOW_SPACE
+			ret
+		]]},
+	})
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------+
 	| New Opcode #408 (ProjectileMutator)                                                                               |
 	+-------------------------------------------------------------------------------------------------------------------+
@@ -1164,8 +1217,18 @@
 
 			_403:
 			cmp eax, 403
-			jne _408
+			jne _404
 			]], EEex_ScreenEffects, [[
+
+			_404:
+			cmp eax, 404
+			jne _405
+			]], EEex_OverrideButtonType, [[
+
+			_405:
+			cmp eax, 405
+			jne _408
+			]], EEex_OverrideButtonIndex, [[
 
 			_408:
 			cmp eax, 408

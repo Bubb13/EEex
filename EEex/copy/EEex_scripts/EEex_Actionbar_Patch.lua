@@ -4,12 +4,13 @@
 	EEex_DisableCodeProtection()
 
 	--[[
-	+--------------------------------------------------------------------------+
-	| Implement actionbar listeners                                            |
-	+--------------------------------------------------------------------------+
-	|   [Lua] EEex_Actionbar_Hook_StateUpdating(config: number, state: number) |
-	|   [Lua] EEex_Actionbar_Hook_ButtonsUpdated()                             |
-	+--------------------------------------------------------------------------+
+	+-----------------------------------------------------------------------------+
+	| Implement actionbar listeners                                               |
+	+-----------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Actionbar_Hook_OnStateUpdated(config: int, state: int)   |
+	|   [Lua] EEex_Actionbar_LuaHook_StateUpdating(config: number, state: number) |
+	|   [Lua] EEex_Actionbar_Hook_ButtonsUpdated()                                |
+	+-----------------------------------------------------------------------------+
 	--]]
 
 	EEex_HookBeforeCall(EEex_Label("Hook-CInfButtonArray::SetState()-SaveArg"), {[[
@@ -30,26 +31,19 @@
 				ja NoConfig
 
 				mov rdx, #L(Data-CInfButtonArray::SetState()-IndirectJumpTable)
-				movzx eax, byte ptr ds:[rdx+rax]
+				movzx ecx, byte ptr ds:[rdx+rax]
 				jmp CallHook
 
 				NoConfig:
-				mov rax, -1
+				mov rcx, -1
 
 				CallHook:
-				#MAKE_SHADOW_SPACE(48)
-			]]},
-			EEex_GenLuaCall("EEex_Actionbar_Hook_StateUpdating", {
-				["args"] = {
-					function(rspOffset) return {"mov qword ptr ss:[rsp+#$(1)], rax", {rspOffset}, "#ENDL"} end,
-					function(rspOffset) return {[[
-						mov edx, dword ptr ds:[rsp+#LAST_FRAME_TOP(70h)]
-						mov qword ptr ss:[rsp+#$(1)], rdx ]], {rspOffset}, [[ #ENDL
-					]]} end,
-				},
-			}),
-			{[[
-				call_error:
+				#MAKE_SHADOW_SPACE
+
+																 ; rcx already config
+				mov edx, dword ptr ds:[rsp+#LAST_FRAME_TOP(70h)] ; state
+				call #L(EEex::Actionbar_Hook_OnStateUpdated)
+
 				#DESTROY_SHADOW_SPACE
 				mov rcx, r14
 			]]},

@@ -248,7 +248,6 @@ end
 ---------------
 
 EEex_Actionbar_Private_Listeners = EEex_Actionbar_Private_Listeners or {}
-EEex_Actionbar_Private_SuppressingListeners = false
 
 -- @bubb_doc { EEex_Actionbar_AddListener }
 --
@@ -355,14 +354,14 @@ function EEex_Actionbar_AddButtonsUpdatedListener(func)
 end
 
 function EEex_Actionbar_SuppressListeners(bSuppress)
-	EEex_Actionbar_Private_SuppressingListeners = bSuppress
+	EEex.Actionbar_SuppressingListeners = bSuppress
 end
 
 function EEex_Actionbar_RunWithListenersSuppressed(func, ...)
-	local saved = EEex_Actionbar_Private_SuppressingListeners
-	EEex_Actionbar_Private_SuppressingListeners = true
+	local saved = EEex.Actionbar_SuppressingListeners
+	EEex.Actionbar_SuppressingListeners = true
 	return EEex_Utility_TryFinally(func,
-		function() EEex_Actionbar_Private_SuppressingListeners = saved end,
+		function() EEex.Actionbar_SuppressingListeners = saved end,
 		...)
 end
 
@@ -410,8 +409,7 @@ EEex_Actionbar_GetOp214ButtonDataItr = EEex_Actionbar_GetOp214ButtonDataIterator
 -- Hooks --
 -----------
 
-EEex_Actionbar_Private_IgnoreEngineStartup1 = true
-EEex_Actionbar_Private_IgnoreEngineStartup2 = true
+EEex_Actionbar_Private_IgnoreEngineStartup = true
 
 --[[
 Unique Config | State(s)
@@ -455,17 +453,7 @@ Unique Config | State(s)
               |    114, -- Cleric / Mage Spells (Select Quick Spell)
               |
 --]]
-function EEex_Actionbar_Hook_StateUpdating(config, state)
-
-	if EEex_Actionbar_Private_IgnoreEngineStartup1 then
-		EEex_Actionbar_Private_IgnoreEngineStartup1 = false
-		return
-	end
-
-	if EEex_Actionbar_Private_SuppressingListeners then
-		return
-	end
-
+function EEex_Actionbar_LuaHook_StateUpdating(config, state)
 	for _, func in ipairs(EEex_Actionbar_Private_Listeners) do
 		if EEex_Utility_TryIgnore(func, config, state) then
 			break
@@ -475,12 +463,12 @@ end
 
 function EEex_Actionbar_Hook_ButtonsUpdated()
 
-	if EEex_Actionbar_Private_IgnoreEngineStartup2 then
-		EEex_Actionbar_Private_IgnoreEngineStartup2 = false
+	if EEex_Actionbar_Private_IgnoreEngineStartup then
+		EEex_Actionbar_Private_IgnoreEngineStartup = false
 		return
 	end
 
-	if EEex_Actionbar_Private_SuppressingListeners then
+	if EEex.Actionbar_SuppressingListeners then
 		return
 	end
 
