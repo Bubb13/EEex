@@ -2326,6 +2326,62 @@ Operations=ADD -5
 Pattern=6685C00F848E0000004885DB
 Operations=ADD 3
 
+[Hook-CItem::Unequip()-RemoveClassSpellAbility]
+Pattern=3943247518
+Operations=ADD 24
+
+[Hook-CGameEffectList::Remove()-ClassSpellAbilityAmountCompare]
+Pattern=394628
+Operations=ADD -31
+
+[Hook-CGameEffectCHR::ApplyEffect()-ClassSpellAbility]
+Pattern=6689877A110000
+Operations=ADD -133
+
+[Data-CGameEffectCHR::ApplyEffect()-ClassSpellAbilityCumulative]
+Pattern=66898F7A110000
+Operations=ADD 9
+
+[Hook-CGameEffectCON::ApplyEffect()-ClassSpellAbility]
+Pattern=66898778110000
+Operations=ADD -133
+
+[Data-CGameEffectCON::ApplyEffect()-ClassSpellAbilityCumulative]
+Pattern=66898F78110000
+Operations=ADD 9
+
+[Hook-CGameEffectINT::ApplyEffect()-ClassSpellAbility]
+Pattern=66898772110000
+Operations=ADD -133
+
+[Data-CGameEffectINT::ApplyEffect()-ClassSpellAbilityCumulative]
+Pattern=66898F72110000
+Operations=ADD 9
+
+[Hook-CGameEffectWIS::ApplyEffect()-ClassSpellAbility]
+Pattern=66898774110000
+Operations=ADD -133
+
+[Data-CGameEffectWIS::ApplyEffect()-ClassSpellAbilityCumulative]
+Pattern=66898F74110000
+Operations=ADD 9
+
+[Hook-CGameEffectApplyEffect::ApplyEffect()-ClassSpellAbilityDriver]
+Pattern=0FB64C2477
+Operations=ADD 471
+
+[Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-ClassSpellAbilityDriver]
+Pattern=FF10488D4C2430
+Operations=ADD -45
+
+[Hook-CGameEffectApplyEffectEquipItemType::ApplyEffect()-ClassSpellAbilityDriver]
+Pattern=0FB75720
+Operations=ADD 118
+
+[Hook-CGameEffectCurseApplyEffect::ApplyEffect()-ClassSpellAbilityDriver]
+Pattern=E96CFDFFFF
+Operations=ADD -118
+
 [Hook-CGameEffectApplySpell::ApplyEffect()-OverrideSplprotContext]
 Pattern=4C8BCF8B5320
 Operations=ADD 9
