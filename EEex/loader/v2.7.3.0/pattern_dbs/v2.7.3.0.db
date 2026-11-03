@@ -38,3 +38,60 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Opcodes #25 / #78 / #98 / #232 / #272 - param2 BIT16: Haste/Slow-neutral timing
+
+[CPersistantEffectListRegenerated::AIUpdate]
+Pattern=488BF1488BEF
+Operations=ADD -29
+
+[CPersistantEffectApplyEffect::AIUpdate]
+Pattern=458BD84C8BF2
+Operations=ADD -33
+
+[CPersistantEffectDisease::AIUpdate]
+Pattern=4053564883EC68
+
+[CPersistantEffectPoison::AIUpdate]
+Pattern=41F7EB4183C202
+Operations=ADD -117
+
+[CPersistantEffectRegeneration::AIUpdate]
+Pattern=41F7EB41FFC24C897C2440
+Operations=ADD -95
+
+[Hook-CContingencyList::Process()-StatusTriggerJmp]
+Pattern=4D8B7D08
+Operations=ADD 78
+
+[Hook-CGameEffectDisease::ApplyEffect()-AddTail-1]
+Pattern=894314B81F85EB51
+Operations=ADD -42
+
+[Hook-CGameEffectDisease::ApplyEffect()-AddTail-2]
+Pattern=8B566485D2
+Operations=ADD -22
+
+[Hook-CGameEffectPoison::ApplyEffect()-AddTail]
+Pattern=66895312
+Operations=ADD 315
+
+[Hook-CGameEffectRegeneration::ApplyEffect()-AddTail]
+Pattern=0FB74F2085C9
+Operations=ADD 285
+
+[Hook-CGameEffectRepeatingApplyEffect::ApplyEffect()-AddTail]
+Pattern=6689531A8B5764
+Operations=ADD 44
+
+[Hook-CGameSprite::ContingencyCheck()-FirstInstruction]
+Pattern=8B8140500000
+Operations=ADD -26
+
+[Hook-CGameSprite::HandlePersistantEffects()-CPersistantEffectListRegenerated::AIUpdate()]
+Pattern=41FF10488BEF
+Operations=ADD 29
+
+[Hook-CGameSprite::ProcessEffectList()-CPersistantEffectListRegenerated::AIUpdate()]
+Pattern=837D8C00
+Operations=ADD -12
