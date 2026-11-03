@@ -4,6 +4,52 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+-------------------------------------------------------------------------------------------------------------+
+	| Prevent blindness cleanup from changing a dead sprite's visual range, and guard repeated death bookkeeping. |
+	+-------------------------------------------------------------------------------------------------------------+
+	| CheckStatsChange() normally calls SetVisualRange() when blindness changes the requested sight distance.     |
+	| The native SetVisualRange() removes and re-adds a party sprite to the visibility map, even if it is dead.   |
+	| That can restore corpse sight and let a later visibility-removal message decrement the area's party count   |
+	| again. EEex's visibility-map replacement avoids the native remove/add, but a corpse still must not have its |
+	| sight distance restored by this stat-change path. Skip only that call; continue processing other stats.     |
+	+-------------------------------------------------------------------------------------------------------------+
+	| Separately, ApplyEffect() for death calls OnDeath() before testing the existing dead flag. Skip that call   |
+	| for an already-dead sprite, while retaining the engine's subsequent dead-state handling. OnDeath() changes  |
+	| monster counters and other bookkeeping; it does not directly decrement the area's party-character count.    |
+	+-------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	-- Resolve the nested structure field through the loaded engine bindings. This is the byte distance from a
+	-- CGameSprite object to its base (persistent) general-state flags.
+	local baseGeneralStateOffset = EEex_OffsetOf("CGameSprite.m_baseStats.m_generalState")
+
+	-- Hook the five-byte call to OnDeath(), where rcx already points to the sprite and edx is already zero.
+	-- The empty label table requests no special register exemptions: these instructions only change flags.
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameEffectDeath::ApplyEffect()-OnDeathCall"), {}, {
+		[[
+			; TEST checks the engine's 0x800 dead-state bit without changing the sprite or any register.
+			test dword ptr ds:[rcx+#$(1)], 0x800
+			; A set bit means death bookkeeping has already happened. Resume just after the original call.
+			jnz #L(return_skip)
+			; A living sprite still needs its first OnDeath() call. The hook framework performs that call.
+			jmp #L(return)
+		]], {baseGeneralStateOffset}
+	})
+
+	-- Hook only the stat-change call to SetVisualRange(), where rcx is the sprite and dx is the new range.
+	-- Other callers keep their existing behavior. Once resurrection clears the dead bit, this call runs normally.
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::CheckStatsChange()-SetVisualRangeCall"), {}, {
+		[[
+			; Read the persistent dead flag, which is independent of the blindness flag in recalculated stats.
+			test dword ptr ds:[rcx+#$(1)], 0x800
+			; Leave a corpse's current visual range and visibility-map membership untouched by this update.
+			jnz #L(return_skip)
+			; For a living sprite, preserve the original visual-range update and all of its arguments.
+			jmp #L(return)
+		]], {baseGeneralStateOffset}
+	})
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+
