@@ -2350,6 +2350,12 @@ Operations=ADD 23
 Pattern=3881F81000007407
 Operations=ADD 56
 
+; Locate the death effect's OnDeath() call so an already-dead sprite can skip repeated bookkeeping.
+[Hook-CGameEffectDeath::ApplyEffect()-OnDeathCall]
+Pattern=0FBF8B10470000
+; Move backward seventeen bytes from the matching instruction to the five-byte OnDeath() call.
+Operations=ADD -17
+
 [Hook-CGameEffectForceSurge::ApplyEffect()-FirstInstruction]
 Pattern=898248130000
 Operations=ADD -3
@@ -2565,6 +2571,13 @@ Operations=ADD -5
 [Hook-CGameSprite::SetCursor()-SetCharacterToolTip()]
 Pattern=80BF38400000FF
 Operations=ADD 63
+
+; Locate the call from stat recalculation to SetVisualRange(), not the function entry.
+; These six bytes are the shared argument setup: movzx edx,cx followed by mov rcx,rbx.
+[Hook-CGameSprite::CheckStatsChange()-SetVisualRangeCall]
+Pattern=0FB7D1488BCB
+; Advance six bytes past that argument setup to the five-byte call that the Lua fix guards.
+Operations=ADD 6
 
 [Hook-CGameSprite::SetVisualRange()-FirstInstruction]
 Pattern=488974242041564883EC40
