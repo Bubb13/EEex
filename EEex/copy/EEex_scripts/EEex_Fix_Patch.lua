@@ -4,6 +4,101 @@
 	EEex_DisableCodeProtection()
 
 	--[[
+	+------------------------------------------------------------------------------------------------------------------+
+	| BUG: v2.7.3.0 - Swing() resolves the launcher ability, but reads the ammunition ability's weapon speed instead   |
+	+------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_GetWeaponSpeed(pAttackAbility: Item_ability_st*, pLauncherAbility: Item_ability_st*) |
+	|       Returns the launcher's speed when the engine resolved its ability; otherwise returns the attack's speed.   |
+	+------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		local hookName = "Hook-CGameSprite::Swing()-ForceLauncherWeaponSpeed"
+		local hookAddress = EEex_TryLabel(hookName)
+		if hookAddress == nil then
+			-- This label is installed only by the v2.7.3.0 database. Shared Lua
+			-- scripts must leave older versions' unverified Swing() code alone.
+			return
+		end
+
+		local requireAddress = function(name, address)
+			if type(address) ~= "number" or address <= 0 or address % 1 ~= 0 then
+				EEex_Error("Force launcher weapon speed: missing or invalid label '"..name.."'")
+			end
+		end
+		requireAddress(hookName, hookAddress)
+		requireAddress("EEex::Fix_Hook_GetWeaponSpeed", EEex_TryLabel("EEex::Fix_Hook_GetWeaponSpeed"))
+
+		-- These ABI values and target-relative instruction contracts were verified
+		-- against each supplied v2.7.3.0 EXE/PDB pair.
+		-- Dotted paths are required by EEex's actual userdata binding metadata.
+		if EEex_OffsetOf("Item_ability_st.speedFactor") ~= 0x12
+			or EEex_OffsetOf("CGameSprite.m_speedFactor") ~= 0x4B4C then
+			EEex_Error("Force launcher weapon speed: incompatible item/sprite bindings")
+		end
+
+		local requireBytes = function(offset, expected)
+			for i = 1, #expected, 2 do
+				if EEex_ReadU8(hookAddress + offset + (i - 1) / 2) ~= tonumber(expected:sub(i, i + 1), 16) then
+					EEex_Error(string.format(
+						"Force launcher weapon speed: unexpected native bytes at '%s' %+d; use matching scripts, database and DLL",
+						hookName, offset + (i - 1) / 2
+					))
+				end
+			end
+		end
+
+		-- Swing() saves seven nonvolatile registers and allocates 0x150 bytes;
+		-- RSP is aligned at our site, and RBP remains a stable frame pointer.
+		requireBytes(-0x33F, "48895C24185556574154415541564157488D6C24B04881EC50010000")
+		-- The launcher ability local starts null. Native GetLauncher()/GetAbility(0)
+		-- either fill [rbp-0x78] or leave it null; no extra item lookup is necessary.
+		requireBytes(-0x261, "4C897588") -- mov [rbp-0x78], r14 (r14 is native zero)
+		requireBytes(-0xCB,  "48894588") -- mov [rbp-0x78], rax (launcher ability)
+		requireBytes(-0xC5,  "4C897588") -- mov [rbp-0x78], r14 (no launcher)
+		-- Includes the preceding CMP, both physical-speed offsets, the original
+		-- five-byte MOVZX, and the CMOVE / sprite-speed store which must stay native.
+		requireBytes(-25, "4439B3A44E0000BA9A1E0000664489B39A4B0000B8F2110000410FB64D120F44C266898B4C4B0000")
+
+		-- Replace only MOVZX, not the subsequent speed bonus, initiative roll or
+		-- clamps. All preflight checks precede feature JIT allocations and writes.
+		EEex_HookNOPsWithLabels(hookAddress, 0, {
+			{"hook_integrity_watchdog_ignore_registers", { EEex_HookIntegrityWatchdogRegister.RCX }}},
+			{[[
+				; The next native CMOVE consumes the earlier CMP's flags. Save them
+				; before calling C++; stack bookkeeping includes this eight-byte push.
+				pushfq #STACK_MOD(8)
+				#MAKE_SHADOW_SPACE(48)
+
+				; Six saved volatile registers occupy rsp+32..72, outside the
+				; helper's 32-byte shadow space. RCX is the sole intended result.
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rax
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r8
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)], r9
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)], r10
+				mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)], r11
+
+				mov rcx, r13                           ; pAttackAbility (native DEFAULT_ATTACK fallback is already applied)
+				mov rdx, qword ptr ss:[rbp-0x78]       ; pLauncherAbility (native ability 0, or nullptr)
+				call #L(EEex::Fix_Hook_GetWeaponSpeed)
+				mov ecx, eax                           ; Replace the original zero-extended byte result
+
+				mov r11, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-48)]
+				mov r10, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-40)]
+				mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-32)]
+				mov r8, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+				mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+				mov rax, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+
+				#DESTROY_SHADOW_SPACE
+				popfq #STACK_MOD(-8)
+			]]}
+		)
+	end)
+
+	--[[
 	+-------------------------------------------------------------------------------------------------------------------------+
 	| Implement the missing WSPECIAL.2DA["SPEED"] bonus                                                                       |
 	+-------------------------------------------------------------------------------------------------------------------------+
