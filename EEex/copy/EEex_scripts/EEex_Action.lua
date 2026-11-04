@@ -306,6 +306,20 @@ EEex_Action_Private_Switch = {
 	[479] = function(aiBase, curAction)
 		return EEex_Action_Private_SpellObjectOffset(aiBase, curAction, false, 337, CGameAIBase.ForceSpellPoint)
 	end,
+
+	-- EEex_AttackOnce
+	[480] = function(aiBase, curAction)
+
+		if not aiBase:isSprite(true) then
+			return EEex_Action_ReturnType.ACTION_ERROR
+		end
+
+		-- Store the EEex-only roll/damage/ammo state, then let vanilla Attack()
+		-- own target validation, movement, range, animation, and interruption.
+		EEex.StartAttackOnce(aiBase, aiBase:GetTargetShare(), curAction.m_specificID, curAction.m_specificID2, curAction.m_specificID3)
+		curAction.m_actionID = 3
+		return aiBase:virtual_ExecuteAction()
+	end,
 }
 
 function EEex_Action_Hook_OnEvaluatingUnknown(aiBase)
