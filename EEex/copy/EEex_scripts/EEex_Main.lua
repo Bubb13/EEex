@@ -28,6 +28,7 @@ EEex_Main_Private_StartupFiles = {
 	"EEex_Keybinds",           --
 	"EEex_Menu",               --
 	"EEex_Menu_Patch",         --
+	"EEex_Op120_Patch",        -- Configure opcode 120 before Mix installs its shared Swing hooks
 	"EEex_Mix_Patch",          --
 	"EEex_Object",             --
 	"EEex_Object_Patch",       --
