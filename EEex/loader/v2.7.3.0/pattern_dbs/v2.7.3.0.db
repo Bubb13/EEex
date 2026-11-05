@@ -38,3 +38,49 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; op135 equipment suppression
+
+[Hook-CGameSprite::ProcessEffectList()-Op135Begin]
+Pattern=450F44FD
+Operations=ADD -166
+
+[Hook-CGameSprite::ProcessEffectList()-Op135Commit]
+Pattern=450F44FD
+Operations=ADD -77
+
+[Hook-CGameEffectPolymorph::ApplyEffect()-Op135Observe]
+Pattern=450BE2
+Operations=ADD 1554
+
+[Hook-CItem::Equip()-Op135]
+Pattern=49392E
+Operations=ADD -209
+
+[Hook-CItem::Unequip()-Op135]
+Pattern=90488B4E08
+Operations=ADD -143
+
+[Hook-CItem::Equip()-Op135ItemEffect]
+Pattern=394524
+Operations=ADD 13
+
+[Hook-CGameEffectApplyEffect::ApplyEffect()-Op135Driven]
+Pattern=0FB64C2477
+Operations=ADD 468
+
+[Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-Op135Driven]
+Pattern=FF10488D4C2430
+Operations=ADD -48
+
+[Hook-CGameEffectApplyEffectEquipItemType::ApplyEffect()-Op135Driven]
+Pattern=0FB75720
+Operations=ADD 115
+
+[Hook-CGameEffectCurseApplyEffect::ApplyEffect()-Op135Driven]
+Pattern=E96CFDFFFF
+Operations=ADD -121
+
+[Hook-CItem::Destruct()-Op135]
+Pattern=48396E08
+Operations=ADD -149
