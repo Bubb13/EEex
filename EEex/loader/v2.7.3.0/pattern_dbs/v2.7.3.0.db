@@ -23,6 +23,29 @@ Operations=ADD -14
 ;-- Hooks --
 ;-----------
 
+; Opcode 233: shortest unique whole-instruction signatures, independently
+; derived across all three matching EXE/PDB pairs.
+
+[Hook-CGameEffectProficiency::ApplyEffect()-Op233Increment]
+Pattern=83C0A7
+Operations=ADD 738
+
+[Hook-CGameEffectApplyEffect::ApplyEffect()-Op233DrivenCall]
+Pattern=0FB64C2477
+Operations=ADD 468
+
+[Hook-CGameEffectApplyEffectEquipItem::ApplyEffect()-Op233DrivenCall]
+Pattern=FF10488D4C2430
+Operations=ADD -48
+
+[Hook-CGameEffectApplyEffectEquipItemType::ApplyEffect()-Op233DrivenCall]
+Pattern=0FB75720
+Operations=ADD 115
+
+[Hook-CGameEffectCurseApplyEffect::ApplyEffect()-Op233DrivenCall]
+Pattern=E96CFDFFFF
+Operations=ADD -121
+
 [Hook-CChitin::OnResizeWindow()-B3Scale]
 Pattern=488D542478488B4E20
 Operations=ADD 9
