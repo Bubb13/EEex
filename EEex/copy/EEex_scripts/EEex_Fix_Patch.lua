@@ -22,6 +22,94 @@
 	)
 
 	--[[
+	+--------------------------------------------------------------------------------------------------------------------------+
+	| BUG: v2.7.3.0 - ITEMANIM.2DA's SEQUENCE column is parsed with sscanf("%c") instead of "%d"                               |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	| CGameSprite::UseItem() and CGameSprite::UseItemPoint() read ITEMANIM.2DA["SEQUENCE"] for the used item and pass the      |
+	| result to CMessageSetSequence::m_sequence (unsigned char). "%c" stores the cell's first character code, so a cell of "8" |
+	| plays sequence 56 instead of 8 (SEQ_SHOOT); modders had to store raw sequence bytes (e.g. 0x08) in the file instead.     |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Fix_Hook_ReadItemAnimSequence(sCell: const char*, sFormat: const char*, pSequence: byte*) -> int      |
+	|       -> A complete base-10 integer in [0, 255] is used as the sequence number                                           |
+	|       -> Anything else keeps the vanilla "%c" behavior, so existing raw-byte content still works                         |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	| Why EEex_ReplaceCall():                                                                                                  |
+	|   The hook function has the exact register signature of the replaced sscanf() call (rcx = cell text, rdx = format,       |
+	|   r8 = address of the 1-byte local, eax = ignored return value), so retargeting the 5-byte `call rel32` needs no         |
+	|   assembly, relocates no instructions, and keeps the engine's stack / volatile register expectations intact. Simply      |
+	|   switching the format string to "%d" is NOT an option: "%d" would write 4 bytes into the engine's 1-byte stack local.   |
+	+--------------------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_Utility_NewScope(function()
+
+		-- These labels are only shipped in v2.7.3.0's pattern database (pattern_dbs/v2.7.3.0.db, audited by
+		-- pattern/itemanim/audit.py). On other engine versions both are absent, and vanilla behavior is kept.
+		local sscanfCallLabels = {
+			"Hook-CGameSprite::UseItem()-ItemAnimSequenceSscanfCall",
+			"Hook-CGameSprite::UseItemPoint()-ItemAnimSequenceSscanfCall",
+		}
+
+		local sscanfCalls = {}
+		for _, label in ipairs(sscanfCallLabels) do
+			local address = EEex_TryLabel(label)
+			if address then
+				table.insert(sscanfCalls, address)
+			end
+		end
+
+		if #sscanfCalls == 0 then
+			return -- Engine version without these labels
+		end
+
+		if #sscanfCalls ~= #sscanfCallLabels then
+			-- Patching only one of the two sites would make item animations depend on how the item was targeted
+			EEex_Error("ITEMANIM.2DA fix: incomplete pattern database, expected both UseItem() and UseItemPoint() labels")
+		end
+
+		-- Validate every site before writing anything, so a mismatch never leaves a half-applied fix behind.
+		local expectedCallee = nil
+		for i, callAddress in ipairs(sscanfCalls) do
+
+			local label = sscanfCallLabels[i]
+
+			-- The site must still be the original `call rel32` (E8 xx xx xx xx)
+			if EEex_ReadU8(callAddress) ~= 0xE8 then
+				EEex_Error(string.format("ITEMANIM.2DA fix: #L(%s) is not an E8 call (0x%02X)", label, EEex_ReadU8(callAddress)))
+			end
+
+			-- Both sites must call the same function (sscanf). rel32 is relative to the end of the 5-byte call.
+			local callee = callAddress + 5 + EEex_Read32(callAddress + 1)
+			expectedCallee = expectedCallee or callee
+			if callee ~= expectedCallee then
+				EEex_Error(string.format("ITEMANIM.2DA fix: #L(%s) calls a different function than the other site", label))
+			end
+
+			-- The instruction right before the call must be `lea rdx, [rip+disp32]` (48 8D 15 disp32), i.e. the format
+			-- argument. RIP points to the next instruction, which is the call itself, so the literal is at callAddress + disp32.
+			local leaAddress = callAddress - 7
+			if EEex_ReadU8(leaAddress) ~= 0x48 or EEex_ReadU8(leaAddress + 1) ~= 0x8D or EEex_ReadU8(leaAddress + 2) ~= 0x15 then
+				EEex_Error(string.format("ITEMANIM.2DA fix: #L(%s) is not preceded by `lea rdx, [rip+disp32]`", label))
+			end
+
+			-- The format literal must be exactly "%c" (0x25 0x63 0x00): the C++ hook's legacy path relies on it
+			local formatAddress = callAddress + EEex_Read32(leaAddress + 3)
+			if EEex_ReadU8(formatAddress) ~= 0x25 or EEex_ReadU8(formatAddress + 1) ~= 0x63 or EEex_ReadU8(formatAddress + 2) ~= 0x00 then
+				EEex_Error(string.format("ITEMANIM.2DA fix: #L(%s) does not pass the \"%%c\" format", label))
+			end
+		end
+
+		-- Resolve the native hook up front (errors if the matching EEex.dll does not export it)
+		local hookAddress = EEex_Label("EEex::Fix_Hook_ReadItemAnimSequence")
+
+		for _, callAddress in ipairs(sscanfCalls) do
+			-- `call sscanf` -> `call EEex::Fix_Hook_ReadItemAnimSequence` (through a near jmp stub, since EEex.dll can be
+			-- further than rel32 away from the executable)
+			EEex_ReplaceCall(callAddress, hookAddress)
+		end
+	end)
+
+	--[[
 	+------------------------------------------------------------------------------------------------------------------------+
 	| BUG: v2.5+ - op33 param2 == 3 immediately subtracts from SAVEVSWANDS instead of SAVEVSDEATH in the current effect pass |
 	+------------------------------------------------------------------------------------------------------------------------+
