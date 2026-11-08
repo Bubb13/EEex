@@ -38,3 +38,31 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Signed XP losses. Derived minima are exact instruction-aligned windows in
+; the containing PDB contribution, unique in all three v2.7.3.0 executables.
+; Stable internal branch bytes may identify a site; no branch is relocated.
+
+[Hook-CGameEffectXP::ApplyEffect()-PermanentAdd]
+Pattern=418B481C
+Operations=ADD 132
+
+[Hook-CGameSprite::FeedBack()-ExperienceFormatCall]
+Pattern=8D4B42
+Operations=ADD 10609
+
+[Hook-CGameSprite::FeedBack()-ExperienceFetchCall]
+Pattern=8D4B42
+Operations=ADD 10681
+
+[Hook-CInfGame::AddPartyXP()-SignedSplit]
+Pattern=74478BC8
+Operations=ADD 102
+
+[Hook-CInfGame::AddPartyXP()-SignedRemainder]
+Pattern=EBDA33D2
+Operations=ADD -160
+
+[Hook-CInfGame::FeedBack()-ExperienceFormatCall]
+Pattern=41B03A
+Operations=ADD -1617
