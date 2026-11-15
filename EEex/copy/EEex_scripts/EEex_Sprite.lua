@@ -679,6 +679,106 @@ function EEex_Sprite_GetCastTimerPercentage(sprite)
 end
 CGameSprite.getCastTimerPercentage = EEex_Sprite_GetCastTimerPercentage
 
+-- ACTION.IDS values that cast a spell over its casting time: Spell(), SpellPoint(), ForceSpell(),
+-- ForceSpellPoint(), SpellNoDec(), SpellPointNoDec(), ForceSpellRange(), ForceSpellPointRange(),
+-- (and their RES variants)
+EEex_Sprite_Private_SpellActions = {
+	[31]  = true,
+	[95]  = true,
+	[113] = true,
+	[114] = true,
+	[191] = true,
+	[192] = true,
+	[318] = true,
+	[319] = true,
+}
+
+-- Whether the sprite has started casting a spell, (the chant), and hasn't released it yet
+function EEex_Sprite_IsCastingSpell(sprite)
+	if not sprite then return false end
+	return sprite.m_bStartedCasting ~= 0 and EEex_Sprite_Private_SpellActions[sprite.m_curAction.m_actionID] == true
+end
+CGameSprite.isCastingSpell = EEex_Sprite_IsCastingSpell
+
+-- The casting time, (in tenths of a round), of the spell the sprite is casting, after the sprite's
+-- casting speed modifiers have been applied. Only meaningful while sprite:isCastingSpell() is true.
+--
+-- NOTE: The engine stores this in the same field as the attack round's speed factor.
+function EEex_Sprite_GetCastingTime(sprite)
+	if not sprite then return 0 end
+	return math.max(0, sprite.m_speedFactor)
+end
+CGameSprite.getCastingTime = EEex_Sprite_GetCastingTime
+
+-- [0-99], the cast timer value at which the spell the sprite is casting is released.
+-- Returns nil if the sprite isn't casting a spell.
+function EEex_Sprite_GetCastReleaseTimer(sprite)
+
+	if not sprite then return nil end
+
+	if sprite:isCastingSpell() then
+		return math.min(sprite:getCastingTime() * 10, 99)
+	end
+
+	if not EEex_Sprite_Private_SpellActions[sprite.m_curAction.m_actionID] then return nil end
+
+	-- The engine doesn't flag every cast, (a spell cast at a point leaves m_bStartedCasting and m_speedFactor at 0),
+	-- so fall back to the casting time of the spell in the sprite's action. This is cosmetic, never let it raise.
+	local ok, castingTime = pcall(EEex_Sprite_Private_GetActionCastingTime, sprite)
+	if not ok or castingTime == nil then return nil end
+
+	local releaseTimer = math.min(castingTime * 10, 99)
+
+	-- The action outlasts the release, (and the cooldown of an earlier spell can still be running before the cast starts)
+	local castTimer = sprite:getCastTimer()
+	if castTimer < 0 or castTimer > releaseTimer then return nil end
+
+	return releaseTimer
+end
+
+-- SPELL.IDS prefixes, [spell id / 1000]
+EEex_Sprite_Private_SpellIDPrefixes = { [1] = "SPPR", [2] = "SPWI", [3] = "SPIN", [4] = "SPCL" }
+
+-- Reading a spell's casting time demands its resource, so it is kept for as long as the sprite casts the same spell
+EEex_Sprite_Private_ActionCastingTimeCache = {} -- [sprite id] = { resref, speedFactor }
+
+-- The casting time, (in tenths of a round), of the spell in the sprite's current spell action, after the sprite's
+-- casting speed modifiers have been applied. Returns nil if the spell can't be determined.
+function EEex_Sprite_Private_GetActionCastingTime(sprite)
+
+	local curAction = sprite.m_curAction
+
+	local resref = curAction.m_string1.m_pchData:get()
+	if resref == nil or resref == "" then
+		local spellID = curAction.m_specificID
+		local prefix = EEex_Sprite_Private_SpellIDPrefixes[math.floor(spellID / 1000)]
+		if prefix == nil then return nil end
+		resref = string.format("%s%03d", prefix, spellID % 1000)
+	end
+	resref = resref:upper()
+
+	local id = sprite.m_id
+	local cache = EEex_Sprite_Private_ActionCastingTimeCache[id]
+
+	if cache == nil or cache.resref ~= resref then
+
+		cache = { ["resref"] = resref }
+		EEex_Sprite_Private_ActionCastingTimeCache[id] = cache
+
+		local spellHeader = EEex_Resource_Demand(resref, "SPL")
+		if spellHeader ~= nil then
+			local ability = spellHeader:getAbilityForLevel(sprite:getCasterLevelForSpell(resref, true))
+			if ability ~= nil then
+				cache.speedFactor = ability.speedFactor
+			end
+		end
+	end
+
+	if cache.speedFactor == nil then return nil end
+	return math.max(0, cache.speedFactor - sprite:getActiveStats().m_nMentalSpeed)
+end
+CGameSprite.getCastReleaseTimer = EEex_Sprite_GetCastReleaseTimer
+
 -- ACTION.IDS values that run the engine's attack round: Attack(), GroupAttack(),
 -- AttackNoSound(), AttackOneRound(), AttackReevaluate()
 EEex_Sprite_Private_AttackActions = {

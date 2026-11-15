@@ -246,6 +246,14 @@ Enables a cyan bar next to party member portraits.
 This indicator displays the cooldown for using spells / items.
 ]]
 
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowCastMarker"] = "Show Cast Marker"
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowCastMarker_Description"] = [[
+Adds a white tick to the cast timer at the point where the spell being cast is released.
+
+The tick is only shown while a party member is casting a spell.
+]]
+
 uiStrings["EEex_Options_TRANSLATION_Timer_ShowContingencyTimer"] = "Show Contingency Timer"
 
 uiStrings["EEex_Options_TRANSLATION_Timer_ShowContingencyTimer_Description"] = [[
