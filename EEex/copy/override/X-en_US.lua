@@ -264,6 +264,22 @@ Enables a red bar next to party member portraits.
 This indicator displays the interval of modal actions: find traps, turn undead, etc.
 ]]
 
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackTimer"] = "Show Attack Timer"
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackTimer_Description"] = [[
+Enables an orange bar next to party member portraits.
+
+This indicator displays how far a party member is through their attack round.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackMarkers"] = "Show Attack Markers"
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackMarkers_Description"] = [[
+Adds white ticks to the attack timer at the points in the round where attack rolls are made.
+
+The ticks move with the character's weapon speed, which the engine decides at the start of every round. With a half attack, (3/2, 5/2, etc.), the last tick is only shown in the rounds where that attack is made.
+]]
+
 ---------------
 -- Uncap FPS --
 ---------------

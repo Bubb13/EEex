@@ -679,6 +679,150 @@ function EEex_Sprite_GetCastTimerPercentage(sprite)
 end
 CGameSprite.getCastTimerPercentage = EEex_Sprite_GetCastTimerPercentage
 
+-- ACTION.IDS values that run the engine's attack round: Attack(), GroupAttack(),
+-- AttackNoSound(), AttackOneRound(), AttackReevaluate()
+EEex_Sprite_Private_AttackActions = {
+	[3]   = true,
+	[94]  = true,
+	[98]  = true,
+	[105] = true,
+	[134] = true,
+}
+
+function EEex_Sprite_IsAttacking(sprite)
+	if not sprite then return false end
+	return EEex_Sprite_Private_AttackActions[sprite.m_curAction.m_actionID] == true
+end
+CGameSprite.isAttacking = EEex_Sprite_IsAttacking
+
+-- [0-100], the sprite's position in its current attack round
+function EEex_Sprite_GetAttackTimer(sprite)
+	if not sprite then return 0 end
+	return sprite.m_attackFrame
+end
+CGameSprite.getAttackTimer = EEex_Sprite_GetAttackTimer
+
+-- [0-1]
+function EEex_Sprite_GetAttackTimerPercentage(sprite)
+	if not sprite then return 0 end
+	return math.max(0, math.min(sprite:getAttackTimer() / 100, 1))
+end
+CGameSprite.getAttackTimerPercentage = EEex_Sprite_GetAttackTimerPercentage
+
+-- [0-10], the row of the RNDBASE*-like .BMP the engine reads for the sprite
+function EEex_Sprite_GetAttackSpeedFactor(sprite)
+	if not sprite then return 0 end
+	return math.max(0, math.min(sprite.m_speedFactor, 10))
+end
+CGameSprite.getAttackSpeedFactor = EEex_Sprite_GetAttackSpeedFactor
+
+-- [1-5], which RNDBASE*-like .BMP (combat_round_<n-1>) the sprite's attacks-per-round stat selects.
+-- Stat values 6-10 are the half-attack values (1/2, 3/2, 5/2, 7/2, 9/2), which use the next table up.
+--
+-- NOTE: The stat already accounts for off-hand weapons and haste. (Haste runs the attack round at double
+--       speed and adjusts the stat, e.g. 2 attacks => 3/2 attacks per half-length round).
+function EEex_Sprite_GetCombatRoundTableIndex(sprite)
+	if not sprite then return 1 end
+	local numAttacks = sprite:getActiveStats().m_nNumberOfAttacks
+	if numAttacks > 5 then numAttacks = numAttacks - 5 end
+	return math.max(1, math.min(numAttacks, 5))
+end
+CGameSprite.getCombatRoundTableIndex = EEex_Sprite_GetCombatRoundTableIndex
+
+-- Returns the palette index the engine reads from the sprite's RNDBASE*-like .BMP for the given
+-- table [1-5], speed factor [0-10], and attack frame [0-100].
+--
+-- NOTE: This asks the animation directly, so op342 (param2=5) combat round overrides are not seen.
+function EEex_Sprite_GetAttackFrameType(sprite, tableIndex, speedFactor, frame)
+	if not sprite then return 0 end
+	local animation = sprite.m_animation.m_animation
+	if not animation then return 0 end
+	return animation:virtual_GetAttackFrameType(tableIndex, speedFactor, frame)
+end
+CGameSprite.getAttackFrameType = EEex_Sprite_GetAttackFrameType
+
+-- The palette index that marks an attack roll in the RNDBASE*.BMP files. A row of these files reads, (in hex):
+--
+--     ...0000A777779888888880000...
+--
+--   A-E => The start of attack #1-#5's swing
+--   7   => The swing is in progress
+--   9   => The attack roll is made
+--   8/0 => Nothing is happening
+--   6   => The start of a cosmetic swing, (no attack roll)
+--
+-- Change this if a mod's combat round tables use a different index for the attack roll.
+EEex_Sprite_AttackRollFrameType = 9
+EEex_Sprite_AttackSwingFrameType = 7
+
+function EEex_Sprite_GetAttackRollFrameType(sprite, speedFactor)
+	return EEex_Sprite_AttackRollFrameType
+end
+CGameSprite.getAttackRollFrameType = EEex_Sprite_GetAttackRollFrameType
+
+-- Returns an array of the attack frames [0-99] on which the sprite makes an attack roll during a round.
+-- tableIndex and speedFactor default to the sprite's current values.
+function EEex_Sprite_GetAttackRollFrames(sprite, tableIndex, speedFactor)
+
+	local frames = {}
+	if not sprite then return frames end
+
+	tableIndex = tableIndex or sprite:getCombatRoundTableIndex()
+	speedFactor = speedFactor or sprite:getAttackSpeedFactor()
+
+	local rollType = sprite:getAttackRollFrameType(speedFactor)
+	if not rollType then return frames end
+
+	for frame = 0, 99 do
+		if sprite:getAttackFrameType(tableIndex, speedFactor, frame) == rollType then
+			table.insert(frames, frame)
+		end
+	end
+
+	return frames
+end
+CGameSprite.getAttackRollFrames = EEex_Sprite_GetAttackRollFrames
+
+-- Returns the attack frame on which the swing that leads to the attack roll at rollFrame starts,
+-- (the "A"-"E" pixel in front of the run of "swing in progress" pixels).
+function EEex_Sprite_GetAttackSwingStartFrame(sprite, rollFrame, tableIndex, speedFactor)
+
+	if not sprite then return rollFrame end
+
+	tableIndex = tableIndex or sprite:getCombatRoundTableIndex()
+	speedFactor = speedFactor or sprite:getAttackSpeedFactor()
+
+	local frame = rollFrame
+	while frame > 0 and sprite:getAttackFrameType(tableIndex, speedFactor, frame - 1) == EEex_Sprite_AttackSwingFrameType do
+		frame = frame - 1
+	end
+
+	return math.max(0, frame - 1)
+end
+CGameSprite.getAttackSwingStartFrame = EEex_Sprite_GetAttackSwingStartFrame
+
+-- Half attacks, (1/2, 3/2, 5/2, etc.): The last attack in the round's table is only real every other round;
+-- in the other rounds the swing is cosmetic. The engine increments m_nHalfSwingCounter when that swing starts,
+-- and makes the attack roll if the counter is now odd.
+EEex_Sprite_HalfAttackRealParity = 1
+
+function EEex_Sprite_HasHalfAttack(sprite)
+	if not sprite then return false end
+	return sprite:getActiveStats().m_nNumberOfAttacks > 5
+end
+CGameSprite.hasHalfAttack = EEex_Sprite_HasHalfAttack
+
+-- Returns true if the sprite's half attack is / was real in the current round.
+-- halfSwingStartFrame is the frame on which the half attack's swing starts, see EEex_Sprite_GetAttackSwingStartFrame().
+function EEex_Sprite_IsHalfAttackRealThisRound(sprite, halfSwingStartFrame)
+	if not sprite then return false end
+	local counter = sprite.m_nHalfSwingCounter
+	-- The counter hasn't been incremented yet this round
+	if sprite.m_attackFrame < halfSwingStartFrame then counter = counter + 1 end
+	return counter % 2 == EEex_Sprite_HalfAttackRealParity
+end
+CGameSprite.isHalfAttackRealThisRound = EEex_Sprite_IsHalfAttackRealThisRound
+
 function EEex_Sprite_GetCasterLevelForSpell(sprite, spellResRef, includeWildMage)
 	return EEex_RunWithStackManager({
 		{ ["name"] = "resref", ["struct"] = "CResRef", ["constructor"] = { ["args"] = { spellResRef } } },

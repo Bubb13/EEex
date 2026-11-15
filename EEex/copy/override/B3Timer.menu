@@ -58,4 +58,27 @@ menu
 		}
 		name "B3Timer_Menu_TEMPLATE_TimerCast"
 	}
+
+	template
+	{
+		label
+		{
+			enabled "B3Timer_Private_Menu_TEMPLATE_TimerAttack_Enabled()"
+			bam "B3TATTCK"
+			scaleToClip
+			frame lua "B3Timer_Private_Menu_TEMPLATE_TimerAttack_Frame()"
+		}
+		name "B3Timer_Menu_TEMPLATE_TimerAttack"
+	}
+
+	template
+	{
+		label
+		{
+			enabled "B3Timer_Private_Menu_TEMPLATE_AttackMarker_Enabled()"
+			bam "B3TAMARK"
+			scaleToClip
+		}
+		name "B3Timer_Menu_TEMPLATE_AttackMarker"
+	}
 }
