@@ -246,6 +246,14 @@ Enables a cyan bar next to party member portraits.
 This indicator displays the cooldown for using spells / items.
 ]]
 
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowCastMarker"] = "Show Cast Marker"
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowCastMarker_Description"] = [[
+Adds a white tick to the cast timer at the point where the spell being cast is released.
+
+The tick is only shown while a party member is casting a spell.
+]]
+
 uiStrings["EEex_Options_TRANSLATION_Timer_ShowContingencyTimer"] = "Show Contingency Timer"
 
 uiStrings["EEex_Options_TRANSLATION_Timer_ShowContingencyTimer_Description"] = [[
@@ -262,6 +270,22 @@ uiStrings["EEex_Options_TRANSLATION_Timer_ShowModalTimer_Description"] = [[
 Enables a red bar next to party member portraits.
 
 This indicator displays the interval of modal actions: find traps, turn undead, etc.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackTimer"] = "Show Attack Timer"
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackTimer_Description"] = [[
+Enables an orange bar next to party member portraits.
+
+This indicator displays how far a party member is through their attack round.
+]]
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackMarkers"] = "Show Attack Markers"
+
+uiStrings["EEex_Options_TRANSLATION_Timer_ShowAttackMarkers_Description"] = [[
+Adds white ticks to the attack timer at the points in the round where attack rolls are made.
+
+The ticks move with the character's weapon speed, which the engine decides at the start of every round. With a half attack, (3/2, 5/2, etc.), the last tick is only shown in the rounds where that attack is made.
 ]]
 
 ---------------

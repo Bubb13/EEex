@@ -31,6 +31,27 @@ B3Timer_Private_ShowModalTimer = EEex_Options_Register("B3Timer_ShowModalTimer",
 	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Modal" }),
 }))
 
+B3Timer_Private_ShowCastMarker = EEex_Options_Register("B3Timer_ShowCastMarker", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Cast Marker" }),
+}))
+
+B3Timer_Private_ShowAttackTimer = EEex_Options_Register("B3Timer_ShowAttackTimer", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Attack" }),
+}))
+
+B3Timer_Private_ShowAttackMarkers = EEex_Options_Register("B3Timer_ShowAttackMarkers", EEex_Options_Option.new({
+	["default"]  = 1,
+	["type"]     = EEex_Options_ToggleType.new(),
+	["accessor"] = EEex_Options_ClampedAccessor.new({ ["min"] = 0, ["max"] = 1 }),
+	["storage"]  = EEex_Options_NumberLuaStorage.new({ ["section"] = "EEex", ["key"] = "Timer Module: Show Attack Markers" }),
+}))
+
 EEex_Options_AddTab("EEex_Options_TRANSLATION_Timer_TabTitle", function() return {
 	{
 		EEex_Options_DisplayEntry.new({
@@ -46,6 +67,12 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_Timer_TabTitle", function() return
 			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3Timer_ShowCastMarker",
+			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowCastMarker",
+			["description"] = "EEex_Options_TRANSLATION_Timer_ShowCastMarker_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
 			["optionID"]    = "B3Timer_ShowContingencyTimer",
 			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowContingencyTimer",
 			["description"] = "EEex_Options_TRANSLATION_Timer_ShowContingencyTimer_Description",
@@ -55,6 +82,18 @@ EEex_Options_AddTab("EEex_Options_TRANSLATION_Timer_TabTitle", function() return
 			["optionID"]    = "B3Timer_ShowModalTimer",
 			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowModalTimer",
 			["description"] = "EEex_Options_TRANSLATION_Timer_ShowModalTimer_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3Timer_ShowAttackTimer",
+			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowAttackTimer",
+			["description"] = "EEex_Options_TRANSLATION_Timer_ShowAttackTimer_Description",
+			["widget"]      = EEex_Options_ToggleWidget.new(),
+		}),
+		EEex_Options_DisplayEntry.new({
+			["optionID"]    = "B3Timer_ShowAttackMarkers",
+			["label"]       = "EEex_Options_TRANSLATION_Timer_ShowAttackMarkers",
+			["description"] = "EEex_Options_TRANSLATION_Timer_ShowAttackMarkers_Description",
 			["widget"]      = EEex_Options_ToggleWidget.new(),
 		}),
 	},
@@ -105,6 +144,7 @@ function B3Timer_Private_CreateInstanceForPortrait(menuName, templateName, x, y,
 	local portraitEntry = EEex_Utility_GetOrCreate(B3Timer_Private_TemplateInstancesByPortrait, instanceEntry.portraitIndex, {})
 	local instanceEntries = EEex_Utility_GetOrCreate(portraitEntry, templateName, {})
 	table.insert(instanceEntries, instanceEntry)
+	return instanceEntry
 end
 
 ---------------
@@ -123,7 +163,20 @@ EEex_Menu_AddMainFileLoadedListener(function()
 			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_Background",       nil, nil, 10, nil, item)
 			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerModal",       nil, nil, 2,  nil, item)
 			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerContingency", nil, nil, 2,  nil, item)
-			B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerCast",        nil, nil, 2,  nil, item)
+
+			-- Markers are injected after their bar so that they render on top of it
+			local castEntry = B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerCast", nil, nil, 2, nil, item)
+			castEntry.marker = B3Timer_Private_CreateInstance(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_CastMarker", nil, nil, 2, B3Timer_Private_MarkerHeight)
+			castEntry.marker.enabled = false
+
+			local attackEntry = B3Timer_Private_CreateInstanceForPortrait(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_TimerAttack", nil, nil, 2, nil, item)
+			attackEntry.markers = {}
+			attackEntry.rollFramesCache = {}
+			for i = 1, B3Timer_Private_MaxAttackMarkers do
+				local markerEntry = B3Timer_Private_CreateInstance(B3Timer_Private_InjectingMenu, "B3Timer_Menu_TEMPLATE_AttackMarker", nil, nil, 2, B3Timer_Private_MarkerHeight)
+				markerEntry.enabled = false
+				attackEntry.markers[i] = markerEntry
+			end
 		end
 		item = item.next
 	end
@@ -134,6 +187,123 @@ function B3Timer_Private_PushMenuListener()
 end
 EEex_GameState_AddInitializedListener(B3Timer_Private_PushMenuListener)
 EEex_Menu_AddAfterMainFileReloadedListener(B3Timer_Private_PushMenuListener)
+
+-------------
+-- Markers --
+-------------
+
+B3Timer_Private_MaxAttackMarkers = 5
+B3Timer_Private_MarkerHeight = 2
+B3Timer_Private_AttackRollFramesLifetime = 2000 -- Milliseconds
+
+-- Moves a marker onto its bar, at the point the bar reaches when it is value / maxValue full
+function B3Timer_Private_PlaceMarker(templateName, markerEntry, barEntry, value, maxValue)
+
+	local portraitArea = barEntry.portraitItem.area
+	local barX = barEntry.barX
+	local barY = portraitArea.y
+	local barW = barEntry.barW or 2
+	local barH = portraitArea.h
+	local markerH = B3Timer_Private_MarkerHeight
+
+	-- The bar fills from the bottom of the portrait to the top
+	local y = barY + barH - math.floor(barH * value / maxValue + 0.5) - math.floor(markerH / 2)
+	y = math.max(barY, math.min(y, barY + barH - markerH))
+
+	-- EEex_Menu_SetTemplateArea() walks the whole menu, only call it when the marker has to move
+	if markerEntry.x ~= barX or markerEntry.y ~= y or markerEntry.w ~= barW then
+		markerEntry.x = barX
+		markerEntry.y = y
+		markerEntry.w = barW
+		EEex_Menu_SetTemplateArea(B3Timer_Private_InjectingMenu, templateName, markerEntry.id, barX, y, barW, markerH)
+	end
+
+	markerEntry.enabled = true
+end
+
+-- Shows where on the cast bar the spell that is being cast will be released
+function B3Timer_Private_UpdateCastMarker(sprite, castEntry)
+
+	local releaseTimer = nil
+	if castEntry.enabled and B3Timer_Private_ShowCastMarker:get() == 1 then
+		releaseTimer = sprite:getCastReleaseTimer()
+	end
+
+	if releaseTimer then
+		-- The cast bar is (cast timer + 1) / 100 full, see EEex_Sprite_GetCastTimerPercentage()
+		B3Timer_Private_PlaceMarker("B3Timer_Menu_TEMPLATE_CastMarker", castEntry.marker, castEntry, releaseTimer + 1, 100)
+	else
+		castEntry.marker.enabled = false
+	end
+end
+
+-- The attack roll frames only change when the sprite's attacks per round / weapon speed / animation changes.
+-- Reading them takes a hundred engine calls, so the result is kept per portrait and refreshed periodically.
+function B3Timer_Private_GetAttackRollFrames(sprite, cache, curTick)
+
+	local id = sprite.m_id
+	local tableIndex = sprite:getCombatRoundTableIndex()
+	local speedFactor = sprite:getAttackSpeedFactor()
+
+	if cache.frames == nil
+		or cache.id ~= id
+		or cache.tableIndex ~= tableIndex
+		or cache.speedFactor ~= speedFactor
+		or curTick >= cache.expireTick
+	then
+		cache.id = id
+		cache.tableIndex = tableIndex
+		cache.speedFactor = speedFactor
+		cache.expireTick = curTick + B3Timer_Private_AttackRollFramesLifetime
+		cache.frames = sprite:getAttackRollFrames(tableIndex, speedFactor)
+
+		-- With a half attack, (1/2, 3/2, etc.), the last attack roll in the table is only made every other round
+		local lastFrame = cache.frames[#cache.frames]
+		if lastFrame and sprite:hasHalfAttack() then
+			cache.halfIndex = #cache.frames
+			cache.halfSwingStartFrame = sprite:getAttackSwingStartFrame(lastFrame, tableIndex, speedFactor)
+		else
+			cache.halfIndex = nil
+			cache.halfSwingStartFrame = nil
+		end
+	end
+
+	return cache.frames
+end
+
+function B3Timer_Private_DisableAttackMarkers(attackEntry)
+	for _, markerEntry in ipairs(attackEntry.markers) do
+		markerEntry.enabled = false
+	end
+end
+
+function B3Timer_Private_UpdateAttackMarkers(sprite, attackEntry, curTick)
+
+	if not attackEntry.enabled or B3Timer_Private_ShowAttackMarkers:get() ~= 1 then
+		B3Timer_Private_DisableAttackMarkers(attackEntry)
+		return
+	end
+
+	local cache = attackEntry.rollFramesCache
+	local frames = B3Timer_Private_GetAttackRollFrames(sprite, cache, curTick)
+
+	-- Don't show the half attack's marker during the rounds where its swing is cosmetic
+	local hiddenIndex = nil
+	if cache.halfIndex and not sprite:isHalfAttackRealThisRound(cache.halfSwingStartFrame) then
+		hiddenIndex = cache.halfIndex
+	end
+
+	for i, markerEntry in ipairs(attackEntry.markers) do
+
+		local frame = frames[i]
+		if frame and i ~= hiddenIndex then
+			-- The attack bar is empty at frame 0 and full at frame 100
+			B3Timer_Private_PlaceMarker("B3Timer_Menu_TEMPLATE_AttackMarker", markerEntry, attackEntry, frame, 100)
+		else
+			markerEntry.enabled = false
+		end
+	end
+end
 
 --------------------
 -- Menu Functions --
@@ -192,6 +362,8 @@ function B3Timer_Private_Menu_Tick()
 						end
 
 						instanceEntry.enabled = true
+						instanceEntry.barX = curX
+						instanceEntry.barW = rgWidth
 						portraitInstanceCurX[i] = curX - rgDif
 						EEex_Menu_SetTemplateArea(B3Timer_Private_InjectingMenu, templateName, instanceEntry.id, curX, portraitArea.y, rgWidth, portraitArea.h)
 					else
@@ -203,6 +375,15 @@ function B3Timer_Private_Menu_Tick()
 			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerCast",        B3Timer_Private_ShowCastTimer:get()        == 1 and sprite:getCastTimerPercentage() > 0                     )
 			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerContingency", B3Timer_Private_ShowContingencyTimer:get() == 1 and sprite:getActiveStats().m_cContingencyList.m_nCount > 0 )
 			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerModal",       B3Timer_Private_ShowModalTimer:get()       == 1 and sprite:getModalState() ~= 0                             )
+			updateTimerBar( "B3Timer_Menu_TEMPLATE_TimerAttack",      B3Timer_Private_ShowAttackTimer:get()      == 1 and sprite:isAttacking()                                    )
+
+			for _, castEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_TimerCast"]) do
+				B3Timer_Private_UpdateCastMarker(sprite, castEntry)
+			end
+
+			for _, attackEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_TimerAttack"]) do
+				B3Timer_Private_UpdateAttackMarkers(sprite, attackEntry, curTick)
+			end
 
 			for i, backgroundEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_Background"]) do
 				local startX = portraitInstanceStartX[i]
@@ -227,12 +408,19 @@ function B3Timer_Private_Menu_Tick()
 				"B3Timer_Menu_TEMPLATE_Background",
 				"B3Timer_Menu_TEMPLATE_TimerModal",
 				"B3Timer_Menu_TEMPLATE_TimerContingency",
-				"B3Timer_Menu_TEMPLATE_TimerCast"
+				"B3Timer_Menu_TEMPLATE_TimerCast",
+				"B3Timer_Menu_TEMPLATE_TimerAttack"
 			})
 			do
 				for _, instanceEntry in ipairs(portraitEntry[templateName]) do
 					instanceEntry.enabled = false
 				end
+			end
+			for _, castEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_TimerCast"]) do
+				castEntry.marker.enabled = false
+			end
+			for _, attackEntry in ipairs(portraitEntry["B3Timer_Menu_TEMPLATE_TimerAttack"]) do
+				B3Timer_Private_DisableAttackMarkers(attackEntry)
 			end
 		end
 	end
@@ -267,4 +455,21 @@ end
 function B3Timer_Private_Menu_TEMPLATE_TimerCast_Frame()
 	local portraitIndex = B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerCast"].instanceData[instanceId].portraitIndex
 	return math.floor(90 * EEex_Sprite_GetCastTimerPercentage(EEex_Sprite_GetInPortrait(portraitIndex)) + 0.5)
+end
+
+function B3Timer_Private_Menu_TEMPLATE_CastMarker_Enabled()
+	return B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_CastMarker"].instanceData[instanceId].enabled
+end
+
+function B3Timer_Private_Menu_TEMPLATE_TimerAttack_Enabled()
+	return B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerAttack"].instanceData[instanceId].enabled
+end
+
+function B3Timer_Private_Menu_TEMPLATE_TimerAttack_Frame()
+	local portraitIndex = B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_TimerAttack"].instanceData[instanceId].portraitIndex
+	return math.floor(90 * EEex_Sprite_GetAttackTimerPercentage(EEex_Sprite_GetInPortrait(portraitIndex)) + 0.5)
+end
+
+function B3Timer_Private_Menu_TEMPLATE_AttackMarker_Enabled()
+	return B3Timer_Private_TemplateInstances[B3Timer_Private_InjectingMenu]["B3Timer_Menu_TEMPLATE_AttackMarker"].instanceData[instanceId].enabled
 end
