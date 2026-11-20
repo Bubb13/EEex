@@ -1,0 +1,29 @@
+
+//////////////
+// EEex.tp2 //
+//////////////
+
+// Component names
+@0 = ~Menu Rapido~
+@1 = ~EEex~
+@2 = ~Abilita modulo menu effetti: tieni premuto Maiusc sinistro e passa il mouse su una creatura per vedere i buff/debuff che la influenzano~
+@3 = ~Abilita modulo contenitori vuoti: evidenzia in grigio i contenitori vuoti anziché in ciano~
+@4 = ~Abilita modulo tasti rapidi: modifica override/B3Hotkey.lua per creare tasti rapidi avanzati per lanciare gli incantesimi~
+@5 = ~Abilita modulo ridimensionamento: fattore di scala dell'interfaccia personalizzabile~
+@6 = ~Abilita modulo avanzamento tempo: avanza di 1 tick di gioco alla pressione di un tasto~
+@7 = ~Abilita modulo timer: indicatori visivi per azioni modali, contingenze e tempi di recupero di incantesimi/oggetti~
+@8 = ~Sperimentale - Usa LuaJIT: può ridurre i rallentamenti | ATTENZIONE: può causare arresti anomali se combinato con alcune mod~
+
+// Error messages
+@1000 = ~Gioco non supportato.~
+@1001 = ~Questo componente richiede che sia installato il componente di base.~
+@1002 = ~Questo componente richiede che sia installato il componente principale.~
+
+// `GROUP`s
+@2000 = ~Opzionale~
+@2001 = ~Sperimentale | ATTENZIONE: installare a patto di comprenderne i rischi~
+
+// QUICK_MENU selections
+@3000 = ~Minimale     | Correzioni del motore di gioco e funzionalità di base richieste da altre mod.~
+@3001 = ~Completa     | "Minimale" + tutti i moduli opzionali abilitati per impostazione predefinita. I moduli possono essere disabilitati all'interno del gioco.~
+@3002 = ~Sperimentale | "Completa" + tutti i componenti sperimentali. ATTENZIONE: installare a patto di comprenderne i rischi.~
