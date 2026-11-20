@@ -641,6 +641,50 @@
 		EEex_HookIntegrityWatchdogRegister.R11
 	})
 
+	local adjustDisplayedDamage = function(label)
+		EEex_HookBeforeRestoreWithLabels(EEex_Label(label), 0, 7, 7, {
+			{"hook_integrity_watchdog_ignore_registers", {
+				EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+				EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+				EEex_HookIntegrityWatchdogRegister.R11
+			}}},
+			{[[
+				mov r9d, dword ptr ss:[rsp+0xF8] ; saved hand argument
+				#MAKE_SHADOW_SPACE
+				mov rcx, rdi                      ; pSprite
+				mov rdx, r13                      ; pItem
+				mov r8d, eax                      ; displayed damage
+				call #L(EEex::Sprite_Hook_AdjustDisplayedDamage)
+				#DESTROY_SHADOW_SPACE
+			]]}
+		)
+	end
+
+	adjustDisplayedDamage("Hook-CGameSprite::GetMaxDamage()-AdjustDisplayedDamage")
+	adjustDisplayedDamage("Hook-CGameSprite::GetMinDamage()-AdjustDisplayedDamage")
+
+	EEex_HookBeforeCallWithLabels(EEex_Label("Hook-CGameSprite::Damage()-AdjustRollHandBonus"), {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE(24)
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)], rcx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)], rdx
+			mov qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)], r9
+			mov edx, r8d ; handBonus
+			mov rcx, rdi ; pSprite
+			call #L(EEex::Sprite_Hook_AdjustDamageRollHandBonus)
+			mov r8d, eax
+			mov r9, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-24)]
+			mov rdx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-16)]
+			mov rcx, qword ptr ss:[rsp+#SHADOW_SPACE_BOTTOM(-8)]
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
 	--[[
 	+---------------------------------------------------------------------------------------------------------------------------------+
 	| Implement X-CLSERG.2DA - Ignore the -8 thac0 penalty characters incur when meleeing with a ranged weapon for specific           |
@@ -762,6 +806,47 @@
 	|           -> true  - Block base weapon damage and on-hit effects                                                                                                                     |
 	+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 	--]]
+
+	--[[
+	+-------------------------------------------------------------------------------------------------------------+
+	| Implement opcode #342 special BIT0 repeated-offhand THAC0 tagging                                           |
+	+-------------------------------------------------------------------------------------------------------------+
+	|   [EEex.dll] EEex::Sprite_Hook_ApplyOp342OffhandFrame(pSprite: CGameSprite*)                                |
+	|       Promotes the tagged repeated offhand frame into a real offhand damage frame.                          |
+	|   [EEex.dll] EEex::Sprite_Hook_GetOp342OffhandTHAC0(pSprite: CGameSprite*, thac0: int) -> int               |
+	|       Applies the queued opcode #342 THAC0 delta only to the tagged repeated offhand attack roll.           |
+	+-------------------------------------------------------------------------------------------------------------+
+	--]]
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::Swing()-Op342OffhandFrame"), 0, 5, 5, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE
+			mov rcx, rbx       ; pSprite
+			call #L(EEex::Sprite_Hook_ApplyOp342OffhandFrame)
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
+
+	EEex_HookBeforeRestoreWithLabels(EEex_Label("Hook-CGameSprite::Hit()-FinalTHAC0Compare"), 0, 5, 5, {
+		{"hook_integrity_watchdog_ignore_registers", {
+			EEex_HookIntegrityWatchdogRegister.RAX, EEex_HookIntegrityWatchdogRegister.RCX, EEex_HookIntegrityWatchdogRegister.RDX,
+			EEex_HookIntegrityWatchdogRegister.R8, EEex_HookIntegrityWatchdogRegister.R9, EEex_HookIntegrityWatchdogRegister.R10,
+			EEex_HookIntegrityWatchdogRegister.R11
+		}}},
+		{[[
+			#MAKE_SHADOW_SPACE
+			mov rcx, rbx       ; pSprite
+			movsx edx, r15w    ; final THAC0 accumulator
+			call #L(EEex::Sprite_Hook_GetOp342OffhandTHAC0)
+			mov r15w, ax
+			#DESTROY_SHADOW_SPACE
+		]]}
+	)
 
 	--[[
 	+-------------------------------------------------------------------------------------------------------------+
