@@ -38,3 +38,28 @@ Operations=ADD 17
 [Hook-drawItem()-FixForcedScrollbarDivideByZero2]
 Pattern=8B5DDC488D55E0
 Operations=ADD 10
+
+; Opcode #74 (Blindness) - every consequence tied to STATE_BLIND, softcoded values (EEex_Opcode_Patch.lua).
+
+[Hook-CGameEffectBlindness::ApplyEffect()-FirstInstruction]
+Pattern=8082AA05000004
+Operations=ADD -47
+
+[Hook-CGameEffectBlindness::OnRemove()-FirstInstruction]
+Pattern=488BCABA08000000
+
+[Hook-CGameSprite::CheckStatsChange()-BlindVisualRange]
+Pattern=898B00130000
+Operations=ADD -5
+
+[Hook-CGameSprite::GetStatBreakdown()-AfterTimedEffectLoop]
+Pattern=448D42CB
+Operations=ADD -131
+
+[Hook-CGameSprite::GetStatBreakdown()-BlindnessEffectJne]
+Pattern=837E104A
+Operations=ADD 4
+
+[Hook-CGameSprite::ProcessEffectList()-CheckStatsChange()]
+Pattern=418D5144
+Operations=ADD 26
